@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .output dist *.tsbuildinfo"
   },
@@ -23,6 +24,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@kubebox/eslint-config": "workspace:*",
+    "eslint": "^9.0.0",
+    "@kubebox/typescript-config": "workspace:*",
     "@tanstack/router-plugin": "^1.114.22",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

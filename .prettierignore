@@ -2,8 +2,5 @@ node_modules
 dist
 .output
 .vinxi
-.turbo
 *.tsbuildinfo
-.env
-.env.local
-.tanstack
+pnpm-lock.yaml

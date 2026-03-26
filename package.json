@@ -5,10 +5,13 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "prettier": "^3.5.0",
     "turbo": "^2.5.0",
     "typescript": "^5.8.2"
   },

@@ -1,7 +1,4 @@
-import {
-  createTRPCClient,
-  httpBatchLink,
-} from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "@kubebox/trpc/client";
 

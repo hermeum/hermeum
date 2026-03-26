@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { trpc } from "../../trpc";
+import { trpc } from "@/trpc";
 
 export const Route = createFileRoute("/sandboxes/")({
   component: SandboxListPage,

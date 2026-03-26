@@ -20,6 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
@@ -29,6 +30,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@kubebox/eslint-config": "workspace:*",
+    "eslint": "^9.0.0",
+    "@kubebox/typescript-config": "workspace:*",
     "typescript": "^5.8.2"
   }
 }

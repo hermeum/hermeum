@@ -1,0 +1,11 @@
+{
+  "name": "@kubebox/typescript-config",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./base.json": "./base.json",
+    "./library.json": "./library.json",
+    "./bundler-app.json": "./bundler-app.json",
+    "./react-library.json": "./react-library.json"
+  }
+}

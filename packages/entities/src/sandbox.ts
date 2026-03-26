@@ -20,30 +20,18 @@ export const ContainerSpecSchema = z.object({
   image: z.string().min(1),
   command: z.array(z.string()).optional(),
   args: z.array(z.string()).optional(),
-  env: z
-    .array(z.object({ name: z.string(), value: z.string() }))
-    .optional(),
+  env: z.array(z.object({ name: z.string(), value: z.string() })).optional(),
   resources: z
     .object({
-      requests: z
-        .object({ cpu: z.string().optional(), memory: z.string().optional() })
-        .optional(),
-      limits: z
-        .object({ cpu: z.string().optional(), memory: z.string().optional() })
-        .optional(),
+      requests: z.object({ cpu: z.string().optional(), memory: z.string().optional() }).optional(),
+      limits: z.object({ cpu: z.string().optional(), memory: z.string().optional() }).optional(),
     })
     .optional(),
 });
 
 export type ContainerSpec = z.infer<typeof ContainerSpecSchema>;
 
-export const SandboxPhase = z.enum([
-  "Pending",
-  "Running",
-  "Succeeded",
-  "Failed",
-  "Terminating",
-]);
+export const SandboxPhase = z.enum(["Pending", "Running", "Succeeded", "Failed", "Terminating"]);
 
 export type SandboxPhase = z.infer<typeof SandboxPhase>;
 
@@ -73,7 +61,7 @@ export const SandboxStatusSchema = z.object({
         reason: z.string().optional(),
         message: z.string().optional(),
         lastTransitionTime: z.string().datetime().optional(),
-      }),
+      })
     )
     .optional(),
 });

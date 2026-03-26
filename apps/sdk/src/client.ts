@@ -1,10 +1,6 @@
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@kubebox/trpc/client";
-import type {
-  AgentSandbox,
-  CreateSandboxInput,
-  ListSandboxesInput,
-} from "@kubebox/entities";
+import type { AgentSandbox, CreateSandboxInput, ListSandboxesInput } from "@kubebox/entities";
 
 export interface KubeBoxClientOptions {
   /** Base URL of the KubeBox server. E.g. http://localhost:3000 */
@@ -50,7 +46,7 @@ export class KubeBoxClient {
 
     logs: (
       name: string,
-      opts?: { namespace?: string; tail?: number },
+      opts?: { namespace?: string; tail?: number }
     ): Promise<{ lines: string[] }> =>
       this.trpc.sandbox.logs.query({
         name,

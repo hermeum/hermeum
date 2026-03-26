@@ -1,17 +1,9 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@kubebox/typescript-config/react-library.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "moduleResolution": "Bundler",
-    "noEmit": true,
     "paths": {
-      "~/*": ["./src/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "app.config.ts"],
-  "references": [
-    { "path": "../../packages/entities" },
-    { "path": "../../packages/trpc" }
-  ]
+  "include": ["src", "app.config.ts"]
 }
