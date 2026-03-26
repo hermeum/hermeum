@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vinxi dev",
-    "build": "vinxi build",
-    "start": "vinxi start",
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .output .vinxi *.tsbuildinfo"
+    "clean": "rm -rf .output dist *.tsbuildinfo"
   },
   "dependencies": {
     "@kubebox/entities": "workspace:*",
@@ -23,10 +23,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@tanstack/router-plugin": "^1.114.22",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.8.2",
-    "vinxi": "^0.5.3",
     "vite": "^7.0.0",
     "vite-tsconfig-paths": "^5.1.4"
   }

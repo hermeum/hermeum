@@ -10,10 +10,11 @@ export interface Context {
   userId?: string;
 }
 
-export const createContext = (opts: Partial<Context> = {}): Context => ({
-  namespace: opts.namespace ?? "default",
-  userId: opts.userId,
-});
+export const createContext = (opts: Partial<Context> = {}): Context => {
+  const ctx: Context = { namespace: opts.namespace ?? "default" };
+  if (opts.userId !== undefined) ctx.userId = opts.userId;
+  return ctx;
+};
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 

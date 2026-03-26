@@ -1,8 +1,4 @@
-import {
-  createTRPCClient,
-  httpBatchLink,
-  type TRPCClientInit,
-} from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@kubebox/trpc/client";
 import type {
   AgentSandbox,
@@ -29,9 +25,9 @@ export class KubeBoxClient {
       links: [
         httpBatchLink({
           url: `${opts.baseUrl}/trpc`,
-          headers: opts.token
-            ? { Authorization: `Bearer ${opts.token}` }
-            : undefined,
+          ...(opts.token && {
+            headers: { Authorization: `Bearer ${opts.token}` },
+          }),
         }),
       ],
     });
