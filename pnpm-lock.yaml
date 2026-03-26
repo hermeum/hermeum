@@ -66,8 +66,8 @@ importers:
       '@trpc/client':
         specifier: ^11.0.0
         version: 11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3)
-      '@trpc/react-query':
-        specifier: ^11.0.0
+      '@trpc/tanstack-react-query':
+        specifier: ^11.15.0
         version: 11.15.0(@tanstack/react-query@5.95.2(react@19.2.4))(@trpc/client@11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.15.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)
       react:
         specifier: ^19.0.0
@@ -758,19 +758,20 @@ packages:
       '@trpc/server': 11.15.0
       typescript: '>=5.7.2'
 
-  '@trpc/react-query@11.15.0':
-    resolution: {integrity: sha512-7Qa/qKydfNPRnRB8tObu1QF8WnBdZh61pHpuCqXz9rocXzw+f40MYBQlMGDI30oPXZU5JYmpNkiuWYhMTOw1Dw==}
+  '@trpc/server@11.15.0':
+    resolution: {integrity: sha512-qLcodARy05fzMSrNG6VYtynsAmUCRaQ7SDm3Ynvryhylp2Zq4KN28qJeMlMqLeJKwZ05KukkcIsVTKzscWX1pQ==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.7.2'
+
+  '@trpc/tanstack-react-query@11.15.0':
+    resolution: {integrity: sha512-5zKGSw/xNYcCBgyCf+WTrncWNt9997jKShD24F0IVMJnqq3Q4CszoTciVxdc5k4X615MbkO8Oh8tdn62D1FnlA==}
+    hasBin: true
     peerDependencies:
       '@tanstack/react-query': ^5.80.3
       '@trpc/client': 11.15.0
       '@trpc/server': 11.15.0
       react: '>=18.2.0'
-      typescript: '>=5.7.2'
-
-  '@trpc/server@11.15.0':
-    resolution: {integrity: sha512-qLcodARy05fzMSrNG6VYtynsAmUCRaQ7SDm3Ynvryhylp2Zq4KN28qJeMlMqLeJKwZ05KukkcIsVTKzscWX1pQ==}
-    hasBin: true
-    peerDependencies:
       typescript: '>=5.7.2'
 
   '@turbo/darwin-64@2.8.20':
@@ -2676,16 +2677,16 @@ snapshots:
       '@trpc/server': 11.15.0(typescript@5.9.3)
       typescript: 5.9.3
 
-  '@trpc/react-query@11.15.0(@tanstack/react-query@5.95.2(react@19.2.4))(@trpc/client@11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.15.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)':
+  '@trpc/server@11.15.0(typescript@5.9.3)':
+    dependencies:
+      typescript: 5.9.3
+
+  '@trpc/tanstack-react-query@11.15.0(@tanstack/react-query@5.95.2(react@19.2.4))(@trpc/client@11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.15.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)':
     dependencies:
       '@tanstack/react-query': 5.95.2(react@19.2.4)
       '@trpc/client': 11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/server': 11.15.0(typescript@5.9.3)
       react: 19.2.4
-      typescript: 5.9.3
-
-  '@trpc/server@11.15.0(typescript@5.9.3)':
-    dependencies:
       typescript: 5.9.3
 
   '@turbo/darwin-64@2.8.20':

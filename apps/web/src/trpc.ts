@@ -1,13 +1,19 @@
+import { QueryClient } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { createTRPCReact } from "@trpc/react-query";
+import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AppRouter } from "@kubebox/trpc/client";
 
-export const trpc = createTRPCReact<AppRouter>();
+export const queryClient = new QueryClient();
 
-export const trpcClient = createTRPCClient<AppRouter>({
+const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: "/trpc",
     }),
   ],
+});
+
+export const trpc = createTRPCOptionsProxy<AppRouter>({
+  client: trpcClient,
+  queryClient,
 });

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/trpc";
 
@@ -7,7 +8,7 @@ export const Route = createFileRoute("/sandboxes/$name")({
 
 function SandboxDetailPage() {
   const { name } = Route.useParams();
-  const { data: sandbox, isPending, error } = trpc.sandbox.get.useQuery({ name });
+  const { data: sandbox, isPending, error } = useQuery(trpc.sandbox.get.queryOptions({ name }));
 
   if (isPending) return <div>Loading…</div>;
   if (error) return <div>Error: {error.message}</div>;

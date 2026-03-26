@@ -5,7 +5,8 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import { queryClient } from "@/trpc";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -29,14 +30,16 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <nav>
-          <Link to="/">Dashboard</Link>
-          {" | "}
-          <Link to="/sandboxes">Sandboxes</Link>
-        </nav>
-        <main>
-          <Outlet />
-        </main>
+        <QueryClientProvider client={queryClient}>
+          <nav>
+            <Link to="/">Dashboard</Link>
+            {" | "}
+            <Link to="/sandboxes">Sandboxes</Link>
+          </nav>
+          <main>
+            <Outlet />
+          </main>
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
