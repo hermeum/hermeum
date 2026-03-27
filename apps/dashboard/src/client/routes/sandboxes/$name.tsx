@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { trpc } from "@/trpc";
+import { trpc } from "@/router";
 
 export const Route = createFileRoute("/sandboxes/$name")({
   component: SandboxDetailPage,
@@ -16,16 +16,12 @@ function SandboxDetailPage() {
 
   return (
     <div>
-      <h1>{sandbox.metadata.name}</h1>
+      <h1>{sandbox.name}</h1>
       <dl>
-        <dt>Namespace</dt>
-        <dd>{sandbox.metadata.namespace}</dd>
-        <dt>Phase</dt>
-        <dd>{sandbox.status?.phase ?? "—"}</dd>
-        <dt>Image</dt>
-        <dd>{sandbox.spec.container.image}</dd>
-        <dt>Singleton Key</dt>
-        <dd>{sandbox.spec.singletonKey}</dd>
+        <dt>Status</dt>
+        <dd>{sandbox.status}</dd>
+        <dt>Shutdown</dt>
+        <dd>{sandbox.shutdown}</dd>
       </dl>
     </div>
   );

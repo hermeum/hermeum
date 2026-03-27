@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { trpc } from "@/trpc";
+import { trpc } from "@/router";
 
 export const Route = createFileRoute("/sandboxes/")({
   component: SandboxListPage,
@@ -18,8 +18,8 @@ function SandboxListPage() {
       {sandboxes?.length === 0 && <p>No sandboxes running.</p>}
       <ul>
         {sandboxes?.map((s) => (
-          <li key={`${s.metadata.namespace}/${s.metadata.name}`}>
-            <strong>{s.metadata.name}</strong> — {s.status?.phase ?? "Unknown"}
+          <li key={s.name}>
+            <strong>{s.name}</strong> — {s.status}
           </li>
         ))}
       </ul>
