@@ -1,8 +1,10 @@
+import { PassThrough } from "node:stream";
+
 import * as k8s from "@kubernetes/client-node";
 
-import { CreateSandboxInput, Sandbox, Status } from "@kubebox/entities";
+import { CreateSandboxInput, RunCommandInput, Sandbox, Status } from "@kubebox/entities";
 import { Runtime } from "../../usecases/adaptors/runtime";
-import { Sandbox as K8sSandbox, SandboxList } from "./types/sandbox";
+import { Sandbox as K8sSandbox, SandboxList, SandboxPodNameAnnotation } from "./types/sandbox";
 import { SandboxClaim as K8sSandboxClaim } from "./types/sandboxclaim";
 
 const enum AgentSandboxGroup {
@@ -48,7 +50,6 @@ function mapSandbox(sandbox: K8sSandbox): Sandbox | null {
 export class KubernetesClient implements Runtime {
   private readonly kc: k8s.KubeConfig;
   private readonly customObjectsApi: k8s.CustomObjectsApi;
-
   constructor(private readonly namespace: string) {
     this.kc = new k8s.KubeConfig();
     this.kc.loadFromDefault();
@@ -236,6 +237,72 @@ export class KubernetesClient implements Runtime {
       } catch (err) {
         settle(() => reject(err));
       }
+    });
+  }
+
+  async runCommand(
+    input: RunCommandInput,
+    onStdout: (chunk: string) => void,
+    onStderr: (chunk: string) => void,
+    onExit: (exitCode: number) => void
+  ): Promise<void> {
+    const sandbox = (await this.customObjectsApi.getNamespacedCustomObject({
+      namespace: this.namespace,
+      group: AgentSandboxGroup.Default,
+      version: AgentSandboxVersion.V1Alpha1,
+      plural: AgentSandboxPlural.Sandboxes,
+      name: input.sandboxName,
+    })) as K8sSandbox;
+
+    const containerName = sandbox.spec.podTemplate.spec.containers[0]?.name;
+    if (!containerName) {
+      throw new Error(`Sandbox ${input.sandboxName} has no containers`);
+    }
+
+    await this.execInPod(
+      input.sandboxName,
+      containerName,
+      input.command,
+      onStdout,
+      onStderr,
+      onExit
+    );
+  }
+
+  private execInPod(
+    podName: string,
+    containerName: string,
+    command: string[],
+    onStdout: (chunk: string) => void,
+    onStderr: (chunk: string) => void,
+    onExit: (exitCode: number) => void
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const stdout = new PassThrough();
+      const stderr = new PassThrough();
+      stdout.on("data", (c: Buffer) => onStdout(c.toString()));
+      stderr.on("data", (c: Buffer) => onStderr(c.toString()));
+
+      const exec = new k8s.Exec(this.kc);
+      exec
+        .exec(
+          this.namespace,
+          podName,
+          containerName,
+          command,
+          stdout,
+          stderr,
+          null,
+          false,
+          (status) => {
+            const causeCode = status.details?.causes?.find((c) => c.reason === "ExitCode")?.message;
+            const exitCode =
+              causeCode != null ? parseInt(causeCode, 10) : status.status === "Success" ? 0 : 1;
+            onExit(exitCode);
+            resolve();
+          }
+        )
+        .catch(reject);
     });
   }
 }

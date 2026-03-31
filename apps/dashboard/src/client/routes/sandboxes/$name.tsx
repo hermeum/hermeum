@@ -21,7 +21,7 @@ function SandboxDetailPage() {
         <dt>Status</dt>
         <dd>{sandbox.status}</dd>
         <dt>Shutdown</dt>
-        <dd>{sandbox.shutdown}</dd>
+        <dd>{sandbox.shutdownTime?.toLocaleUpperCase()}</dd>
       </dl>
     </div>
   );

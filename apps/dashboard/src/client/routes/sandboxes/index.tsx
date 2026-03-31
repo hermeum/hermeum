@@ -6,6 +6,38 @@ export const Route = createFileRoute("/sandboxes/")({
   component: SandboxListPage,
 });
 
+function SandboxItem({
+  name,
+  status,
+  onDelete,
+}: {
+  name: string;
+  status: string;
+  onDelete: () => void;
+}) {
+  const {
+    mutate: runCommand,
+    isPending: isRunning,
+    data: result,
+  } = useMutation(trpc.command.run.mutationOptions());
+
+  return (
+    <li>
+      <strong>{name}</strong> — {status}
+      <button onClick={onDelete}>Delete</button>
+      <button
+        disabled={isRunning}
+        onClick={() =>
+          runCommand({ sandboxName: name, command: ["sh", "-c", "sleep 1 && echo Hello, world!"] })
+        }
+      >
+        {isRunning ? "Running…" : "Run sleep"}
+      </button>
+      {result && <span> exitCode: {result.exitCode}</span>}
+    </li>
+  );
+}
+
 function SandboxListPage() {
   const { data: sandboxes, isPending, error } = useQuery(trpc.sandbox.list.queryOptions());
   const { mutate: createSandbox, isPending: isCreating } = useMutation({
@@ -28,7 +60,7 @@ function SandboxListPage() {
         onClick={() =>
           createSandbox({
             name: `sandbox-${Math.random().toString(36).slice(2, 8)}`,
-            sandboxTemplate: "secure-datascience-template",
+            sandboxTemplate: "kubebox-default-template",
           })
         }
       >
@@ -37,10 +69,12 @@ function SandboxListPage() {
       {sandboxes?.length === 0 && <p>No sandboxes running.</p>}
       <ul>
         {sandboxes?.map((s) => (
-          <li key={s.name}>
-            <strong>{s.name}</strong> — {s.status}
-            <button onClick={() => deleteSandbox({ name: s.name })}>Delete</button>
-          </li>
+          <SandboxItem
+            key={s.name}
+            name={s.name}
+            status={s.status}
+            onDelete={() => deleteSandbox({ name: s.name })}
+          />
         ))}
       </ul>
     </div>
