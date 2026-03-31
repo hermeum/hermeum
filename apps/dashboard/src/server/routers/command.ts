@@ -8,11 +8,9 @@ const usecase = new CommandUseCase();
 
 const t = initTRPC.create();
 export const commandRouter = t.router({
-  run: t.procedure
-    .input(RunCommandInputSchema)
-    .mutation(async ({ input }): Promise<Command> => {
-      return await usecase.runCommand(input);
-    }),
+  run: t.procedure.input(RunCommandInputSchema).mutation(async ({ input }): Promise<Command> => {
+    return await usecase.runCommand(input);
+  }),
 
   get: t.procedure
     .input(z.object({ id: z.string() }))

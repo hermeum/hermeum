@@ -4,3 +4,4 @@ dist
 .vinxi
 *.tsbuildinfo
 pnpm-lock.yaml
+routeTree.gen.ts

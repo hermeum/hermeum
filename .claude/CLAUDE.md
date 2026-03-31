@@ -44,7 +44,7 @@ src/server/
 routers -> usecases ->  adaptors (interfaces) <- infras
               |
               V
-           entities 
+           entities
 ```
 
 Outer layers depend on inner layers. Use cases never import from `infras/` or `routers/`.
