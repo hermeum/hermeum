@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Command, RunCommandInputSchema } from "@kubebox/entities";
+import { Command, RunCommandInputSchema } from "@kubeclaw/entities";
 import { CommandUseCase } from "../usecases/command";
 
 const usecase = new CommandUseCase();

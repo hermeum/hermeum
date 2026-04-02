@@ -1,3 +1,3 @@
-import baseConfig from "@kubebox/eslint-config/base";
+import baseConfig from "@kubeclaw/eslint-config/base";
 
 export default baseConfig;

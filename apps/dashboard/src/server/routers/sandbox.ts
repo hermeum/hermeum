@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { CreateSandboxInputSchema, Sandbox } from "@kubebox/entities";
+import { CreateSandboxInputSchema, Sandbox } from "@kubeclaw/entities";
 import { SandboxUseCase } from "../usecases/sandbox";
 
 const usecase = new SandboxUseCase();

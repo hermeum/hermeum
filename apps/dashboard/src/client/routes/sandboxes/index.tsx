@@ -60,7 +60,7 @@ function SandboxListPage() {
         onClick={() =>
           createSandbox({
             name: `sandbox-${Math.random().toString(36).slice(2, 8)}`,
-            sandboxTemplate: "kubebox-default-template",
+            sandboxTemplate: "kubeclaw-default-template",
           })
         }
       >

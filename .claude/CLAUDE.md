@@ -1,11 +1,11 @@
-# KubeBox Monorepo
+# KubeClaw Monorepo
 
 ## Repository Structure
 
 This is a pnpm monorepo managed with Turborepo.
 
 ```
-kubebox/
+kubeclaw/
 ├── apps/
 │   └── dashboard/        # Main web application (Next.js)
 ├── packages/

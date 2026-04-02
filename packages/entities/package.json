@@ -1,5 +1,5 @@
 {
-  "name": "@kubebox/entities",
+  "name": "@kubeclaw/entities",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -22,9 +22,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@kubebox/eslint-config": "workspace:*",
+    "@kubeclaw/eslint-config": "workspace:*",
     "eslint": "^9.0.0",
-    "@kubebox/typescript-config": "workspace:*",
+    "@kubeclaw/typescript-config": "workspace:*",
     "typescript": "^5.8.2"
   }
 }

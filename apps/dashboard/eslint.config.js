@@ -1,3 +1,3 @@
-import reactConfig from "@kubebox/eslint-config/react";
+import reactConfig from "@kubeclaw/eslint-config/react";
 
 export default reactConfig;

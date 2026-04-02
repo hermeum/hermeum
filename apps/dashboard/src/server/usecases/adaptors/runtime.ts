@@ -1,4 +1,4 @@
-import { CreateSandboxInput, RunCommandInput, Sandbox } from "@kubebox/entities";
+import { CreateSandboxInput, RunCommandInput, Sandbox } from "@kubeclaw/entities";
 
 export interface Runtime {
   listSandboxes: () => Promise<Sandbox[]>;

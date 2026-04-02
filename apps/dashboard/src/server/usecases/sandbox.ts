@@ -1,4 +1,4 @@
-import { CreateSandboxInput, Sandbox } from "@kubebox/entities";
+import { CreateSandboxInput, Sandbox } from "@kubeclaw/entities";
 import { Runtime } from "./adaptors/runtime";
 import { KubernetesClient } from "../infras/kubernetes/client";
 

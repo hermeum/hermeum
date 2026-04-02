@@ -2,7 +2,7 @@ import { PassThrough } from "node:stream";
 
 import * as k8s from "@kubernetes/client-node";
 
-import { CreateSandboxInput, RunCommandInput, Sandbox, Status } from "@kubebox/entities";
+import { CreateSandboxInput, RunCommandInput, Sandbox, Status } from "@kubeclaw/entities";
 import { Runtime } from "../../usecases/adaptors/runtime";
 import { Sandbox as K8sSandbox, SandboxList, SandboxPodNameAnnotation } from "./types/sandbox";
 import { SandboxClaim as K8sSandboxClaim } from "./types/sandboxclaim";
@@ -19,12 +19,12 @@ const enum AgentSandboxPlural {
   Sandboxes = "sandboxes",
   SandboxClaims = "sandboxclaims",
 }
-const enum KubeBoxLabel {
+const enum KubeClawLabel {
   // https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
   ManagedBy = "app.kubernetes.io/managed-by",
 }
-const enum KubeBoxLabelValue {
-  ManagedBy = "kubebox",
+const enum KubeClawLabelValue {
+  ManagedBy = "kubeclaw",
 }
 
 function mapStatus(conditions: k8s.V1Condition[] | undefined): Status {
@@ -62,7 +62,7 @@ export class KubernetesClient implements Runtime {
       group: AgentSandboxGroup.Default,
       version: AgentSandboxVersion.V1Alpha1,
       plural: AgentSandboxPlural.Sandboxes,
-      labelSelector: `${KubeBoxLabel.ManagedBy}=${KubeBoxLabelValue.ManagedBy}`,
+      labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
     });
 
     const sandboxes = body as SandboxList;
@@ -98,7 +98,7 @@ export class KubernetesClient implements Runtime {
       throw new Error(`Sandbox ${name} has no SandboxClaim owner`);
     }
 
-    // Step 2: Get the SandboxClaim and verify it has the kubebox managed-by label
+    // Step 2: Get the SandboxClaim and verify it has the kubeclaw managed-by label
     const claimBody = await this.customObjectsApi.getNamespacedCustomObject({
       namespace: this.namespace,
       group: AgentSandboxGroup.Extensions,
@@ -107,8 +107,8 @@ export class KubernetesClient implements Runtime {
       name: ownerRef.name,
     });
     const claim = claimBody as K8sSandboxClaim;
-    if (claim.metadata?.labels?.[KubeBoxLabel.ManagedBy] !== KubeBoxLabelValue.ManagedBy) {
-      throw new Error(`SandboxClaim ${ownerRef.name} is not managed by kubebox`);
+    if (claim.metadata?.labels?.[KubeClawLabel.ManagedBy] !== KubeClawLabelValue.ManagedBy) {
+      throw new Error(`SandboxClaim ${ownerRef.name} is not managed by kubeclaw`);
     }
 
     // Step 3: Delete the SandboxClaim — controller cascades deletion to the Sandbox
@@ -133,7 +133,7 @@ export class KubernetesClient implements Runtime {
         kind: "SandboxClaim",
         metadata: {
           name: input.name,
-          labels: { [KubeBoxLabel.ManagedBy]: KubeBoxLabelValue.ManagedBy },
+          labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
         },
         spec: { sandboxTemplateRef: { name: input.sandboxTemplate } },
       },
@@ -148,7 +148,7 @@ export class KubernetesClient implements Runtime {
     );
     const sandboxName = claim.status!.sandbox!.Name!;
 
-    // Step 3: Label the sandbox to mark it as managed by kubebox
+    // Step 3: Label the sandbox to mark it as managed by kubeclaw
     await this.customObjectsApi.patchNamespacedCustomObject(
       {
         namespace: this.namespace,
@@ -156,7 +156,7 @@ export class KubernetesClient implements Runtime {
         version: AgentSandboxVersion.V1Alpha1,
         plural: AgentSandboxPlural.Sandboxes,
         name: sandboxName,
-        body: { metadata: { labels: { [KubeBoxLabel.ManagedBy]: KubeBoxLabelValue.ManagedBy } } },
+        body: { metadata: { labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy } } },
       },
       k8s.setHeaderOptions("Content-Type", k8s.PatchStrategy.MergePatch)
     );

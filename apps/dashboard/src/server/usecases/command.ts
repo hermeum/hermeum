@@ -1,4 +1,4 @@
-import { Command, RunCommandInput } from "@kubebox/entities";
+import { Command, RunCommandInput } from "@kubeclaw/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { Runtime } from "./adaptors/runtime";

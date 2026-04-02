@@ -1,5 +1,5 @@
 {
-  "name": "kubebox",
+  "name": "kubeclaw",
   "private": true,
   "scripts": {
     "build": "turbo build",

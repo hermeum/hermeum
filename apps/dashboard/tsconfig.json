@@ -1,5 +1,5 @@
 {
-  "extends": "@kubebox/typescript-config/react-library.json",
+  "extends": "@kubeclaw/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]

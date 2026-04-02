@@ -1,5 +1,5 @@
 {
-  "extends": "@kubebox/typescript-config/library.json",
+  "extends": "@kubeclaw/typescript-config/library.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",

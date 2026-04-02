@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
 function DashboardPage() {
   return (
     <div>
-      <h1>KubeBox Dashboard</h1>
+      <h1>KubeClaw Dashboard</h1>
       <p>Manage your agent sandbox workloads.</p>
     </div>
   );
