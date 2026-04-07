@@ -1,8 +1,10 @@
 import { z } from "zod";
 
-import { InitialFilesSchema, SkillsSchema, PluginsSchema, StorageSchema } from "./instance";
+import { InitialFilesSchema, SkillsSchema, PluginsSchema, StorageSchema, SelfConfigureSchema, ConfigSchema } from "./instance";
 
 export const TemplateLockedSchema = z.object({
+  selfConfigure: SelfConfigureSchema,
+  config: ConfigSchema,
   initialFiles: InitialFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,

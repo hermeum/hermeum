@@ -34,6 +34,15 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   const secretRef = raw.spec.envFrom?.find((e) => e.secretRef?.name)?.secretRef?.name;
   return {
     name: raw.metadata?.name ?? "",
+    selfConfigure: raw.spec.selfConfigure,
+    config: raw.spec.config
+      ? {
+          configMapRef: raw.spec.config.configMapRef,
+          raw: raw.spec.config.raw,
+          mergeMode: raw.spec.config.mergeMode,
+          format: raw.spec.config.format,
+        }
+      : undefined,
     envFromSecret: secretRef,
     initialFiles: raw.spec.workspace?.initialFiles,
     skills: raw.spec.skills,
@@ -49,6 +58,9 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
 function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
+  if (template.locked.selfConfigure !== undefined) {
+    spec.selfConfigure = template.locked.selfConfigure;
+  }
   if (template.locked.initialFiles !== undefined) {
     spec.workspace = { initialFiles: template.locked.initialFiles };
   }
@@ -57,6 +69,9 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   }
   if (template.locked.plugins !== undefined) {
     spec.plugins = template.locked.plugins;
+  }
+  if (template.locked.config !== undefined) {
+    spec.config = template.locked.config;
   }
   if (template.defaults.storage !== undefined) {
     const { storage } = template.defaults;
@@ -75,6 +90,12 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
 function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
+  if (instance.selfConfigure !== undefined) {
+    spec.selfConfigure = instance.selfConfigure;
+  }
+  if (instance.config !== undefined) {
+    spec.config = instance.config;
+  }
   if (instance.envFromSecret !== undefined) {
     spec.envFrom = [{ secretRef: { name: instance.envFromSecret } }];
   }

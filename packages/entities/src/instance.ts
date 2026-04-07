@@ -26,8 +26,41 @@ export const StorageSchema = z
 
 export type Storage = z.infer<typeof StorageSchema>;
 
+export const ConfigSchema = z
+  .object({
+    configMapRef: z
+      .object({ name: z.string().min(1), key: z.string().optional() })
+      .optional(),
+    raw: z.record(z.unknown()).optional(),
+    mergeMode: z.enum(["overwrite", "merge"]).optional(),
+    format: z.enum(["json", "json5"]).optional(),
+  })
+  .optional();
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+export const SelfConfigActionSchema = z.enum([
+  "skills",
+  "config",
+  "workspaceFiles",
+  "envVars",
+]);
+
+export type SelfConfigAction = z.infer<typeof SelfConfigActionSchema>;
+
+export const SelfConfigureSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    allowedActions: z.array(SelfConfigActionSchema).max(4).optional(),
+  })
+  .optional();
+
+export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
+
 export const InstanceSchema = z.object({
   name: z.string().min(1),
+  selfConfigure: SelfConfigureSchema,
+  config: ConfigSchema,
   envFromSecret: EnvFromSecretSchema,
   initialFiles: InitialFilesSchema,
   skills: SkillsSchema,

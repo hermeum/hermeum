@@ -5,6 +5,8 @@
 
 import * as k8s from "@kubernetes/client-node";
 
+import { SelfConfigAction } from "./openclaw-selfconfig";
+
 // ─── Image ────────────────────────────────────────────────────────────────────
 
 export interface ImageSpec {
@@ -412,6 +414,7 @@ export interface GatewaySpec {
 
 export interface SelfConfigureSpec {
   enabled?: boolean;
+  allowedActions?: SelfConfigAction[];
 }
 
 // ─── OpenClawInstanceSpec ─────────────────────────────────────────────────────
