@@ -1,0 +1,32 @@
+import { initTRPC } from "@trpc/server";
+import { z } from "zod";
+
+import { Instance } from "@kubeclaw/entities";
+import { InstanceUseCase } from "../usecases/openclaw-instance";
+
+const usecase = new InstanceUseCase();
+
+const t = initTRPC.create();
+export const instanceRouter = t.router({
+  list: t.procedure.query(async (): Promise<Instance[]> => {
+    return await usecase.listOpenClawInstances();
+  }),
+
+  get: t.procedure
+    .input(z.object({ name: z.string().min(1) }))
+    .query(async ({ input }): Promise<Instance | null> => {
+      return await usecase.getOpenClawInstance(input.name);
+    }),
+
+  create: t.procedure
+    .input(z.object({ templateName: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.createOpenClawInstanceByTemplate();
+    }),
+
+  delete: t.procedure
+    .input(z.object({ name: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<void> => {
+      return await usecase.deleteOpenClawInstance(input.name);
+    }),
+});

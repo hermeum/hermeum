@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './client/routes/__root'
 import { Route as IndexRouteImport } from './client/routes/index'
 import { Route as SandboxesIndexRouteImport } from './client/routes/sandboxes/index'
+import { Route as InstancesIndexRouteImport } from './client/routes/instances/index'
 import { Route as SandboxesNameRouteImport } from './client/routes/sandboxes/$name'
+import { Route as InstancesNameRouteImport } from './client/routes/instances/$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,39 +25,73 @@ const SandboxesIndexRoute = SandboxesIndexRouteImport.update({
   path: '/sandboxes/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstancesIndexRoute = InstancesIndexRouteImport.update({
+  id: '/instances/',
+  path: '/instances/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SandboxesNameRoute = SandboxesNameRouteImport.update({
   id: '/sandboxes/$name',
   path: '/sandboxes/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstancesNameRoute = InstancesNameRouteImport.update({
+  id: '/instances/$name',
+  path: '/instances/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/instances/$name': typeof InstancesNameRoute
   '/sandboxes/$name': typeof SandboxesNameRoute
+  '/instances/': typeof InstancesIndexRoute
   '/sandboxes/': typeof SandboxesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/instances/$name': typeof InstancesNameRoute
   '/sandboxes/$name': typeof SandboxesNameRoute
+  '/instances': typeof InstancesIndexRoute
   '/sandboxes': typeof SandboxesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/instances/$name': typeof InstancesNameRoute
   '/sandboxes/$name': typeof SandboxesNameRoute
+  '/instances/': typeof InstancesIndexRoute
   '/sandboxes/': typeof SandboxesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sandboxes/$name' | '/sandboxes/'
+  fullPaths:
+    | '/'
+    | '/instances/$name'
+    | '/sandboxes/$name'
+    | '/instances/'
+    | '/sandboxes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sandboxes/$name' | '/sandboxes'
-  id: '__root__' | '/' | '/sandboxes/$name' | '/sandboxes/'
+  to:
+    | '/'
+    | '/instances/$name'
+    | '/sandboxes/$name'
+    | '/instances'
+    | '/sandboxes'
+  id:
+    | '__root__'
+    | '/'
+    | '/instances/$name'
+    | '/sandboxes/$name'
+    | '/instances/'
+    | '/sandboxes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InstancesNameRoute: typeof InstancesNameRoute
   SandboxesNameRoute: typeof SandboxesNameRoute
+  InstancesIndexRoute: typeof InstancesIndexRoute
   SandboxesIndexRoute: typeof SandboxesIndexRoute
 }
 
@@ -75,6 +111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SandboxesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/instances/': {
+      id: '/instances/'
+      path: '/instances'
+      fullPath: '/instances/'
+      preLoaderRoute: typeof InstancesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sandboxes/$name': {
       id: '/sandboxes/$name'
       path: '/sandboxes/$name'
@@ -82,12 +125,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SandboxesNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/instances/$name': {
+      id: '/instances/$name'
+      path: '/instances/$name'
+      fullPath: '/instances/$name'
+      preLoaderRoute: typeof InstancesNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InstancesNameRoute: InstancesNameRoute,
   SandboxesNameRoute: SandboxesNameRoute,
+  InstancesIndexRoute: InstancesIndexRoute,
   SandboxesIndexRoute: SandboxesIndexRoute,
 }
 export const routeTree = rootRouteImport

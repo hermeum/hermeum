@@ -15,7 +15,7 @@ function RootLayout() {
       <nav>
         <Link to="/">Dashboard</Link>
         {" | "}
-        <Link to="/sandboxes">Sandboxes</Link>
+        <Link to="/instances">Instances</Link>
       </nav>
       <main>
         <Outlet />
