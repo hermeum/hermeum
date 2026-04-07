@@ -8,7 +8,7 @@ import {
 } from "./adaptors/runtime";
 
 export class InstanceUseCase {
-  constructor(private readonly runtime: Runtime = new KubernetesClient("default")) {}
+  constructor(private readonly runtime: Runtime = new KubernetesClient("kubeclaw")) {}
 
   async listOpenClawInstances(): Promise<Instance[]> {
     return this.runtime.listOpenClawInstances();
