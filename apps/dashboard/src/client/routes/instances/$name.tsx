@@ -19,7 +19,6 @@ function InstanceDetailPage() {
       <h1>{instance.name}</h1>
       <dl>
         <dt>Storage</dt>
-        <dd>{instance.storage.size}</dd>
       </dl>
     </div>
   );

@@ -6,18 +6,10 @@ export const Route = createFileRoute("/instances/")({
   component: InstanceListPage,
 });
 
-function InstanceItem({
-  name,
-  status,
-  onDelete,
-}: {
-  name: string;
-  status: string;
-  onDelete: () => void;
-}) {
+function InstanceItem({ name, onDelete }: { name: string; onDelete: () => void }) {
   return (
     <li>
-      <strong>{name}</strong> — {status}
+      <strong>{name}</strong>
       <button onClick={onDelete}>Delete</button>
     </li>
   );
@@ -42,9 +34,7 @@ function InstanceListPage() {
       <h1>Instances</h1>
       <button
         disabled={isCreating}
-        onClick={() =>
-          createInstance({ templateName: "kubeclaw-default-template" })
-        }
+        onClick={() => createInstance({ templateName: "kubeclaw-default-template" })}
       >
         {isCreating ? "Creating…" : "Create instance"}
       </button>
@@ -54,7 +44,6 @@ function InstanceListPage() {
           <InstanceItem
             key={i.name}
             name={i.name}
-            status={i.storage.size}
             onDelete={() => deleteInstance({ name: i.name })}
           />
         ))}
