@@ -19,6 +19,7 @@ export const TemplateDefaultsSchema = z.object({
 export type TemplateDefaults = z.infer<typeof TemplateDefaultsSchema>;
 
 export const TemplateSchema = z.object({
+  name: z.string(),
   locked: TemplateLockedSchema,
   defaults: TemplateDefaultsSchema,
 });

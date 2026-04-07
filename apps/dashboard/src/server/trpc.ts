@@ -1,10 +1,12 @@
 import { initTRPC } from "@trpc/server";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { instanceRouter } from "./routers/openclaw-instance.js";
+import { templateRouter } from "./routers/template.js";
 
 const t = initTRPC.create();
 export const appRouter = t.router({
   instance: instanceRouter,
+  template: templateRouter,
 });
 
 export type AppRouter = typeof appRouter;

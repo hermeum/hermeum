@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { queryClient, trpc } from "@/router";
 
 export const Route = createFileRoute("/instances/")({
@@ -17,6 +18,11 @@ function InstanceItem({ name, onDelete }: { name: string; onDelete: () => void }
 
 function InstanceListPage() {
   const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
+  const { data: templates, isPending: isTemplatesLoading } = useQuery(
+    trpc.template.list.queryOptions()
+  );
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+
   const { mutate: createInstance, isPending: isCreating } = useMutation({
     ...trpc.instance.create.mutationOptions(),
     onSuccess: () => queryClient.invalidateQueries(trpc.instance.list.queryOptions()),
@@ -32,9 +38,21 @@ function InstanceListPage() {
   return (
     <div>
       <h1>Instances</h1>
+      <select
+        value={selectedTemplate}
+        onChange={(e) => setSelectedTemplate(e.target.value)}
+        disabled={isTemplatesLoading}
+      >
+        <option value="">Select a template…</option>
+        {templates?.map((t) => (
+          <option key={t.name} value={t.name}>
+            {t.name}
+          </option>
+        ))}
+      </select>
       <button
-        disabled={isCreating}
-        onClick={() => createInstance({ templateName: "kubeclaw-default-template" })}
+        disabled={isCreating || !selectedTemplate}
+        onClick={() => createInstance({ templateName: selectedTemplate })}
       >
         {isCreating ? "Creating…" : "Create instance"}
       </button>

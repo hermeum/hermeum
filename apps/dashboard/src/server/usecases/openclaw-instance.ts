@@ -23,6 +23,7 @@ export class InstanceUseCase {
     return this.runtime.createOpenClawInstanceByTemplate({
       name,
       template: {
+        name: "default",
         locked: {},
         defaults: {},
       },
