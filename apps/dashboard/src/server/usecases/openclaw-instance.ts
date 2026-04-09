@@ -1,14 +1,19 @@
-import { Instance, Template } from "@kubeclaw/entities";
+import { Instance } from "@kubeclaw/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
+import { LocalConfig } from "../infras/local-config";
 import {
   CreateOpenClawInstanceInput,
   PatchOpenClawInstanceInput,
   Runtime,
 } from "./adaptors/runtime";
+import { ConfigAdaptor } from "./adaptors/config";
 
 export class InstanceUseCase {
-  constructor(private readonly runtime: Runtime = new KubernetesClient("kubeclaw")) {}
+  constructor(
+    private readonly runtime: Runtime = new KubernetesClient("kubeclaw"),
+    private readonly config: ConfigAdaptor = new LocalConfig()
+  ) {}
 
   async listOpenClawInstances(): Promise<Instance[]> {
     return this.runtime.listOpenClawInstances();
@@ -18,16 +23,14 @@ export class InstanceUseCase {
     return this.runtime.getOpenClawInstance(name);
   }
 
-  async createOpenClawInstanceByTemplate(): Promise<Instance> {
+  async createOpenClawInstanceByTemplate(templateName: string): Promise<Instance> {
+    const template = this.config.get().templates.find((t) => t.name === templateName) ?? null;
+    if (!template) {
+      throw new Error(`Template "${templateName}" not found`);
+    }
+
     const name = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;
-    return this.runtime.createOpenClawInstanceByTemplate({
-      name,
-      template: {
-        name: "default",
-        locked: {},
-        defaults: {},
-      },
-    });
+    return this.runtime.createOpenClawInstanceByTemplate({ name, template });
   }
 
   async patchOpenClawInstance(input: PatchOpenClawInstanceInput): Promise<Instance> {

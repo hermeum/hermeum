@@ -73,7 +73,7 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   if (template.locked.config !== undefined) {
     spec.config = template.locked.config;
   }
-  if (template.defaults.storage !== undefined) {
+  if (template.defaults?.storage !== undefined) {
     const { storage } = template.defaults;
     spec.storage = {
       persistence: {
@@ -162,6 +162,9 @@ export class KubernetesClient implements Runtime {
     name,
     template,
   }: CreateOpenClawInstanceInput): Promise<Instance> {
+    const spec = templateToSpec(template);
+    console.log("Creating OpenClawInstance with spec:", JSON.stringify(spec, null, 2));
+
     const body = await this.customObjectsApi.createNamespacedCustomObject({
       namespace: this.namespace,
       group: OpenClawGroup.Default,
@@ -175,7 +178,7 @@ export class KubernetesClient implements Runtime {
           namespace: this.namespace,
           labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
         },
-        spec: templateToSpec(template),
+        spec,
       },
     });
     return mapOpenClawInstance(body as OpenClawInstance);

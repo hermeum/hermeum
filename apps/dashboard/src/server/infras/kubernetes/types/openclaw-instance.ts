@@ -21,7 +21,7 @@ export interface ImageSpec {
 
 export interface ConfigMapKeySelector {
   name: string;
-  key?: string;
+  key?: string | undefined;
 }
 
 export interface ConfigMapNameSelector {
@@ -29,10 +29,10 @@ export interface ConfigMapNameSelector {
 }
 
 export interface ConfigSpec {
-  configMapRef?: ConfigMapKeySelector;
-  raw?: Record<string, unknown>;
-  mergeMode?: "overwrite" | "merge";
-  format?: "json" | "json5";
+  configMapRef?: ConfigMapKeySelector | undefined;
+  raw?: Record<string, unknown> | undefined;
+  mergeMode?: "overwrite" | "merge" | undefined;
+  format?: "json" | "json5" | undefined;
 }
 
 // ─── Workspace ────────────────────────────────────────────────────────────────
@@ -413,8 +413,8 @@ export interface GatewaySpec {
 // ─── Self Configure ───────────────────────────────────────────────────────────
 
 export interface SelfConfigureSpec {
-  enabled?: boolean;
-  allowedActions?: SelfConfigAction[];
+  enabled?: boolean | undefined;
+  allowedActions?: SelfConfigAction[] | undefined;
 }
 
 // ─── OpenClawInstanceSpec ─────────────────────────────────────────────────────

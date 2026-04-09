@@ -10,9 +10,7 @@
 
 import { Route as rootRouteImport } from './client/routes/__root'
 import { Route as IndexRouteImport } from './client/routes/index'
-import { Route as SandboxesIndexRouteImport } from './client/routes/sandboxes/index'
 import { Route as InstancesIndexRouteImport } from './client/routes/instances/index'
-import { Route as SandboxesNameRouteImport } from './client/routes/sandboxes/$name'
 import { Route as InstancesNameRouteImport } from './client/routes/instances/$name'
 
 const IndexRoute = IndexRouteImport.update({
@@ -20,19 +18,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SandboxesIndexRoute = SandboxesIndexRouteImport.update({
-  id: '/sandboxes/',
-  path: '/sandboxes/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InstancesIndexRoute = InstancesIndexRouteImport.update({
   id: '/instances/',
   path: '/instances/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SandboxesNameRoute = SandboxesNameRouteImport.update({
-  id: '/sandboxes/$name',
-  path: '/sandboxes/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstancesNameRoute = InstancesNameRouteImport.update({
@@ -44,55 +32,31 @@ const InstancesNameRoute = InstancesNameRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/instances/$name': typeof InstancesNameRoute
-  '/sandboxes/$name': typeof SandboxesNameRoute
   '/instances/': typeof InstancesIndexRoute
-  '/sandboxes/': typeof SandboxesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/instances/$name': typeof InstancesNameRoute
-  '/sandboxes/$name': typeof SandboxesNameRoute
   '/instances': typeof InstancesIndexRoute
-  '/sandboxes': typeof SandboxesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/instances/$name': typeof InstancesNameRoute
-  '/sandboxes/$name': typeof SandboxesNameRoute
   '/instances/': typeof InstancesIndexRoute
-  '/sandboxes/': typeof SandboxesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/instances/$name'
-    | '/sandboxes/$name'
-    | '/instances/'
-    | '/sandboxes/'
+  fullPaths: '/' | '/instances/$name' | '/instances/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/instances/$name'
-    | '/sandboxes/$name'
-    | '/instances'
-    | '/sandboxes'
-  id:
-    | '__root__'
-    | '/'
-    | '/instances/$name'
-    | '/sandboxes/$name'
-    | '/instances/'
-    | '/sandboxes/'
+  to: '/' | '/instances/$name' | '/instances'
+  id: '__root__' | '/' | '/instances/$name' | '/instances/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstancesNameRoute: typeof InstancesNameRoute
-  SandboxesNameRoute: typeof SandboxesNameRoute
   InstancesIndexRoute: typeof InstancesIndexRoute
-  SandboxesIndexRoute: typeof SandboxesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -104,25 +68,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sandboxes/': {
-      id: '/sandboxes/'
-      path: '/sandboxes'
-      fullPath: '/sandboxes/'
-      preLoaderRoute: typeof SandboxesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/instances/': {
       id: '/instances/'
       path: '/instances'
       fullPath: '/instances/'
       preLoaderRoute: typeof InstancesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sandboxes/$name': {
-      id: '/sandboxes/$name'
-      path: '/sandboxes/$name'
-      fullPath: '/sandboxes/$name'
-      preLoaderRoute: typeof SandboxesNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instances/$name': {
@@ -138,9 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstancesNameRoute: InstancesNameRoute,
-  SandboxesNameRoute: SandboxesNameRoute,
   InstancesIndexRoute: InstancesIndexRoute,
-  SandboxesIndexRoute: SandboxesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

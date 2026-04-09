@@ -19,9 +19,11 @@ export const TemplateLockedSchema = z.object({
 
 export type TemplateLocked = z.infer<typeof TemplateLockedSchema>;
 
-export const TemplateDefaultsSchema = z.object({
-  storage: StorageSchema,
-});
+export const TemplateDefaultsSchema = z
+  .object({
+    storage: StorageSchema,
+  })
+  .optional();
 
 export type TemplateDefaults = z.infer<typeof TemplateDefaultsSchema>;
 

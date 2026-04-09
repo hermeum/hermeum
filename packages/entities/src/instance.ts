@@ -28,9 +28,7 @@ export type Storage = z.infer<typeof StorageSchema>;
 
 export const ConfigSchema = z
   .object({
-    configMapRef: z
-      .object({ name: z.string().min(1), key: z.string().optional() })
-      .optional(),
+    configMapRef: z.object({ name: z.string().min(1), key: z.string().optional() }).optional(),
     raw: z.record(z.unknown()).optional(),
     mergeMode: z.enum(["overwrite", "merge"]).optional(),
     format: z.enum(["json", "json5"]).optional(),
@@ -39,18 +37,13 @@ export const ConfigSchema = z
 
 export type Config = z.infer<typeof ConfigSchema>;
 
-export const SelfConfigActionSchema = z.enum([
-  "skills",
-  "config",
-  "workspaceFiles",
-  "envVars",
-]);
+export const SelfConfigActionSchema = z.enum(["skills", "config", "workspaceFiles", "envVars"]);
 
 export type SelfConfigAction = z.infer<typeof SelfConfigActionSchema>;
 
 export const SelfConfigureSchema = z
   .object({
-    enabled: z.boolean().default(false),
+    enabled: z.boolean().default(false).optional(),
     allowedActions: z.array(SelfConfigActionSchema).max(4).optional(),
   })
   .optional();
