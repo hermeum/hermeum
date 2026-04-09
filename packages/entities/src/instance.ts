@@ -18,7 +18,7 @@ export const SkillSchema = z
   .max(128, "Skill exceeds maximum length of 128 characters")
   .regex(
     /^[a-zA-Z0-9@\-_/.:]+$/,
-    "Skill contains invalid characters. Allowed: alphanumeric, -, _, /, ., @",
+    "Skill contains invalid characters. Allowed: alphanumeric, -, _, /, ., @"
   )
   .refine((s) => s !== "npm:" && s !== "pack:", "Skill cannot be a bare prefix");
 
@@ -53,10 +53,35 @@ export const ConfigSchema = z
 
 export type Config = z.infer<typeof ConfigSchema>;
 
+export const SelfConfigActionSchema = z.enum(["skills", "config", "workspaceFiles", "envVars"]);
+
+export type SelfConfigAction = z.infer<typeof SelfConfigActionSchema>;
+
+export const SelfConfigureSchema = z
+  .object({
+    enabled: z.boolean().default(false).optional(),
+    allowedActions: z.array(SelfConfigActionSchema).max(4).optional(),
+  })
+  .optional();
+
+export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
+
+export const EnvVarSchema = z.object({
+  name: z.string().min(1),
+  value: z.string(),
+});
+
+export type EnvVar = z.infer<typeof EnvVarSchema>;
+
+export const EnvSchema = z.array(EnvVarSchema).optional();
+
+export type Env = z.infer<typeof EnvSchema>;
+
 export const InstanceSchema = z.object({
   name: z.string().min(1),
   config: ConfigSchema,
   envFromSecret: EnvFromSecretSchema,
+  env: EnvSchema,
   workspace: WorkspaceSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
