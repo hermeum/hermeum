@@ -54,11 +54,23 @@ export const SelfConfigureSchema = z
 
 export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
 
+export const EnvVarSchema = z.object({
+  name: z.string().min(1),
+  value: z.string(),
+});
+
+export type EnvVar = z.infer<typeof EnvVarSchema>;
+
+export const EnvSchema = z.array(EnvVarSchema).optional();
+
+export type Env = z.infer<typeof EnvSchema>;
+
 export const InstanceSchema = z.object({
   name: z.string().min(1),
   selfConfigure: SelfConfigureSchema,
   config: ConfigSchema,
   envFromSecret: EnvFromSecretSchema,
+  env: EnvSchema,
   workspace: WorkspaceSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,

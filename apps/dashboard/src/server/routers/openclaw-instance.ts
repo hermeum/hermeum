@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Instance } from "@kubeclaw/entities";
+import { EnvVarSchema, Instance } from "@kubeclaw/entities";
 import { InstanceUseCase } from "../usecases/openclaw-instance";
 
 const usecase = new InstanceUseCase();
@@ -28,5 +28,23 @@ export const instanceRouter = t.router({
     .input(z.object({ name: z.string().min(1) }))
     .mutation(async ({ input }): Promise<void> => {
       return await usecase.deleteOpenClawInstance(input.name);
+    }),
+
+  addEnv: t.procedure
+    .input(z.object({ name: z.string().min(1), envVar: EnvVarSchema }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.addEnv(input.name, input.envVar);
+    }),
+
+  updateEnv: t.procedure
+    .input(z.object({ name: z.string().min(1), envVar: EnvVarSchema }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.updateEnv(input.name, input.envVar);
+    }),
+
+  removeEnv: t.procedure
+    .input(z.object({ name: z.string().min(1), envName: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.removeEnv(input.name, input.envName);
     }),
 });
