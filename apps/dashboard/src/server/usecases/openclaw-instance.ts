@@ -79,6 +79,18 @@ export class InstanceUseCase {
     }
   }
 
+  private checkWorkspaceFileAllowed(filePath: string): void {
+    const { allowedWorkspaceFiles } = this.config.get();
+    if (allowedWorkspaceFiles === undefined) {
+      return;
+    }
+    if (!allowedWorkspaceFiles.includes(filePath)) {
+      throw new Error(
+        `Workspace file operation is not allowed: "${filePath}" is not in the allowed list`
+      );
+    }
+  }
+
   async patchOpenClawInstance(input: PatchOpenClawInstanceInput): Promise<Instance> {
     const instance = await this.runtime.getOpenClawInstance(input.name);
     if (!instance) {
