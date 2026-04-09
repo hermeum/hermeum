@@ -1,9 +1,5 @@
-import { Template } from "@kubeclaw/entities";
-
-export type Config = {
-  templates: Template[];
-};
+import { InitConfig } from "@kubeclaw/entities";
 
 export interface ConfigAdaptor {
-  get(): Config;
+  get(): InitConfig;
 }

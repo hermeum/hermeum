@@ -1,2 +1,3 @@
-export * from "./instance.js";
-export * from "./template.js";
+export * from "./instance";
+export * from "./template";
+export * from "./config";

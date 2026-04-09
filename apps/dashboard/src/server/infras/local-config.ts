@@ -3,15 +3,11 @@ import * as path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 
-import { TemplateSchema } from "@kubeclaw/entities";
-import { Config, ConfigAdaptor } from "../usecases/adaptors/config";
-
-const ConfigSchema = z.object({
-  templates: z.array(TemplateSchema),
-});
+import { TemplateSchema, InitConfig, InitConfigSchema } from "@kubeclaw/entities";
+import { ConfigAdaptor } from "../usecases/adaptors/config";
 
 export class LocalConfig implements ConfigAdaptor {
-  private cache: Config;
+  private cache: InitConfig;
 
   constructor(private filePath?: string) {
     const resolvedPath =
@@ -20,10 +16,10 @@ export class LocalConfig implements ConfigAdaptor {
     const content = fs.readFileSync(resolvedPath, "utf-8");
     const raw = parse(content);
 
-    this.cache = ConfigSchema.parse(raw);
+    this.cache = InitConfigSchema.parse(raw);
   }
 
-  get(): Config {
+  get(): InitConfig {
     return this.cache;
   }
 }
