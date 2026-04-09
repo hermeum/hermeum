@@ -44,7 +44,9 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
         }
       : undefined,
     envFromSecret: secretRef,
-    initialFiles: raw.spec.workspace?.initialFiles,
+    workspace: raw.spec.workspace
+      ? { initialFiles: raw.spec.workspace.initialFiles }
+      : undefined,
     skills: raw.spec.skills,
     plugins: raw.spec.plugins,
     storage: {
@@ -61,8 +63,8 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   if (template.selfConfigure !== undefined) {
     spec.selfConfigure = template.selfConfigure;
   }
-  if (template.initialFiles !== undefined) {
-    spec.workspace = { initialFiles: template.initialFiles };
+  if (template.workspace !== undefined) {
+    spec.workspace = template.workspace;
   }
   if (template.skills !== undefined) {
     spec.skills = template.skills;
@@ -99,8 +101,8 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   if (instance.envFromSecret !== undefined) {
     spec.envFrom = [{ secretRef: { name: instance.envFromSecret } }];
   }
-  if (instance.initialFiles !== undefined) {
-    spec.workspace = { initialFiles: instance.initialFiles };
+  if (instance.workspace !== undefined) {
+    spec.workspace = instance.workspace;
   }
   if (instance.skills !== undefined) {
     spec.skills = instance.skills;

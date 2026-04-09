@@ -4,9 +4,13 @@ export const EnvFromSecretSchema = z.string().optional();
 
 export type EnvFromSecret = z.infer<typeof EnvFromSecretSchema>;
 
-export const InitialFilesSchema = z.record(z.string()).optional();
+export const WorkspaceSchema = z
+  .object({
+    initialFiles: z.record(z.string()).optional(),
+  })
+  .optional();
 
-export type InitialFiles = z.infer<typeof InitialFilesSchema>;
+export type Workspace = z.infer<typeof WorkspaceSchema>;
 
 export const SkillsSchema = z.array(z.string()).max(20).optional();
 
@@ -55,7 +59,7 @@ export const InstanceSchema = z.object({
   selfConfigure: SelfConfigureSchema,
   config: ConfigSchema,
   envFromSecret: EnvFromSecretSchema,
-  initialFiles: InitialFilesSchema,
+  workspace: WorkspaceSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   storage: StorageSchema,

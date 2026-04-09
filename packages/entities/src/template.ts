@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  InitialFilesSchema,
+  WorkspaceSchema,
   SkillsSchema,
   PluginsSchema,
   StorageSchema,
@@ -13,7 +13,7 @@ export const TemplateSchema = z.object({
   name: z.string(),
   selfConfigure: SelfConfigureSchema,
   config: ConfigSchema,
-  initialFiles: InitialFilesSchema,
+  workspace: WorkspaceSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   storage: StorageSchema,
