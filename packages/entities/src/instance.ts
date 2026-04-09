@@ -12,7 +12,19 @@ export const WorkspaceSchema = z
 
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 
-export const SkillsSchema = z.array(z.string()).max(20).optional();
+export const SkillSchema = z
+  .string()
+  .min(1)
+  .max(128, "Skill exceeds maximum length of 128 characters")
+  .regex(
+    /^[a-zA-Z0-9@\-_/.:]+$/,
+    "Skill contains invalid characters. Allowed: alphanumeric, -, _, /, ., @",
+  )
+  .refine((s) => s !== "npm:" && s !== "pack:", "Skill cannot be a bare prefix");
+
+export type Skill = string;
+
+export const SkillsSchema = z.array(SkillSchema).max(20).optional();
 
 export type Skills = z.infer<typeof SkillsSchema>;
 
