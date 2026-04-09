@@ -1,10 +1,12 @@
 import { Instance, Skill, SkillSchema, EnvVar, Config } from "@kubeclaw/entities";
-import { compare } from "fast-json-patch";
+import jsonPatch from "fast-json-patch";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
 import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+
+const { compare } = jsonPatch;
 
 function deepMerge(
   dst: Record<string, unknown>,
