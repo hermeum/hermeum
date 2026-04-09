@@ -58,23 +58,23 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
 function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
-  if (template.locked.selfConfigure !== undefined) {
-    spec.selfConfigure = template.locked.selfConfigure;
+  if (template.selfConfigure !== undefined) {
+    spec.selfConfigure = template.selfConfigure;
   }
-  if (template.locked.initialFiles !== undefined) {
-    spec.workspace = { initialFiles: template.locked.initialFiles };
+  if (template.initialFiles !== undefined) {
+    spec.workspace = { initialFiles: template.initialFiles };
   }
-  if (template.locked.skills !== undefined) {
-    spec.skills = template.locked.skills;
+  if (template.skills !== undefined) {
+    spec.skills = template.skills;
   }
-  if (template.locked.plugins !== undefined) {
-    spec.plugins = template.locked.plugins;
+  if (template.plugins !== undefined) {
+    spec.plugins = template.plugins;
   }
-  if (template.locked.config !== undefined) {
-    spec.config = template.locked.config;
+  if (template.config !== undefined) {
+    spec.config = template.config;
   }
-  if (template.defaults?.storage !== undefined) {
-    const { storage } = template.defaults;
+  if (template.storage !== undefined) {
+    const { storage } = template;
     spec.storage = {
       persistence: {
         enabled: storage.enabled,
