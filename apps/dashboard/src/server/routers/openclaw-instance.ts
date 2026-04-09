@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Instance, Skill, EnvFromSecret } from "@kubeclaw/entities";
+import { Instance, SkillSchema, EnvVarSchema } from "@kubeclaw/entities";
 import { InstanceUseCase } from "../usecases/openclaw-instance";
 
 const usecase = new InstanceUseCase();
@@ -30,18 +30,18 @@ export const instanceRouter = t.router({
       return await usecase.deleteOpenClawInstance(input.name);
     }),
 
-<<<<<<< HEAD
   installSkill: t.procedure
-    .input(z.object({ instanceName: z.string().min(1), skill: Skill }))
+    .input(z.object({ instanceName: z.string().min(1), skill: SkillSchema }))
     .mutation(async ({ input }): Promise<Instance> => {
       return await usecase.installSkill(input.instanceName, input.skill);
     }),
 
   uninstallSkill: t.procedure
-    .input(z.object({ instanceName: z.string().min(1), skill: Skill }))
+    .input(z.object({ instanceName: z.string().min(1), skill: SkillSchema }))
     .mutation(async ({ input }): Promise<Instance> => {
       return await usecase.uninstallSkill(input.instanceName, input.skill);
-=======
+    }),
+
   addEnv: t.procedure
     .input(z.object({ name: z.string().min(1), envVar: EnvVarSchema }))
     .mutation(async ({ input }): Promise<Instance> => {
@@ -58,6 +58,5 @@ export const instanceRouter = t.router({
     .input(z.object({ name: z.string().min(1), envName: z.string().min(1) }))
     .mutation(async ({ input }): Promise<Instance> => {
       return await usecase.removeEnv(input.name, input.envName);
->>>>>>> claude/angry-montalcini
     }),
 });

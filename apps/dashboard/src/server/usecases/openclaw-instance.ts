@@ -2,11 +2,7 @@ import { Instance, Skill, SkillSchema, EnvVar } from "@kubeclaw/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
-import {
-  CreateOpenClawInstanceInput,
-  PatchOpenClawInstanceInput,
-  Runtime,
-} from "./adaptors/runtime";
+import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
 
 export class InstanceUseCase {
@@ -67,7 +63,7 @@ export class InstanceUseCase {
     }
     return this.runtime.patchOpenClawInstance({
       name: instanceName,
-      patch: { env: instance.env.map((e) => (e.name === envVar.name ? envVar : e)) },
+      patch: { env: instance.env?.map((e) => (e.name === envVar.name ? envVar : e)) },
     });
   }
 
@@ -82,7 +78,7 @@ export class InstanceUseCase {
     }
     return this.runtime.patchOpenClawInstance({
       name: instanceName,
-      patch: { env: instance.env.filter((e) => e.name !== envName) },
+      patch: { env: instance.env?.filter((e) => e.name !== envName) },
     });
   }
 

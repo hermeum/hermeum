@@ -44,9 +44,7 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
       : undefined,
     envFromSecret: secretRef,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
-    workspace: raw.spec.workspace
-      ? { initialFiles: raw.spec.workspace.initialFiles }
-      : undefined,
+    workspace: raw.spec.workspace ? { initialFiles: raw.spec.workspace.initialFiles } : undefined,
     skills: raw.spec.skills,
     plugins: raw.spec.plugins,
     storage: {

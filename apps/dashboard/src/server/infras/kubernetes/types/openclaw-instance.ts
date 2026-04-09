@@ -46,7 +46,7 @@ export interface AdditionalWorkspace {
 
 export interface WorkspaceSpec {
   configMapRef?: ConfigMapNameSelector;
-  initialFiles?: Record<string, string>;
+  initialFiles?: Record<string, string> | undefined;
   initialDirectories?: string[];
   additionalWorkspaces?: AdditionalWorkspace[];
 }
