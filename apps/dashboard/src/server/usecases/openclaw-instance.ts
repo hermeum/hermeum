@@ -155,8 +155,20 @@ export class InstanceUseCase {
     return this.runtime.deleteOpenClawInstance(name);
   }
 
+  private checkSkillAllowed(skill: Skill): void {
+    const { allowedSkills } = this.config.get();
+    if (allowedSkills === undefined) {
+      return;
+    }
+    const isAllowed = allowedSkills.some((pattern) => new RegExp(pattern).test(skill));
+    if (!isAllowed) {
+      throw new Error(`Skill "${skill}" is not in the allowed list`);
+    }
+  }
+
   async installSkill(instanceName: string, skill: Skill): Promise<Instance> {
     SkillSchema.parse(skill);
+    this.checkSkillAllowed(skill);
 
     const instance = await this.runtime.getOpenClawInstance(instanceName);
     if (!instance) {
@@ -176,6 +188,7 @@ export class InstanceUseCase {
   }
 
   async uninstallSkill(instanceName: string, skill: Skill): Promise<Instance> {
+    this.checkSkillAllowed(skill);
     const instance = await this.runtime.getOpenClawInstance(instanceName);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceName}" not found`);
