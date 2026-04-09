@@ -1,4 +1,4 @@
-import { Instance } from "@kubeclaw/entities";
+import { Instance, Skill, SkillSchema } from "@kubeclaw/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
@@ -47,5 +47,40 @@ export class InstanceUseCase {
       throw new Error(`OpenClawInstance ${name} not found`);
     }
     return this.runtime.deleteOpenClawInstance(name);
+  }
+
+  async installSkill(instanceName: string, skill: Skill): Promise<Instance> {
+    SkillSchema.parse(skill);
+
+    const instance = await this.runtime.getOpenClawInstance(instanceName);
+    if (!instance) {
+      throw new Error(`OpenClawInstance "${instanceName}" not found`);
+    }
+    const current = instance.skills ?? [];
+    if (current.includes(skill)) {
+      throw new Error(`Skill "${skill}" is already installed on instance "${instanceName}"`);
+    }
+    if (current.length >= 20) {
+      throw new Error("Instance already has the maximum of 20 skills");
+    }
+    return this.runtime.patchOpenClawInstance({
+      name: instanceName,
+      patch: { skills: [...current, skill] },
+    });
+  }
+
+  async uninstallSkill(instanceName: string, skill: Skill): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(instanceName);
+    if (!instance) {
+      throw new Error(`OpenClawInstance "${instanceName}" not found`);
+    }
+    const current = instance.skills ?? [];
+    if (!current.includes(skill)) {
+      throw new Error(`Skill "${skill}" is not installed on instance "${instanceName}"`);
+    }
+    return this.runtime.patchOpenClawInstance({
+      name: instanceName,
+      patch: { skills: current.filter((s) => s !== skill) },
+    });
   }
 }

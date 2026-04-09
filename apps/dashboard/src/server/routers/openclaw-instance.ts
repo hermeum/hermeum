@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Instance } from "@kubeclaw/entities";
+import { Instance, Skill, SkillSchema } from "@kubeclaw/entities";
 import { InstanceUseCase } from "../usecases/openclaw-instance";
 
 const usecase = new InstanceUseCase();
@@ -28,5 +28,17 @@ export const instanceRouter = t.router({
     .input(z.object({ name: z.string().min(1) }))
     .mutation(async ({ input }): Promise<void> => {
       return await usecase.deleteOpenClawInstance(input.name);
+    }),
+
+  installSkill: t.procedure
+    .input(z.object({ instanceName: z.string().min(1), skill: Skill }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.installSkill(input.instanceName, input.skill);
+    }),
+
+  uninstallSkill: t.procedure
+    .input(z.object({ instanceName: z.string().min(1), skill: Skill }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.uninstallSkill(input.instanceName, input.skill);
     }),
 });
