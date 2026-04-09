@@ -81,6 +81,8 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
     };
   }
 
+  spec.selfConfigure = { enabled: true, allowedActions: ["skills", "config", "workspaceFiles", "envVars"] };
+
   return spec;
 }
 
@@ -160,7 +162,6 @@ export class KubernetesClient implements Runtime {
     template,
   }: CreateOpenClawInstanceInput): Promise<Instance> {
     const spec = templateToSpec(template);
-    console.log("Creating OpenClawInstance with spec:", JSON.stringify(spec, null, 2));
 
     const body = await this.customObjectsApi.createNamespacedCustomObject({
       namespace: this.namespace,
