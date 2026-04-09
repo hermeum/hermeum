@@ -34,7 +34,6 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   const secretRef = raw.spec.envFrom?.find((e) => e.secretRef?.name)?.secretRef?.name;
   return {
     name: raw.metadata?.name ?? "",
-    selfConfigure: raw.spec.selfConfigure,
     config: raw.spec.config
       ? {
           configMapRef: raw.spec.config.configMapRef,
@@ -60,9 +59,6 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
 function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
-  if (template.selfConfigure !== undefined) {
-    spec.selfConfigure = template.selfConfigure;
-  }
   if (template.workspace !== undefined) {
     spec.workspace = template.workspace;
   }
@@ -92,9 +88,6 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
 function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
-  if (instance.selfConfigure !== undefined) {
-    spec.selfConfigure = instance.selfConfigure;
-  }
   if (instance.config !== undefined) {
     spec.config = instance.config;
   }
