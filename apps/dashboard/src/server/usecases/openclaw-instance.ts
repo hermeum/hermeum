@@ -56,9 +56,17 @@ export class InstanceUseCase {
     return this.runtime.createOpenClawInstanceByTemplate({ name, template });
   }
 
+  async deleteOpenClawInstance(name: string): Promise<void> {
+    const instance = await this.runtime.getOpenClawInstance(name);
+    if (!instance) {
+      throw new Error(`OpenClawInstance ${name} not found`);
+    }
+    return this.runtime.deleteOpenClawInstance(name);
+  }
+
   private checkConfigPatchAllowed(originalConfig: Config, inputConfig: Config): void {
-    const { allowedConfigPaths: allowedPaths } = this.config.get();
-    if (allowedPaths === undefined) {
+    const { allowedConfigPaths } = this.config.get();
+    if (allowedConfigPaths === undefined) {
       return;
     }
 
@@ -68,7 +76,7 @@ export class InstanceUseCase {
     const ops = compare(original, merged);
 
     for (const op of ops) {
-      const isAllowed = allowedPaths.some(
+      const isAllowed = allowedConfigPaths.some(
         (allowed) => op.path === allowed || op.path.startsWith(allowed + "/")
       );
       if (!isAllowed) {
@@ -91,15 +99,15 @@ export class InstanceUseCase {
     }
   }
 
-  async patchOpenClawInstance(input: PatchOpenClawInstanceInput): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(input.name);
-    if (!instance) {
-      throw new Error(`OpenClawInstance ${input.name} not found`);
+  private checkSkillAllowed(skill: Skill): void {
+    const { allowedSkills } = this.config.get();
+    if (allowedSkills === undefined) {
+      return;
     }
-    if (input.patch.config !== undefined) {
-      this.checkConfigPatchAllowed(instance.config, input.patch.config);
+    const isAllowed = allowedSkills.some((pattern) => new RegExp(pattern).test(skill));
+    if (!isAllowed) {
+      throw new Error(`Skill "${skill}" is not in the allowed list`);
     }
-    return this.runtime.patchOpenClawInstance(input);
   }
 
   async addEnv(instanceName: string, envVar: EnvVar): Promise<Instance> {
@@ -145,25 +153,6 @@ export class InstanceUseCase {
       name: instanceName,
       patch: { env: instance.env?.filter((e) => e.name !== envName) },
     });
-  }
-
-  async deleteOpenClawInstance(name: string): Promise<void> {
-    const instance = await this.runtime.getOpenClawInstance(name);
-    if (!instance) {
-      throw new Error(`OpenClawInstance ${name} not found`);
-    }
-    return this.runtime.deleteOpenClawInstance(name);
-  }
-
-  private checkSkillAllowed(skill: Skill): void {
-    const { allowedSkills } = this.config.get();
-    if (allowedSkills === undefined) {
-      return;
-    }
-    const isAllowed = allowedSkills.some((pattern) => new RegExp(pattern).test(skill));
-    if (!isAllowed) {
-      throw new Error(`Skill "${skill}" is not in the allowed list`);
-    }
   }
 
   async installSkill(instanceName: string, skill: Skill): Promise<Instance> {
