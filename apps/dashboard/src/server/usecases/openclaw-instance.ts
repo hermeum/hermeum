@@ -1,9 +1,34 @@
-import { Instance, Skill, SkillSchema, EnvVar } from "@kubeclaw/entities";
+import { Instance, Skill, SkillSchema, EnvVar, Config } from "@kubeclaw/entities";
+import { compare } from "fast-json-patch";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
 import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+
+function deepMerge(
+  dst: Record<string, unknown>,
+  src: Record<string, unknown>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...dst };
+  for (const key of Object.keys(src)) {
+    const srcVal = src[key];
+    const dstVal = result[key];
+    if (
+      srcVal !== null &&
+      typeof srcVal === "object" &&
+      !Array.isArray(srcVal) &&
+      dstVal !== null &&
+      typeof dstVal === "object" &&
+      !Array.isArray(dstVal)
+    ) {
+      result[key] = deepMerge(dstVal as Record<string, unknown>, srcVal as Record<string, unknown>);
+    } else {
+      result[key] = srcVal;
+    }
+  }
+  return result;
+}
 
 export class InstanceUseCase {
   constructor(
@@ -29,10 +54,36 @@ export class InstanceUseCase {
     return this.runtime.createOpenClawInstanceByTemplate({ name, template });
   }
 
+  private checkConfigPatchAllowed(originalConfig: Config, inputConfig: Config): void {
+    const { allowedConfigPaths: allowedPaths } = this.config.get();
+    if (allowedPaths === undefined) {
+      return;
+    }
+
+    const original = (originalConfig ?? {}) as Record<string, unknown>;
+    const input = (inputConfig ?? {}) as Record<string, unknown>;
+    const merged = deepMerge(original, input);
+    const ops = compare(original, merged);
+
+    for (const op of ops) {
+      const isAllowed = allowedPaths.some(
+        (allowed) => op.path === allowed || op.path.startsWith(allowed + "/")
+      );
+      if (!isAllowed) {
+        throw new Error(
+          `Config patch is not allowed: path "${op.path}" is not in the allowed list`
+        );
+      }
+    }
+  }
+
   async patchOpenClawInstance(input: PatchOpenClawInstanceInput): Promise<Instance> {
     const instance = await this.runtime.getOpenClawInstance(input.name);
     if (!instance) {
       throw new Error(`OpenClawInstance ${input.name} not found`);
+    }
+    if (input.patch.config !== undefined) {
+      this.checkConfigPatchAllowed(instance.config, input.patch.config);
     }
     return this.runtime.patchOpenClawInstance(input);
   }

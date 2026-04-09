@@ -4,6 +4,7 @@ import { TemplateSchema } from "./template";
 
 export const InitConfigSchema = z.object({
   templates: z.array(TemplateSchema),
+  allowedConfigPaths: z.array(z.string()).optional(),
 });
 
 export type InitConfig = z.infer<typeof InitConfigSchema>;
