@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-export const EnvFromSecretSchema = z.string().optional();
-
-export type EnvFromSecret = z.infer<typeof EnvFromSecretSchema>;
-
 export const WorkspaceFilesSchema = z.record(z.string()).optional();
 
 export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
@@ -66,15 +62,19 @@ export const EnvSchema = z.array(EnvVarSchema).optional();
 
 export type Env = z.infer<typeof EnvSchema>;
 
-export const InstanceSchema = z.object({
-  name: z.string().min(1),
+export const InstanceInputSchema = z.object({
   openClawJson: OpenClawJsonSchema,
-  envFromSecret: EnvFromSecretSchema,
   env: EnvSchema,
   workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   storage: StorageSchema,
+});
+
+export type InstanceInput = z.infer<typeof InstanceInputSchema>;
+
+export const InstanceSchema = InstanceInputSchema.extend({
+  name: z.string().min(1),
 });
 
 export type Instance = z.infer<typeof InstanceSchema>;

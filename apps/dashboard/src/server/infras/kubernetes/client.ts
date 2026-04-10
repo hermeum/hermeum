@@ -31,11 +31,9 @@ const enum KubeClawLabelValue {
 }
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
-  const secretRef = raw.spec.envFrom?.find((e) => e.secretRef?.name)?.secretRef?.name;
   return {
     name: raw.metadata?.name ?? "",
     openClawJson: raw.spec.config?.raw,
-    envFromSecret: secretRef,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     workspaceFiles: raw.spec.workspace?.initialFiles,
     skills: raw.spec.skills,
@@ -60,6 +58,9 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
   if (template.plugins !== undefined) {
     spec.plugins = template.plugins;
   }
+  if (template.env !== undefined) {
+    spec.env = template.env.map((e) => ({ name: e.name, value: e.value }));
+  }
   if (template.openClawJson !== undefined) {
     spec.config = { raw: template.openClawJson };
   }
@@ -74,7 +75,10 @@ function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
     };
   }
 
-  spec.selfConfigure = { enabled: true, allowedActions: ["skills", "config", "workspaceFiles", "envVars"] };
+  spec.selfConfigure = {
+    enabled: true,
+    allowedActions: ["skills", "config", "workspaceFiles", "envVars"],
+  };
 
   return spec;
 }
@@ -84,9 +88,6 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
 
   if (instance.openClawJson !== undefined) {
     spec.config = { raw: instance.openClawJson };
-  }
-  if (instance.envFromSecret !== undefined) {
-    spec.envFrom = [{ secretRef: { name: instance.envFromSecret } }];
   }
   if (instance.env !== undefined) {
     spec.env = instance.env.map((e) => ({ name: e.name, value: e.value }));
