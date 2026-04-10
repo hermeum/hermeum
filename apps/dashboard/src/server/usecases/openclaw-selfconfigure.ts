@@ -1,4 +1,4 @@
-import { Config } from "@kubeclaw/entities";
+import { OpenClawJson } from "@kubeclaw/entities";
 
 import { LocalConfig } from "../infras/local-config";
 import { ConfigAdaptor } from "./adaptors/config";
@@ -9,7 +9,7 @@ export class SelfConfigureUseCase extends SharedUseCase {
     super(config);
   }
 
-  async patchConfig(originalConfig: Config, inputConfig: Config): Promise<void> {
+  async patchConfig(originalConfig: OpenClawJson, inputConfig: OpenClawJson): Promise<void> {
     this.checkConfigPatchAllowed(originalConfig, inputConfig);
   }
 }

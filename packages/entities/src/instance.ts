@@ -4,13 +4,9 @@ export const EnvFromSecretSchema = z.string().optional();
 
 export type EnvFromSecret = z.infer<typeof EnvFromSecretSchema>;
 
-export const WorkspaceSchema = z
-  .object({
-    initialFiles: z.record(z.string()).optional(),
-  })
-  .optional();
+export const WorkspaceFilesSchema = z.record(z.string()).optional();
 
-export type Workspace = z.infer<typeof WorkspaceSchema>;
+export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
 
 export const SkillSchema = z
   .string()
@@ -42,16 +38,9 @@ export const StorageSchema = z
 
 export type Storage = z.infer<typeof StorageSchema>;
 
-export const ConfigSchema = z
-  .object({
-    configMapRef: z.object({ name: z.string().min(1), key: z.string().optional() }).optional(),
-    raw: z.record(z.unknown()).optional(),
-    mergeMode: z.enum(["overwrite", "merge"]).optional(),
-    format: z.enum(["json", "json5"]).optional(),
-  })
-  .optional();
+export const OpenClawJsonSchema = z.record(z.unknown()).optional();
 
-export type Config = z.infer<typeof ConfigSchema>;
+export type OpenClawJson = z.infer<typeof OpenClawJsonSchema>;
 
 export const SelfConfigActionSchema = z.enum(["skills", "config", "workspaceFiles", "envVars"]);
 
@@ -79,10 +68,10 @@ export type Env = z.infer<typeof EnvSchema>;
 
 export const InstanceSchema = z.object({
   name: z.string().min(1),
-  config: ConfigSchema,
+  openClawJson: OpenClawJsonSchema,
   envFromSecret: EnvFromSecretSchema,
   env: EnvSchema,
-  workspace: WorkspaceSchema,
+  workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   storage: StorageSchema,

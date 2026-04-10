@@ -1,4 +1,4 @@
-import { Config, Skill } from "@kubeclaw/entities";
+import { OpenClawJson, Skill } from "@kubeclaw/entities";
 import jsonPatch from "fast-json-patch";
 
 import { ConfigAdaptor } from "./adaptors/config";
@@ -32,7 +32,7 @@ function deepMerge(
 export abstract class SharedUseCase {
   constructor(protected readonly config: ConfigAdaptor) {}
 
-  protected checkConfigPatchAllowed(originalConfig: Config, inputConfig: Config): void {
+  protected checkConfigPatchAllowed(originalConfig: OpenClawJson, inputConfig: OpenClawJson): void {
     const { allowedConfigPaths } = this.config.get();
     if (allowedConfigPaths === undefined) {
       return;

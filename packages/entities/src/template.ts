@@ -1,17 +1,17 @@
 import { z } from "zod";
 
 import {
-  WorkspaceSchema,
+  WorkspaceFilesSchema,
   SkillsSchema,
   PluginsSchema,
   StorageSchema,
-  ConfigSchema,
+  OpenClawJsonSchema,
 } from "./instance";
 
 export const TemplateSchema = z.object({
   name: z.string(),
-  config: ConfigSchema,
-  workspace: WorkspaceSchema,
+  openClawJson: OpenClawJsonSchema,
+  workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   storage: StorageSchema,
