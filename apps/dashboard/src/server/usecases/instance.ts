@@ -22,10 +22,10 @@ export class InstanceUseCase extends SharedUseCase {
     return this.runtime.getOpenClawInstance(name);
   }
 
-  async createOpenClawInstanceByTemplate(templateName: string): Promise<Instance> {
-    const template = this.config.get().templates[templateName] ?? null;
+  async createOpenClawInstanceByTemplate(templateId: string): Promise<Instance> {
+    const template = this.config.get().templates.find((t) => t.id === templateId) ?? null;
     if (!template) {
-      throw new Error(`Template "${templateName}" not found`);
+      throw new Error(`Template "${templateId}" not found`);
     }
 
     const name = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;

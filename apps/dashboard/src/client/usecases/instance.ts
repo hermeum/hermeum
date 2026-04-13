@@ -12,8 +12,8 @@ export class InstanceUseCase {
     return await this.api.getInstance(name);
   }
 
-  async create(templateName: string): Promise<Instance> {
-    return await this.api.createInstance(templateName);
+  async create(templateId: string): Promise<Instance> {
+    return await this.api.createInstance(templateId);
   }
 
   async delete(name: string): Promise<void> {

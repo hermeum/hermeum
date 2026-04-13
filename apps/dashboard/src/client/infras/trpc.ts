@@ -17,8 +17,8 @@ export class TrpcClient implements API {
     return await this.client.instance.get.query({ name });
   }
 
-  async createInstance(templateName: string): Promise<Instance> {
-    return await this.client.instance.create.mutate({ templateName });
+  async createInstance(templateId: string): Promise<Instance> {
+    return await this.client.instance.create.mutate({ templateId });
   }
 
   async deleteInstance(name: string): Promise<void> {

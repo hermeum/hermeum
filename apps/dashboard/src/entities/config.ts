@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TemplateSchema } from "./template";
 
 export const InitConfigSchema = z.object({
-  templates: z.record(z.string(), TemplateSchema),
+  templates: z.array(TemplateSchema),
   allowed: z
     .object({
       openClawJsonPaths: z.array(z.string()).optional(),

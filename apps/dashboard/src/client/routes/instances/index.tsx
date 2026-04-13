@@ -57,7 +57,7 @@ function InstanceListPage() {
       >
         <option value="">Select a template…</option>
         {templates?.map((t) => (
-          <option key={t.name} value={t.name}>
+          <option key={t.id} value={t.id}>
             {t.name}
           </option>
         ))}

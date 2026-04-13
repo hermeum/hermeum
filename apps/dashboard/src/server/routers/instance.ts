@@ -19,9 +19,9 @@ export const instanceRouter = t.router({
     }),
 
   create: t.procedure
-    .input(z.object({ templateName: z.string().min(1) }))
+    .input(z.object({ templateId: z.string().min(1) }))
     .mutation(async ({ input }): Promise<Instance> => {
-      return await usecase.createOpenClawInstanceByTemplate(input.templateName);
+      return await usecase.createOpenClawInstanceByTemplate(input.templateId);
     }),
 
   delete: t.procedure

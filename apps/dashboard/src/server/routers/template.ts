@@ -20,8 +20,8 @@ export const templateRouter = t.router({
   }),
 
   get: t.procedure
-    .input(z.object({ name: z.string().min(1) }))
+    .input(z.object({ id: z.string().min(1) }))
     .query(({ input }): Template | null => {
-      return usecase.get(input.name);
+      return usecase.get(input.id);
     }),
 });

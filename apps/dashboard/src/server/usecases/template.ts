@@ -5,10 +5,10 @@ export class TemplateUseCase {
   constructor(private readonly config: ConfigAdaptor) {}
 
   list(): Template[] {
-    return Object.values(this.config.get().templates);
+    return this.config.get().templates;
   }
 
-  get(name: string): Template | null {
-    return this.config.get().templates[name] ?? null;
+  get(id: string): Template | null {
+    return this.config.get().templates.find((t) => t.id === id) ?? null;
   }
 }
