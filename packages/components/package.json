@@ -11,6 +11,8 @@
   },
   "scripts": {
     "add": "shadcn add --overwrite",
+    "dev": "tsc --noEmit --watch",
+    "build": "tsc --noEmit",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf *.tsbuildinfo"
@@ -31,6 +33,8 @@
   "devDependencies": {
     "@kubeclaw/eslint-config": "workspace:*",
     "@kubeclaw/typescript-config": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "shadcn": "^4.2.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.8.2"
