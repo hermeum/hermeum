@@ -1,6 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { Instance, Template } from "@/entities";
+import { Instance, InstancePhase, Template } from "@/entities";
 import {
   CreateOpenClawInstanceInput,
   PatchOpenClawInstanceInput,
@@ -32,6 +32,7 @@ const enum KubeClawLabelValue {
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
+    id: raw.metadata?.uid ?? "",
     name: raw.metadata?.name ?? "",
     openClawJson: raw.spec.config?.raw,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
@@ -43,6 +44,8 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
       size: raw.spec.storage?.persistence?.size ?? "",
       storageClass: raw.spec.storage?.persistence?.storageClass,
     },
+    status: raw.status?.phase as InstancePhase | undefined,
+    createdAt: raw.metadata?.creationTimestamp,
   };
 }
 

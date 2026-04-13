@@ -1,4 +1,5 @@
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import SuperJSON from "superjson";
 import type { AppRouter } from "@/server/trpc";
 import type { API } from "../usecases/adaptors/api";
 import type { Instance } from "@/entities/instance";
@@ -6,7 +7,7 @@ import type { Template } from "@/entities/template";
 
 export class TrpcClient implements API {
   private readonly client = createTRPCClient<AppRouter>({
-    links: [httpBatchLink({ url: "/trpc" })],
+    links: [httpBatchLink({ url: "/trpc", transformer: SuperJSON })],
   });
 
   async listInstances(): Promise<Instance[]> {

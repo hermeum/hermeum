@@ -457,6 +457,7 @@ export interface OpenClawInstanceSpec {
 // ─── OpenClawInstanceStatus ───────────────────────────────────────────────────
 
 export interface OpenClawInstanceStatus {
+  phase?: string;
   conditions?: k8s.V1Condition[];
   autoUpdate?: AutoUpdateStatus;
 }

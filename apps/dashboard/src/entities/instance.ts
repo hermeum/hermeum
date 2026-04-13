@@ -73,8 +73,25 @@ export const InstanceInputSchema = z.object({
 
 export type InstanceInput = z.infer<typeof InstanceInputSchema>;
 
+export const InstancePhaseSchema = z.enum([
+  "Pending",
+  "Provisioning",
+  "Running",
+  "Degraded",
+  "Failed",
+  "Terminating",
+  "BackingUp",
+  "Restoring",
+  "Updating",
+  "Suspended",
+]);
+export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
+
 export const InstanceSchema = InstanceInputSchema.extend({
+  id: z.string().min(1),
   name: z.string().min(1),
+  status: InstancePhaseSchema.optional(),
+  createdAt: z.date().optional(),
 });
 
 export type Instance = z.infer<typeof InstanceSchema>;
