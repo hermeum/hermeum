@@ -1,9 +1,8 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useState } from "react";
-import { queryClient } from "@/router";
-import { instanceUseCase, templateUseCase } from "@/client/container";
+import { useTRPC } from "@/router";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   Table,
@@ -23,30 +22,32 @@ function formatDate(date: Date | undefined): string {
   return format(date, "MMM d, yyyy");
 }
 
-
 function InstanceListPage() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
   const {
     data: instances,
     isPending,
     error,
-  } = useQuery({
-    queryKey: ["instances"],
-    queryFn: () => instanceUseCase.list(),
-  });
-  const { data: templates, isPending: isTemplatesLoading } = useQuery({
-    queryKey: ["templates"],
-    queryFn: () => templateUseCase.list(),
-  });
+  } = useQuery(trpc.instance.list.queryOptions());
+  const { data: templates, isPending: isTemplatesLoading } = useQuery(
+    trpc.template.list.queryOptions(),
+  );
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
-  const { mutate: createInstance, isPending: isCreating } = useMutation({
-    mutationFn: (templateName: string) => instanceUseCase.create(templateName),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instances"] }),
-  });
-  const { mutate: deleteInstance } = useMutation({
-    mutationFn: (name: string) => instanceUseCase.delete(name),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instances"] }),
-  });
+  const { mutate: createInstance, isPending: isCreating } = useMutation(
+    trpc.instance.create.mutationOptions({
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
+    }),
+  );
+  const { mutate: deleteInstance } = useMutation(
+    trpc.instance.delete.mutationOptions({
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
+    }),
+  );
 
   if (isPending) return <div>Loading instances…</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -69,7 +70,7 @@ function InstanceListPage() {
         </select>
         <Button
           disabled={isCreating || !selectedTemplate}
-          onClick={() => createInstance(selectedTemplate)}
+          onClick={() => createInstance({ templateId: selectedTemplate })}
         >
           {isCreating ? "Creating…" : "Create instance"}
         </Button>
@@ -100,7 +101,7 @@ function InstanceListPage() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => deleteInstance(instance.name)}
+                    onClick={() => deleteInstance({ name: instance.name })}
                   >
                     Delete
                   </Button>

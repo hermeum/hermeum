@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { instanceUseCase } from "@/client/container";
+import { useTRPC } from "@/router";
 
 export const Route = createFileRoute("/instances/$name")({
   component: InstanceDetailPage,
@@ -8,14 +8,12 @@ export const Route = createFileRoute("/instances/$name")({
 
 function InstanceDetailPage() {
   const { name } = Route.useParams();
+  const trpc = useTRPC();
   const {
     data: instance,
     isPending,
     error,
-  } = useQuery({
-    queryKey: ["instances", name],
-    queryFn: () => instanceUseCase.get(name),
-  });
+  } = useQuery(trpc.instance.get.queryOptions({ name }));
 
   if (isPending) return <div>Loading…</div>;
   if (error) return <div>Error: {error.message}</div>;
