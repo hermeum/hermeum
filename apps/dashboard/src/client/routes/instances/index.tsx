@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { queryClient, trpc } from "@/router";
+import { queryClient } from "@/router";
+import { instanceUseCase, templateUseCase } from "@/client/container";
 import { Button } from "@kubeclaw/components/ui/button";
 
 export const Route = createFileRoute("/instances/")({
@@ -18,19 +19,23 @@ function InstanceItem({ name, onDelete }: { name: string; onDelete: () => void }
 }
 
 function InstanceListPage() {
-  const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
-  const { data: templates, isPending: isTemplatesLoading } = useQuery(
-    trpc.template.list.queryOptions()
-  );
+  const { data: instances, isPending, error } = useQuery({
+    queryKey: ["instances"],
+    queryFn: () => instanceUseCase.list(),
+  });
+  const { data: templates, isPending: isTemplatesLoading } = useQuery({
+    queryKey: ["templates"],
+    queryFn: () => templateUseCase.list(),
+  });
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
   const { mutate: createInstance, isPending: isCreating } = useMutation({
-    ...trpc.instance.create.mutationOptions(),
-    onSuccess: () => queryClient.invalidateQueries(trpc.instance.list.queryOptions()),
+    mutationFn: (templateName: string) => instanceUseCase.create(templateName),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instances"] }),
   });
   const { mutate: deleteInstance } = useMutation({
-    ...trpc.instance.delete.mutationOptions(),
-    onSuccess: () => queryClient.invalidateQueries(trpc.instance.list.queryOptions()),
+    mutationFn: (name: string) => instanceUseCase.delete(name),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instances"] }),
   });
 
   if (isPending) return <div>Loading instances…</div>;
@@ -53,7 +58,7 @@ function InstanceListPage() {
       </select>
       <Button
         disabled={isCreating || !selectedTemplate}
-        onClick={() => createInstance({ templateName: selectedTemplate })}
+        onClick={() => createInstance(selectedTemplate)}
       >
         {isCreating ? "Creating…" : "Create instance"}
       </Button>
@@ -63,7 +68,7 @@ function InstanceListPage() {
           <InstanceItem
             key={i.name}
             name={i.name}
-            onDelete={() => deleteInstance({ name: i.name })}
+            onDelete={() => deleteInstance(i.name)}
           />
         ))}
       </ul>
