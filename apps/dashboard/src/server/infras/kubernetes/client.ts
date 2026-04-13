@@ -47,7 +47,7 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
       size: raw.spec.storage?.persistence?.size ?? "",
       storageClass: raw.spec.storage?.persistence?.storageClass,
     },
-    status: raw.status?.phase as InstancePhase | undefined,
+    status: { phase: raw.status?.phase as InstancePhase | undefined },
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -70,17 +70,6 @@ function instanceInputToSpec(instanceInput: InstanceInput): Partial<OpenClawInst
   if (instanceInput.openClawJson !== undefined) {
     spec.config = { raw: instanceInput.openClawJson };
   }
-  if (instanceInput.storage !== undefined) {
-    const { storage } = instanceInput;
-    spec.storage = {
-      persistence: {
-        enabled: storage.enabled,
-        size: storage.size,
-        ...(storage.storageClass !== undefined && { storageClass: storage.storageClass }),
-      },
-    };
-  }
-
   spec.selfConfigure = {
     enabled: true,
     allowedActions: ["skills", "config", "workspaceFiles", "envVars"],
@@ -107,18 +96,6 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   if (instance.plugins !== undefined) {
     spec.plugins = instance.plugins;
   }
-  if (instance.storage !== undefined) {
-    spec.storage = {
-      persistence: {
-        enabled: instance.storage.enabled,
-        size: instance.storage.size,
-        ...(instance.storage.storageClass !== undefined && {
-          storageClass: instance.storage.storageClass,
-        }),
-      },
-    };
-  }
-
   return spec;
 }
 

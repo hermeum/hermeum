@@ -69,7 +69,6 @@ export const InstanceInputSchema = z.object({
   workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
-  storage: StorageSchema,
 });
 
 export type InstanceInput = z.infer<typeof InstanceInputSchema>;
@@ -88,9 +87,17 @@ export const InstancePhaseSchema = z.enum([
 ]);
 export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
 
+export const InstanceStatusSchema = z
+  .object({
+    phase: InstancePhaseSchema.optional(),
+  })
+  .optional();
+
+export type InstanceStatus = z.infer<typeof InstanceStatusSchema>;
+
 export const InstanceSchema = InstanceInputSchema.extend({
   id: z.string().min(1),
-  status: InstancePhaseSchema.optional(),
+  status: InstanceStatusSchema,
   createdAt: z.date().optional(),
 });
 
