@@ -7,28 +7,37 @@ This is a pnpm monorepo managed with Turborepo.
 ```
 kubeclaw/
 ├── apps/
-│   └── dashboard/        # Main web application (Next.js)
+│   └── dashboard/        # Main web application (Vite + React + TanStack Router)
 ├── packages/
-│   ├── components/         # Shared components
+│   ├── components/       # Shared Shadcn/ui components
 │   ├── eslint-config/    # Shared ESLint configuration
 │   └── typescript-config/ # Shared TypeScript configuration
+├── testdata/
+│   └── k8s/              # Kubernetes test fixtures
 ├── package.json
 ├── pnpm-workspace.yaml
 └── turbo.json
 ```
 
-## apps/dashboard — Clean Architecture
+## apps/dashboard — Architecture
 
-The server-side code in `apps/dashboard/src/server/` follows **clean architecture**:
+The dashboard is a full-stack app with a client/server split:
 
 ```
-src/server/
-├── usecases/             # Application business logic (use cases)
-│   └── adaptors/         # Interfaces/ports that use cases depend on
-├── infras/               # Infrastructure implementations (DB, external APIs, etc.)
-├── routers/              # tRPC routers — entry points that wire use cases together
-├── trpc.ts               # tRPC instance and context setup
-└── server.ts             # Server entry point
+src/
+├── client/
+│   ├── cmd/              # Client entry commands
+│   └── routes/           # TanStack Router file-based routes
+├── entities/             # Shared domain types (used by both client and server)
+├── server/               # Server-side code (clean architecture)
+│   ├── usecases/         # Application business logic (use cases)
+│   │   └── adaptors/     # Interfaces/ports that use cases depend on
+│   ├── infras/           # Infrastructure implementations
+│   │   ├── kubernetes/   # Kubernetes API client and types
+│   │   └── ...
+│   ├── routers/          # tRPC routers — entry points that wire use cases together
+├── main.tsx
+└── router.tsx
 ```
 
 ### Layer responsibilities
