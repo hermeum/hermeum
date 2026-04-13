@@ -2,7 +2,7 @@ import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
 import { Instance, SkillSchema, EnvVarSchema } from "@/entities";
-import { InstanceUseCase } from "../usecases/openclaw-instance";
+import { InstanceUseCase } from "../usecases/instance";
 
 const usecase = new InstanceUseCase();
 
