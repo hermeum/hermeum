@@ -36,7 +36,7 @@ const enum KubeClawAnnotation {
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
     id: raw.metadata?.name ?? "",
-    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name] ?? "",
+    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
     openClawJson: raw.spec.config?.raw,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     workspaceFiles: raw.spec.workspace?.initialFiles,

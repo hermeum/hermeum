@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@kubeclaw/components/ui/table";
+import { Template } from "@/entities";
 
 export const Route = createFileRoute("/instances/")({
   component: InstanceListPage,
@@ -26,31 +27,30 @@ function InstanceListPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const {
-    data: instances,
-    isPending,
-    error,
-  } = useQuery(trpc.instance.list.queryOptions());
+  const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
   const { data: templates, isPending: isTemplatesLoading } = useQuery(
-    trpc.template.list.queryOptions(),
+    trpc.template.list.queryOptions()
   );
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
   const { mutate: createInstance, isPending: isCreating } = useMutation(
     trpc.instance.create.mutationOptions({
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
-    }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
+    })
   );
   const { mutate: deleteInstance } = useMutation(
     trpc.instance.delete.mutationOptions({
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
-    }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
+    })
   );
 
-  if (isPending) return <div>Loading instances…</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  if (isPending) {
+    return <div>Loading instances…</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
 
   return (
     <div>
@@ -70,7 +70,14 @@ function InstanceListPage() {
         </select>
         <Button
           disabled={isCreating || !selectedTemplate}
-          onClick={() => createInstance({ templateId: selectedTemplate })}
+          onClick={() => {
+            const {
+              id: _id,
+              name: _name,
+              ...instanceInput
+            } = templates?.find((t) => t.id === selectedTemplate) as Template;
+            createInstance({ ...instanceInput });
+          }}
         >
           {isCreating ? "Creating…" : "Create instance"}
         </Button>
@@ -90,18 +97,18 @@ function InstanceListPage() {
           </TableHeader>
           <TableBody>
             {instances?.map((instance) => (
-              <TableRow key={instance.name}>
+              <TableRow key={instance.agentName}>
                 <TableCell className="max-w-24 truncate font-mono text-xs text-muted-foreground">
                   {instance.id}
                 </TableCell>
-                <TableCell className="font-medium">{instance.name}</TableCell>
+                <TableCell className="font-medium">{instance.agentName}</TableCell>
                 <TableCell>{instance.status ?? "—"}</TableCell>
                 <TableCell>{formatDate(instance.createdAt)}</TableCell>
                 <TableCell>
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => deleteInstance({ name: instance.name })}
+                    onClick={() => deleteInstance({ id: instance.id })}
                   >
                     Delete
                   </Button>
