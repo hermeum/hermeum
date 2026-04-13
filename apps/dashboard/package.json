@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server/server.ts",
-    "build": "vite build",
+    "build": "vite build & vite build --mode server & vite build --mode cmd & wait",
     "start": "NODE_ENV=production tsx src/server/server.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@kubeclaw/components": "workspace:*",
-    "@kubeclaw/entities": "workspace:*",
     "@kubernetes/client-node": "^1.4.0",
     "@tanstack/react-query": "^5.67.3",
     "@tanstack/react-router": "^1.114.22",

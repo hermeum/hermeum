@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 
-import { TemplateSchema, InitConfig, InitConfigSchema } from "@kubeclaw/entities";
+import { TemplateSchema, InitConfig, InitConfigSchema } from "@/entities";
 import { ConfigAdaptor } from "../usecases/adaptors/config";
 
 export class LocalConfig implements ConfigAdaptor {

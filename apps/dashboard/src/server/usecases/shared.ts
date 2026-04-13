@@ -1,4 +1,4 @@
-import { OpenClawJson, Skill } from "@kubeclaw/entities";
+import { OpenClawJson, Skill } from "@/entities";
 import jsonPatch from "fast-json-patch";
 
 import { ConfigAdaptor } from "./adaptors/config";

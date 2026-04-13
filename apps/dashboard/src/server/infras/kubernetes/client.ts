@@ -1,6 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { Instance, Template } from "@kubeclaw/entities";
+import { Instance, Template } from "@/entities";
 import {
   CreateOpenClawInstanceInput,
   PatchOpenClawInstanceInput,

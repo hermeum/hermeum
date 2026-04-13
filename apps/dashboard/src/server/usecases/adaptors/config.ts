@@ -1,4 +1,4 @@
-import { InitConfig } from "@kubeclaw/entities";
+import { InitConfig } from "@/entities";
 
 export interface ConfigAdaptor {
   get(): InitConfig;

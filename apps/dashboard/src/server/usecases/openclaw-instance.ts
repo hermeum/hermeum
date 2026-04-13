@@ -1,4 +1,4 @@
-import { Instance, Skill, SkillSchema, EnvVar } from "@kubeclaw/entities";
+import { Instance, Skill, SkillSchema, EnvVar } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";

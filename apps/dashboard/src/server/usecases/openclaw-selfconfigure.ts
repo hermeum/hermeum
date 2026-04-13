@@ -1,4 +1,4 @@
-import { OpenClawJson } from "@kubeclaw/entities";
+import { OpenClawJson } from "@/entities";
 
 import { LocalConfig } from "../infras/local-config";
 import { ConfigAdaptor } from "./adaptors/config";

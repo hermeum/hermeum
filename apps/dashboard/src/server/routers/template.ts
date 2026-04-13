@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Template } from "@kubeclaw/entities";
+import { Template } from "@/entities";
 import { LocalConfig } from "../infras/local-config";
 import { TemplateUseCase } from "../usecases/template";
 

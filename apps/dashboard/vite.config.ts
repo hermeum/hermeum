@@ -34,6 +34,22 @@ const serverBuildConfig: BuildEnvironmentOptions = {
   },
 };
 
+// Command Build Configuration
+const cmdBuildConfig: BuildEnvironmentOptions = {
+  ssr: true,
+  outDir: "dist/cmd",
+  copyPublicDir: false,
+  emptyOutDir: true,
+  rollupOptions: {
+    input: path.resolve(__dirname, "src/cmd/index.ts"),
+    output: {
+      entryFileNames: "[name].js",
+      chunkFileNames: "assets/[name]-[hash].js",
+      assetFileNames: "assets/[name]-[hash][extname]",
+    },
+  },
+};
+
 export default defineConfig((configEnv) => {
   return {
     plugins: [
@@ -46,6 +62,9 @@ export default defineConfig((configEnv) => {
       react(),
       tsConfigPaths({ projects: ["./tsconfig.json"] }),
     ],
-    build: configEnv.mode === "server" ? serverBuildConfig : clientBuildConfig,
+    build:
+      configEnv.mode === "server" ? serverBuildConfig
+      : configEnv.mode === "cmd" ? cmdBuildConfig
+      : clientBuildConfig,
   };
 });

@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
-import { Instance, SkillSchema, EnvVarSchema } from "@kubeclaw/entities";
+import { Instance, SkillSchema, EnvVarSchema } from "@/entities";
 import { InstanceUseCase } from "../usecases/openclaw-instance";
 
 const usecase = new InstanceUseCase();

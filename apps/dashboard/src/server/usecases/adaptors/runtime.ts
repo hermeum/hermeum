@@ -1,4 +1,4 @@
-import { Instance, Template } from "@kubeclaw/entities";
+import { Instance, Template } from "@/entities";
 
 export type CreateOpenClawInstanceInput = { name: string; template: Template };
 export type PatchOpenClawInstanceInput = { name: string; patch: Partial<Omit<Instance, "name">> };

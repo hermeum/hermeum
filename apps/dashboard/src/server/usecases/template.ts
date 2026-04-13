@@ -1,4 +1,4 @@
-import { Template } from "@kubeclaw/entities";
+import { Template } from "@/entities";
 import { ConfigAdaptor } from "./adaptors/config";
 
 export class TemplateUseCase {
