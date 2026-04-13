@@ -9,23 +9,23 @@ export class TrpcClient implements API {
     links: [httpBatchLink({ url: "/trpc" })],
   });
 
-  listInstances(): Promise<Instance[]> {
-    return this.client.instance.list.query();
+  async listInstances(): Promise<Instance[]> {
+    return await this.client.instance.list.query();
   }
 
-  getInstance(name: string): Promise<Instance | null> {
-    return this.client.instance.get.query({ name });
+  async getInstance(name: string): Promise<Instance | null> {
+    return await this.client.instance.get.query({ name });
   }
 
-  createInstance(templateName: string): Promise<Instance> {
-    return this.client.instance.create.mutate({ templateName });
+  async createInstance(templateName: string): Promise<Instance> {
+    return await this.client.instance.create.mutate({ templateName });
   }
 
-  deleteInstance(name: string): Promise<void> {
-    return this.client.instance.delete.mutate({ name });
+  async deleteInstance(name: string): Promise<void> {
+    return await this.client.instance.delete.mutate({ name });
   }
 
-  listTemplates(): Promise<Template[]> {
-    return this.client.template.list.query();
+  async listTemplates(): Promise<Template[]> {
+    return await this.client.template.list.query();
   }
 }

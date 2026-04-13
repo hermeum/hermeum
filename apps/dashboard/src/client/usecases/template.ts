@@ -4,7 +4,7 @@ import type { API } from "./adaptors/api";
 export class TemplateUseCase {
   constructor(private readonly api: API) {}
 
-  list(): Promise<Template[]> {
-    return this.api.listTemplates();
+  async list(): Promise<Template[]> {
+    return await this.api.listTemplates();
   }
 }
