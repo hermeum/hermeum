@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 
+import "@kubeclaw/components/index.css";
+
 const router = getRouter();
 
 createRoot(document.getElementById("root")!).render(

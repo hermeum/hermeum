@@ -2,7 +2,8 @@
   "extends": "@kubeclaw/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@kubeclaw/components/*": ["../../packages/components/*"]
     }
   },
   "include": ["src", "app.config.ts"]

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { queryClient, trpc } from "@/router";
+import { Button } from "@kubeclaw/components/ui/button";
 
 export const Route = createFileRoute("/instances/")({
   component: InstanceListPage,
@@ -11,7 +12,7 @@ function InstanceItem({ name, onDelete }: { name: string; onDelete: () => void }
   return (
     <li>
       <strong>{name}</strong>
-      <button onClick={onDelete}>Delete</button>
+      <Button variant="destructive" onClick={onDelete}>Delete</Button>
     </li>
   );
 }
@@ -50,12 +51,12 @@ function InstanceListPage() {
           </option>
         ))}
       </select>
-      <button
+      <Button
         disabled={isCreating || !selectedTemplate}
         onClick={() => createInstance({ templateName: selectedTemplate })}
       >
         {isCreating ? "Creating…" : "Create instance"}
-      </button>
+      </Button>
       {instances?.length === 0 && <p>No instances running.</p>}
       <ul>
         {instances?.map((i) => (

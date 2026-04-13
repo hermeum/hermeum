@@ -1,0 +1,9 @@
+{
+  "extends": "@kubeclaw/typescript-config/react-library.json",
+  "compilerOptions": {
+    "paths": {
+      "@kubeclaw/components/*": ["./*"]
+    }
+  },
+  "include": ["ui", "lib", "hooks"]
+}
