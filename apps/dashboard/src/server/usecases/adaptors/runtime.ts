@@ -1,12 +1,12 @@
-import { Instance, Template } from "@/entities";
+import { Instance, InstanceInput } from "@/entities";
 
-export type CreateOpenClawInstanceInput = { name: string; template: Template };
-export type PatchOpenClawInstanceInput = { name: string; patch: Partial<Omit<Instance, "name">> };
+export type CreateOpenClawInstanceInput = { id: string; instanceInput: InstanceInput };
+export type PatchOpenClawInstanceInput = { id: string; patch: Partial<Omit<Instance, "id">> };
 
 export interface Runtime {
   listOpenClawInstances: () => Promise<Instance[]>;
-  getOpenClawInstance: (name: string) => Promise<Instance | null>;
-  createOpenClawInstanceByTemplate: (input: CreateOpenClawInstanceInput) => Promise<Instance>;
+  getOpenClawInstance: (id: string) => Promise<Instance | null>;
+  createOpenClawInstance: (input: CreateOpenClawInstanceInput) => Promise<Instance>;
   patchOpenClawInstance: (input: PatchOpenClawInstanceInput) => Promise<Instance>;
-  deleteOpenClawInstance: (name: string) => Promise<void>;
+  deleteOpenClawInstance: (id: string) => Promise<void>;
 }

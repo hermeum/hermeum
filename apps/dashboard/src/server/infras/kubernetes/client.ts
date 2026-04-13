@@ -1,6 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { Instance, InstancePhase, Template } from "@/entities";
+import { Instance, InstanceInput, InstancePhase } from "@/entities";
 import {
   CreateOpenClawInstanceInput,
   PatchOpenClawInstanceInput,
@@ -29,11 +29,14 @@ const enum KubeClawLabel {
 const enum KubeClawLabelValue {
   ManagedBy = "kubeclaw",
 }
+const enum KubeClawAnnotation {
+  Name = "kubeclaw.xyz/agent-name",
+}
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
-    id: raw.metadata?.uid ?? "",
-    name: raw.metadata?.name ?? "",
+    id: raw.metadata?.name ?? "",
+    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name] ?? "",
     openClawJson: raw.spec.config?.raw,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     workspaceFiles: raw.spec.workspace?.initialFiles,
@@ -49,26 +52,26 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   };
 }
 
-function templateToSpec(template: Template): Partial<OpenClawInstanceSpec> {
+function instanceInputToSpec(instanceInput: InstanceInput): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
 
-  if (template.workspaceFiles !== undefined) {
-    spec.workspace = { initialFiles: template.workspaceFiles };
+  if (instanceInput.workspaceFiles !== undefined) {
+    spec.workspace = { initialFiles: instanceInput.workspaceFiles };
   }
-  if (template.skills !== undefined) {
-    spec.skills = template.skills;
+  if (instanceInput.skills !== undefined) {
+    spec.skills = instanceInput.skills;
   }
-  if (template.plugins !== undefined) {
-    spec.plugins = template.plugins;
+  if (instanceInput.plugins !== undefined) {
+    spec.plugins = instanceInput.plugins;
   }
-  if (template.env !== undefined) {
-    spec.env = template.env.map((e) => ({ name: e.name, value: e.value }));
+  if (instanceInput.env !== undefined) {
+    spec.env = instanceInput.env.map((e) => ({ name: e.name, value: e.value }));
   }
-  if (template.openClawJson !== undefined) {
-    spec.config = { raw: template.openClawJson };
+  if (instanceInput.openClawJson !== undefined) {
+    spec.config = { raw: instanceInput.openClawJson };
   }
-  if (template.storage !== undefined) {
-    const { storage } = template;
+  if (instanceInput.storage !== undefined) {
+    const { storage } = instanceInput;
     spec.storage = {
       persistence: {
         enabled: storage.enabled,
@@ -139,14 +142,14 @@ export class KubernetesClient implements Runtime {
     return (body as OpenClawInstanceList).items.map(mapOpenClawInstance);
   }
 
-  async getOpenClawInstance(name: string): Promise<Instance | null> {
+  async getOpenClawInstance(id: string): Promise<Instance | null> {
     try {
       const body = await this.customObjectsApi.getNamespacedCustomObject({
         namespace: this.namespace,
         group: OpenClawGroup.Default,
         version: OpenClawVersion.V1Alpha1,
         plural: OpenClawPlural.Instances,
-        name,
+        name: id,
       });
       return mapOpenClawInstance(body as OpenClawInstance);
     } catch {
@@ -154,11 +157,11 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createOpenClawInstanceByTemplate({
-    name,
-    template,
+  async createOpenClawInstance({
+    id,
+    instanceInput,
   }: CreateOpenClawInstanceInput): Promise<Instance> {
-    const spec = templateToSpec(template);
+    const spec = instanceInputToSpec(instanceInput);
 
     const body = await this.customObjectsApi.createNamespacedCustomObject({
       namespace: this.namespace,
@@ -169,9 +172,10 @@ export class KubernetesClient implements Runtime {
         apiVersion: `${OpenClawGroup.Default}/${OpenClawVersion.V1Alpha1}`,
         kind: "OpenClawInstance",
         metadata: {
-          name,
+          name: id,
           namespace: this.namespace,
           labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
+          annotations: { [KubeClawAnnotation.Name]: instanceInput.agentName },
         },
         spec,
       },
@@ -179,28 +183,32 @@ export class KubernetesClient implements Runtime {
     return mapOpenClawInstance(body as OpenClawInstance);
   }
 
-  async patchOpenClawInstance({ name, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
+  async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
+    const patchBody: Record<string, unknown> = { spec: instanceToSpec(patch) };
+    if (patch.agentName !== undefined) {
+      patchBody.metadata = { annotations: { [KubeClawAnnotation.Name]: patch.agentName } };
+    }
     const body = await this.customObjectsApi.patchNamespacedCustomObject(
       {
         namespace: this.namespace,
         group: OpenClawGroup.Default,
         version: OpenClawVersion.V1Alpha1,
         plural: OpenClawPlural.Instances,
-        name,
-        body: { spec: instanceToSpec(patch) },
+        name: id,
+        body: patchBody,
       },
       k8s.setHeaderOptions("Content-Type", k8s.PatchStrategy.MergePatch)
     );
     return mapOpenClawInstance(body as OpenClawInstance);
   }
 
-  async deleteOpenClawInstance(name: string): Promise<void> {
+  async deleteOpenClawInstance(id: string): Promise<void> {
     await this.customObjectsApi.deleteNamespacedCustomObject({
       namespace: this.namespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
-      name,
+      name: id,
     });
   }
 }

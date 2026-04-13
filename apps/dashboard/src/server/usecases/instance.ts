@@ -1,4 +1,4 @@
-import { Instance, Skill, SkillSchema, EnvVar } from "@/entities";
+import { Instance, InstanceInput, Skill, SkillSchema, EnvVar } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
@@ -18,106 +18,101 @@ export class InstanceUseCase extends SharedUseCase {
     return this.runtime.listOpenClawInstances();
   }
 
-  async getOpenClawInstance(name: string): Promise<Instance | null> {
-    return this.runtime.getOpenClawInstance(name);
+  async getOpenClawInstance(id: string): Promise<Instance | null> {
+    return this.runtime.getOpenClawInstance(id);
   }
 
-  async createOpenClawInstanceByTemplate(templateId: string): Promise<Instance> {
-    const template = this.config.get().templates.find((t) => t.id === templateId) ?? null;
-    if (!template) {
-      throw new Error(`Template "${templateId}" not found`);
-    }
-
-    const name = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;
-    return this.runtime.createOpenClawInstanceByTemplate({ name, template });
+  async createOpenClawInstance(instanceInput: InstanceInput): Promise<Instance> {
+    const id = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;
+    return this.runtime.createOpenClawInstance({ id, instanceInput });
   }
 
-  async deleteOpenClawInstance(name: string): Promise<void> {
-    const instance = await this.runtime.getOpenClawInstance(name);
+  async deleteOpenClawInstance(id: string): Promise<void> {
+    const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
-      throw new Error(`OpenClawInstance ${name} not found`);
+      throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.deleteOpenClawInstance(name);
+    return this.runtime.deleteOpenClawInstance(id);
   }
 
-  async addEnv(instanceName: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceName);
+  async addEnv(instanceId: string, envVar: EnvVar): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
-      throw new Error(`OpenClawInstance ${instanceName} not found`);
+      throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
     const alreadyExists = instance.env?.some((e) => e.name === envVar.name);
     if (alreadyExists) {
       throw new Error(`Env var "${envVar.name}" already exists`);
     }
     return this.runtime.patchOpenClawInstance({
-      name: instanceName,
+      id: instanceId,
       patch: { env: [...(instance.env ?? []), envVar] },
     });
   }
 
-  async updateEnv(instanceName: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceName);
+  async updateEnv(instanceId: string, envVar: EnvVar): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
-      throw new Error(`OpenClawInstance ${instanceName} not found`);
+      throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
     const envVarExists = instance.env?.some((e) => e.name === envVar.name);
     if (!envVarExists) {
       throw new Error(`Env var "${envVar.name}" not found`);
     }
     return this.runtime.patchOpenClawInstance({
-      name: instanceName,
+      id: instanceId,
       patch: { env: instance.env?.map((e) => (e.name === envVar.name ? envVar : e)) },
     });
   }
 
-  async removeEnv(instanceName: string, envName: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceName);
+  async removeEnv(instanceId: string, envName: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
-      throw new Error(`OpenClawInstance ${instanceName} not found`);
+      throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
     const envVarExists = instance.env?.some((e) => e.name === envName);
     if (!envVarExists) {
       throw new Error(`Env var "${envName}" not found`);
     }
     return this.runtime.patchOpenClawInstance({
-      name: instanceName,
+      id: instanceId,
       patch: { env: instance.env?.filter((e) => e.name !== envName) },
     });
   }
 
-  async installSkill(instanceName: string, skill: Skill): Promise<Instance> {
+  async installSkill(instanceId: string, skill: Skill): Promise<Instance> {
     SkillSchema.parse(skill);
     this.checkSkillAllowed(skill);
 
-    const instance = await this.runtime.getOpenClawInstance(instanceName);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
-      throw new Error(`OpenClawInstance "${instanceName}" not found`);
+      throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
     const current = instance.skills ?? [];
     if (current.includes(skill)) {
-      throw new Error(`Skill "${skill}" is already installed on instance "${instanceName}"`);
+      throw new Error(`Skill "${skill}" is already installed on instance "${instanceId}"`);
     }
     if (current.length >= 20) {
       throw new Error("Instance already has the maximum of 20 skills");
     }
     return this.runtime.patchOpenClawInstance({
-      name: instanceName,
+      id: instanceId,
       patch: { skills: [...current, skill] },
     });
   }
 
-  async uninstallSkill(instanceName: string, skill: Skill): Promise<Instance> {
+  async uninstallSkill(instanceId: string, skill: Skill): Promise<Instance> {
     this.checkSkillAllowed(skill);
-    const instance = await this.runtime.getOpenClawInstance(instanceName);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
-      throw new Error(`OpenClawInstance "${instanceName}" not found`);
+      throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
     const current = instance.skills ?? [];
     if (!current.includes(skill)) {
-      throw new Error(`Skill "${skill}" is not installed on instance "${instanceName}"`);
+      throw new Error(`Skill "${skill}" is not installed on instance "${instanceId}"`);
     }
     return this.runtime.patchOpenClawInstance({
-      name: instanceName,
+      id: instanceId,
       patch: { skills: current.filter((s) => s !== skill) },
     });
   }

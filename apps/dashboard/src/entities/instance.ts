@@ -63,6 +63,7 @@ export const EnvSchema = z.array(EnvVarSchema).optional();
 export type Env = z.infer<typeof EnvSchema>;
 
 export const InstanceInputSchema = z.object({
+  agentName: z.string().min(1),
   openClawJson: OpenClawJsonSchema,
   env: EnvSchema,
   workspaceFiles: WorkspaceFilesSchema,
@@ -89,7 +90,6 @@ export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
 
 export const InstanceSchema = InstanceInputSchema.extend({
   id: z.string().min(1),
-  name: z.string().min(1),
   status: InstancePhaseSchema.optional(),
   createdAt: z.date().optional(),
 });
