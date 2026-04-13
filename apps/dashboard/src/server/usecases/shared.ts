@@ -33,8 +33,8 @@ export abstract class SharedUseCase {
   constructor(protected readonly config: ConfigAdaptor) {}
 
   protected checkConfigPatchAllowed(originalConfig: OpenClawJson, inputConfig: OpenClawJson): void {
-    const { allowedConfigPaths } = this.config.get();
-    if (allowedConfigPaths === undefined) {
+    const { openClawJsonPaths } = this.config.get().allowed ?? {};
+    if (openClawJsonPaths === undefined) {
       return;
     }
 
@@ -44,8 +44,8 @@ export abstract class SharedUseCase {
     const ops = compare(original, merged);
 
     for (const op of ops) {
-      const isAllowed = allowedConfigPaths.some(
-        (allowed) => op.path === allowed || op.path.startsWith(allowed + "/")
+      const isAllowed = openClawJsonPaths.some(
+        (pattern) => new RegExp(pattern).test(op.path)
       );
       if (!isAllowed) {
         throw new Error(
@@ -56,11 +56,11 @@ export abstract class SharedUseCase {
   }
 
   protected checkWorkspaceFileAllowed(filePath: string): void {
-    const { allowedWorkspaceFiles } = this.config.get();
-    if (allowedWorkspaceFiles === undefined) {
+    const { workspaceFiles } = this.config.get().allowed ?? {};
+    if (workspaceFiles === undefined) {
       return;
     }
-    if (!allowedWorkspaceFiles.includes(filePath)) {
+    if (!workspaceFiles.some((pattern) => new RegExp(pattern).test(filePath))) {
       throw new Error(
         `Workspace file operation is not allowed: "${filePath}" is not in the allowed list`
       );
@@ -68,11 +68,11 @@ export abstract class SharedUseCase {
   }
 
   protected checkSkillAllowed(skill: Skill): void {
-    const { allowedSkills } = this.config.get();
-    if (allowedSkills === undefined) {
+    const { skills } = this.config.get().allowed ?? {};
+    if (skills === undefined) {
       return;
     }
-    const isAllowed = allowedSkills.some((pattern) => new RegExp(pattern).test(skill));
+    const isAllowed = skills.some((pattern) => new RegExp(pattern).test(skill));
     if (!isAllowed) {
       throw new Error(`Skill "${skill}" is not in the allowed list`);
     }
