@@ -8,7 +8,11 @@ export const Route = createFileRoute("/instances/$name")({
 
 function InstanceDetailPage() {
   const { name } = Route.useParams();
-  const { data: instance, isPending, error } = useQuery({
+  const {
+    data: instance,
+    isPending,
+    error,
+  } = useQuery({
     queryKey: ["instances", name],
     queryFn: () => instanceUseCase.get(name),
   });

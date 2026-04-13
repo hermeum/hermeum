@@ -44,9 +44,7 @@ export abstract class SharedUseCase {
     const ops = compare(original, merged);
 
     for (const op of ops) {
-      const isAllowed = openClawJsonPaths.some(
-        (pattern) => new RegExp(pattern).test(op.path)
-      );
+      const isAllowed = openClawJsonPaths.some((pattern) => new RegExp(pattern).test(op.path));
       if (!isAllowed) {
         throw new Error(
           `Config patch is not allowed: path "${op.path}" is not in the allowed list`

@@ -13,13 +13,19 @@ function InstanceItem({ name, onDelete }: { name: string; onDelete: () => void }
   return (
     <li>
       <strong>{name}</strong>
-      <Button variant="destructive" onClick={onDelete}>Delete</Button>
+      <Button variant="destructive" onClick={onDelete}>
+        Delete
+      </Button>
     </li>
   );
 }
 
 function InstanceListPage() {
-  const { data: instances, isPending, error } = useQuery({
+  const {
+    data: instances,
+    isPending,
+    error,
+  } = useQuery({
     queryKey: ["instances"],
     queryFn: () => instanceUseCase.list(),
   });
@@ -65,11 +71,7 @@ function InstanceListPage() {
       {instances?.length === 0 && <p>No instances running.</p>}
       <ul>
         {instances?.map((i) => (
-          <InstanceItem
-            key={i.name}
-            name={i.name}
-            onDelete={() => deleteInstance(i.name)}
-          />
+          <InstanceItem key={i.name} name={i.name} onDelete={() => deleteInstance(i.name)} />
         ))}
       </ul>
     </div>
