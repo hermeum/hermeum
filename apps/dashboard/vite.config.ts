@@ -41,7 +41,7 @@ const cmdBuildConfig: BuildEnvironmentOptions = {
   copyPublicDir: false,
   emptyOutDir: true,
   rollupOptions: {
-    input: path.resolve(__dirname, "src/cmd/index.ts"),
+    input: path.resolve(__dirname, "src/client/cmd/index.ts"),
     output: {
       entryFileNames: "[name].js",
       chunkFileNames: "assets/[name]-[hash].js",
@@ -63,8 +63,10 @@ export default defineConfig((configEnv) => {
       tsConfigPaths({ projects: ["./tsconfig.json"] }),
     ],
     build:
-      configEnv.mode === "server" ? serverBuildConfig
-      : configEnv.mode === "cmd" ? cmdBuildConfig
-      : clientBuildConfig,
+      configEnv.mode === "server"
+        ? serverBuildConfig
+        : configEnv.mode === "cmd"
+          ? cmdBuildConfig
+          : clientBuildConfig,
   };
 });

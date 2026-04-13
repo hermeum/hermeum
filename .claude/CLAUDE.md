@@ -9,7 +9,7 @@ kubeclaw/
 ├── apps/
 │   └── dashboard/        # Main web application (Next.js)
 ├── packages/
-│   ├── entities/         # Shared domain entities
+│   ├── components/         # Shared components
 │   ├── eslint-config/    # Shared ESLint configuration
 │   └── typescript-config/ # Shared TypeScript configuration
 ├── package.json
