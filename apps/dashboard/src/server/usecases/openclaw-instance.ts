@@ -23,7 +23,7 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async createOpenClawInstanceByTemplate(templateName: string): Promise<Instance> {
-    const template = this.config.get().templates.find((t) => t.name === templateName) ?? null;
+    const template = this.config.get().templates[templateName] ?? null;
     if (!template) {
       throw new Error(`Template "${templateName}" not found`);
     }
