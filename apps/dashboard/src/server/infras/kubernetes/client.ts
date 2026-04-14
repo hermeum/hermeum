@@ -42,12 +42,7 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
     workspaceFiles: raw.spec.workspace?.initialFiles,
     skills: raw.spec.skills,
     plugins: raw.spec.plugins,
-    storage: {
-      enabled: raw.spec.storage?.persistence?.enabled ?? true,
-      size: raw.spec.storage?.persistence?.size ?? "",
-      storageClass: raw.spec.storage?.persistence?.storageClass,
-    },
-    status: { phase: raw.status?.phase as InstancePhase | undefined },
+    phase: raw.status?.phase as InstancePhase | undefined,
     createdAt: raw.metadata?.creationTimestamp,
   };
 }

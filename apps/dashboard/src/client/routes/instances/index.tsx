@@ -102,7 +102,7 @@ function InstanceListPage() {
                   {instance.id}
                 </TableCell>
                 <TableCell className="font-medium">{instance.agentName}</TableCell>
-                <TableCell>{instance.status?.phase ?? "—"}</TableCell>
+                <TableCell>{instance.phase ?? "—"}</TableCell>
                 <TableCell>{formatDate(instance.createdAt)}</TableCell>
                 <TableCell>
                   <Button

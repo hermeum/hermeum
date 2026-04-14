@@ -1,7 +1,7 @@
 import { Instance, InstanceInput } from "@/entities";
 
 export type CreateOpenClawInstanceInput = { id: string; instanceInput: InstanceInput };
-export type PatchOpenClawInstanceInput = { id: string; patch: Partial<Omit<Instance, "id">> };
+export type PatchOpenClawInstanceInput = { id: string; patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">> };
 
 export interface Runtime {
   listOpenClawInstances: () => Promise<Instance[]>;

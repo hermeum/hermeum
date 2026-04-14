@@ -87,18 +87,10 @@ export const InstancePhaseSchema = z.enum([
 ]);
 export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
 
-export const InstanceStatusSchema = z
-  .object({
-    phase: InstancePhaseSchema.optional(),
-  })
-  .optional();
-
-export type InstanceStatus = z.infer<typeof InstanceStatusSchema>;
-
 export const InstanceSchema = InstanceInputSchema.extend({
   id: z.string().min(1),
-  status: InstanceStatusSchema,
+  phase: InstancePhaseSchema.optional(),
   createdAt: z.date().optional(),
-});
+}).readonly();
 
 export type Instance = z.infer<typeof InstanceSchema>;
