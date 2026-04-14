@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTRPC } from "@/router";
-import { CreateAgentDialog } from "@/client/components/create-agent-dialog";
+import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
 import type { InstancePhase } from "@/entities";
 import { Badge } from "@kubeclaw/components/ui/badge";
 import { Button } from "@kubeclaw/components/ui/button";

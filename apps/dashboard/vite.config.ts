@@ -57,7 +57,7 @@ export default defineConfig((configEnv) => {
       tanstackRouter({
         target: "react",
         autoCodeSplitting: true,
-        routesDirectory: "./src/client/routes",
+        routesDirectory: "./src/client/ui/routes",
       }),
       react(),
       tsConfigPaths({ projects: ["./tsconfig.json"] }),
