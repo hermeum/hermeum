@@ -20,15 +20,24 @@ import {
 } from "@kubeclaw/components/ui/dialog";
 
 const DEFAULT_YAML = `\
-name: Untitled agent
-description: A blank starting point with the core toolset.
-model: claude-sonnet-4-6
-system: You are a general-purpose agent that can research, write code, run commands, and use connected tools to complete the user's task end to end.
-mcp_servers: []
-tools:
-  - type: agent_toolset_20260401
+agentName: Untitled agent
+openClawJson: 
+  agents:
+    defaults:
+      model:
+        primary: "anthropic/claude-opus-4-6"
+workspaceFiles:
+  SOUL.md: |
+    ## Identity
+    You are a helpful assistant. Your goal is to answer questions clearly
+    and concisely, help with tasks, and make the user's work easier.
+
+    ## Core Principles
+    - Ask for clarification when a request is ambiguous.
+    - Admit when you don't know something rather than guessing.
+env: []
 skills: []
-`;
+plugins: []`;
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -62,25 +71,14 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
-    const config = {
-      name: template.agentName ?? template.name,
-      ...template.openClawJson,
-      skills: template.skills ?? [],
-    };
-    setEditorValue(stringify(config));
+
+    const { id, name, description, ...instanceInput } = template;
+    setEditorValue(stringify(instanceInput));
   }
 
   function handleCreate() {
-    try {
-      const parsed = (parse(editorValue) ?? {}) as Record<string, unknown>;
-      createInstance({
-        agentName: typeof parsed.name === "string" ? parsed.name : undefined,
-        openClawJson: parsed,
-        skills: Array.isArray(parsed.skills) ? parsed.skills : undefined,
-      });
-    } catch {
-      // YAML parse error — ignore silently for now
-    }
+    const parsed = (parse(editorValue) ?? {}) as Record<string, unknown>;
+    createInstance(parsed);
   }
 
   return (
