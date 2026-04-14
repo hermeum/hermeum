@@ -10,6 +10,6 @@ export class SelfConfigureUseCase extends SharedUseCase {
   }
 
   async patchConfig(originalConfig: OpenClawJson, inputConfig: OpenClawJson): Promise<void> {
-    this.checkConfigPatchAllowed(originalConfig, inputConfig);
+    this.checkOpenClawJsonAllowed(originalConfig, inputConfig);
   }
 }

@@ -23,6 +23,18 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async createOpenClawInstance(instanceInput: InstanceInput): Promise<Instance> {
+    if (instanceInput.openClawJson) {
+      this.checkOpenClawJsonAllowed({}, instanceInput.openClawJson);
+    }
+    for (const filePath of Object.keys(instanceInput.workspaceFiles ?? {})) {
+      this.checkWorkspaceFileAllowed(filePath);
+    }
+    for (const skill of instanceInput.skills ?? []) {
+      this.checkSkillAllowed(skill);
+    }
+    for (const plugin of instanceInput.plugins ?? []) {
+      this.checkPluginAllowed(plugin);
+    }
     const id = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;
     return this.runtime.createOpenClawInstance({ id, instanceInput });
   }

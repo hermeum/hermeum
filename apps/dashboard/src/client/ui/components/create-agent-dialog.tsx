@@ -5,6 +5,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { useTRPC } from "@/router";
 import type { Template } from "@/entities";
+import { InstanceInputSchema } from "@/entities";
 import { cn } from "@kubeclaw/components/lib/utils";
 import { Button } from "@kubeclaw/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
@@ -49,6 +50,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const trpc = useTRPC();
   const [editorValue, setEditorValue] = useState(DEFAULT_YAML);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
 
@@ -58,6 +60,9 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
         onSuccess();
         handleOpenChange(false);
       },
+      onError: (error) => {
+        setValidationError(error.message);
+      },
     })
   );
 
@@ -65,6 +70,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
     if (!nextOpen) {
       setEditorValue(DEFAULT_YAML);
       setSelectedTemplateId(null);
+      setValidationError(null);
     }
     onOpenChange(nextOpen);
   }
@@ -77,7 +83,23 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   }
 
   function handleCreate() {
-    const parsed = (parse(editorValue) ?? {}) as Record<string, unknown>;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = (parse(editorValue) ?? {}) as Record<string, unknown>;
+    } catch (e) {
+      setValidationError(e instanceof Error ? e.message : "Invalid YAML");
+      return;
+    }
+
+    const result = InstanceInputSchema.safeParse(parsed);
+    if (!result.success) {
+      const issue = result.error.errors[0];
+      const path = issue.path.length > 0 ? `/${issue.path.join("/")}` : "";
+      setValidationError(`${issue.message} (path: ${path})`);
+      return;
+    }
+
+    setValidationError(null);
     createInstance(parsed);
   }
 
@@ -134,6 +156,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
               }}
               height="200px"
             />
+            {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>
         </div>
 

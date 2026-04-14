@@ -10,6 +10,7 @@ export const InitConfigSchema = z
         openClawJsonPaths: z.array(z.string()).optional(),
         skills: z.array(z.string()).optional(),
         workspaceFiles: z.array(z.string()).optional(),
+        plugins: z.array(z.string()).optional(),
       })
       .optional(),
   })

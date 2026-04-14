@@ -32,7 +32,7 @@ function deepMerge(
 export abstract class SharedUseCase {
   constructor(protected readonly config: ConfigAdaptor) {}
 
-  protected checkConfigPatchAllowed(originalConfig: OpenClawJson, inputConfig: OpenClawJson): void {
+  protected checkOpenClawJsonAllowed(originalConfig: OpenClawJson, inputConfig: OpenClawJson): void {
     const { openClawJsonPaths } = this.config.get().allowed ?? {};
     if (openClawJsonPaths === undefined) {
       return;
@@ -73,6 +73,16 @@ export abstract class SharedUseCase {
     const isAllowed = skills.some((pattern) => new RegExp(pattern).test(skill));
     if (!isAllowed) {
       throw new Error(`Skill "${skill}" is not in the allowed list`);
+    }
+  }
+
+  protected checkPluginAllowed(plugin: string): void {
+    const { plugins } = this.config.get().allowed ?? {};
+    if (plugins === undefined) {
+      return;
+    }
+    if (!plugins.some((pattern) => new RegExp(pattern).test(plugin))) {
+      throw new Error(`Plugin "${plugin}" is not in the allowed list`);
     }
   }
 }
