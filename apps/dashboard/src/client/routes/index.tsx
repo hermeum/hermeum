@@ -113,9 +113,7 @@ function DashboardPage() {
                 <TableCell className="max-w-32 truncate font-mono text-xs">{instance.id}</TableCell>
                 <TableCell className="font-medium">{instance.agentName ?? "-"}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(instance.status?.phase)}>
-                    {instance.status?.phase ?? "-"}
-                  </Badge>
+                  <Badge variant={getStatusVariant(instance.phase)}>{instance.phase ?? "-"}</Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {instance.createdAt
