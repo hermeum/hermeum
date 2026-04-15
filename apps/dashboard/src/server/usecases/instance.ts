@@ -60,13 +60,13 @@ export class InstanceUseCase extends SharedUseCase {
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
-    const alreadyExists = instance.env?.some((e) => e.name === envVar.name);
+    const alreadyExists = instance.envVars?.some((e) => e.name === envVar.name);
     if (alreadyExists) {
       throw new Error(`Env var "${envVar.name}" already exists`);
     }
     return this.runtime.patchOpenClawInstance({
       id: instanceId,
-      patch: { env: [...(instance.env ?? []), envVar] },
+      patch: { envVars: [...(instance.envVars ?? []), envVar] },
     });
   }
 
@@ -75,13 +75,13 @@ export class InstanceUseCase extends SharedUseCase {
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
-    const envVarExists = instance.env?.some((e) => e.name === envVar.name);
+    const envVarExists = instance.envVars?.some((e) => e.name === envVar.name);
     if (!envVarExists) {
       throw new Error(`Env var "${envVar.name}" not found`);
     }
     return this.runtime.patchOpenClawInstance({
       id: instanceId,
-      patch: { env: instance.env?.map((e) => (e.name === envVar.name ? envVar : e)) },
+      patch: { envVars: instance.envVars?.map((e) => (e.name === envVar.name ? envVar : e)) },
     });
   }
 
@@ -90,13 +90,13 @@ export class InstanceUseCase extends SharedUseCase {
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
-    const envVarExists = instance.env?.some((e) => e.name === envName);
+    const envVarExists = instance.envVars?.some((e) => e.name === envName);
     if (!envVarExists) {
       throw new Error(`Env var "${envName}" not found`);
     }
     return this.runtime.patchOpenClawInstance({
       id: instanceId,
-      patch: { env: instance.env?.filter((e) => e.name !== envName) },
+      patch: { envVars: instance.envVars?.filter((e) => e.name !== envName) },
     });
   }
 

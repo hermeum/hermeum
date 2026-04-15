@@ -58,15 +58,11 @@ export const EnvVarSchema = z.object({
 
 export type EnvVar = z.infer<typeof EnvVarSchema>;
 
-export const EnvSchema = z.array(EnvVarSchema).optional();
-
-export type Env = z.infer<typeof EnvSchema>;
-
 export const InstanceInputSchema = z.object({
   agentName: z.string().optional(),
   agentDescription: z.string().optional(),
   openClawJson: OpenClawJsonSchema,
-  env: EnvSchema,
+  envVars: z.array(EnvVarSchema).optional(),
   workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,

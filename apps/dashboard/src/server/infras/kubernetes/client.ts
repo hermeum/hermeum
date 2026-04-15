@@ -40,7 +40,7 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
     agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
     agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
     openClawJson: raw.spec.config?.raw,
-    env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
+    envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     workspaceFiles: raw.spec.workspace?.initialFiles,
     skills: raw.spec.skills,
     plugins: raw.spec.plugins,
@@ -61,8 +61,8 @@ function instanceInputToSpec(instanceInput: InstanceInput): Partial<OpenClawInst
   if (instanceInput.plugins !== undefined) {
     spec.plugins = instanceInput.plugins;
   }
-  if (instanceInput.env !== undefined) {
-    spec.env = instanceInput.env.map((e) => ({ name: e.name, value: e.value }));
+  if (instanceInput.envVars !== undefined) {
+    spec.env = instanceInput.envVars.map((e) => ({ name: e.name, value: e.value }));
   }
   if (instanceInput.openClawJson !== undefined) {
     spec.config = { raw: instanceInput.openClawJson };
@@ -81,8 +81,8 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   if (instance.openClawJson !== undefined) {
     spec.config = { raw: instance.openClawJson };
   }
-  if (instance.env !== undefined) {
-    spec.env = instance.env.map((e) => ({ name: e.name, value: e.value }));
+  if (instance.envVars !== undefined) {
+    spec.env = instance.envVars.map((e) => ({ name: e.name, value: e.value }));
   }
   if (instance.workspaceFiles !== undefined) {
     spec.workspace = { initialFiles: instance.workspaceFiles };

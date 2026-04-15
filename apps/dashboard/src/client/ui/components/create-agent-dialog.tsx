@@ -36,7 +36,7 @@ workspaceFiles:
     ## Core Principles
     - Ask for clarification when a request is ambiguous.
     - Admit when you don't know something rather than guessing.
-env: []
+envVars: []
 skills: []
 plugins: []`;
 
