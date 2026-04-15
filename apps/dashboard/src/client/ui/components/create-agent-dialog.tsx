@@ -8,7 +8,7 @@ import type { Template } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
 import { cn } from "@kubeclaw/components/lib/utils";
 import { Button } from "@kubeclaw/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
 import { ScrollArea, ScrollBar } from "@kubeclaw/components/ui/scroll-area";
 import {
   Dialog,
@@ -105,7 +105,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex flex-col sm:max-w-xl max-h-[min(600px,calc(100dvh-4rem))]">
+      <DialogContent className="flex flex-col sm:max-w-xl max-h-[min(700px,calc(100dvh-4rem))]">
         <DialogHeader>
           <DialogTitle>Create agent</DialogTitle>
           <DialogDescription>Start from a template or describe what you need.</DialogDescription>
@@ -116,14 +116,14 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
           <div className="space-y-2">
             <p className="text-sm font-medium">Template</p>
             <ScrollArea className="w-full">
-              <div className="flex gap-2 p-1">
+              <div className="flex gap-2 px-1 py-2">
                 {templates?.map((template) => (
                   <Card
                     key={template.id}
                     size="sm"
                     onClick={() => handleSelectTemplate(template)}
                     className={cn(
-                      "w-36 shrink-0 cursor-pointer transition-all",
+                      "w-64 shrink-0 cursor-pointer transition-all",
                       selectedTemplateId === template.id
                         ? "ring-2 ring-primary"
                         : "ring-1 ring-border"
@@ -131,6 +131,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                   >
                     <CardHeader>
                       <CardTitle>{template.name}</CardTitle>
+                      <CardDescription>{template.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 ))}
@@ -154,7 +155,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                 autocompletion: false,
                 lintKeymap: false,
               }}
-              height="200px"
+              height="300px"
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>

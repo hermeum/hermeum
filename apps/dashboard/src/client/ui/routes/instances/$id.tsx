@@ -116,9 +116,6 @@ function InstanceDetailPage() {
       <Tabs defaultValue="agent">
         <TabsList>
           <TabsTrigger value="agent">Agent</TabsTrigger>
-          <TabsTrigger value="sessions" disabled>
-            Sessions
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent" className="mt-4 flex flex-col gap-4">

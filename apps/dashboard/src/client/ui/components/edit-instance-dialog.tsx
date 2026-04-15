@@ -99,7 +99,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
               autocompletion: false,
               lintKeymap: false,
             }}
-            height="300px"
+            height="500px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
         </div>
