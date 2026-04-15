@@ -123,7 +123,7 @@ function InstanceDetailPage() {
           {instance.openClawJson && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-medium">Configuration</CardTitle>
+                <CardTitle className="text-sm font-medium">openclaw.json</CardTitle>
               </CardHeader>
               <CardContent>
                 <CodeMirror
