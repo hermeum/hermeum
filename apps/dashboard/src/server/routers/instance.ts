@@ -22,6 +22,13 @@ export const instanceRouter = t.router({
     return await usecase.createOpenClawInstance(input);
   }),
 
+  update: t.procedure
+    .input(InstanceInputSchema.extend({ id: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      const { id, ...instanceInput } = input;
+      return await usecase.updateOpenClawInstance(id, instanceInput);
+    }),
+
   delete: t.procedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }): Promise<void> => {

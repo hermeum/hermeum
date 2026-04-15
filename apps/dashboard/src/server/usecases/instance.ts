@@ -39,6 +39,14 @@ export class InstanceUseCase extends SharedUseCase {
     return this.runtime.createOpenClawInstance({ id, instanceInput });
   }
 
+  async updateOpenClawInstance(id: string, patch: InstanceInput): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(id);
+    if (!instance) {
+      throw new Error(`OpenClawInstance ${id} not found`);
+    }
+    return this.runtime.patchOpenClawInstance({ id, patch });
+  }
+
   async deleteOpenClawInstance(id: string): Promise<void> {
     const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {

@@ -31,12 +31,14 @@ const enum KubeClawLabelValue {
 }
 const enum KubeClawAnnotation {
   Name = "kubeclaw.xyz/agent-name",
+  Description = "kubeclaw.xyz/agent-description",
 }
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
     id: raw.metadata?.name ?? "",
     agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
+    agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
     openClawJson: raw.spec.config?.raw,
     env: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     workspaceFiles: raw.spec.workspace?.initialFiles,
@@ -147,7 +149,10 @@ export class KubernetesClient implements Runtime {
           name: id,
           namespace: this.namespace,
           labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
-          annotations: { [KubeClawAnnotation.Name]: instanceInput.agentName },
+          annotations: {
+            [KubeClawAnnotation.Name]: instanceInput.agentName,
+            [KubeClawAnnotation.Description]: instanceInput.agentDescription,
+          },
         },
         spec,
       },
@@ -157,8 +162,15 @@ export class KubernetesClient implements Runtime {
 
   async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
     const patchBody: Record<string, unknown> = { spec: instanceToSpec(patch) };
-    if (patch.agentName !== undefined) {
-      patchBody.metadata = { annotations: { [KubeClawAnnotation.Name]: patch.agentName } };
+    if (patch.agentName !== undefined || patch.agentDescription !== undefined) {
+      patchBody.metadata = {
+        annotations: {
+          ...(patch.agentName !== undefined && { [KubeClawAnnotation.Name]: patch.agentName }),
+          ...(patch.agentDescription !== undefined && {
+            [KubeClawAnnotation.Description]: patch.agentDescription,
+          }),
+        },
+      };
     }
     const body = await this.customObjectsApi.patchNamespacedCustomObject(
       {

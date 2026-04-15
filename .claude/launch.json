@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "KubeClaw",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 3000
+    },
+    {
+      "name": "Dashboard",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@kubeclaw/dashboard", "dev"],
+      "port": 3000
+    }
+  ]
+}
