@@ -6,6 +6,7 @@ import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { useTRPC } from "@/router";
 import type { Instance } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
+import { cn } from "@kubeclaw/components/lib/utils";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   Dialog,
@@ -91,7 +92,10 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
             value={editorValue}
             extensions={[yamlLang()]}
             onChange={setEditorValue}
-            className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
+            className={cn(
+              "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
+              validationError && "border-destructive"
+            )}
             basicSetup={{
               lineNumbers: false,
               foldGutter: false,

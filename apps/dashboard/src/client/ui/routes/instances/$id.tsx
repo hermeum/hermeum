@@ -20,8 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@kubeclaw/components/ui/table";
-import { type InstancePhase } from "@/entities";
 import { useTRPC } from "@/router";
+import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-instance-dialog";
 
@@ -29,23 +29,6 @@ export const Route = createFileRoute("/instances/$id")({
   component: InstanceDetailPage,
 });
 
-function phaseBadgeClass(phase: InstancePhase | undefined) {
-  switch (phase) {
-    case "Running":
-      return "bg-green-100 text-green-800";
-    case "Pending":
-    case "Provisioning":
-    case "Updating":
-    case "Restoring":
-    case "BackingUp":
-      return "bg-yellow-100 text-yellow-800";
-    case "Failed":
-    case "Degraded":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
 
 const BADGE_MAX = 10;
 
@@ -85,13 +68,7 @@ function InstanceDetailPage() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{instance.agentName ?? instance.id}</h1>
-            {instance.phase && (
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${phaseBadgeClass(instance.phase)}`}
-              >
-                {instance.phase}
-              </span>
-            )}
+            <PhaseBadge phase={instance.phase} />
           </div>
           <p className="text-sm text-muted-foreground font-mono">{instance.id}</p>
           {instance.agentDescription && (

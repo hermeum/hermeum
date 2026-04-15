@@ -3,9 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
-import { useTRPC } from "@/router";
-import type { Template } from "@/entities";
-import { InstanceInputSchema } from "@/entities";
+
 import { cn } from "@kubeclaw/components/lib/utils";
 import { Button } from "@kubeclaw/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
@@ -19,26 +17,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@kubeclaw/components/ui/dialog";
+import { useTRPC } from "@/router";
+import type { Template, InstanceInput } from "@/entities";
+import { InstanceInputSchema } from "@/entities";
 
-const DEFAULT_YAML = `\
-agentName: Untitled agent
-openClawJson: 
-  agents:
-    defaults:
-      model:
-        primary: "anthropic/claude-opus-4-6"
-workspaceFiles:
-  SOUL.md: |
-    ## Identity
-    You are a helpful assistant. Your goal is to answer questions clearly
-    and concisely, help with tasks, and make the user's work easier.
+const DEFAULT_YAML = stringify(
+  {
+    agentName: "Untitled agent",
+    openClawJson: {
+      agents: {
+        defaults: {
+          model: {
+            primary: "anthropic/claude-opus-4-6",
+          },
+        },
+      },
+    },
+    workspaceFiles: {
+      "SOUL.md": `## Identity
+You are a helpful assistant. Your goal is to answer questions clearly
+and concisely, help with tasks, and make the user's work easier.
 
-    ## Core Principles
-    - Ask for clarification when a request is ambiguous.
-    - Admit when you don't know something rather than guessing.
-envVars: []
-skills: []
-plugins: []`;
+## Core Principles
+- Ask for clarification when a request is ambiguous.
+- Admit when you don't know something rather than guessing.`,
+    },
+    envVars: [],
+    skills: [],
+    plugins: [],
+  } as InstanceInput,
+  null,
+  2
+);
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -147,7 +157,10 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
               value={editorValue}
               extensions={[yamlLang()]}
               onChange={setEditorValue}
-              className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
+              className={cn(
+                "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
+                validationError && "border-destructive"
+              )}
               basicSetup={{
                 lineNumbers: false,
                 foldGutter: false,

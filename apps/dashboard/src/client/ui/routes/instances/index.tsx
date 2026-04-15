@@ -5,8 +5,7 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
-import type { InstancePhase } from "@/entities";
-import { Badge } from "@kubeclaw/components/ui/badge";
+import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   DropdownMenu,
@@ -28,27 +27,6 @@ export const Route = createFileRoute("/instances/")({
   component: DashboardPage,
 });
 
-function getStatusVariant(
-  phase: InstancePhase | undefined
-): "default" | "secondary" | "destructive" | "outline" {
-  switch (phase) {
-    case "Running":
-    case "Pending":
-    case "Provisioning":
-    case "Updating":
-    case "BackingUp":
-    case "Restoring":
-      return "secondary";
-    case "Degraded":
-    case "Failed":
-      return "destructive";
-    case "Terminating":
-    case "Suspended":
-      return "outline";
-    default:
-      return "outline";
-  }
-}
 
 function DashboardPage() {
   const trpc = useTRPC();
@@ -113,7 +91,7 @@ function DashboardPage() {
                 <TableCell className="max-w-32 truncate font-mono text-xs">{instance.id}</TableCell>
                 <TableCell className="font-medium">{instance.agentName ?? "-"}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(instance.phase)}>{instance.phase ?? "-"}</Badge>
+                  <PhaseBadge phase={instance.phase} />
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {instance.createdAt
