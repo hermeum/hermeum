@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import CodeMirror from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
 import { Badge } from "@kubeclaw/components/ui/badge";
@@ -80,15 +80,6 @@ function InstanceDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Breadcrumb */}
-      <nav className="text-sm text-muted-foreground flex items-center gap-1">
-        <Link to="/instances" className="hover:underline">
-          Instances
-        </Link>
-        <span>/</span>
-        <span>{instance.agentName ?? instance.id}</span>
-      </nav>
-
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
