@@ -1,4 +1,4 @@
-import { Instance, InstanceInput, Skill, SkillSchema, EnvVar } from "@/entities";
+import { Instance, InstanceInput, InstanceInputSchema, Skill, SkillSchema, EnvVar } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
@@ -23,6 +23,8 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async createOpenClawInstance(instanceInput: InstanceInput): Promise<Instance> {
+    instanceInput = InstanceInputSchema.parse(instanceInput);
+
     if (instanceInput.openClawJson) {
       this.checkOpenClawJsonAllowed({}, instanceInput.openClawJson);
     }
@@ -43,6 +45,21 @@ export class InstanceUseCase extends SharedUseCase {
     const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
+    }
+
+    patch = InstanceInputSchema.parse(patch);
+
+    if (patch.openClawJson) {
+      this.checkOpenClawJsonAllowed(instance.openClawJson ?? {}, patch.openClawJson);
+    }
+    for (const filePath of Object.keys(patch.workspaceFiles ?? {})) {
+      this.checkWorkspaceFileAllowed(filePath);
+    }
+    for (const skill of patch.skills ?? []) {
+      this.checkSkillAllowed(skill);
+    }
+    for (const plugin of patch.plugins ?? []) {
+      this.checkPluginAllowed(plugin);
     }
     return this.runtime.patchOpenClawInstance({ id, patch });
   }

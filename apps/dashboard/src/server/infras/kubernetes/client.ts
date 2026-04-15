@@ -161,28 +161,38 @@ export class KubernetesClient implements Runtime {
   }
 
   async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
-    const patchBody: Record<string, unknown> = { spec: instanceToSpec(patch) };
-    if (patch.agentName !== undefined || patch.agentDescription !== undefined) {
-      patchBody.metadata = {
+    const current = (await this.customObjectsApi.getNamespacedCustomObject({
+      namespace: this.namespace,
+      group: OpenClawGroup.Default,
+      version: OpenClawVersion.V1Alpha1,
+      plural: OpenClawPlural.Instances,
+      name: id,
+    })) as OpenClawInstance;
+
+    const specPatch = instanceToSpec(patch);
+    const replaceBody: OpenClawInstance = {
+      ...current,
+      metadata: {
+        ...current.metadata,
         annotations: {
+          ...current.metadata?.annotations,
           ...(patch.agentName !== undefined && { [KubeClawAnnotation.Name]: patch.agentName }),
           ...(patch.agentDescription !== undefined && {
             [KubeClawAnnotation.Description]: patch.agentDescription,
           }),
         },
-      };
-    }
-    const body = await this.customObjectsApi.patchNamespacedCustomObject(
-      {
-        namespace: this.namespace,
-        group: OpenClawGroup.Default,
-        version: OpenClawVersion.V1Alpha1,
-        plural: OpenClawPlural.Instances,
-        name: id,
-        body: patchBody,
       },
-      k8s.setHeaderOptions("Content-Type", k8s.PatchStrategy.MergePatch)
-    );
+      spec: { ...current.spec, ...specPatch },
+    };
+
+    const body = await this.customObjectsApi.replaceNamespacedCustomObject({
+      namespace: this.namespace,
+      group: OpenClawGroup.Default,
+      version: OpenClawVersion.V1Alpha1,
+      plural: OpenClawPlural.Instances,
+      name: id,
+      body: replaceBody,
+    });
     return mapOpenClawInstance(body as OpenClawInstance);
   }
 

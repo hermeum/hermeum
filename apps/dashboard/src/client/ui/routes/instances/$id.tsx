@@ -133,7 +133,7 @@ function InstanceDetailPage() {
                   value={JSON.stringify(instance.openClawJson, null, 2)}
                   extensions={[jsonLang()]}
                   editable={false}
-                  maxHeight="384px"
+                  maxHeight="300px"
                   basicSetup={{
                     lineNumbers: true,
                     foldGutter: true,
@@ -170,8 +170,8 @@ function InstanceDetailPage() {
             </Card>
           )}
 
-          {/* env */}
-          {instance.env && instance.env.length > 0 && (
+          {/* envVars */}
+          {instance.envVars && instance.envVars.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Environment Variables</CardTitle>
@@ -185,7 +185,7 @@ function InstanceDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {instance.env.map((e) => (
+                    {instance.envVars.map((e) => (
                       <TableRow key={e.name}>
                         <TableCell className="font-mono text-xs">{e.name}</TableCell>
                         <TableCell className="font-mono text-xs">{e.value}</TableCell>
