@@ -29,7 +29,6 @@ export const Route = createFileRoute("/instances/$id")({
   component: InstanceDetailPage,
 });
 
-
 const BADGE_MAX = 10;
 
 function BadgeList({ items, max = BADGE_MAX }: { items: string[]; max?: number }) {
@@ -91,7 +90,7 @@ function InstanceDetailPage() {
           {instance.openClawJson && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-medium">openclaw.json</CardTitle>
+                <CardTitle className="text-sm font-medium">Configuration</CardTitle>
               </CardHeader>
               <CardContent>
                 <CodeMirror
