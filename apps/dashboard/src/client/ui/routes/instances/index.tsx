@@ -1,17 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
+import { CopyButton } from "@/client/ui/components/copy-button";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@kubeclaw/components/ui/dropdown-menu";
 import {
@@ -32,6 +32,7 @@ function DashboardPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
 
@@ -87,8 +88,17 @@ function DashboardPage() {
             </TableRow>
           ) : (
             instances?.map((instance) => (
-              <TableRow key={instance.id}>
-                <TableCell className="max-w-32 truncate font-mono text-xs">{instance.id}</TableCell>
+              <TableRow
+                key={instance.id}
+                className="cursor-pointer"
+                onClick={() => navigate({ to: "/instances/$id", params: { id: instance.id } })}
+              >
+                <TableCell className="max-w-32 font-mono text-xs">
+                  <div className="group flex items-center gap-1 min-w-0">
+                    <span className="truncate">{instance.id}</span>
+                    <CopyButton text={instance.id} />
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{instance.agentName ?? "-"}</TableCell>
                 <TableCell>
                   <PhaseBadge phase={instance.phase} />
@@ -98,7 +108,7 @@ function DashboardPage() {
                     ? formatDistanceToNow(instance.createdAt, { addSuffix: true })
                     : "—"}
                 </TableCell>
-                <TableCell className="w-10">
+                <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={<Button variant="ghost" size="icon" aria-label="Open actions menu" />}
@@ -106,12 +116,6 @@ function DashboardPage() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        render={<Link to="/instances/$id" params={{ id: instance.id }} />}
-                      >
-                        View
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => deleteInstance({ id: instance.id })}

@@ -24,6 +24,7 @@ import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-instance-dialog";
+import { CopyButton } from "@/client/ui/components/copy-button";
 
 export const Route = createFileRoute("/instances/$id")({
   component: InstanceDetailPage,
@@ -69,7 +70,10 @@ function InstanceDetailPage() {
             <h1 className="text-2xl font-bold">{instance.agentName ?? instance.id}</h1>
             <PhaseBadge phase={instance.phase} />
           </div>
-          <p className="text-sm text-muted-foreground font-mono">{instance.id}</p>
+          <div className="group flex items-center gap-1">
+            <p className="text-sm text-muted-foreground font-mono">{instance.id}</p>
+            <CopyButton text={instance.id} />
+          </div>
           {instance.agentDescription && (
             <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>
           )}
@@ -93,20 +97,27 @@ function InstanceDetailPage() {
                 <CardTitle className="text-sm font-medium">Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <CodeMirror
-                  value={JSON.stringify(instance.openClawJson, null, 2)}
-                  extensions={[jsonLang()]}
-                  editable={false}
-                  maxHeight="300px"
-                  basicSetup={{
-                    lineNumbers: true,
-                    foldGutter: true,
-                    searchKeymap: false,
-                    autocompletion: false,
-                    lintKeymap: false,
-                  }}
-                  className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
-                />
+                <Accordion>
+                  <AccordionItem value="openclaw-json">
+                    <AccordionTrigger className="font-mono text-xs">openclaw.json</AccordionTrigger>
+                    <AccordionContent>
+                      <CodeMirror
+                        value={JSON.stringify(instance.openClawJson, null, 2)}
+                        extensions={[jsonLang()]}
+                        editable={false}
+                        maxHeight="300px"
+                        basicSetup={{
+                          lineNumbers: true,
+                          foldGutter: true,
+                          searchKeymap: false,
+                          autocompletion: false,
+                          lintKeymap: false,
+                        }}
+                        className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
           )}
