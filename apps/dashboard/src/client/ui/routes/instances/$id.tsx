@@ -72,7 +72,7 @@ function InstanceDetailPage() {
           </div>
           <div className="group flex items-center gap-1">
             <p className="text-sm text-muted-foreground font-mono">{instance.id}</p>
-            <CopyButton text={instance.id} />
+            <CopyButton text={instance.id} className="opacity-0 group-hover:opacity-100" />
           </div>
           {instance.agentDescription && (
             <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>

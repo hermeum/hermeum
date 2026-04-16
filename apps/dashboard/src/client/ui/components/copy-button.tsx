@@ -29,7 +29,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       aria-label="Copy to clipboard"
       onClick={handleCopy}
       className={cn(
-        "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+        "transition-opacity shrink-0",
         className
       )}
     >

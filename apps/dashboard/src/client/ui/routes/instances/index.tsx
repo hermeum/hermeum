@@ -96,7 +96,7 @@ function DashboardPage() {
                 <TableCell className="max-w-32 font-mono text-xs">
                   <div className="group flex items-center gap-1 min-w-0">
                     <span className="truncate">{instance.id}</span>
-                    <CopyButton text={instance.id} />
+                    <CopyButton text={instance.id} className="opacity-0 group-hover:opacity-100" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">{instance.agentName ?? "-"}</TableCell>
