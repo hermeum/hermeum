@@ -25,7 +25,7 @@ interface EditInstanceDialogProps {
 }
 
 function instanceToYaml(instance: Instance): string {
-  const { id, phase, createdAt, ...input } = instance;
+  const { id, suspended, phase, createdAt, ...input } = instance;
   return stringify(input);
 }
 
@@ -39,6 +39,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
     trpc.instance.update.mutationOptions({
       onSuccess: (updated) => {
         queryClient.setQueryData(trpc.instance.get.queryKey({ id: instance.id }), updated);
+        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
         handleOpenChange(false);
       },
       onError: (error) => {

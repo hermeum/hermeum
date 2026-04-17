@@ -219,7 +219,7 @@ export class KubernetesClient implements Runtime {
           }),
         },
       },
-      spec: { ...current.spec, ...specPatch },
+      spec: { ...specPatch },
     };
 
     const body = await this.customObjectsApi.replaceNamespacedCustomObject({
