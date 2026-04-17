@@ -42,12 +42,12 @@ export class SecretUseCase {
     });
   }
 
-  async deleteSecret(id: string): Promise<void> {
+  async archiveSecret(id: string): Promise<Secret> {
     const secret = await this.runtime.getSecret(id);
     if (!secret) {
       throw new Error(`Secret "${id}" not found`);
     }
-    return this.runtime.deleteSecret(id);
+    return this.runtime.archiveSecret(id);
   }
 
   async addEnvVar(secretId: string, envVar: EnvVar): Promise<Secret> {

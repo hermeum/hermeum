@@ -6,6 +6,7 @@ import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
 import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
+import { Badge } from "@kubeclaw/components/ui/badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   Dialog,
@@ -47,7 +48,7 @@ function SecretDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
@@ -62,8 +63,8 @@ function SecretDetailPage() {
     })
   );
 
-  const { mutate: deleteSecret, isPending: isDeleting } = useMutation(
-    trpc.secret.delete.mutationOptions({
+  const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
+    trpc.secret.archive.mutationOptions({
       onSuccess: () => navigate({ to: "/secrets" }),
     })
   );
@@ -80,7 +81,10 @@ function SecretDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">{secret.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{secret.name}</h1>
+            <Badge variant="secondary">{secret.archived ? "Archived" : "Active"}</Badge>
+          </div>
           <div className="group flex items-center gap-1">
             <p className="font-mono text-sm text-muted-foreground">{secret.id}</p>
             <CopyButton text={secret.id} className="opacity-0 group-hover:opacity-100" />
@@ -103,8 +107,8 @@ function SecretDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                Delete
+              <DropdownMenuItem variant="destructive" onClick={() => setArchiveOpen(true)}>
+                Archive
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -181,22 +185,22 @@ function SecretDetailPage() {
         }}
       />
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete secret</DialogTitle>
+            <DialogTitle>Archive secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this secret? This action cannot be undone.
+              Are you sure you want to archive this secret? It will no longer appear in the list.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
             <Button
               variant="destructive"
-              disabled={isDeleting}
-              onClick={() => deleteSecret({ id })}
+              disabled={isArchiving}
+              onClick={() => archiveSecret({ id })}
             >
-              Delete
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>

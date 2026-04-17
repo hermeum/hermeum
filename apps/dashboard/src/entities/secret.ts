@@ -16,6 +16,7 @@ export const SecretSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   envVars: z.array(SecretEnvVarSchema),
+  archived: z.boolean().optional(),
   createdAt: z.date().optional().readonly(),
 });
 export type Secret = z.infer<typeof SecretSchema>;

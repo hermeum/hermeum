@@ -13,6 +13,7 @@ export type CreateSecretInput = {
 export type SecretPatch = {
   name?: string | undefined;
   description?: string | undefined;
+  archived?: boolean | undefined;
 };
 
 export interface Runtime {
@@ -25,7 +26,7 @@ export interface Runtime {
   listSecrets: () => Promise<Secret[]>;
   getSecret: (id: string) => Promise<Secret | null>;
   createSecret: (input: CreateSecretInput) => Promise<Secret>;
-  deleteSecret: (id: string) => Promise<void>;
+  archiveSecret: (id: string) => Promise<Secret>;
   patchSecret: (id: string, patch: SecretPatch) => Promise<Secret>;
   addEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
   updateEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;

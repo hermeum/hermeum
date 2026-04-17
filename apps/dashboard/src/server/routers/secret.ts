@@ -35,10 +35,10 @@ export const secretRouter = t.router({
       return usecase.updateSecret(id, patch);
     }),
 
-  delete: t.procedure
+  archive: t.procedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ input }): Promise<void> => {
-      return usecase.deleteSecret(input.id);
+    .mutation(async ({ input }): Promise<Secret> => {
+      return usecase.archiveSecret(input.id);
     }),
 
   addEnvVar: t.procedure

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { CreateSecretDialog } from "@/client/ui/components/create-secret-dialog";
+import { Badge } from "@kubeclaw/components/ui/badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
   Dialog,
@@ -65,16 +66,16 @@ function SecretsPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archiveId, setArchiveId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const { data: secrets, isPending, error } = useQuery(trpc.secret.list.queryOptions());
 
-  const { mutate: deleteSecret, isPending: isDeleting } = useMutation(
-    trpc.secret.delete.mutationOptions({
+  const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
+    trpc.secret.archive.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() });
-        setDeleteId(null);
+        setArchiveId(null);
       },
     })
   );
@@ -105,28 +106,28 @@ function SecretsPage() {
       <CreateSecretDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
       <Dialog
-        open={deleteId !== null}
+        open={archiveId !== null}
         onOpenChange={(open) => {
-          if (!open) setDeleteId(null);
+          if (!open) setArchiveId(null);
         }}
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete secret</DialogTitle>
+            <DialogTitle>Archive secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this secret? This action cannot be undone.
+              Are you sure you want to archive this secret? It will no longer appear in the list.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
             <Button
               variant="destructive"
-              disabled={isDeleting}
+              disabled={isArchiving}
               onClick={() => {
-                if (deleteId) deleteSecret({ id: deleteId });
+                if (archiveId) archiveSecret({ id: archiveId });
               }}
             >
-              Delete
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -137,6 +138,7 @@ function SecretsPage() {
           <TableRow>
             <TableHead>ID</TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Env Vars</TableHead>
             <TableHead>Created</TableHead>
             <TableHead />
@@ -145,7 +147,7 @@ function SecretsPage() {
         <TableBody>
           {secrets?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 No secrets yet.
               </TableCell>
             </TableRow>
@@ -163,6 +165,9 @@ function SecretsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">{secret.name}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{secret.archived ? "Archived" : "Active"}</Badge>
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   <EnvVarList envVars={secret.envVars} />
                 </TableCell>
@@ -181,9 +186,9 @@ function SecretsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => setDeleteId(secret.id)}
+                        onClick={() => setArchiveId(secret.id)}
                       >
-                        Delete
+                        Archive
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

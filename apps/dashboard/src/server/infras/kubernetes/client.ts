@@ -36,6 +36,7 @@ const enum KubeClawAnnotation {
   Description = "kubeclaw.xyz/agent-description",
   SecretName = "kubeclaw.xyz/secret-name",
   SecretDescription = "kubeclaw.xyz/secret-description",
+  SecretArchived = "kubeclaw.xyz/secret-archived",
 }
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
@@ -126,6 +127,7 @@ function mapSecret(raw: k8s.V1Secret): Secret {
     name: raw.metadata?.annotations?.[KubeClawAnnotation.SecretName] ?? "",
     description: raw.metadata?.annotations?.[KubeClawAnnotation.SecretDescription],
     envVars,
+    archived: raw.metadata?.annotations?.[KubeClawAnnotation.SecretArchived] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -286,8 +288,8 @@ export class KubernetesClient implements Runtime {
     return mapSecret(body);
   }
 
-  async deleteSecret(id: string): Promise<void> {
-    await this.coreV1Api.deleteNamespacedSecret({ name: id, namespace: this.namespace });
+  async archiveSecret(id: string): Promise<Secret> {
+    return this.patchSecret(id, { archived: true });
   }
 
   async patchSecret(id: string, patch: SecretPatch): Promise<Secret> {
@@ -312,6 +314,9 @@ export class KubernetesClient implements Runtime {
             ...(patch.name !== undefined && { [KubeClawAnnotation.SecretName]: patch.name }),
             ...(patch.description !== undefined && {
               [KubeClawAnnotation.SecretDescription]: patch.description,
+            }),
+            ...(patch.archived !== undefined && {
+              [KubeClawAnnotation.SecretArchived]: String(patch.archived),
             }),
           },
         },
