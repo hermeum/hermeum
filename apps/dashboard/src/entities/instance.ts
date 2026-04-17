@@ -69,6 +69,7 @@ export const InstanceInputSchema = z.object({
   agentDescription: z.string().optional(),
   openClawJson: OpenClawJsonSchema,
   envVars: z.array(EnvVarSchema).optional(),
+  secrets: z.array(z.string()).optional(),
   workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,

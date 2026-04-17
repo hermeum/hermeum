@@ -44,6 +44,7 @@ export class InstanceUseCase extends SharedUseCase {
     for (const plugin of instanceInput.plugins ?? []) {
       this.checkPluginAllowed(plugin);
     }
+    await this.checkSecretsExist(instanceInput.secrets);
     return this.runtime.createOpenClawInstance(instanceInput);
   }
 
@@ -67,6 +68,7 @@ export class InstanceUseCase extends SharedUseCase {
     for (const plugin of patch.plugins ?? []) {
       this.checkPluginAllowed(plugin);
     }
+    await this.checkSecretsExist(patch.secrets);
     return this.runtime.patchOpenClawInstance({ id, patch });
   }
 
@@ -158,6 +160,15 @@ export class InstanceUseCase extends SharedUseCase {
       id: instanceId,
       patch: { skills: current.filter((s) => s !== skill) },
     });
+  }
+
+  private async checkSecretsExist(secrets: string[] | undefined): Promise<void> {
+    for (const name of secrets ?? []) {
+      const secret = await this.runtime.getSecret(name);
+      if (!secret) {
+        throw new Error(`Secret "${name}" not found`);
+      }
+    }
   }
 
   async suspendOpenClawInstance(id: string): Promise<Instance> {
