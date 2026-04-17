@@ -1,10 +1,12 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { Instance, InstanceInput, InstancePhase } from "@/entities";
+import { EnvVar, Instance, InstanceInput, InstancePhase, Secret, SecretEnvVar } from "@/entities";
 import {
   CreateOpenClawInstanceInput,
+  CreateSecretInput,
   PatchOpenClawInstanceInput,
   Runtime,
+  SecretPatch,
 } from "../../usecases/adaptors/runtime";
 import {
   OpenClawInstance,
@@ -32,6 +34,8 @@ const enum KubeClawLabelValue {
 const enum KubeClawAnnotation {
   Name = "kubeclaw.xyz/agent-name",
   Description = "kubeclaw.xyz/agent-description",
+  SecretName = "kubeclaw.xyz/secret-name",
+  SecretDescription = "kubeclaw.xyz/secret-description",
 }
 
 function mapOpenClawInstance(raw: OpenClawInstance): Instance {
@@ -96,13 +100,34 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   return spec;
 }
 
+function decodeSecretData(data: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, b64Value] of Object.entries(data)) {
+    result[key] = Buffer.from(b64Value, "base64").toString("utf-8");
+  }
+  return result;
+}
+
+function mapSecret(raw: k8s.V1Secret): Secret {
+  const envVars: SecretEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
+  return {
+    id: raw.metadata?.name ?? "",
+    name: raw.metadata?.annotations?.[KubeClawAnnotation.SecretName] ?? "",
+    description: raw.metadata?.annotations?.[KubeClawAnnotation.SecretDescription],
+    envVars,
+  };
+}
+
 export class KubernetesClient implements Runtime {
   private readonly kc: k8s.KubeConfig;
   private readonly customObjectsApi: k8s.CustomObjectsApi;
+  private readonly coreV1Api: k8s.CoreV1Api;
+
   constructor(private readonly namespace: string) {
     this.kc = new k8s.KubeConfig();
     this.kc.loadFromDefault();
     this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi);
+    this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
   async listOpenClawInstances(): Promise<Instance[]> {
@@ -204,5 +229,138 @@ export class KubernetesClient implements Runtime {
       plural: OpenClawPlural.Instances,
       name: id,
     });
+  }
+
+  async listSecrets(): Promise<Secret[]> {
+    const body = await this.coreV1Api.listNamespacedSecret({
+      namespace: this.namespace,
+      labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
+    });
+    return (body.items ?? []).map(mapSecret);
+  }
+
+  async getSecret(id: string): Promise<Secret | null> {
+    try {
+      const body = await this.coreV1Api.readNamespacedSecret({
+        name: id,
+        namespace: this.namespace,
+      });
+      return mapSecret(body);
+    } catch {
+      return null;
+    }
+  }
+
+  async createSecret({ id, name, description }: CreateSecretInput): Promise<Secret> {
+    const annotations: Record<string, string> = {
+      [KubeClawAnnotation.SecretName]: name,
+    };
+    if (description !== undefined) {
+      annotations[KubeClawAnnotation.SecretDescription] = description;
+    }
+    const body = await this.coreV1Api.createNamespacedSecret({
+      namespace: this.namespace,
+      body: {
+        apiVersion: "v1",
+        kind: "Secret",
+        type: "Opaque",
+        metadata: {
+          name: id,
+          namespace: this.namespace,
+          labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
+          annotations,
+        },
+      },
+    });
+    return mapSecret(body);
+  }
+
+  async deleteSecret(id: string): Promise<void> {
+    await this.coreV1Api.deleteNamespacedSecret({ name: id, namespace: this.namespace });
+  }
+
+  async patchSecret(id: string, patch: SecretPatch): Promise<Secret> {
+    const current = await this.coreV1Api.readNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: _data, stringData: _stringData, ...rest } = current;
+    const body = await this.coreV1Api.replaceNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+      body: {
+        ...rest,
+        metadata: {
+          ...current.metadata,
+          ...(current.metadata?.resourceVersion !== undefined && {
+            resourceVersion: current.metadata.resourceVersion,
+          }),
+          annotations: {
+            ...current.metadata?.annotations,
+            ...(patch.name !== undefined && { [KubeClawAnnotation.SecretName]: patch.name }),
+            ...(patch.description !== undefined && {
+              [KubeClawAnnotation.SecretDescription]: patch.description,
+            }),
+          },
+        },
+        ...(current.data !== undefined && { data: current.data }),
+      },
+    });
+    return mapSecret(body);
+  }
+
+  async addEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+    const current = await this.coreV1Api.readNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+    });
+    const stringData = decodeSecretData(current.data ?? {});
+    stringData[envVar.name] = envVar.value;
+    return this._applyStringData(id, current, stringData);
+  }
+
+  async updateEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+    const current = await this.coreV1Api.readNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+    });
+    const stringData = decodeSecretData(current.data ?? {});
+    stringData[envVar.name] = envVar.value;
+    return this._applyStringData(id, current, stringData);
+  }
+
+  async removeEnvVar(id: string, name: string): Promise<Secret> {
+    const current = await this.coreV1Api.readNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+    });
+    const stringData = decodeSecretData(current.data ?? {});
+    delete stringData[name];
+    return this._applyStringData(id, current, stringData);
+  }
+
+  private async _applyStringData(
+    id: string,
+    current: k8s.V1Secret,
+    stringData: Record<string, string>
+  ): Promise<Secret> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: _data, ...rest } = current;
+    const body = await this.coreV1Api.replaceNamespacedSecret({
+      name: id,
+      namespace: this.namespace,
+      body: {
+        ...rest,
+        metadata: {
+          ...current.metadata,
+          ...(current.metadata?.resourceVersion !== undefined && {
+            resourceVersion: current.metadata.resourceVersion,
+          }),
+        },
+        stringData,
+      },
+    });
+    return mapSecret(body);
   }
 }

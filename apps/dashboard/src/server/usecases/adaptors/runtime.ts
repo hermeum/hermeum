@@ -1,7 +1,20 @@
-import { Instance, InstanceInput } from "@/entities";
+import { EnvVar, Instance, InstanceInput, Secret } from "@/entities";
 
 export type CreateOpenClawInstanceInput = { id: string; instanceInput: InstanceInput };
-export type PatchOpenClawInstanceInput = { id: string; patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">> };
+export type PatchOpenClawInstanceInput = {
+  id: string;
+  patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">>;
+};
+
+export type CreateSecretInput = {
+  id: string;
+  name: string;
+  description?: string | undefined;
+};
+export type SecretPatch = {
+  name?: string | undefined;
+  description?: string | undefined;
+};
 
 export interface Runtime {
   listOpenClawInstances: () => Promise<Instance[]>;
@@ -9,4 +22,13 @@ export interface Runtime {
   createOpenClawInstance: (input: CreateOpenClawInstanceInput) => Promise<Instance>;
   patchOpenClawInstance: (input: PatchOpenClawInstanceInput) => Promise<Instance>;
   deleteOpenClawInstance: (id: string) => Promise<void>;
+
+  listSecrets: () => Promise<Secret[]>;
+  getSecret: (id: string) => Promise<Secret | null>;
+  createSecret: (input: CreateSecretInput) => Promise<Secret>;
+  deleteSecret: (id: string) => Promise<void>;
+  patchSecret: (id: string, patch: SecretPatch) => Promise<Secret>;
+  addEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
+  updateEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
+  removeEnvVar: (id: string, name: string) => Promise<Secret>;
 }
