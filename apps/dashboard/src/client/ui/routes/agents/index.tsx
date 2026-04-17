@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@kubeclaw/components/ui/table";
 
-export const Route = createFileRoute("/instances/")({
+export const Route = createFileRoute("/agents/")({
   component: DashboardPage,
 });
 
@@ -91,7 +91,7 @@ function DashboardPage() {
               <TableRow
                 key={instance.id}
                 className="cursor-pointer"
-                onClick={() => navigate({ to: "/instances/$id", params: { id: instance.id } })}
+                onClick={() => navigate({ to: "/agents/$id", params: { id: instance.id } })}
               >
                 <TableCell className="max-w-32 font-mono text-xs">
                   <div className="group flex items-center gap-1 min-w-0">

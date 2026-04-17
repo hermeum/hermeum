@@ -26,7 +26,7 @@ import { Button } from "@kubeclaw/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-instance-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 
-export const Route = createFileRoute("/instances/$id")({
+export const Route = createFileRoute("/agents/$id")({
   component: InstanceDetailPage,
 });
 
