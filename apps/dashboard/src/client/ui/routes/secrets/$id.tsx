@@ -49,6 +49,7 @@ function SecretDetailPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteEnvVarName, setDeleteEnvVarName] = useState<string | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
@@ -69,8 +70,13 @@ function SecretDetailPage() {
     })
   );
 
-  const { mutate: removeEnvVar } = useMutation(
-    trpc.secret.removeEnvVar.mutationOptions({ onSuccess: invalidate })
+  const { mutate: removeEnvVar, isPending: isRemoving } = useMutation(
+    trpc.secret.removeEnvVar.mutationOptions({
+      onSuccess: () => {
+        invalidate();
+        setDeleteEnvVarName(null);
+      },
+    })
   );
 
   if (isPending) return <div className="p-6">Loading…</div>;
@@ -161,7 +167,7 @@ function SecretDetailPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={() => removeEnvVar({ secretId: id, name: v.name })}
+                          onClick={() => setDeleteEnvVarName(v.name)}
                         >
                           Delete
                         </DropdownMenuItem>
@@ -202,6 +208,36 @@ function SecretDetailPage() {
               onClick={() => archiveSecret({ id })}
             >
               Archive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteEnvVarName !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteEnvVarName(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete env var</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-mono font-medium">{deleteEnvVarName}</span>? This cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isRemoving}
+              onClick={() => {
+                if (deleteEnvVarName) removeEnvVar({ secretId: id, name: deleteEnvVarName });
+              }}
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
