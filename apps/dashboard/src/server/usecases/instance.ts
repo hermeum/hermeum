@@ -168,6 +168,9 @@ export class InstanceUseCase extends SharedUseCase {
       if (!secret) {
         throw new Error(`Secret "${name}" not found`);
       }
+      if (secret.archived) {
+        throw new Error(`Secret "${name}" is archived`);
+      }
     }
   }
 

@@ -190,7 +190,8 @@ function SecretDetailPage() {
           <DialogHeader>
             <DialogTitle>Archive secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to archive this secret? It will no longer appear in the list.
+              You will no longer be able to use it in your agents, but existing agents using it will
+              not be affected.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
