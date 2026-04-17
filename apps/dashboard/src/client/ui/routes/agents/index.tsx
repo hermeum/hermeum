@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
@@ -22,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@kubeclaw/components/ui/dropdown-menu";
 import {
   Table,
@@ -43,12 +44,28 @@ function DashboardPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
+  const {
+    data: instances,
+    isPending,
+    isFetching,
+    error,
+  } = useQuery(trpc.instance.list.queryOptions());
+
+  const invalidateList = () =>
+    queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
+
+  const { mutate: suspendInstance } = useMutation(
+    trpc.instance.suspend.mutationOptions({ onSuccess: () => setTimeout(invalidateList, 500) })
+  );
+
+  const { mutate: resumeInstance } = useMutation(
+    trpc.instance.resume.mutationOptions({ onSuccess: () => setTimeout(invalidateList, 500) })
+  );
 
   const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
     trpc.instance.delete.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
+        invalidateList();
         setDeleteId(null);
       },
     })
@@ -69,10 +86,20 @@ function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Agents</h1>
           <p className="mt-1 text-sm text-muted-foreground">Create and manage autonomous agents.</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4" />
-          New agent
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4" />
+            New agent
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Refresh agents"
+            onClick={invalidateList}
+          >
+            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       <CreateAgentDialog
@@ -156,6 +183,16 @@ function DashboardPage() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {instance.suspended ? (
+                        <DropdownMenuItem onClick={() => resumeInstance({ id: instance.id })}>
+                          Resume
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => suspendInstance({ id: instance.id })}>
+                          Pause
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => setDeleteId(instance.id)}

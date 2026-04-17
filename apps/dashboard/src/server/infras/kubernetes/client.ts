@@ -48,6 +48,7 @@ function mapOpenClawInstance(raw: OpenClawInstance): Instance {
     workspaceFiles: raw.spec.workspace?.initialFiles,
     skills: raw.spec.skills,
     plugins: raw.spec.plugins,
+    suspended: raw.spec.suspended,
     phase: raw.status?.phase as InstancePhase | undefined,
     createdAt: raw.metadata?.creationTimestamp,
   };
@@ -96,6 +97,9 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   }
   if (instance.plugins !== undefined) {
     spec.plugins = instance.plugins;
+  }
+  if (instance.suspended !== undefined) {
+    spec.suspended = instance.suspended;
   }
   return spec;
 }

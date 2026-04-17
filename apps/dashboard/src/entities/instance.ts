@@ -72,6 +72,7 @@ export const InstanceInputSchema = z.object({
   workspaceFiles: WorkspaceFilesSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
+  suspended: z.boolean().optional(),
 });
 
 export type InstanceInput = z.infer<typeof InstanceInputSchema>;

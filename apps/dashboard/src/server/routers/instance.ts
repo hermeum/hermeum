@@ -64,4 +64,16 @@ export const instanceRouter = t.router({
     .mutation(async ({ input }): Promise<Instance> => {
       return await usecase.removeEnv(input.id, input.envName);
     }),
+
+  suspend: t.procedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.suspendOpenClawInstance(input.id);
+    }),
+
+  resume: t.procedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ input }): Promise<Instance> => {
+      return await usecase.resumeOpenClawInstance(input.id);
+    }),
 });

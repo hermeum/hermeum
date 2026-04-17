@@ -159,4 +159,20 @@ export class InstanceUseCase extends SharedUseCase {
       patch: { skills: current.filter((s) => s !== skill) },
     });
   }
+
+  async suspendOpenClawInstance(id: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(id);
+    if (!instance) {
+      throw new Error(`OpenClawInstance ${id} not found`);
+    }
+    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: true } });
+  }
+
+  async resumeOpenClawInstance(id: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(id);
+    if (!instance) {
+      throw new Error(`OpenClawInstance ${id} not found`);
+    }
+    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: false } });
+  }
 }
