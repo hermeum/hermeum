@@ -16,6 +16,8 @@ function RootLayout() {
         <Link to="/">Dashboard</Link>
         {" | "}
         <Link to="/agents">Agents</Link>
+        {" | "}
+        <Link to="/secrets">Secrets</Link>
       </nav>
       <main>
         <Outlet />

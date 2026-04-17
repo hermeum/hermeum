@@ -1,6 +1,6 @@
 import { EnvVar, Instance, InstanceInput, Secret } from "@/entities";
 
-export type CreateOpenClawInstanceInput = { instanceInput: InstanceInput };
+export type CreateOpenClawInstanceInput = InstanceInput;
 export type PatchOpenClawInstanceInput = {
   id: string;
   patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">>;

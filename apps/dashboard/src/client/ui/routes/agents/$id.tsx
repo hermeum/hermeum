@@ -23,7 +23,7 @@ import {
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
-import { EditInstanceDialog } from "@/client/ui/components/edit-instance-dialog";
+import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 
 export const Route = createFileRoute("/agents/$id")({

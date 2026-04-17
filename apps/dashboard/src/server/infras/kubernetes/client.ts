@@ -115,6 +115,7 @@ function mapSecret(raw: k8s.V1Secret): Secret {
     name: raw.metadata?.annotations?.[KubeClawAnnotation.SecretName] ?? "",
     description: raw.metadata?.annotations?.[KubeClawAnnotation.SecretDescription],
     envVars,
+    createdAt: raw.metadata?.creationTimestamp,
   };
 }
 
@@ -156,7 +157,7 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createOpenClawInstance({ instanceInput }: CreateOpenClawInstanceInput): Promise<Instance> {
+  async createOpenClawInstance(instanceInput: CreateOpenClawInstanceInput): Promise<Instance> {
     const id = `instance-${Math.random().toString(36).slice(2, 8)}`;
     const spec = instanceInputToSpec(instanceInput);
 

@@ -52,7 +52,13 @@ export const SelfConfigureSchema = z
 export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
 
 export const EnvVarSchema = z.object({
-  name: z.string().min(1),
+  name: z
+    .string()
+    .min(1)
+    .regex(
+      /^[-._a-zA-Z0-9]+$/,
+      "A environment variable name must consist of alphanumeric characters, '-', '_' or '.'"
+    ),
   value: z.string(),
 });
 
