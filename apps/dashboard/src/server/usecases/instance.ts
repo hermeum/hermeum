@@ -1,4 +1,11 @@
-import { Instance, InstanceInput, InstanceInputSchema, Skill, SkillSchema, EnvVar } from "@/entities";
+import {
+  Instance,
+  InstanceInput,
+  InstanceInputSchema,
+  Skill,
+  SkillSchema,
+  EnvVar,
+} from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-config";
@@ -37,8 +44,7 @@ export class InstanceUseCase extends SharedUseCase {
     for (const plugin of instanceInput.plugins ?? []) {
       this.checkPluginAllowed(plugin);
     }
-    const id = `kubeclaw-${Math.random().toString(36).slice(2, 8)}`;
-    return this.runtime.createOpenClawInstance({ id, instanceInput });
+    return this.runtime.createOpenClawInstance(instanceInput);
   }
 
   async updateOpenClawInstance(id: string, patch: InstanceInput): Promise<Instance> {

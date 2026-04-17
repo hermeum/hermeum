@@ -1,13 +1,12 @@
 import { EnvVar, Instance, InstanceInput, Secret } from "@/entities";
 
-export type CreateOpenClawInstanceInput = { id: string; instanceInput: InstanceInput };
+export type CreateOpenClawInstanceInput = { instanceInput: InstanceInput };
 export type PatchOpenClawInstanceInput = {
   id: string;
   patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">>;
 };
 
 export type CreateSecretInput = {
-  id: string;
   name: string;
   description?: string | undefined;
 };

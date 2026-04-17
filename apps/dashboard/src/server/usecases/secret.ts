@@ -28,8 +28,7 @@ export class SecretUseCase {
   }
 
   async createSecret(input: CreateSecretInput): Promise<Secret> {
-    const id = `kubeclaw-secret-${Math.random().toString(36).slice(2, 8)}`;
-    return this.runtime.createSecret({ ...input, id });
+    return this.runtime.createSecret(input);
   }
 
   async updateSecret(id: string, input: UpdateSecretInput): Promise<Secret> {

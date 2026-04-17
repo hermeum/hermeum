@@ -156,10 +156,8 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createOpenClawInstance({
-    id,
-    instanceInput,
-  }: CreateOpenClawInstanceInput): Promise<Instance> {
+  async createOpenClawInstance({ instanceInput }: CreateOpenClawInstanceInput): Promise<Instance> {
+    const id = `instance-${Math.random().toString(36).slice(2, 8)}`;
     const spec = instanceInputToSpec(instanceInput);
 
     const body = await this.customObjectsApi.createNamespacedCustomObject({
@@ -251,7 +249,8 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createSecret({ id, name, description }: CreateSecretInput): Promise<Secret> {
+  async createSecret({ name, description }: CreateSecretInput): Promise<Secret> {
+    const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
     const annotations: Record<string, string> = {
       [KubeClawAnnotation.SecretName]: name,
     };
