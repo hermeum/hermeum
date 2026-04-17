@@ -9,6 +9,15 @@ import { CopyButton } from "@/client/ui/components/copy-button";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@kubeclaw/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,18 +36,21 @@ export const Route = createFileRoute("/agents/")({
   component: DashboardPage,
 });
 
-
 function DashboardPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const { data: instances, isPending, error } = useQuery(trpc.instance.list.queryOptions());
 
-  const { mutate: deleteInstance } = useMutation(
+  const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
     trpc.instance.delete.mutationOptions({
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
+        setDeleteId(null);
+      },
     })
   );
 
@@ -68,6 +80,34 @@ function DashboardPage() {
         onOpenChange={setDialogOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() })}
       />
+
+      <Dialog
+        open={deleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete agent</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this agent? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => {
+                if (deleteId) deleteInstance({ id: deleteId });
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Table>
         <TableHeader>
@@ -118,7 +158,7 @@ function DashboardPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => deleteInstance({ id: instance.id })}
+                        onClick={() => setDeleteId(instance.id)}
                       >
                         Delete
                       </DropdownMenuItem>

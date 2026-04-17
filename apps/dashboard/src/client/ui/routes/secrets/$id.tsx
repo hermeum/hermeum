@@ -8,6 +8,15 @@ import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
 import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@kubeclaw/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -38,6 +47,7 @@ function SecretDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
@@ -52,7 +62,7 @@ function SecretDetailPage() {
     })
   );
 
-  const { mutate: deleteSecret } = useMutation(
+  const { mutate: deleteSecret, isPending: isDeleting } = useMutation(
     trpc.secret.delete.mutationOptions({
       onSuccess: () => navigate({ to: "/secrets" }),
     })
@@ -88,13 +98,12 @@ function SecretDetailPage() {
             <DropdownMenuTrigger
               render={<Button variant="outline" size="icon" aria-label="More actions" />}
             >
-              <MoreHorizontal className="size-4" />
+              <Button variant="outline" size="icon" aria-label="Open actions menu">
+                <MoreHorizontal className="size-4" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => deleteSecret({ id })}
-              >
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -166,8 +175,32 @@ function SecretDetailPage() {
         open={editOpen}
         onOpenChange={setEditOpen}
         secretId={id}
-        initial={{ name: secret.name, ...(secret.description && { description: secret.description }) }}
+        initial={{
+          name: secret.name,
+          ...(secret.description && { description: secret.description }),
+        }}
       />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete secret</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this secret? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => deleteSecret({ id })}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <EnvVarDialog
         open={addOpen}

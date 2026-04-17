@@ -8,6 +8,15 @@ import { CopyButton } from "@/client/ui/components/copy-button";
 import { CreateSecretDialog } from "@/client/ui/components/create-secret-dialog";
 import { Button } from "@kubeclaw/components/ui/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@kubeclaw/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -56,13 +65,17 @@ function SecretsPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const { data: secrets, isPending, error } = useQuery(trpc.secret.list.queryOptions());
 
-  const { mutate: deleteSecret } = useMutation(
+  const { mutate: deleteSecret, isPending: isDeleting } = useMutation(
     trpc.secret.delete.mutationOptions({
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() });
+        setDeleteId(null);
+      },
     })
   );
 
@@ -90,6 +103,34 @@ function SecretsPage() {
       </div>
 
       <CreateSecretDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      <Dialog
+        open={deleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete secret</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this secret? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => {
+                if (deleteId) deleteSecret({ id: deleteId });
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Table>
         <TableHeader>
@@ -140,7 +181,7 @@ function SecretsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => deleteSecret({ id: secret.id })}
+                        onClick={() => setDeleteId(secret.id)}
                       >
                         Delete
                       </DropdownMenuItem>
