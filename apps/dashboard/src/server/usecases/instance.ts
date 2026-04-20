@@ -2,6 +2,7 @@ import {
   Instance,
   InstanceInput,
   InstanceInputSchema,
+  JsonPatchOp,
   Skill,
   SkillSchema,
   EnvVar,
@@ -19,6 +20,14 @@ export class InstanceUseCase extends SharedUseCase {
     config: ConfigAdaptor = new LocalConfig()
   ) {
     super(config);
+  }
+
+  getMutatingJsonPatch(instance: Instance): JsonPatchOp[] | null {
+    if (!instance.agentType) return null;
+    const { agentTypes } = this.config.get();
+    const agentType = agentTypes?.[instance.agentType];
+    if (!agentType) return null;
+    return agentType.mutatingJsonPatch;
   }
 
   async listOpenClawInstances(): Promise<Instance[]> {
@@ -44,6 +53,9 @@ export class InstanceUseCase extends SharedUseCase {
     for (const plugin of instanceInput.plugins ?? []) {
       this.checkPluginAllowed(plugin);
     }
+    if (instanceInput.agentType !== undefined) {
+      this.checkAgentTypeAllowed(instanceInput.agentType);
+    }
     await this.checkSecretsExist(instanceInput.secrets);
     return this.runtime.createOpenClawInstance(instanceInput);
   }
@@ -67,6 +79,9 @@ export class InstanceUseCase extends SharedUseCase {
     }
     for (const plugin of patch.plugins ?? []) {
       this.checkPluginAllowed(plugin);
+    }
+    if (patch.agentType !== undefined) {
+      this.checkAgentTypeAllowed(patch.agentType);
     }
     await this.checkSecretsExist(patch.secrets);
     return this.runtime.patchOpenClawInstance({ id, patch });

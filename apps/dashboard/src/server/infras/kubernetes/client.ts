@@ -34,16 +34,18 @@ const enum KubeClawLabelValue {
 const enum KubeClawAnnotation {
   Name = "kubeclaw.xyz/agent-name",
   Description = "kubeclaw.xyz/agent-description",
+  AgentType = "kubeclaw.xyz/agent-type",
   SecretName = "kubeclaw.xyz/secret-name",
   SecretDescription = "kubeclaw.xyz/secret-description",
   SecretArchived = "kubeclaw.xyz/secret-archived",
 }
 
-function mapOpenClawInstance(raw: OpenClawInstance): Instance {
+export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
     id: raw.metadata?.name ?? "",
     agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
     agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
+    agentType: raw.metadata?.annotations?.[KubeClawAnnotation.AgentType],
     openClawJson: raw.spec.config?.raw,
     envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
@@ -189,6 +191,7 @@ export class KubernetesClient implements Runtime {
           annotations: {
             [KubeClawAnnotation.Name]: instanceInput.agentName,
             [KubeClawAnnotation.Description]: instanceInput.agentDescription,
+            [KubeClawAnnotation.AgentType]: instanceInput.agentType,
           },
         },
         spec,
@@ -217,6 +220,7 @@ export class KubernetesClient implements Runtime {
           ...(patch.agentDescription !== undefined && {
             [KubeClawAnnotation.Description]: patch.agentDescription,
           }),
+          ...(patch.agentType !== undefined && { [KubeClawAnnotation.AgentType]: patch.agentType }),
         },
       },
       spec: { ...specPatch },

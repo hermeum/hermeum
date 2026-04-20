@@ -67,6 +67,7 @@ export type EnvVar = z.infer<typeof EnvVarSchema>;
 export const InstanceInputSchema = z.object({
   agentName: z.string().optional(),
   agentDescription: z.string().optional(),
+  agentType: z.string().optional(),
   openClawJson: OpenClawJsonSchema,
   envVars: z.array(EnvVarSchema).optional(),
   secrets: z.array(z.string()).optional(),

@@ -3,6 +3,7 @@ import url from "node:url";
 import * as fs from "node:fs";
 import express from "express";
 import { trpcMiddleware } from "./trpc.js";
+import { webhookRouter } from "./routers/webhook.js";
 
 const PORT = typeof process.env.PORT !== "undefined" ? parseInt(process.env.PORT, 10) : 3000;
 const HMR_PORT =
@@ -19,7 +20,9 @@ export const createServer = async (
 ) => {
   const app = express();
 
+  app.use(express.json());
   app.use("/trpc", trpcMiddleware);
+  app.use("/webhook", webhookRouter);
 
   if (!isProd) {
     const vite = await import("vite");

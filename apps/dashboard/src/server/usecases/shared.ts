@@ -85,4 +85,14 @@ export abstract class SharedUseCase {
       throw new Error(`Plugin "${plugin}" is not in the allowed list`);
     }
   }
+
+  protected checkAgentTypeAllowed(agentType: string): void {
+    const { agentTypes } = this.config.get();
+    if (!agentTypes) {
+      throw new Error("Agent types are not configured");
+    }
+    if (!(agentType in agentTypes)) {
+      throw new Error(`Agent type "${agentType}" is not configured`);
+    }
+  }
 }
