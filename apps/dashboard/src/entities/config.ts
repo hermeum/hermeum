@@ -12,7 +12,7 @@ export const JsonPatchOpSchema = z.object({
 export type JsonPatchOp = z.infer<typeof JsonPatchOpSchema>;
 
 export const AgentTypeSchema = z.object({
-  mutatingJsonPatch: z.array(JsonPatchOpSchema),
+  mutatingWebhookJsonPatch: z.array(JsonPatchOpSchema),
 });
 
 export type AgentType = z.infer<typeof AgentTypeSchema>;

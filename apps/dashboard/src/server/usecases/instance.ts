@@ -22,12 +22,12 @@ export class InstanceUseCase extends SharedUseCase {
     super(config);
   }
 
-  getMutatingJsonPatch(instance: Instance): JsonPatchOp[] | null {
+  getmutatingWebhookJsonPatch(instance: Instance): JsonPatchOp[] | null {
     if (!instance.agentType) return null;
     const { agentTypes } = this.config.get();
     const agentType = agentTypes?.[instance.agentType];
     if (!agentType) return null;
-    return agentType.mutatingJsonPatch;
+    return agentType.mutatingWebhookJsonPatch;
   }
 
   async listOpenClawInstances(): Promise<Instance[]> {

@@ -38,7 +38,12 @@ webhookRouter.post("/mutating", (req, res) => {
     return;
   }
 
-  if (request.kind.kind !== "OpenClawInstance" || request.operation === "DELETE" || request.operation === "CONNECT" || !request.object) {
+  if (
+    request.kind.kind !== "OpenClawInstance" ||
+    request.operation === "DELETE" ||
+    request.operation === "CONNECT" ||
+    !request.object
+  ) {
     res.json({
       apiVersion: body.apiVersion,
       kind: "AdmissionReview",
@@ -48,7 +53,7 @@ webhookRouter.post("/mutating", (req, res) => {
   }
 
   const instance = mapOpenClawInstance(request.object);
-  const patch = usecase.getMutatingJsonPatch(instance);
+  const patch = usecase.getmutatingWebhookJsonPatch(instance);
 
   const response: AdmissionReview = {
     apiVersion: body.apiVersion,
