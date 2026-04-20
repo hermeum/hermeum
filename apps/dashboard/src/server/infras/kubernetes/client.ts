@@ -114,6 +114,71 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   return spec;
 }
 
+function instanceInputToMetadata(instanceInput: CreateOpenClawInstanceInput): {
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+} {
+  const annotations: Record<string, string> = {};
+  if (instanceInput.agentName !== undefined) {
+    annotations[KubeClawAnnotation.Name] = instanceInput.agentName;
+  }
+  if (instanceInput.agentDescription !== undefined) {
+    annotations[KubeClawAnnotation.Description] = instanceInput.agentDescription;
+  }
+  if (instanceInput.agentType !== undefined) {
+    annotations[KubeClawAnnotation.AgentType] = instanceInput.agentType;
+  }
+  return {
+    labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
+    annotations,
+  };
+}
+
+function instanceToMetadata(patch: Partial<Omit<Instance, "id" | "phase" | "createdAt">>): {
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+} {
+  const annotations: Record<string, string> = {};
+  if (patch.agentName !== undefined) {
+    annotations[KubeClawAnnotation.Name] = patch.agentName;
+  }
+  if (patch.agentDescription !== undefined) {
+    annotations[KubeClawAnnotation.Description] = patch.agentDescription;
+  }
+  if (patch.agentType !== undefined) {
+    annotations[KubeClawAnnotation.AgentType] = patch.agentType;
+  }
+  return {
+    labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
+    annotations,
+  };
+}
+
+function secretToMetadata({
+  name,
+  description,
+  archived,
+}: {
+  name?: string;
+  description?: string;
+  archived?: boolean;
+}): { labels: Record<string, string>; annotations: Record<string, string> } {
+  const annotations: Record<string, string> = {};
+  if (name !== undefined) {
+    annotations[KubeClawAnnotation.SecretName] = name;
+  }
+  if (description !== undefined) {
+    annotations[KubeClawAnnotation.SecretDescription] = description;
+  }
+  if (archived !== undefined) {
+    annotations[KubeClawAnnotation.SecretArchived] = String(archived);
+  }
+  return {
+    labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
+    annotations,
+  };
+}
+
 function decodeSecretData(data: Record<string, string>): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, b64Value] of Object.entries(data)) {
@@ -122,7 +187,7 @@ function decodeSecretData(data: Record<string, string>): Record<string, string> 
   return result;
 }
 
-function mapSecret(raw: k8s.V1Secret): Secret {
+function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
   const envVars: SecretEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
   return {
     id: raw.metadata?.name ?? "",
@@ -187,12 +252,7 @@ export class KubernetesClient implements Runtime {
         metadata: {
           name: id,
           namespace: this.namespace,
-          labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
-          annotations: {
-            [KubeClawAnnotation.Name]: instanceInput.agentName,
-            [KubeClawAnnotation.Description]: instanceInput.agentDescription,
-            [KubeClawAnnotation.AgentType]: instanceInput.agentType,
-          },
+          ...instanceInputToMetadata(instanceInput),
         },
         spec,
       },
@@ -214,14 +274,7 @@ export class KubernetesClient implements Runtime {
       ...current,
       metadata: {
         ...current.metadata,
-        annotations: {
-          ...current.metadata?.annotations,
-          ...(patch.agentName !== undefined && { [KubeClawAnnotation.Name]: patch.agentName }),
-          ...(patch.agentDescription !== undefined && {
-            [KubeClawAnnotation.Description]: patch.agentDescription,
-          }),
-          ...(patch.agentType !== undefined && { [KubeClawAnnotation.AgentType]: patch.agentType }),
-        },
+        ...instanceToMetadata(patch),
       },
       spec: { ...specPatch },
     };
@@ -252,7 +305,7 @@ export class KubernetesClient implements Runtime {
       namespace: this.namespace,
       labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
     });
-    return (body.items ?? []).map(mapSecret);
+    return (body.items ?? []).map(mapKubernetesSecret);
   }
 
   async getSecret(id: string): Promise<Secret | null> {
@@ -261,20 +314,14 @@ export class KubernetesClient implements Runtime {
         name: id,
         namespace: this.namespace,
       });
-      return mapSecret(body);
+      return mapKubernetesSecret(body);
     } catch {
       return null;
     }
   }
 
-  async createSecret({ name, description }: CreateSecretInput): Promise<Secret> {
+  async createSecret(input: CreateSecretInput): Promise<Secret> {
     const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
-    const annotations: Record<string, string> = {
-      [KubeClawAnnotation.SecretName]: name,
-    };
-    if (description !== undefined) {
-      annotations[KubeClawAnnotation.SecretDescription] = description;
-    }
     const body = await this.coreV1Api.createNamespacedSecret({
       namespace: this.namespace,
       body: {
@@ -284,12 +331,11 @@ export class KubernetesClient implements Runtime {
         metadata: {
           name: id,
           namespace: this.namespace,
-          labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
-          annotations,
+          ...secretToMetadata(input),
         },
       },
     });
-    return mapSecret(body);
+    return mapKubernetesSecret(body);
   }
 
   async archiveSecret(id: string): Promise<Secret> {
@@ -310,24 +356,12 @@ export class KubernetesClient implements Runtime {
         ...rest,
         metadata: {
           ...current.metadata,
-          ...(current.metadata?.resourceVersion !== undefined && {
-            resourceVersion: current.metadata.resourceVersion,
-          }),
-          annotations: {
-            ...current.metadata?.annotations,
-            ...(patch.name !== undefined && { [KubeClawAnnotation.SecretName]: patch.name }),
-            ...(patch.description !== undefined && {
-              [KubeClawAnnotation.SecretDescription]: patch.description,
-            }),
-            ...(patch.archived !== undefined && {
-              [KubeClawAnnotation.SecretArchived]: String(patch.archived),
-            }),
-          },
+          ...secretToMetadata(patch),
         },
         ...(current.data !== undefined && { data: current.data }),
       },
     });
-    return mapSecret(body);
+    return mapKubernetesSecret(body);
   }
 
   async addEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
@@ -381,6 +415,6 @@ export class KubernetesClient implements Runtime {
         stringData,
       },
     });
-    return mapSecret(body);
+    return mapKubernetesSecret(body);
   }
 }
