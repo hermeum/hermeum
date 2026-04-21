@@ -4,7 +4,7 @@ import { Button } from "@kubeclaw/components/ui/button";
 import { Input } from "@kubeclaw/components/ui/input";
 import { Label } from "@kubeclaw/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
-import { authClient } from "@/client/ui/libs/auth-client";
+import { authClient } from "@/client/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,

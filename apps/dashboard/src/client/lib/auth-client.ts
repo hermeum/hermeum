@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
-import type { Session, User } from "../../../entities";
+
+import type { Session, User } from "@/entities";
 
 const client = createAuthClient({ basePath: "/auth" });
 

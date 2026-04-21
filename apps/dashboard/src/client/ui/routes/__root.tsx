@@ -1,7 +1,7 @@
 import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { Button } from "@kubeclaw/components/ui/button";
-import { authClient, useSession } from "@/client/ui/libs/auth-client";
+import { authClient, useSession } from "@/client/lib/auth-client";
 
 interface RouterContext {
   queryClient: QueryClient;
