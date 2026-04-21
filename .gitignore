@@ -9,4 +9,4 @@ dist
 .env.local
 .tanstack
 
-apps/dashboard/kubeclaw.yaml
+apps/dashboard/clawagent.yaml

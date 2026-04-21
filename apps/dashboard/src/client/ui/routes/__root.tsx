@@ -1,23 +1,45 @@
-import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
+import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+import { Button } from "@kubeclaw/components/ui/button";
+import { authClient, useSession } from "@/client/ui/libs/auth-client";
 
 interface RouterContext {
   queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ location }) => {
+    if (location.pathname === "/login") {
+      return;
+    }
+
+    const session = await authClient.getSession();
+    if (!session.data) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: RootLayout,
 });
 
 function RootLayout() {
+  const { data: session } = useSession();
+
   return (
     <>
-      <nav>
+      <nav className="flex items-center gap-4 p-4 border-b">
         <Link to="/">Dashboard</Link>
-        {" | "}
         <Link to="/agents">Agents</Link>
-        {" | "}
         <Link to="/secrets">Secrets</Link>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{session?.user?.email}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => authClient.signOut().then(() => window.location.assign("/login"))}
+          >
+            Sign out
+          </Button>
+        </div>
       </nav>
       <main>
         <Outlet />

@@ -19,7 +19,7 @@ export type AgentType = z.infer<typeof AgentTypeSchema>;
 
 export const InitConfigSchema = z
   .object({
-    agentTypes: z.record(AgentTypeSchema).optional(),
+    agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
     templates: z.array(TemplateSchema),
     allowed: z
       .object({

@@ -53,3 +53,21 @@ routers -> usecases ->  adaptors (interfaces) <- infras
 ```
 
 Outer layers depend on inner layers. Use cases never import from `infras/` or `routers/`.
+
+## Frameworks & Libraries
+
+| Layer | Library |
+|---|---|
+| Server framework | Express |
+| API layer | tRPC v11 |
+| Frontend routing | TanStack Router (file-based) |
+| Data fetching | TanStack Query + `@trpc/tanstack-react-query` |
+| Forms | TanStack Form |
+| UI components | shadcn/ui (Radix + Tailwind CSS v4) |
+| Icons | Lucide React |
+| Kubernetes client | `@kubernetes/client-node` |
+| Schema validation | Zod |
+| Code editor | CodeMirror (`@uiw/react-codemirror`) |
+| Serialization | SuperJSON |
+| Build tool | Vite |
+| Runtime | Node.js + tsx |

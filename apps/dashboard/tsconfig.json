@@ -6,5 +6,5 @@
       "@kubeclaw/components/*": ["../../packages/components/*"]
     }
   },
-  "include": ["src", "app.config.ts"]
+  "include": ["src", "app.config.ts", "drizzle.config.ts"]
 }

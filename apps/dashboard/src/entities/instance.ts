@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const WorkspaceFilesSchema = z.record(z.string()).optional();
+export const WorkspaceFilesSchema = z.record(z.string(), z.string()).optional();
 
 export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
 
@@ -34,7 +34,7 @@ export const StorageSchema = z
 
 export type Storage = z.infer<typeof StorageSchema>;
 
-export const OpenClawJsonSchema = z.record(z.unknown()).optional();
+export const OpenClawJsonSchema = z.record(z.string(), z.unknown()).optional();
 
 export type OpenClawJson = z.infer<typeof OpenClawJsonSchema>;
 

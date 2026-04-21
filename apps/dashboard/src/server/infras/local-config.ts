@@ -11,7 +11,9 @@ export class LocalConfig implements ConfigAdaptor {
 
   constructor(private filePath?: string) {
     const resolvedPath =
-      this.filePath ?? process.env.CONFIG_PATH ?? path.resolve(process.cwd(), "kubeclaw.yaml");
+      this.filePath ??
+      process.env.CLAW_AGENT_CONFIG_PATH ??
+      path.resolve(process.cwd(), "kubeclaw.yaml");
 
     const content = fs.readFileSync(resolvedPath, "utf-8");
     const raw = parse(content);

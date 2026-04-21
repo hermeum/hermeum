@@ -67,7 +67,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
 
     const result = InstanceInputSchema.safeParse(parsed);
     if (!result.success) {
-      const issue = result.error.errors[0]!;
+      const issue = result.error.issues[0]!;
       const path = issue.path.length > 0 ? `/${issue.path.join("/")}` : "";
       setValidationError(`${issue.message} (path: ${path})`);
       return;

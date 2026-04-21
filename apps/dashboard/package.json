@@ -9,6 +9,9 @@
     "start": "NODE_ENV=production tsx src/server/server.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "better-auth:generate": "pnpm dlx auth generate --config src/server/infras/better-auth/auth.ts --output src/server/infras/better-auth/schema.ts",
+    "drizzle:generate": "drizzle-kit generate ",
+    "drizzle:migrate": "drizzle-kit migrate",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
@@ -23,15 +26,18 @@
     "@trpc/server": "^11.0.0",
     "@trpc/tanstack-react-query": "^11.15.0",
     "@uiw/react-codemirror": "^4.25.9",
+    "better-auth": "^1.6.5",
     "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
     "fast-json-patch": "^3.1.1",
     "lucide-react": "^1.8.0",
+    "postgres": "^3.4.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "superjson": "^2.2.6",
     "yaml": "^2.8.3",
-    "zod": "^3.24.2"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@kubeclaw/eslint-config": "workspace:*",
@@ -42,6 +48,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.19.3",

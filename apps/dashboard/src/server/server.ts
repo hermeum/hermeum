@@ -2,8 +2,11 @@ import path from "node:path";
 import url from "node:url";
 import * as fs from "node:fs";
 import express from "express";
-import { trpcMiddleware } from "./trpc.js";
-import { webhookRouter } from "./routers/webhook.js";
+import { toNodeHandler } from "better-auth/node";
+
+import { trpcMiddleware } from "./trpc";
+import { webhookRouter } from "./routers/webhook";
+import { auth } from "./infras/better-auth/auth";
 
 const PORT = typeof process.env.PORT !== "undefined" ? parseInt(process.env.PORT, 10) : 3000;
 const HMR_PORT =
@@ -20,6 +23,7 @@ export const createServer = async (
 ) => {
   const app = express();
 
+  app.all("/auth/*", toNodeHandler(auth));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
   app.use("/webhook", webhookRouter);
