@@ -9,7 +9,7 @@ import {
 } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
-import { LocalConfig } from "../infras/local-config";
+import { LocalConfig } from "../infras/local-agent-config";
 import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
 import { SharedUseCase } from "./shared";

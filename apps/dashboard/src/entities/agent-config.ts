@@ -17,7 +17,7 @@ export const AgentTypeSchema = z.object({
 
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 
-export const InitConfigSchema = z
+export const AgentConfigSchema = z
   .object({
     agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
     templates: z.array(TemplateSchema),
@@ -44,4 +44,4 @@ export const InitConfigSchema = z
   })
   .readonly();
 
-export type InitConfig = z.infer<typeof InitConfigSchema>;
+export type AgentConfig = z.infer<typeof AgentConfigSchema>;

@@ -2,7 +2,7 @@ import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
 import { Template } from "@/entities";
-import { LocalConfig } from "../infras/local-config";
+import { LocalConfig } from "../infras/local-agent-config";
 import { TemplateUseCase } from "../usecases/template";
 
 let usecase: TemplateUseCase;

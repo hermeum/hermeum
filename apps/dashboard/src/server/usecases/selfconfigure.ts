@@ -1,6 +1,6 @@
 import { OpenClawJson } from "@/entities";
 
-import { LocalConfig } from "../infras/local-config";
+import { LocalConfig } from "../infras/local-agent-config";
 import { ConfigAdaptor } from "./adaptors/config";
 import { SharedUseCase } from "./shared";
 

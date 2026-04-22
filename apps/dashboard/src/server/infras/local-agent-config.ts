@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 import { parse } from "yaml";
 
-import { InitConfig, InitConfigSchema } from "@/entities";
+import { AgentConfig, AgentConfigSchema } from "@/entities";
 import { config } from "@/server/config";
 import { ConfigAdaptor } from "../usecases/adaptors/config";
 
 export class LocalConfig implements ConfigAdaptor {
-  private cache: InitConfig;
+  private cache: AgentConfig;
 
   constructor(private filePath?: string) {
     const resolvedPath = this.filePath ?? config.agentConfigPath;
@@ -14,10 +14,10 @@ export class LocalConfig implements ConfigAdaptor {
     const content = fs.readFileSync(resolvedPath, "utf-8");
     const raw = parse(content);
 
-    this.cache = InitConfigSchema.parse(raw);
+    this.cache = AgentConfigSchema.parse(raw);
   }
 
-  get(): InitConfig {
+  get(): AgentConfig {
     return this.cache;
   }
 }
