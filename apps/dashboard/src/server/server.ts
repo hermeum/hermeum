@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
+import { config } from "./config";
 import { trpcMiddleware } from "./trpc";
 import { webhookRouter } from "./routers/webhook";
 import { auth } from "./infras/better-auth/auth";
@@ -13,6 +14,9 @@ const HMR_PORT =
   typeof process.env.HMR_PORT !== "undefined" ? parseInt(process.env.HMR_PORT, 10) : 3001;
 
 const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
+
+// Validate required env vars before starting
+void config;
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
