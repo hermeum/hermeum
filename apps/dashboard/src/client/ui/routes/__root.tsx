@@ -1,7 +1,8 @@
 import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { Button } from "@kubeclaw/components/ui/button";
-import { authClient, useSession } from "@/client/lib/auth-client";
+import { useQuery } from "@tanstack/react-query";
+import { authClient } from "@/client/lib/auth-client";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -22,7 +23,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootLayout() {
-  const { data: session } = useSession();
+  const { data } = useQuery({
+    queryKey: ["session"],
+    queryFn: () => authClient.getSession(),
+  });
+  const session = data?.data;
 
   return (
     <>

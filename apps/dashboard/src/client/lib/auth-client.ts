@@ -40,11 +40,3 @@ class BetterAuthClient implements AuthClient {
 
 export const authClient: AuthClient = new BetterAuthClient();
 
-export function useSession() {
-  return client.useSession() as {
-    data: SessionData | null;
-    isPending: boolean;
-    error: unknown;
-    refetch: () => void;
-  };
-}
