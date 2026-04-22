@@ -1,24 +1,20 @@
 import { createAuthClient } from "better-auth/react";
-import { magicLinkClient } from "better-auth/client/plugins";
 
 import type { Session, User } from "@/entities";
 
-const client = createAuthClient({
-  basePath: "/auth",
-  plugins: [magicLinkClient()],
-});
+const client = createAuthClient({ basePath: "/auth" });
 
 export type SessionData = { session: Session; user: User };
 
 export interface AuthClient {
-  sendMagicLink(params: { email: string; callbackURL?: string }): Promise<void>;
+  signIn(args: { email: string; password: string }): Promise<void>;
   getSession(): Promise<{ data: SessionData | null }>;
   signOut(): Promise<unknown>;
 }
 
 class BetterAuthClient implements AuthClient {
-  async sendMagicLink({ email, callbackURL }: { email: string; callbackURL?: string }) {
-    const { error } = await client.signIn.magicLink({ email, callbackURL });
+  async signIn({ email, password }: { email: string; password: string }) {
+    const { error } = await client.signIn.email({ email, password });
     if (error) {
       throw error;
     }

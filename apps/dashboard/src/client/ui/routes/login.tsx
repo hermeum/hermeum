@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
 import { Button } from "@kubeclaw/components/ui/button";
 import { Input } from "@kubeclaw/components/ui/input";
 import { Label } from "@kubeclaw/components/ui/label";
@@ -12,13 +11,17 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
   const form = useForm({
-    defaultValues: { email: "" },
+    defaultValues: { email: "", password: "" },
     onSubmit: async ({ value }) => {
       try {
-        await authClient.sendMagicLink({ email: value.email, callbackURL: "/agents" });
-        setSent(true);
+        await authClient.signIn({
+          email: value.email,
+          password: value.password,
+        });
+
+        navigate({ to: "/agents" });
       } catch (err) {
         console.error(err);
       }
@@ -32,37 +35,45 @@ function LoginPage() {
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent>
-          {sent ? (
-            <p className="text-sm text-muted-foreground">
-              Check your email for a sign-in link.
-            </p>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                form.handleSubmit();
-              }}
-              className="space-y-4"
-            >
-              <form.Field name="email">
-                {(field) => (
-                  <div className="space-y-1">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      required
-                    />
-                  </div>
-                )}
-              </form.Field>
-              <Button type="submit" className="w-full">
-                Send magic link
-              </Button>
-            </form>
-          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit();
+            }}
+            className="space-y-4"
+          >
+            <form.Field name="email">
+              {(field) => (
+                <div className="space-y-1">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </form.Field>
+            <form.Field name="password">
+              {(field) => (
+                <div className="space-y-1">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </form.Field>
+            <Button type="submit" className="w-full">
+              Sign in
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
