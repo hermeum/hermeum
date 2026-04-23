@@ -9,13 +9,13 @@ interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
-    if (location.pathname === "/login") {
+    if (location.pathname === "/signin") {
       return;
     }
 
     const { data: session } = await authClient.getSession();
     if (!session) {
-      throw redirect({ to: "/login" });
+      throw redirect({ to: "/signin" });
     }
   },
   component: RootLayout,
@@ -35,7 +35,7 @@ function RootLayout() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => authClient.signOut().then(() => window.location.assign("/login"))}
+            onClick={() => authClient.signOut().then(() => window.location.assign("/signin"))}
           >
             Sign out
           </Button>

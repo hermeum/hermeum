@@ -9,16 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './client/ui/routes/__root'
-import { Route as LoginRouteImport } from './client/ui/routes/login'
+import { Route as SigninRouteImport } from './client/ui/routes/signin'
 import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as SecretsIndexRouteImport } from './client/ui/routes/secrets/index'
 import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index'
 import { Route as SecretsIdRouteImport } from './client/ui/routes/secrets/$id'
 import { Route as AgentsIdRouteImport } from './client/ui/routes/agents/$id'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,7 +49,7 @@ const AgentsIdRoute = AgentsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
+  '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
   '/secrets/$id': typeof SecretsIdRoute
   '/agents/': typeof AgentsIndexRoute
@@ -57,7 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
+  '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
   '/secrets/$id': typeof SecretsIdRoute
   '/agents': typeof AgentsIndexRoute
@@ -66,7 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
+  '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
   '/secrets/$id': typeof SecretsIdRoute
   '/agents/': typeof AgentsIndexRoute
@@ -76,17 +76,17 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
+    | '/signin'
     | '/agents/$id'
     | '/secrets/$id'
     | '/agents/'
     | '/secrets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/agents/$id' | '/secrets/$id' | '/agents' | '/secrets'
+  to: '/' | '/signin' | '/agents/$id' | '/secrets/$id' | '/agents' | '/secrets'
   id:
     | '__root__'
     | '/'
-    | '/login'
+    | '/signin'
     | '/agents/$id'
     | '/secrets/$id'
     | '/agents/'
@@ -95,7 +95,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LoginRoute: typeof LoginRoute
+  SigninRoute: typeof SigninRoute
   AgentsIdRoute: typeof AgentsIdRoute
   SecretsIdRoute: typeof SecretsIdRoute
   AgentsIndexRoute: typeof AgentsIndexRoute
@@ -104,11 +104,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -151,7 +151,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LoginRoute: LoginRoute,
+  SigninRoute: SigninRoute,
   AgentsIdRoute: AgentsIdRoute,
   SecretsIdRoute: SecretsIdRoute,
   AgentsIndexRoute: AgentsIndexRoute,
