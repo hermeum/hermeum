@@ -8,6 +8,7 @@ import { CopyButton } from "@/client/ui/components/copy-button";
 import { CreateSecretDialog } from "@/client/ui/components/create-secret-dialog";
 import { Badge } from "@kubeclaw/components/ui/badge";
 import { Button } from "@kubeclaw/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kubeclaw/components/ui/tabs";
 import {
   Dialog,
   DialogClose,
@@ -67,9 +68,11 @@ function SecretsPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [archiveId, setArchiveId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | "active">("all");
   const navigate = useNavigate();
 
   const { data: secrets, isPending, error } = useQuery(trpc.secret.list.queryOptions());
+  const visibleSecrets = tab === "active" ? secrets?.filter((s) => !s.archived) : secrets;
 
   const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
     trpc.secret.archive.mutationOptions({
@@ -134,6 +137,12 @@ function SecretsPage() {
         </DialogContent>
       </Dialog>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "active")}>
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="active">Active</TabsTrigger>
+        </TabsList>
+        <TabsContent value={tab}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -146,14 +155,14 @@ function SecretsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {secrets?.length === 0 ? (
+          {visibleSecrets?.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-muted-foreground">
                 No secrets yet.
               </TableCell>
             </TableRow>
           ) : (
-            secrets?.map((secret) => (
+            visibleSecrets?.map((secret) => (
               <TableRow
                 key={secret.id}
                 className="cursor-pointer"
@@ -199,6 +208,8 @@ function SecretsPage() {
           )}
         </TableBody>
       </Table>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
