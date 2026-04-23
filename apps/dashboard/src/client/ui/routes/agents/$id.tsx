@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { MoreHorizontal } from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
 import { Badge } from "@kubeclaw/components/ui/badge";
@@ -25,6 +26,22 @@ import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@kubeclaw/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@kubeclaw/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/agents/$id")({
   component: InstanceDetailPage,
@@ -54,8 +71,26 @@ function BadgeList({ items, max = BADGE_MAX }: { items: string[]; max?: number }
 function InstanceDetailPage() {
   const { id } = Route.useParams();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: instance, isPending, error } = useQuery(trpc.instance.get.queryOptions({ id }));
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const invalidateDetail = () =>
+    queryClient.invalidateQueries({ queryKey: trpc.instance.get.queryKey({ id }) });
+
+  const { mutate: suspendInstance } = useMutation(
+    trpc.instance.suspend.mutationOptions({ onSuccess: () => setTimeout(invalidateDetail, 500) })
+  );
+  const { mutate: resumeInstance } = useMutation(
+    trpc.instance.resume.mutationOptions({ onSuccess: () => setTimeout(invalidateDetail, 500) })
+  );
+  const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
+    trpc.instance.delete.mutationOptions({
+      onSuccess: () => navigate({ to: "/agents/" }),
+    })
+  );
 
   if (isPending) return <div className="p-6">Loading…</div>;
   if (error) return <div className="p-6 text-red-500">Error: {error.message}</div>;
@@ -78,9 +113,29 @@ function InstanceDetailPage() {
             <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>
           )}
         </div>
-        <Button variant="outline" onClick={() => setEditOpen(true)}>
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" size="icon" aria-label="Open actions menu" />}
+            >
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {instance.suspended ? (
+                <DropdownMenuItem onClick={() => resumeInstance({ id })}>Resume</DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => suspendInstance({ id })}>Pause</DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" onClick={() => setEditOpen(true)}>
+            Edit
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -197,6 +252,27 @@ function InstanceDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={deleteOpen} onOpenChange={(open) => { if (!open) setDeleteOpen(false); }}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete agent</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this agent? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => deleteInstance({ id })}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <EditInstanceDialog instance={instance} open={editOpen} onOpenChange={setEditOpen} />
     </div>
