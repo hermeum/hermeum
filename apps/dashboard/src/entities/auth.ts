@@ -14,3 +14,9 @@ export const SessionSchema = z.object({
   expiresAt: z.date(),
 });
 export type Session = z.infer<typeof SessionSchema>;
+
+export const ContextSchema = z.object({
+  session: SessionSchema.nullable(),
+  user: UserSchema.nullable(),
+});
+export type Context = z.infer<typeof ContextSchema>;

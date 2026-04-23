@@ -14,13 +14,13 @@ try {
 }
 
 export const templateRouter = t.router({
-  list: protectedProcedure.query((): Template[] => {
-    return usecase.list();
+  list: protectedProcedure.query(({ ctx }): Template[] => {
+    return usecase.list(ctx);
   }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .query(({ input }): Template | null => {
-      return usecase.get(input.id);
+    .query(({ ctx, input }): Template | null => {
+      return usecase.get(ctx, input.id);
     }),
 });

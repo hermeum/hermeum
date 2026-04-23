@@ -1,4 +1,4 @@
-import { EnvVar, Instance, InstanceInput, Secret } from "@/entities";
+import { Context, EnvVar, Instance, InstanceInput, Secret } from "@/entities";
 
 export type CreateOpenClawInstanceInput = InstanceInput;
 export type PatchOpenClawInstanceInput = {
@@ -17,18 +17,18 @@ export type SecretPatch = {
 };
 
 export interface Runtime {
-  listOpenClawInstances: () => Promise<Instance[]>;
-  getOpenClawInstance: (id: string) => Promise<Instance | null>;
-  createOpenClawInstance: (input: CreateOpenClawInstanceInput) => Promise<Instance>;
-  patchOpenClawInstance: (input: PatchOpenClawInstanceInput) => Promise<Instance>;
-  deleteOpenClawInstance: (id: string) => Promise<void>;
+  listOpenClawInstances: (ctx: Context) => Promise<Instance[]>;
+  getOpenClawInstance: (ctx: Context, id: string) => Promise<Instance | null>;
+  createOpenClawInstance: (ctx: Context, input: CreateOpenClawInstanceInput) => Promise<Instance>;
+  patchOpenClawInstance: (ctx: Context, input: PatchOpenClawInstanceInput) => Promise<Instance>;
+  deleteOpenClawInstance: (ctx: Context, id: string) => Promise<void>;
 
-  listSecrets: () => Promise<Secret[]>;
-  getSecret: (id: string) => Promise<Secret | null>;
-  createSecret: (input: CreateSecretInput) => Promise<Secret>;
-  archiveSecret: (id: string) => Promise<Secret>;
-  patchSecret: (id: string, patch: SecretPatch) => Promise<Secret>;
-  addEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
-  updateEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
-  removeEnvVar: (id: string, name: string) => Promise<Secret>;
+  listSecrets: (ctx: Context) => Promise<Secret[]>;
+  getSecret: (ctx: Context, id: string) => Promise<Secret | null>;
+  createSecret: (ctx: Context, input: CreateSecretInput) => Promise<Secret>;
+  archiveSecret: (ctx: Context, id: string) => Promise<Secret>;
+  patchSecret: (ctx: Context, id: string, patch: SecretPatch) => Promise<Secret>;
+  addEnvVar: (ctx: Context, id: string, envVar: EnvVar) => Promise<Secret>;
+  updateEnvVar: (ctx: Context, id: string, envVar: EnvVar) => Promise<Secret>;
+  removeEnvVar: (ctx: Context, id: string, name: string) => Promise<Secret>;
 }

@@ -1,6 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { EnvVar, Instance, InstanceInput, InstancePhase, Secret, SecretEnvVar } from "@/entities";
+import { Context, EnvVar, Instance, InstanceInput, InstancePhase, Secret, SecretEnvVar } from "@/entities";
 import {
   CreateOpenClawInstanceInput,
   CreateSecretInput,
@@ -211,7 +211,7 @@ export class KubernetesClient implements Runtime {
     this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
-  async listOpenClawInstances(): Promise<Instance[]> {
+  async listOpenClawInstances(ctx: Context): Promise<Instance[]> {
     const body = await this.customObjectsApi.listNamespacedCustomObject({
       namespace: this.namespace,
       group: OpenClawGroup.Default,
@@ -222,7 +222,7 @@ export class KubernetesClient implements Runtime {
     return (body as OpenClawInstanceList).items.map(mapOpenClawInstance);
   }
 
-  async getOpenClawInstance(id: string): Promise<Instance | null> {
+  async getOpenClawInstance(ctx: Context, id: string): Promise<Instance | null> {
     try {
       const body = await this.customObjectsApi.getNamespacedCustomObject({
         namespace: this.namespace,
@@ -237,7 +237,7 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createOpenClawInstance(instanceInput: CreateOpenClawInstanceInput): Promise<Instance> {
+  async createOpenClawInstance(ctx: Context, instanceInput: CreateOpenClawInstanceInput): Promise<Instance> {
     const id = `instance-${Math.random().toString(36).slice(2, 8)}`;
     const spec = instanceInputToSpec(instanceInput);
 
@@ -260,7 +260,7 @@ export class KubernetesClient implements Runtime {
     return mapOpenClawInstance(body as OpenClawInstance);
   }
 
-  async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
+  async patchOpenClawInstance(ctx: Context, { id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
     const current = (await this.customObjectsApi.getNamespacedCustomObject({
       namespace: this.namespace,
       group: OpenClawGroup.Default,
@@ -290,7 +290,7 @@ export class KubernetesClient implements Runtime {
     return mapOpenClawInstance(body as OpenClawInstance);
   }
 
-  async deleteOpenClawInstance(id: string): Promise<void> {
+  async deleteOpenClawInstance(ctx: Context, id: string): Promise<void> {
     await this.customObjectsApi.deleteNamespacedCustomObject({
       namespace: this.namespace,
       group: OpenClawGroup.Default,
@@ -300,7 +300,7 @@ export class KubernetesClient implements Runtime {
     });
   }
 
-  async listSecrets(): Promise<Secret[]> {
+  async listSecrets(ctx: Context): Promise<Secret[]> {
     const body = await this.coreV1Api.listNamespacedSecret({
       namespace: this.namespace,
       labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
@@ -308,7 +308,7 @@ export class KubernetesClient implements Runtime {
     return (body.items ?? []).map(mapKubernetesSecret);
   }
 
-  async getSecret(id: string): Promise<Secret | null> {
+  async getSecret(ctx: Context, id: string): Promise<Secret | null> {
     try {
       const body = await this.coreV1Api.readNamespacedSecret({
         name: id,
@@ -320,7 +320,7 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createSecret(input: CreateSecretInput): Promise<Secret> {
+  async createSecret(ctx: Context, input: CreateSecretInput): Promise<Secret> {
     const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
     const body = await this.coreV1Api.createNamespacedSecret({
       namespace: this.namespace,
@@ -338,11 +338,11 @@ export class KubernetesClient implements Runtime {
     return mapKubernetesSecret(body);
   }
 
-  async archiveSecret(id: string): Promise<Secret> {
-    return this.patchSecret(id, { archived: true });
+  async archiveSecret(context: Context, id: string): Promise<Secret> {
+    return this.patchSecret(context, id, { archived: true });
   }
 
-  async patchSecret(id: string, patch: SecretPatch): Promise<Secret> {
+  async patchSecret(context: Context, id: string, patch: SecretPatch): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: this.namespace,
@@ -364,7 +364,7 @@ export class KubernetesClient implements Runtime {
     return mapKubernetesSecret(body);
   }
 
-  async addEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+  async addEnvVar(ctx: Context, id: string, envVar: EnvVar): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: this.namespace,
@@ -374,7 +374,7 @@ export class KubernetesClient implements Runtime {
     return this._applyStringData(id, current, stringData);
   }
 
-  async updateEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+  async updateEnvVar(ctx: Context, id: string, envVar: EnvVar): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: this.namespace,
@@ -384,7 +384,7 @@ export class KubernetesClient implements Runtime {
     return this._applyStringData(id, current, stringData);
   }
 
-  async removeEnvVar(id: string, name: string): Promise<Secret> {
+  async removeEnvVar(ctx: Context, id: string, name: string): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: this.namespace,

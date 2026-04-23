@@ -1,4 +1,5 @@
 import {
+  Context,
   Instance,
   InstanceInput,
   InstanceInputSchema,
@@ -30,15 +31,15 @@ export class InstanceUseCase extends SharedUseCase {
     return agentType.mutatingWebhookJsonPatch;
   }
 
-  async listOpenClawInstances(): Promise<Instance[]> {
-    return this.runtime.listOpenClawInstances();
+  async listOpenClawInstances(ctx: Context): Promise<Instance[]> {
+    return this.runtime.listOpenClawInstances(ctx);
   }
 
-  async getOpenClawInstance(id: string): Promise<Instance | null> {
-    return this.runtime.getOpenClawInstance(id);
+  async getOpenClawInstance(ctx: Context, id: string): Promise<Instance | null> {
+    return this.runtime.getOpenClawInstance(ctx, id);
   }
 
-  async createOpenClawInstance(instanceInput: InstanceInput): Promise<Instance> {
+  async createOpenClawInstance(ctx: Context, instanceInput: InstanceInput): Promise<Instance> {
     instanceInput = InstanceInputSchema.parse(instanceInput);
 
     if (instanceInput.openClawJson) {
@@ -56,12 +57,12 @@ export class InstanceUseCase extends SharedUseCase {
     if (instanceInput.agentType !== undefined) {
       this.checkAgentTypeAllowed(instanceInput.agentType);
     }
-    await this.checkSecretsExist(instanceInput.secrets);
-    return this.runtime.createOpenClawInstance(instanceInput);
+    await this.checkSecretsExist(ctx, instanceInput.secrets);
+    return this.runtime.createOpenClawInstance(ctx, instanceInput);
   }
 
-  async updateOpenClawInstance(id: string, patch: InstanceInput): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(id);
+  async updateOpenClawInstance(ctx: Context, id: string, patch: InstanceInput): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
@@ -83,20 +84,20 @@ export class InstanceUseCase extends SharedUseCase {
     if (patch.agentType !== undefined) {
       this.checkAgentTypeAllowed(patch.agentType);
     }
-    await this.checkSecretsExist(patch.secrets);
-    return this.runtime.patchOpenClawInstance({ id, patch });
+    await this.checkSecretsExist(ctx, patch.secrets);
+    return this.runtime.patchOpenClawInstance(ctx, { id, patch });
   }
 
-  async deleteOpenClawInstance(id: string): Promise<void> {
-    const instance = await this.runtime.getOpenClawInstance(id);
+  async deleteOpenClawInstance(ctx: Context, id: string): Promise<void> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.deleteOpenClawInstance(id);
+    return this.runtime.deleteOpenClawInstance(ctx, id);
   }
 
-  async addEnv(instanceId: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceId);
+  async addEnv(ctx: Context, instanceId: string, envVar: EnvVar): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
@@ -104,14 +105,14 @@ export class InstanceUseCase extends SharedUseCase {
     if (alreadyExists) {
       throw new Error(`Env var "${envVar.name}" already exists`);
     }
-    return this.runtime.patchOpenClawInstance({
+    return this.runtime.patchOpenClawInstance(ctx, {
       id: instanceId,
       patch: { envVars: [...(instance.envVars ?? []), envVar] },
     });
   }
 
-  async updateEnv(instanceId: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceId);
+  async updateEnv(ctx: Context, instanceId: string, envVar: EnvVar): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
@@ -119,14 +120,14 @@ export class InstanceUseCase extends SharedUseCase {
     if (!envVarExists) {
       throw new Error(`Env var "${envVar.name}" not found`);
     }
-    return this.runtime.patchOpenClawInstance({
+    return this.runtime.patchOpenClawInstance(ctx, {
       id: instanceId,
       patch: { envVars: instance.envVars?.map((e) => (e.name === envVar.name ? envVar : e)) },
     });
   }
 
-  async removeEnv(instanceId: string, envName: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(instanceId);
+  async removeEnv(ctx: Context, instanceId: string, envName: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
@@ -134,17 +135,17 @@ export class InstanceUseCase extends SharedUseCase {
     if (!envVarExists) {
       throw new Error(`Env var "${envName}" not found`);
     }
-    return this.runtime.patchOpenClawInstance({
+    return this.runtime.patchOpenClawInstance(ctx, {
       id: instanceId,
       patch: { envVars: instance.envVars?.filter((e) => e.name !== envName) },
     });
   }
 
-  async installSkill(instanceId: string, skill: Skill): Promise<Instance> {
+  async installSkill(ctx: Context, instanceId: string, skill: Skill): Promise<Instance> {
     SkillSchema.parse(skill);
     this.checkSkillAllowed(skill);
 
-    const instance = await this.runtime.getOpenClawInstance(instanceId);
+    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
@@ -155,15 +156,15 @@ export class InstanceUseCase extends SharedUseCase {
     if (current.length >= 20) {
       throw new Error("Instance already has the maximum of 20 skills");
     }
-    return this.runtime.patchOpenClawInstance({
+    return this.runtime.patchOpenClawInstance(ctx, {
       id: instanceId,
       patch: { skills: [...current, skill] },
     });
   }
 
-  async uninstallSkill(instanceId: string, skill: Skill): Promise<Instance> {
+  async uninstallSkill(ctx: Context, instanceId: string, skill: Skill): Promise<Instance> {
     this.checkSkillAllowed(skill);
-    const instance = await this.runtime.getOpenClawInstance(instanceId);
+    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
@@ -171,15 +172,15 @@ export class InstanceUseCase extends SharedUseCase {
     if (!current.includes(skill)) {
       throw new Error(`Skill "${skill}" is not installed on instance "${instanceId}"`);
     }
-    return this.runtime.patchOpenClawInstance({
+    return this.runtime.patchOpenClawInstance(ctx, {
       id: instanceId,
       patch: { skills: current.filter((s) => s !== skill) },
     });
   }
 
-  private async checkSecretsExist(secrets: string[] | undefined): Promise<void> {
+  private async checkSecretsExist(ctx: Context, secrets: string[] | undefined): Promise<void> {
     for (const name of secrets ?? []) {
-      const secret = await this.runtime.getSecret(name);
+      const secret = await this.runtime.getSecret(ctx, name);
       if (!secret) {
         throw new Error(`Secret "${name}" not found`);
       }
@@ -189,19 +190,19 @@ export class InstanceUseCase extends SharedUseCase {
     }
   }
 
-  async suspendOpenClawInstance(id: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(id);
+  async suspendOpenClawInstance(ctx: Context, id: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: true } });
+    return this.runtime.patchOpenClawInstance(ctx, { id, patch: { suspended: true } });
   }
 
-  async resumeOpenClawInstance(id: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(id);
+  async resumeOpenClawInstance(ctx: Context, id: string): Promise<Instance> {
+    const instance = await this.runtime.getOpenClawInstance(ctx, id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: false } });
+    return this.runtime.patchOpenClawInstance(ctx, { id, patch: { suspended: false } });
   }
 }
