@@ -20,68 +20,79 @@ export class SecretUseCase {
   constructor(private readonly runtime: Runtime = new KubernetesClient("kubeclaw")) {}
 
   async listSecrets(ctx: Context): Promise<Secret[]> {
-    return this.runtime.listSecrets(ctx);
+    return this.runtime.listSecrets();
   }
 
   async getSecret(ctx: Context, id: string): Promise<Secret | null> {
-    return this.runtime.getSecret(ctx, id);
+    return this.runtime.getSecret(id);
   }
 
   async createSecret(ctx: Context, input: CreateSecretInput): Promise<Secret> {
-    return this.runtime.createSecret(ctx, input);
+    return this.runtime.createSecret({ ...input, userId: ctx.user!.id });
   }
 
   async updateSecret(ctx: Context, id: string, input: UpdateSecretInput): Promise<Secret> {
-    const secret = await this.runtime.getSecret(ctx, id);
+    const secret = await this.runtime.getSecret(id);
     if (!secret) {
       throw new Error(`Secret "${id}" not found`);
     }
-    return this.runtime.patchSecret(ctx, id, {
+    this.verifyOwnership(ctx, secret);
+    return this.runtime.patchSecret(id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
     });
   }
 
   async archiveSecret(ctx: Context, id: string): Promise<Secret> {
-    const secret = await this.runtime.getSecret(ctx, id);
+    const secret = await this.runtime.getSecret(id);
     if (!secret) {
       throw new Error(`Secret "${id}" not found`);
     }
-    return this.runtime.archiveSecret(ctx, id);
+    this.verifyOwnership(ctx, secret);
+    return this.runtime.archiveSecret(id);
   }
 
   async addEnvVar(ctx: Context, secretId: string, envVar: EnvVar): Promise<Secret> {
     EnvVarSchema.parse(envVar);
-    const secret = await this.runtime.getSecret(ctx, secretId);
+    const secret = await this.runtime.getSecret(secretId);
     if (!secret) {
       throw new Error(`Secret "${secretId}" not found`);
     }
+    this.verifyOwnership(ctx, secret);
     if (secret.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" already exists in secret "${secretId}"`);
     }
-    return this.runtime.addEnvVar(ctx, secretId, envVar);
+    return this.runtime.addEnvVar(secretId, envVar);
   }
 
   async updateEnvVar(ctx: Context, secretId: string, envVar: EnvVar): Promise<Secret> {
     EnvVarSchema.parse(envVar);
-    const secret = await this.runtime.getSecret(ctx, secretId);
+    const secret = await this.runtime.getSecret(secretId);
     if (!secret) {
       throw new Error(`Secret "${secretId}" not found`);
     }
+    this.verifyOwnership(ctx, secret);
     if (!secret.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" not found in secret "${secretId}"`);
     }
-    return this.runtime.updateEnvVar(ctx, secretId, envVar);
+    return this.runtime.updateEnvVar(secretId, envVar);
   }
 
   async removeEnvVar(ctx: Context, secretId: string, name: string): Promise<Secret> {
-    const secret = await this.runtime.getSecret(ctx, secretId);
+    const secret = await this.runtime.getSecret(secretId);
     if (!secret) {
       throw new Error(`Secret "${secretId}" not found`);
     }
+    this.verifyOwnership(ctx, secret);
     if (!secret.envVars.some((e) => e.name === name)) {
       throw new Error(`Env var "${name}" not found in secret "${secretId}"`);
     }
-    return this.runtime.removeEnvVar(ctx, secretId, name);
+    return this.runtime.removeEnvVar(secretId, name);
+  }
+
+  private verifyOwnership(ctx: Context, resource: { userId: string }): void {
+    if (ctx.user!.id !== resource.userId) {
+      throw new Error("Forbidden");
+    }
   }
 }

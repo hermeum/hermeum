@@ -32,11 +32,11 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async listOpenClawInstances(ctx: Context): Promise<Instance[]> {
-    return this.runtime.listOpenClawInstances(ctx);
+    return this.runtime.listOpenClawInstances();
   }
 
   async getOpenClawInstance(ctx: Context, id: string): Promise<Instance | null> {
-    return this.runtime.getOpenClawInstance(ctx, id);
+    return this.runtime.getOpenClawInstance(id);
   }
 
   async createOpenClawInstance(ctx: Context, instanceInput: InstanceInput): Promise<Instance> {
@@ -57,15 +57,16 @@ export class InstanceUseCase extends SharedUseCase {
     if (instanceInput.agentType !== undefined) {
       this.checkAgentTypeAllowed(instanceInput.agentType);
     }
-    await this.checkSecretsExist(ctx, instanceInput.secrets);
-    return this.runtime.createOpenClawInstance(ctx, instanceInput);
+    await this.checkSecretsExist(instanceInput.secrets);
+    return this.runtime.createOpenClawInstance({ ...instanceInput, userId: ctx.user!.id });
   }
 
   async updateOpenClawInstance(ctx: Context, id: string, patch: InstanceInput): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, id);
+    const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
+    this.verifyOwnership(ctx, instance);
 
     patch = InstanceInputSchema.parse(patch);
 
@@ -84,58 +85,62 @@ export class InstanceUseCase extends SharedUseCase {
     if (patch.agentType !== undefined) {
       this.checkAgentTypeAllowed(patch.agentType);
     }
-    await this.checkSecretsExist(ctx, patch.secrets);
-    return this.runtime.patchOpenClawInstance(ctx, { id, patch });
+    await this.checkSecretsExist(patch.secrets);
+    return this.runtime.patchOpenClawInstance({ id, patch });
   }
 
   async deleteOpenClawInstance(ctx: Context, id: string): Promise<void> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, id);
+    const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.deleteOpenClawInstance(ctx, id);
+    this.verifyOwnership(ctx, instance);
+    return this.runtime.deleteOpenClawInstance(id);
   }
 
   async addEnv(ctx: Context, instanceId: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
+    this.verifyOwnership(ctx, instance);
     const alreadyExists = instance.envVars?.some((e) => e.name === envVar.name);
     if (alreadyExists) {
       throw new Error(`Env var "${envVar.name}" already exists`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, {
+    return this.runtime.patchOpenClawInstance({
       id: instanceId,
       patch: { envVars: [...(instance.envVars ?? []), envVar] },
     });
   }
 
   async updateEnv(ctx: Context, instanceId: string, envVar: EnvVar): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
+    this.verifyOwnership(ctx, instance);
     const envVarExists = instance.envVars?.some((e) => e.name === envVar.name);
     if (!envVarExists) {
       throw new Error(`Env var "${envVar.name}" not found`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, {
+    return this.runtime.patchOpenClawInstance({
       id: instanceId,
       patch: { envVars: instance.envVars?.map((e) => (e.name === envVar.name ? envVar : e)) },
     });
   }
 
   async removeEnv(ctx: Context, instanceId: string, envName: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance ${instanceId} not found`);
     }
+    this.verifyOwnership(ctx, instance);
     const envVarExists = instance.envVars?.some((e) => e.name === envName);
     if (!envVarExists) {
       throw new Error(`Env var "${envName}" not found`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, {
+    return this.runtime.patchOpenClawInstance({
       id: instanceId,
       patch: { envVars: instance.envVars?.filter((e) => e.name !== envName) },
     });
@@ -145,10 +150,11 @@ export class InstanceUseCase extends SharedUseCase {
     SkillSchema.parse(skill);
     this.checkSkillAllowed(skill);
 
-    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
+    this.verifyOwnership(ctx, instance);
     const current = instance.skills ?? [];
     if (current.includes(skill)) {
       throw new Error(`Skill "${skill}" is already installed on instance "${instanceId}"`);
@@ -156,7 +162,7 @@ export class InstanceUseCase extends SharedUseCase {
     if (current.length >= 20) {
       throw new Error("Instance already has the maximum of 20 skills");
     }
-    return this.runtime.patchOpenClawInstance(ctx, {
+    return this.runtime.patchOpenClawInstance({
       id: instanceId,
       patch: { skills: [...current, skill] },
     });
@@ -164,23 +170,24 @@ export class InstanceUseCase extends SharedUseCase {
 
   async uninstallSkill(ctx: Context, instanceId: string, skill: Skill): Promise<Instance> {
     this.checkSkillAllowed(skill);
-    const instance = await this.runtime.getOpenClawInstance(ctx, instanceId);
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceId}" not found`);
     }
+    this.verifyOwnership(ctx, instance);
     const current = instance.skills ?? [];
     if (!current.includes(skill)) {
       throw new Error(`Skill "${skill}" is not installed on instance "${instanceId}"`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, {
+    return this.runtime.patchOpenClawInstance({
       id: instanceId,
       patch: { skills: current.filter((s) => s !== skill) },
     });
   }
 
-  private async checkSecretsExist(ctx: Context, secrets: string[] | undefined): Promise<void> {
+  private async checkSecretsExist(secrets: string[] | undefined): Promise<void> {
     for (const name of secrets ?? []) {
-      const secret = await this.runtime.getSecret(ctx, name);
+      const secret = await this.runtime.getSecret(name);
       if (!secret) {
         throw new Error(`Secret "${name}" not found`);
       }
@@ -191,18 +198,26 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async suspendOpenClawInstance(ctx: Context, id: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, id);
+    const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, { id, patch: { suspended: true } });
+    this.verifyOwnership(ctx, instance);
+    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: true } });
   }
 
   async resumeOpenClawInstance(ctx: Context, id: string): Promise<Instance> {
-    const instance = await this.runtime.getOpenClawInstance(ctx, id);
+    const instance = await this.runtime.getOpenClawInstance(id);
     if (!instance) {
       throw new Error(`OpenClawInstance ${id} not found`);
     }
-    return this.runtime.patchOpenClawInstance(ctx, { id, patch: { suspended: false } });
+    this.verifyOwnership(ctx, instance);
+    return this.runtime.patchOpenClawInstance({ id, patch: { suspended: false } });
+  }
+
+  private verifyOwnership(ctx: Context, resource: { userId: string }): void {
+    if (ctx.user!.id !== resource.userId) {
+      throw new Error("Forbidden");
+    }
   }
 }

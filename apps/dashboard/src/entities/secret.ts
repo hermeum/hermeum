@@ -13,6 +13,7 @@ export type SecretEnvVar = z.infer<typeof SecretEnvVarSchema>;
 
 export const SecretSchema = z.object({
   id: z.string().min(1),
+  userId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
   envVars: z.array(SecretEnvVarSchema),

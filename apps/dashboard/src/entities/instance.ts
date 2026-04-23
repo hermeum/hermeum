@@ -94,6 +94,7 @@ export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
 
 export const InstanceSchema = InstanceInputSchema.extend({
   id: z.string().min(1),
+  userId: z.string().min(1),
   suspended: z.boolean().optional(),
   phase: InstancePhaseSchema.optional(),
   createdAt: z.date().optional(),
