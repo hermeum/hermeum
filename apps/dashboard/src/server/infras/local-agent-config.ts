@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { parse } from "yaml";
 
 import { AgentConfig, AgentConfigSchema } from "@/entities";
-import { config } from "@/server/config";
+import { config } from "@/server/libs/config";
 import { ConfigAdaptor } from "../usecases/adaptors/config";
 
 export class LocalConfig implements ConfigAdaptor {

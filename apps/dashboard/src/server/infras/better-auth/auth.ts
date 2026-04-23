@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 
-import { config } from "@/server/config";
+import { config } from "@/server/libs/config";
 
 const client = postgres(config.databaseUrl);
 export const db = drizzle(client);

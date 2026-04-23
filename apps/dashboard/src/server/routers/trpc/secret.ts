@@ -1,4 +1,3 @@
-import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
 import { EnvVarSchema, Secret } from "@/entities";
@@ -6,54 +5,54 @@ import {
   CreateSecretInputSchema,
   SecretUseCase,
   UpdateSecretInputSchema,
-} from "../usecases/secret";
+} from "@/server/usecases/secret";
+import { protectedProcedure, t } from "./shared.js";
 
 const usecase = new SecretUseCase();
 
-const t = initTRPC.create();
 export const secretRouter = t.router({
-  list: t.procedure.query(async (): Promise<Secret[]> => {
+  list: protectedProcedure.query(async (): Promise<Secret[]> => {
     return usecase.listSecrets();
   }),
 
-  get: t.procedure
+  get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ input }): Promise<Secret | null> => {
       return usecase.getSecret(input.id);
     }),
 
-  create: t.procedure
+  create: protectedProcedure
     .input(CreateSecretInputSchema)
     .mutation(async ({ input }): Promise<Secret> => {
       return usecase.createSecret(input);
     }),
 
-  update: t.procedure
+  update: protectedProcedure
     .input(UpdateSecretInputSchema.extend({ id: z.string().min(1) }))
     .mutation(async ({ input }): Promise<Secret> => {
       const { id, ...patch } = input;
       return usecase.updateSecret(id, patch);
     }),
 
-  archive: t.procedure
+  archive: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input }): Promise<Secret> => {
       return usecase.archiveSecret(input.id);
     }),
 
-  addEnvVar: t.procedure
+  addEnvVar: protectedProcedure
     .input(z.object({ secretId: z.string().min(1), envVar: EnvVarSchema }))
     .mutation(async ({ input }): Promise<Secret> => {
       return usecase.addEnvVar(input.secretId, input.envVar);
     }),
 
-  updateEnvVar: t.procedure
+  updateEnvVar: protectedProcedure
     .input(z.object({ secretId: z.string().min(1), envVar: EnvVarSchema }))
     .mutation(async ({ input }): Promise<Secret> => {
       return usecase.updateEnvVar(input.secretId, input.envVar);
     }),
 
-  removeEnvVar: t.procedure
+  removeEnvVar: protectedProcedure
     .input(z.object({ secretId: z.string().min(1), name: z.string().min(1) }))
     .mutation(async ({ input }): Promise<Secret> => {
       return usecase.removeEnvVar(input.secretId, input.name);

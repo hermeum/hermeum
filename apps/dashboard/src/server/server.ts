@@ -4,8 +4,8 @@ import * as fs from "node:fs";
 import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
-import { config } from "./config";
-import { trpcMiddleware } from "./trpc";
+import { config } from "./libs/config";
+import { trpcMiddleware } from "@/server/routers/trpc/index.js";
 import { webhookRouter } from "./routers/webhook";
 import { auth } from "./infras/better-auth/auth";
 

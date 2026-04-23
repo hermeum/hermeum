@@ -4,7 +4,7 @@ import { Button } from "@kubeclaw/components/ui/button";
 import { Input } from "@kubeclaw/components/ui/input";
 import { Label } from "@kubeclaw/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
-import { authClient } from "@/client/lib/auth-client";
+import { authClient } from "@/client/auth-client";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -15,16 +15,17 @@ function LoginPage() {
   const form = useForm({
     defaultValues: { email: "", password: "" },
     onSubmit: async ({ value }) => {
-      try {
-        await authClient.signIn({
-          email: value.email,
-          password: value.password,
-        });
+      const { error } = await authClient.signIn.email({
+        email: value.email,
+        password: value.password,
+      });
 
-        navigate({ to: "/agents" });
-      } catch (err) {
-        console.error(err);
+      if (error) {
+        console.error(error);
+        return;
       }
+
+      navigate({ to: "/agents" });
     },
   });
 

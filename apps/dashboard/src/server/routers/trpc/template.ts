@@ -1,9 +1,9 @@
-import { initTRPC } from "@trpc/server";
 import { z } from "zod";
 
 import { Template } from "@/entities";
-import { LocalConfig } from "../infras/local-agent-config";
-import { TemplateUseCase } from "../usecases/template";
+import { LocalConfig } from "@/server/infras/local-agent-config";
+import { TemplateUseCase } from "@/server/usecases/template";
+import { protectedProcedure, t } from "./shared.js";
 
 let usecase: TemplateUseCase;
 try {
@@ -13,13 +13,12 @@ try {
   process.exit(1);
 }
 
-const t = initTRPC.create();
 export const templateRouter = t.router({
-  list: t.procedure.query((): Template[] => {
+  list: protectedProcedure.query((): Template[] => {
     return usecase.list();
   }),
 
-  get: t.procedure
+  get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(({ input }): Template | null => {
       return usecase.get(input.id);
