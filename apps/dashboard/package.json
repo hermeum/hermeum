@@ -28,6 +28,7 @@
     "@uiw/react-codemirror": "^4.25.9",
     "better-auth": "^1.6.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
     "fast-json-patch": "^3.1.1",

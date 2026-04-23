@@ -1,4 +1,7 @@
+import { config as loadEnv } from "dotenv";
 import { z } from "zod";
+
+loadEnv();
 
 export const ConfigSchema = z.object({
   databaseUrl: z.url(),

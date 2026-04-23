@@ -9,8 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './client/ui/routes/__root'
-import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as LoginRouteImport } from './client/ui/routes/login'
+import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as SecretsIndexRouteImport } from './client/ui/routes/secrets/index'
 import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index'
 import { Route as SecretsIdRouteImport } from './client/ui/routes/secrets/$id'
@@ -74,7 +74,13 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/agents/$id' | '/secrets/$id' | '/agents/' | '/secrets/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/agents/$id'
+    | '/secrets/$id'
+    | '/agents/'
+    | '/secrets/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/login' | '/agents/$id' | '/secrets/$id' | '/agents' | '/secrets'
   id:
@@ -98,6 +104,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -124,13 +137,6 @@ declare module '@tanstack/react-router' {
       path: '/secrets/$id'
       fullPath: '/secrets/$id'
       preLoaderRoute: typeof SecretsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents/$id': {

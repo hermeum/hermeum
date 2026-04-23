@@ -9,4 +9,4 @@ dist
 .env.local
 .tanstack
 
-apps/dashboard/clawagent.yaml
+agent-config.yaml
