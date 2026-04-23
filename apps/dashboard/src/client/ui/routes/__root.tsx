@@ -1,7 +1,16 @@
-import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { Button } from "@kubeclaw/components/ui/button";
 import { authClient } from "@/client/auth-client";
+import { AppSidebar } from "@/client/ui/components/app-sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+} from "@kubeclaw/components/ui/sidebar";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -23,27 +32,18 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const { data: session } = authClient.useSession();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  if (pathname === "/signin") {
+    return <Outlet />;
+  }
 
   return (
-    <>
-      <nav className="flex items-center gap-4 p-4 border-b">
-        <Link to="/">Dashboard</Link>
-        <Link to="/agents">Agents</Link>
-        <Link to="/secrets">Secrets</Link>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{session?.user?.email}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => authClient.signOut().then(() => window.location.assign("/signin"))}
-          >
-            Sign out
-          </Button>
-        </div>
-      </nav>
-      <main>
+    <SidebarProvider className="h-svh">
+      <AppSidebar session={session} />
+      <SidebarInset>
         <Outlet />
-      </main>
-    </>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
