@@ -14,6 +14,25 @@ export const db = drizzle(client, { schema });
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   basePath: "/auth",
+  hooks: {
+    before: [
+      {
+        matcher: (ctx) => ctx.path === "/sign-in/email-otp/send-verification-otp",
+        handler: async (ctx) => {
+          if (!config.allowedEmailDomain) return;
+          const email: string = ctx.body?.email ?? "";
+          if (!email.endsWith(`@${config.allowedEmailDomain}`)) {
+            return {
+              error: {
+                status: 403,
+                message: `Only @${config.allowedEmailDomain} accounts are allowed`,
+              },
+            };
+          }
+        },
+      },
+    ],
+  },
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
