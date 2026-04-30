@@ -1,6 +1,7 @@
 import * as k8s from "@kubernetes/client-node";
 
 import { EnvVar, Instance, InstanceInput, InstancePhase, Secret, SecretEnvVar } from "@/entities";
+import { config } from "@/server/libs/config";
 import {
   CreateOpenClawInstanceInput,
   CreateSecretInput,
@@ -41,57 +42,24 @@ const enum KubeClawAnnotation {
   SecretArchived = "kubeclaw.xyz/secret-archived",
 }
 
-export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
-  return {
-    id: raw.metadata?.name ?? "",
-    userId: raw.metadata?.labels?.[KubeClawLabel.UserId] ?? "",
-    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
-    agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
-    agentType: raw.metadata?.annotations?.[KubeClawAnnotation.AgentType],
-    openClawJson: raw.spec.config?.raw,
-    envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
-    secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
-    workspaceFiles: raw.spec.workspace?.initialFiles,
-    skills: raw.spec.skills,
-    plugins: raw.spec.plugins,
-    suspended: raw.spec.suspended,
-    phase: raw.status?.phase as InstancePhase | undefined,
-    createdAt: raw.metadata?.creationTimestamp,
-  };
-}
-
-function instanceInputToSpec(instanceInput: InstanceInput): Partial<OpenClawInstanceSpec> {
-  const spec: Partial<OpenClawInstanceSpec> = {};
-
-  if (instanceInput.workspaceFiles !== undefined) {
-    spec.workspace = { initialFiles: instanceInput.workspaceFiles };
-  }
-  if (instanceInput.skills !== undefined) {
-    spec.skills = instanceInput.skills;
-  }
-  if (instanceInput.plugins !== undefined) {
-    spec.plugins = instanceInput.plugins;
-  }
-  if (instanceInput.envVars !== undefined) {
-    spec.env = instanceInput.envVars.map((e) => ({ name: e.name, value: e.value }));
-  }
-  if (instanceInput.secrets !== undefined) {
-    spec.envFrom = instanceInput.secrets.map((name) => ({ secretRef: { name } }));
-  }
-  if (instanceInput.openClawJson !== undefined) {
-    spec.config = { raw: instanceInput.openClawJson };
-  }
-  spec.selfConfigure = {
-    enabled: true,
-    allowedActions: ["skills", "config", "workspaceFiles", "envVars"],
+export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance {
+  const labels: Record<string, string> = {
+    [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy,
+    [KubeClawLabel.UserId]: instance.userId,
   };
 
-  return spec;
-}
+  const annotations: Record<string, string> = {};
+  if (instance.agentName !== undefined) {
+    annotations[KubeClawAnnotation.Name] = instance.agentName;
+  }
+  if (instance.agentDescription !== undefined) {
+    annotations[KubeClawAnnotation.Description] = instance.agentDescription;
+  }
+  if (instance.agentType !== undefined) {
+    annotations[KubeClawAnnotation.AgentType] = instance.agentType;
+  }
 
-function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<OpenClawInstanceSpec> {
   const spec: Partial<OpenClawInstanceSpec> = {};
-
   if (instance.openClawJson !== undefined) {
     spec.config = { raw: instance.openClawJson };
   }
@@ -113,78 +81,66 @@ function instanceToSpec(instance: Partial<Omit<Instance, "name">>): Partial<Open
   if (instance.suspended !== undefined) {
     spec.suspended = instance.suspended;
   }
-  return spec;
-}
 
-function instanceInputToMetadata(instanceInput: CreateOpenClawInstanceInput): {
-  labels: Record<string, string>;
-  annotations: Record<string, string>;
-} {
-  const annotations: Record<string, string> = {};
-  if (instanceInput.agentName !== undefined) {
-    annotations[KubeClawAnnotation.Name] = instanceInput.agentName;
-  }
-  if (instanceInput.agentDescription !== undefined) {
-    annotations[KubeClawAnnotation.Description] = instanceInput.agentDescription;
-  }
-  if (instanceInput.agentType !== undefined) {
-    annotations[KubeClawAnnotation.AgentType] = instanceInput.agentType;
-  }
   return {
-    labels: {
-      [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy,
-      [KubeClawLabel.UserId]: instanceInput.userId,
+    apiVersion: `${OpenClawGroup.Default}/${OpenClawVersion.V1Alpha1}`,
+    kind: "OpenClawInstance",
+    metadata: {
+      name: instance.id,
+      namespace: config.kubernetesNamespace,
+      labels,
+      annotations,
     },
-    annotations,
+    spec,
   };
 }
 
-function instanceToMetadata(patch: Partial<Omit<Instance, "id" | "userId" | "phase" | "createdAt">>): {
-  labels: Record<string, string>;
-  annotations: Record<string, string>;
-} {
-  const annotations: Record<string, string> = {};
-  if (patch.agentName !== undefined) {
-    annotations[KubeClawAnnotation.Name] = patch.agentName;
-  }
-  if (patch.agentDescription !== undefined) {
-    annotations[KubeClawAnnotation.Description] = patch.agentDescription;
-  }
-  if (patch.agentType !== undefined) {
-    annotations[KubeClawAnnotation.AgentType] = patch.agentType;
-  }
+export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
-    labels: { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy },
-    annotations,
+    id: raw.metadata?.name ?? "",
+    userId: raw.metadata?.labels?.[KubeClawLabel.UserId] ?? "",
+    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
+    agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
+    agentType: raw.metadata?.annotations?.[KubeClawAnnotation.AgentType],
+    openClawJson: raw.spec.config?.raw,
+    envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
+    secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
+    workspaceFiles: raw.spec.workspace?.initialFiles,
+    skills: raw.spec.skills,
+    plugins: raw.spec.plugins,
+    suspended: raw.spec.suspended,
+    phase: raw.status?.phase as InstancePhase | undefined,
+    createdAt: raw.metadata?.creationTimestamp,
   };
 }
 
-function secretToMetadata({
-  name,
-  description,
-  archived,
-  userId,
-}: {
-  name?: string;
-  description?: string;
-  archived?: boolean;
-  userId?: string;
-}): { labels: Record<string, string>; annotations: Record<string, string> } {
-  const annotations: Record<string, string> = {};
-  if (name !== undefined) {
-    annotations[KubeClawAnnotation.SecretName] = name;
-  }
-  if (description !== undefined) {
-    annotations[KubeClawAnnotation.SecretDescription] = description;
-  }
-  if (archived !== undefined) {
-    annotations[KubeClawAnnotation.SecretArchived] = String(archived);
-  }
-  const labels: Record<string, string> = { [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy };
-  if (userId !== undefined) {
-    labels[KubeClawLabel.UserId] = userId;
-  }
-  return { labels, annotations };
+export function secretToKubernetesSecret(
+  secret: Secret,
+  data?: Record<string, string>
+): k8s.V1Secret {
+  return {
+    apiVersion: "v1",
+    kind: "Secret",
+    type: "Opaque",
+    metadata: {
+      name: secret.id,
+      namespace: config.kubernetesNamespace,
+      labels: {
+        [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy,
+        [KubeClawLabel.UserId]: secret.userId,
+      },
+      annotations: {
+        [KubeClawAnnotation.SecretName]: secret.name,
+        ...(secret.description !== undefined && {
+          [KubeClawAnnotation.SecretDescription]: secret.description,
+        }),
+        ...(secret.archived !== undefined && {
+          [KubeClawAnnotation.SecretArchived]: String(secret.archived),
+        }),
+      },
+    },
+    ...(data !== undefined && { data }),
+  };
 }
 
 function decodeSecretData(data: Record<string, string>): Record<string, string> {
@@ -213,7 +169,7 @@ export class KubernetesClient implements Runtime {
   private readonly customObjectsApi: k8s.CustomObjectsApi;
   private readonly coreV1Api: k8s.CoreV1Api;
 
-  constructor(private readonly namespace: string) {
+  constructor() {
     this.kc = new k8s.KubeConfig();
     this.kc.loadFromDefault();
     this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi);
@@ -222,7 +178,7 @@ export class KubernetesClient implements Runtime {
 
   async listOpenClawInstances(): Promise<Instance[]> {
     const body = await this.customObjectsApi.listNamespacedCustomObject({
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
@@ -234,7 +190,7 @@ export class KubernetesClient implements Runtime {
   async getOpenClawInstance(id: string): Promise<Instance | null> {
     try {
       const body = await this.customObjectsApi.getNamespacedCustomObject({
-        namespace: this.namespace,
+        namespace: config.kubernetesNamespace,
         group: OpenClawGroup.Default,
         version: OpenClawVersion.V1Alpha1,
         plural: OpenClawPlural.Instances,
@@ -248,60 +204,53 @@ export class KubernetesClient implements Runtime {
 
   async createOpenClawInstance(instanceInput: CreateOpenClawInstanceInput): Promise<Instance> {
     const id = `instance-${Math.random().toString(36).slice(2, 8)}`;
-    const spec = instanceInputToSpec(instanceInput);
-
-    const body = await this.customObjectsApi.createNamespacedCustomObject({
-      namespace: this.namespace,
+    const body = instanceToOpenClawInstance({
+      id,
+      ...instanceInput,
+    });
+    const resource = await this.customObjectsApi.createNamespacedCustomObject({
+      namespace: config.kubernetesNamespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
-      body: {
-        apiVersion: `${OpenClawGroup.Default}/${OpenClawVersion.V1Alpha1}`,
-        kind: "OpenClawInstance",
-        metadata: {
-          name: id,
-          namespace: this.namespace,
-          ...instanceInputToMetadata(instanceInput),
-        },
-        spec,
-      },
+      body,
     });
-    return mapOpenClawInstance(body as OpenClawInstance);
+    return mapOpenClawInstance(resource as OpenClawInstance);
   }
 
   async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
-    const current = (await this.customObjectsApi.getNamespacedCustomObject({
-      namespace: this.namespace,
+    const raw = (await this.customObjectsApi.getNamespacedCustomObject({
+      namespace: config.kubernetesNamespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
       name: id,
     })) as OpenClawInstance;
+    if (!raw) {
+      throw new Error(`Instance with id ${id} not found`);
+    }
 
-    const specPatch = instanceToSpec(patch);
-    const replaceBody: OpenClawInstance = {
-      ...current,
-      metadata: {
-        ...current.metadata,
-        ...instanceToMetadata(patch),
-      },
-      spec: { ...specPatch },
-    };
-
-    const body = await this.customObjectsApi.replaceNamespacedCustomObject({
-      namespace: this.namespace,
+    const body = instanceToOpenClawInstance({
+      ...mapOpenClawInstance(raw),
+      ...patch,
+    });
+    if (body.metadata && raw.metadata?.resourceVersion) {
+      body.metadata.resourceVersion = raw.metadata.resourceVersion;
+    }
+    const resource = await this.customObjectsApi.replaceNamespacedCustomObject({
+      namespace: config.kubernetesNamespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
       name: id,
-      body: replaceBody,
+      body,
     });
-    return mapOpenClawInstance(body as OpenClawInstance);
+    return mapOpenClawInstance(resource as OpenClawInstance);
   }
 
   async deleteOpenClawInstance(id: string): Promise<void> {
     await this.customObjectsApi.deleteNamespacedCustomObject({
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
@@ -311,7 +260,7 @@ export class KubernetesClient implements Runtime {
 
   async listSecrets(): Promise<Secret[]> {
     const body = await this.coreV1Api.listNamespacedSecret({
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
       labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
     });
     return (body.items ?? []).map(mapKubernetesSecret);
@@ -321,7 +270,7 @@ export class KubernetesClient implements Runtime {
     try {
       const body = await this.coreV1Api.readNamespacedSecret({
         name: id,
-        namespace: this.namespace,
+        namespace: config.kubernetesNamespace,
       });
       return mapKubernetesSecret(body);
     } catch {
@@ -331,20 +280,16 @@ export class KubernetesClient implements Runtime {
 
   async createSecret(input: CreateSecretInput): Promise<Secret> {
     const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
-    const body = await this.coreV1Api.createNamespacedSecret({
-      namespace: this.namespace,
-      body: {
-        apiVersion: "v1",
-        kind: "Secret",
-        type: "Opaque",
-        metadata: {
-          name: id,
-          namespace: this.namespace,
-          ...secretToMetadata(input),
-        },
-      },
+    const body = secretToKubernetesSecret({
+      id,
+      envVars: [],
+      ...input,
     });
-    return mapKubernetesSecret(body);
+    const resource = await this.coreV1Api.createNamespacedSecret({
+      namespace: config.kubernetesNamespace,
+      body,
+    });
+    return mapKubernetesSecret(resource);
   }
 
   async archiveSecret(id: string): Promise<Secret> {
@@ -352,31 +297,36 @@ export class KubernetesClient implements Runtime {
   }
 
   async patchSecret(id: string, patch: SecretPatch): Promise<Secret> {
-    const current = await this.coreV1Api.readNamespacedSecret({
+    const raw = await this.coreV1Api.readNamespacedSecret({
       name: id,
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
     });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { data: _data, stringData: _stringData, ...rest } = current;
-    const body = await this.coreV1Api.replaceNamespacedSecret({
-      name: id,
-      namespace: this.namespace,
-      body: {
-        ...rest,
-        metadata: {
-          ...current.metadata,
-          ...secretToMetadata(patch),
-        },
-        ...(current.data !== undefined && { data: current.data }),
+    if (!raw) {
+      throw new Error(`Secret with id ${id} not found`);
+    }
+    const { data } = raw;
+    const body = secretToKubernetesSecret(
+      {
+        ...mapKubernetesSecret(raw),
+        ...patch,
       },
+      data
+    );
+    if (body.metadata && raw.metadata?.resourceVersion) {
+      body.metadata.resourceVersion = raw.metadata.resourceVersion;
+    }
+    const resource = await this.coreV1Api.replaceNamespacedSecret({
+      name: id,
+      namespace: config.kubernetesNamespace,
+      body,
     });
-    return mapKubernetesSecret(body);
+    return mapKubernetesSecret(resource);
   }
 
   async addEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
     });
     const stringData = decodeSecretData(current.data ?? {});
     stringData[envVar.name] = envVar.value;
@@ -386,7 +336,7 @@ export class KubernetesClient implements Runtime {
   async updateEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
     });
     const stringData = decodeSecretData(current.data ?? {});
     stringData[envVar.name] = envVar.value;
@@ -396,7 +346,7 @@ export class KubernetesClient implements Runtime {
   async removeEnvVar(id: string, name: string): Promise<Secret> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
     });
     const stringData = decodeSecretData(current.data ?? {});
     delete stringData[name];
@@ -412,7 +362,7 @@ export class KubernetesClient implements Runtime {
     const { data: _data, ...rest } = current;
     const body = await this.coreV1Api.replaceNamespacedSecret({
       name: id,
-      namespace: this.namespace,
+      namespace: config.kubernetesNamespace,
       body: {
         ...rest,
         metadata: {

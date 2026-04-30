@@ -17,7 +17,7 @@ export const UpdateSecretInputSchema = z.object({
 export type UpdateSecretInput = z.infer<typeof UpdateSecretInputSchema>;
 
 export class SecretUseCase {
-  constructor(private readonly runtime: Runtime = new KubernetesClient("kubeclaw")) {}
+  constructor(private readonly runtime: Runtime = new KubernetesClient()) {}
 
   async listSecrets(ctx: Context): Promise<Secret[]> {
     return this.runtime.listSecrets();

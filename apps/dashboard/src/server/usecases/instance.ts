@@ -17,7 +17,7 @@ import { SharedUseCase } from "./shared";
 
 export class InstanceUseCase extends SharedUseCase {
   constructor(
-    private readonly runtime: Runtime = new KubernetesClient("kubeclaw"),
+    private readonly runtime: Runtime = new KubernetesClient(),
     config: ConfigAdaptor = new LocalConfig()
   ) {
     super(config);

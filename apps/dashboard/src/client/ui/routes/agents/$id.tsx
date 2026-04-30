@@ -88,7 +88,7 @@ function InstanceDetailPage() {
   );
   const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
     trpc.instance.delete.mutationOptions({
-      onSuccess: () => navigate({ to: "/agents/" }),
+      onSuccess: () => navigate({ to: "/agents" }),
     })
   );
 
@@ -253,7 +253,12 @@ function InstanceDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={deleteOpen} onOpenChange={(open) => { if (!open) setDeleteOpen(false); }}>
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open) setDeleteOpen(false);
+        }}
+      >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>Delete agent</DialogTitle>

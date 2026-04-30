@@ -6,16 +6,8 @@ export type PatchOpenClawInstanceInput = {
   patch: Partial<Omit<Instance, "id" | "userId" | "phase" | "createdAt">>;
 };
 
-export type CreateSecretInput = {
-  name: string;
-  userId: string;
-  description?: string | undefined;
-};
-export type SecretPatch = {
-  name?: string | undefined;
-  description?: string | undefined;
-  archived?: boolean | undefined;
-};
+export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
+export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
 
 export interface Runtime {
   listOpenClawInstances: () => Promise<Instance[]>;
