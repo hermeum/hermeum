@@ -26,8 +26,7 @@ interface EditInstanceDialogProps {
 }
 
 function instanceToYaml(instance: Instance): string {
-  const { id, userId, suspended, phase, createdAt, ...input } = instance;
-  return stringify(input);
+  return stringify(InstanceInputSchema.parse(instance));
 }
 
 export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanceDialogProps) {

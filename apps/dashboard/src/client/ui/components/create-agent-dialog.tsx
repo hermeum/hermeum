@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
@@ -22,34 +22,30 @@ import { useTRPC } from "@/router";
 import type { Template, InstanceInput } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
 
-const DEFAULT_YAML = stringify(
-  {
-    agentName: "Untitled agent",
-    openClawJson: {
-      agents: {
-        defaults: {
-          model: {
-            primary: "anthropic/claude-opus-4-6",
-          },
+const DEFAULT_YAML = stringify({
+  agentName: "Untitled agent",
+  openClawJson: {
+    agents: {
+      defaults: {
+        model: {
+          primary: "anthropic/claude-opus-4-6",
         },
       },
     },
-    workspaceFiles: {
-      "SOUL.md": `## Identity
+  },
+  workspaceFiles: {
+    "SOUL.md": `## Identity
 You are a helpful assistant. Your goal is to answer questions clearly
 and concisely, help with tasks, and make the user's work easier.
 
 ## Core Principles
 - Ask for clarification when a request is ambiguous.
 - Admit when you don't know something rather than guessing.`,
-    },
-    envVars: [],
-    skills: [],
-    plugins: [],
-  } as InstanceInput,
-  null,
-  2
-);
+  },
+  envVars: [],
+  skills: [],
+  plugins: [],
+} as InstanceInput);
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -64,6 +60,12 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
+
+  useEffect(() => {
+    if (templates && templates.length > 0 && selectedTemplateId === null) {
+      handleSelectTemplate(templates[0]!);
+    }
+  }, [templates]);
 
   const { mutate: createInstance, isPending: isCreating } = useMutation(
     trpc.instance.create.mutationOptions({

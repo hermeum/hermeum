@@ -17,14 +17,6 @@ export const AgentTypeSchema = z.object({
 
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 
-export type WebhookVariables = {
-  agentId: string;
-  userId: string;
-  agentName: string;
-  agentDescription: string;
-  agentType: string;
-};
-
 export const AgentConfigSchema = z
   .object({
     agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
@@ -53,3 +45,11 @@ export const AgentConfigSchema = z
   .readonly();
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
+
+export type WebhookVariables = {
+  agentId: string;
+  userId: string;
+  agentName: string;
+  agentDescription: string;
+  agentType: string;
+};

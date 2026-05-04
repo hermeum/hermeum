@@ -11,10 +11,17 @@ export class LocalConfig implements ConfigAdaptor {
   constructor(private filePath?: string) {
     const resolvedPath = this.filePath ?? config.agentConfigPath;
 
-    const content = fs.readFileSync(resolvedPath, "utf-8");
-    const raw = parse(content);
-
-    this.cache = AgentConfigSchema.parse(raw);
+    try {
+      const content = fs.readFileSync(resolvedPath, "utf-8");
+      const raw = parse(content);
+      this.cache = AgentConfigSchema.parse(raw);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        this.cache = AgentConfigSchema.parse({ templates: [] });
+      } else {
+        throw err;
+      }
+    }
   }
 
   get(): AgentConfig {
