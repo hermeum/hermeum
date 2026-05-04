@@ -7,8 +7,8 @@ import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
 import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
-import { Badge } from "@kubeclaw/components/ui/badge";
-import { Button } from "@kubeclaw/components/ui/button";
+import { Badge } from "@clawagent/components/ui/badge";
+import { Button } from "@clawagent/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -17,13 +17,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@kubeclaw/components/ui/dropdown-menu";
+} from "@clawagent/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -31,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@kubeclaw/components/ui/table";
+} from "@clawagent/components/ui/table";
 
 export const Route = createFileRoute("/secrets/$id")({
   component: SecretDetailPage,

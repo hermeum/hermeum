@@ -1,8 +1,8 @@
 {
-  "extends": "@kubeclaw/typescript-config/react-library.json",
+  "extends": "@clawagent/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
-      "@kubeclaw/components/*": ["./*"]
+      "@clawagent/components/*": ["./*"]
     }
   },
   "include": ["ui", "lib", "hooks"]

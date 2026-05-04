@@ -1,4 +1,4 @@
-import { cn } from "@kubeclaw/components/lib/utils";
+import { cn } from "@clawagent/components/lib/utils";
 import type { InstancePhase } from "@/entities";
 
 function phaseClass(phase: InstancePhase | undefined): string {

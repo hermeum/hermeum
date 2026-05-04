@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { CreateSecretDialog } from "@/client/ui/components/create-secret-dialog";
-import { Badge } from "@kubeclaw/components/ui/badge";
-import { Button } from "@kubeclaw/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kubeclaw/components/ui/tabs";
+import { Badge } from "@clawagent/components/ui/badge";
+import { Button } from "@clawagent/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@clawagent/components/ui/tabs";
 import {
   Dialog,
   DialogClose,
@@ -18,13 +18,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@kubeclaw/components/ui/dropdown-menu";
+} from "@clawagent/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -32,7 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@kubeclaw/components/ui/table";
+} from "@clawagent/components/ui/table";
 
 const ENV_VAR_LIMIT = 3;
 

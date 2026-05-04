@@ -4,10 +4,10 @@ import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
 
-import { cn } from "@kubeclaw/components/lib/utils";
-import { Button } from "@kubeclaw/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
-import { ScrollArea, ScrollBar } from "@kubeclaw/components/ui/scroll-area";
+import { cn } from "@clawagent/components/lib/utils";
+import { Button } from "@clawagent/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@clawagent/components/ui/card";
+import { ScrollArea, ScrollBar } from "@clawagent/components/ui/scroll-area";
 import {
   Dialog,
   DialogClose,
@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Template, InstanceInput } from "@/entities";

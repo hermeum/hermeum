@@ -6,15 +6,15 @@ import CodeMirror from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
 import { toast } from "sonner";
 
-import { Badge } from "@kubeclaw/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@kubeclaw/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kubeclaw/components/ui/tabs";
+import { Badge } from "@clawagent/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@clawagent/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@clawagent/components/ui/tabs";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@kubeclaw/components/ui/accordion";
+} from "@clawagent/components/ui/accordion";
 import {
   Table,
   TableBody,
@@ -22,10 +22,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@kubeclaw/components/ui/table";
+} from "@clawagent/components/ui/table";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
-import { Button } from "@kubeclaw/components/ui/button";
+import { Button } from "@clawagent/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
@@ -36,14 +36,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@kubeclaw/components/ui/dropdown-menu";
+} from "@clawagent/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/agents/$id")({
   component: InstanceDetailPage,

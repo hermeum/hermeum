@@ -25,38 +25,38 @@ const enum OpenClawPlural {
   Instances = "openclawinstances",
 }
 
-const enum KubeClawLabel {
+const enum ClawAgentLabel {
   // https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
   ManagedBy = "app.kubernetes.io/managed-by",
-  UserId = "kubeclaw.xyz/user-id",
+  UserId = "clawagent.ai/user-id",
 }
-const enum KubeClawLabelValue {
-  ManagedBy = "kubeclaw",
+const enum ClawAgentLabelValue {
+  ManagedBy = "clawagent",
 }
-const enum KubeClawAnnotation {
-  Name = "kubeclaw.xyz/agent-name",
-  Description = "kubeclaw.xyz/agent-description",
-  AgentType = "kubeclaw.xyz/agent-type",
-  SecretName = "kubeclaw.xyz/secret-name",
-  SecretDescription = "kubeclaw.xyz/secret-description",
-  SecretArchived = "kubeclaw.xyz/secret-archived",
+const enum ClawAgentAnnotation {
+  Name = "clawagent.ai/agent-name",
+  Description = "clawagent.ai/agent-description",
+  AgentType = "clawagent.ai/agent-type",
+  SecretName = "clawagent.ai/secret-name",
+  SecretDescription = "clawagent.ai/secret-description",
+  SecretArchived = "clawagent.ai/secret-archived",
 }
 
 export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance {
   const labels: Record<string, string> = {
-    [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy,
-    [KubeClawLabel.UserId]: instance.userId,
+    [ClawAgentLabel.ManagedBy]: ClawAgentLabelValue.ManagedBy,
+    [ClawAgentLabel.UserId]: instance.userId,
   };
 
   const annotations: Record<string, string> = {};
   if (instance.agentName !== undefined) {
-    annotations[KubeClawAnnotation.Name] = instance.agentName;
+    annotations[ClawAgentAnnotation.Name] = instance.agentName;
   }
   if (instance.agentDescription !== undefined) {
-    annotations[KubeClawAnnotation.Description] = instance.agentDescription;
+    annotations[ClawAgentAnnotation.Description] = instance.agentDescription;
   }
   if (instance.agentType !== undefined) {
-    annotations[KubeClawAnnotation.AgentType] = instance.agentType;
+    annotations[ClawAgentAnnotation.AgentType] = instance.agentType;
   }
 
   const spec: Partial<OpenClawInstanceSpec> = {};
@@ -98,10 +98,10 @@ export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance
 export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
   return {
     id: raw.metadata?.name ?? "",
-    userId: raw.metadata?.labels?.[KubeClawLabel.UserId] ?? "",
-    agentName: raw.metadata?.annotations?.[KubeClawAnnotation.Name],
-    agentDescription: raw.metadata?.annotations?.[KubeClawAnnotation.Description],
-    agentType: raw.metadata?.annotations?.[KubeClawAnnotation.AgentType],
+    userId: raw.metadata?.labels?.[ClawAgentLabel.UserId] ?? "",
+    agentName: raw.metadata?.annotations?.[ClawAgentAnnotation.Name],
+    agentDescription: raw.metadata?.annotations?.[ClawAgentAnnotation.Description],
+    agentType: raw.metadata?.annotations?.[ClawAgentAnnotation.AgentType],
     openClawJson: raw.spec.config?.raw,
     envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
@@ -127,16 +127,16 @@ export function secretToKubernetesSecret(
       name: secret.id,
       namespace: config.kubernetesNamespace,
       labels: {
-        [KubeClawLabel.ManagedBy]: KubeClawLabelValue.ManagedBy,
-        [KubeClawLabel.UserId]: secret.userId,
+        [ClawAgentLabel.ManagedBy]: ClawAgentLabelValue.ManagedBy,
+        [ClawAgentLabel.UserId]: secret.userId,
       },
       annotations: {
-        [KubeClawAnnotation.SecretName]: secret.name,
+        [ClawAgentAnnotation.SecretName]: secret.name,
         ...(secret.description !== undefined && {
-          [KubeClawAnnotation.SecretDescription]: secret.description,
+          [ClawAgentAnnotation.SecretDescription]: secret.description,
         }),
         ...(secret.archived !== undefined && {
-          [KubeClawAnnotation.SecretArchived]: String(secret.archived),
+          [ClawAgentAnnotation.SecretArchived]: String(secret.archived),
         }),
       },
     },
@@ -156,11 +156,11 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
   const envVars: SecretEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
   return {
     id: raw.metadata?.name ?? "",
-    userId: raw.metadata?.labels?.[KubeClawLabel.UserId] ?? "",
-    name: raw.metadata?.annotations?.[KubeClawAnnotation.SecretName] ?? "",
-    description: raw.metadata?.annotations?.[KubeClawAnnotation.SecretDescription],
+    userId: raw.metadata?.labels?.[ClawAgentLabel.UserId] ?? "",
+    name: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretName] ?? "",
+    description: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretDescription],
     envVars,
-    archived: raw.metadata?.annotations?.[KubeClawAnnotation.SecretArchived] === "true",
+    archived: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretArchived] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -183,7 +183,7 @@ export class KubernetesClient implements Runtime {
       group: OpenClawGroup.Default,
       version: OpenClawVersion.V1Alpha1,
       plural: OpenClawPlural.Instances,
-      labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
+      labelSelector: `${ClawAgentLabel.ManagedBy}=${ClawAgentLabelValue.ManagedBy}`,
     });
     return (body as OpenClawInstanceList).items.map(mapOpenClawInstance);
   }
@@ -262,7 +262,7 @@ export class KubernetesClient implements Runtime {
   async listSecrets(): Promise<Secret[]> {
     const body = await this.coreV1Api.listNamespacedSecret({
       namespace: config.kubernetesNamespace,
-      labelSelector: `${KubeClawLabel.ManagedBy}=${KubeClawLabelValue.ManagedBy}`,
+      labelSelector: `${ClawAgentLabel.ManagedBy}=${ClawAgentLabelValue.ManagedBy}`,
     });
     return (body.items ?? []).map(mapKubernetesSecret);
   }

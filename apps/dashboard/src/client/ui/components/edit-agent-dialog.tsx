@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Instance } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
-import { cn } from "@kubeclaw/components/lib/utils";
-import { Button } from "@kubeclaw/components/ui/button";
+import { cn } from "@clawagent/components/lib/utils";
+import { Button } from "@clawagent/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -17,7 +17,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 
 interface EditInstanceDialogProps {
   instance: Instance;

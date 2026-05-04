@@ -3,7 +3,7 @@
 This is a pnpm monorepo managed with Turborepo.
 
 ```
-kubeclaw/
+clawagent/
 ├── apps/
 │   └── dashboard/        # Main web application (Vite + React + TanStack Router)
 ├── packages/

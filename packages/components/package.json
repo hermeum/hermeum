@@ -1,5 +1,5 @@
 {
-  "name": "@kubeclaw/components",
+  "name": "@clawagent/components",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -32,8 +32,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@kubeclaw/eslint-config": "workspace:*",
-    "@kubeclaw/typescript-config": "workspace:*",
+    "@clawagent/eslint-config": "workspace:*",
+    "@clawagent/typescript-config": "workspace:*",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "shadcn": "^4.2.0",

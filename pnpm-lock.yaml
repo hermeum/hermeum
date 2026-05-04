@@ -20,15 +20,15 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@clawagent/components':
+        specifier: workspace:*
+        version: link:../../packages/components
       '@codemirror/lang-json':
         specifier: ^6.0.2
         version: 6.0.2
       '@codemirror/lang-yaml':
         specifier: ^6.1.3
         version: 6.1.3
-      '@kubeclaw/components':
-        specifier: workspace:*
-        version: link:../../packages/components
       '@kubernetes/client-node':
         specifier: ^1.4.0
         version: 1.4.0
@@ -102,10 +102,10 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@kubeclaw/eslint-config':
+      '@clawagent/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@kubeclaw/typescript-config':
+      '@clawagent/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@tailwindcss/vite':
@@ -184,10 +184,10 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
-      '@kubeclaw/eslint-config':
+      '@clawagent/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@kubeclaw/typescript-config':
+      '@clawagent/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/react':

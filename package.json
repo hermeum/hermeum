@@ -1,5 +1,5 @@
 {
-  "name": "kubeclaw",
+  "name": "clawagent",
   "private": true,
   "scripts": {
     "build": "turbo build",

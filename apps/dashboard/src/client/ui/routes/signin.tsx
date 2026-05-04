@@ -4,17 +4,17 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { ArrowLeftIcon } from "lucide-react";
-import { Button } from "@kubeclaw/components/ui/button";
-import { Input } from "@kubeclaw/components/ui/input";
+import { Button } from "@clawagent/components/ui/button";
+import { Input } from "@clawagent/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@kubeclaw/components/ui/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@kubeclaw/components/ui/field";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@kubeclaw/components/ui/input-otp";
+} from "@clawagent/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@clawagent/components/ui/field";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@clawagent/components/ui/input-otp";
 import { authClient } from "@/client/auth-client";
 
 export const Route = createFileRoute("/signin")({

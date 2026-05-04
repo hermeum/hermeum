@@ -11,7 +11,7 @@ import { AppSidebar } from "@/client/ui/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
-} from "@kubeclaw/components/ui/sidebar";
+} from "@clawagent/components/ui/sidebar";
 
 interface RouterContext {
   queryClient: QueryClient;

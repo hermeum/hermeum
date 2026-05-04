@@ -6,7 +6,7 @@ loadEnv();
 export const ConfigSchema = z.object({
   agentConfigPath: z.string().default("./agent-config.yaml"),
   databaseUrl: z.url(),
-  kubernetesNamespace: z.string().default("kubeclaw"),
+  kubernetesNamespace: z.string().default("clawagent"),
   smtpUrl: z.url().optional(),
   allowedEmailDomain: z.string().optional(),
 });

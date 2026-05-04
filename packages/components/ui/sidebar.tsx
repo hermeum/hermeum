@@ -5,24 +5,24 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { useIsMobile } from "@kubeclaw/components/hooks/use-mobile"
-import { cn } from "@kubeclaw/components/lib/utils"
-import { Button } from "@kubeclaw/components/ui/button"
-import { Input } from "@kubeclaw/components/ui/input"
-import { Separator } from "@kubeclaw/components/ui/separator"
+import { useIsMobile } from "@clawagent/components/hooks/use-mobile"
+import { cn } from "@clawagent/components/lib/utils"
+import { Button } from "@clawagent/components/ui/button"
+import { Input } from "@clawagent/components/ui/input"
+import { Separator } from "@clawagent/components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@kubeclaw/components/ui/sheet"
-import { Skeleton } from "@kubeclaw/components/ui/skeleton"
+} from "@clawagent/components/ui/sheet"
+import { Skeleton } from "@clawagent/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@kubeclaw/components/ui/tooltip"
+} from "@clawagent/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"

@@ -1,9 +1,9 @@
 {
-  "extends": "@kubeclaw/typescript-config/react-library.json",
+  "extends": "@clawagent/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@kubeclaw/components/*": ["../../packages/components/*"]
+      "@clawagent/components/*": ["../../packages/components/*"]
     }
   },
   "include": ["src", "app.config.ts", "drizzle.config.ts"]

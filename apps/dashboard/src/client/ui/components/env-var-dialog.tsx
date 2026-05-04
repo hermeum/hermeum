@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "@tanstack/react-form";
 
-import { Button } from "@kubeclaw/components/ui/button";
+import { Button } from "@clawagent/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -9,15 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
-import { Alert, AlertTitle, AlertDescription } from "@kubeclaw/components/ui/alert";
+} from "@clawagent/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from "@clawagent/components/ui/alert";
 import {
   Field,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@kubeclaw/components/ui/field";
-import { Input } from "@kubeclaw/components/ui/input";
+} from "@clawagent/components/ui/field";
+import { Input } from "@clawagent/components/ui/input";
 import { TriangleAlert } from "lucide-react";
 import { EnvVarSchema } from "@/entities";
 

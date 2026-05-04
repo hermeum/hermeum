@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@kubeclaw/components",
-    "utils": "@kubeclaw/components/lib/utils",
-    "ui": "@kubeclaw/components/ui",
-    "lib": "@kubeclaw/components/lib",
-    "hooks": "@kubeclaw/components/hooks"
+    "components": "@clawagent/components",
+    "utils": "@clawagent/components/lib/utils",
+    "ui": "@clawagent/components/ui",
+    "lib": "@clawagent/components/lib",
+    "hooks": "@clawagent/components/hooks"
   },
   "menuColor": "default-translucent",
   "menuAccent": "subtle",

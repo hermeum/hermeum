@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-import { Button } from "@kubeclaw/components/ui/button";
+import { Button } from "@clawagent/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -12,16 +12,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@kubeclaw/components/ui/dialog";
+} from "@clawagent/components/ui/dialog";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@kubeclaw/components/ui/field";
-import { Input } from "@kubeclaw/components/ui/input";
-import { Textarea } from "@kubeclaw/components/ui/textarea";
+} from "@clawagent/components/ui/field";
+import { Input } from "@clawagent/components/ui/input";
+import { Textarea } from "@clawagent/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 

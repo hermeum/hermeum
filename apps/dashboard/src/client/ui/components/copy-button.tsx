@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
-import { Button } from "@kubeclaw/components/ui/button";
-import { cn } from "@kubeclaw/components/lib/utils";
+import { Button } from "@clawagent/components/ui/button";
+import { cn } from "@clawagent/components/lib/utils";
 
 interface CopyButtonProps {
   text: string;

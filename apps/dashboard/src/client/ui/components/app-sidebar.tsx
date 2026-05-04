@@ -11,13 +11,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@kubeclaw/components/ui/sidebar";
+} from "@clawagent/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@kubeclaw/components/ui/dropdown-menu";
+} from "@clawagent/components/ui/dropdown-menu";
 
 interface Session {
   user?: { email?: string | null; name?: string | null };
@@ -29,7 +29,7 @@ const agentNavItems = [
 ];
 
 const resourceNavItems = [
-  { to: "https://github.com/noahingh/kubeclaw" as const, label: "Documentation", icon: BookOpen },
+  { to: "https://github.com/noahingh/clawagent" as const, label: "Documentation", icon: BookOpen },
 ];
 
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
