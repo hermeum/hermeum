@@ -1,3 +1,5 @@
+import Handlebars from "handlebars";
+
 import {
   Context,
   Instance,
@@ -7,6 +9,7 @@ import {
   Skill,
   SkillSchema,
   EnvVar,
+  WebhookVariables,
 } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
@@ -28,7 +31,28 @@ export class InstanceUseCase extends SharedUseCase {
     const { agentTypes } = this.config.get();
     const agentType = agentTypes?.[instance.agentType];
     if (!agentType) return null;
-    return agentType.mutatingWebhookJsonPatch;
+    return this.substituteVariables(agentType.mutatingWebhookJsonPatch, instance);
+  }
+
+  private substituteVariables(patch: JsonPatchOp[], instance: Instance): JsonPatchOp[] {
+    const vars: WebhookVariables = {
+      agentId: instance.id,
+      userId: instance.userId,
+      agentName: instance.agentName ?? "",
+      agentDescription: instance.agentDescription ?? "",
+      agentType: instance.agentType ?? "",
+    };
+
+    const substituteValue = (v: unknown): unknown => {
+      const json = JSON.stringify(v);
+      const substituted = Handlebars.compile(json, { noEscape: true })(vars);
+      return JSON.parse(substituted);
+    };
+
+    return patch.map((op) => ({
+      ...op,
+      ...(op.value !== undefined && { value: substituteValue(op.value) }),
+    }));
   }
 
   async listOpenClawInstances(ctx: Context): Promise<Instance[]> {
