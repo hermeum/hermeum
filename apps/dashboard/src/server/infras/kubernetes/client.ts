@@ -111,6 +111,7 @@ export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
     suspended: raw.spec.suspended,
     phase: raw.status?.phase as InstancePhase | undefined,
     createdAt: raw.metadata?.creationTimestamp,
+    gatewayEndpoint: raw.status?.gatewayEndpoint,
   };
 }
 

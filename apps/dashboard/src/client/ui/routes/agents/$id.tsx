@@ -129,6 +129,32 @@ function InstanceDetailPage() {
           {instance.agentDescription && (
             <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>
           )}
+          {(instance.agentType || instance.gatewayEndpoint) && (
+            <div className="flex flex-col gap-1 mt-1">
+              {instance.agentType && (
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Type:</span> {instance.agentType}
+                </p>
+              )}
+              {instance.gatewayEndpoint && (
+                <div className="group flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground font-medium">Endpoint:</span>
+                  <a
+                    href={instance.gatewayEndpoint}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground font-mono hover:underline"
+                  >
+                    {instance.gatewayEndpoint}
+                  </a>
+                  <CopyButton
+                    text={instance.gatewayEndpoint}
+                    className="opacity-0 group-hover:opacity-100"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <DropdownMenu>

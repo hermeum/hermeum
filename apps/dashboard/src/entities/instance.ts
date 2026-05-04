@@ -98,6 +98,7 @@ export const InstanceSchema = InstanceInputSchema.extend({
   suspended: z.boolean().optional(),
   phase: InstancePhaseSchema.optional(),
   createdAt: z.date().optional(),
+  gatewayEndpoint: z.string().optional(),
 }).readonly();
 
 export type Instance = z.infer<typeof InstanceSchema>;
