@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { CreateSecretDialog } from "@/client/ui/components/create-secret-dialog";
@@ -77,9 +78,11 @@ function SecretsPage() {
   const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
     trpc.secret.archive.mutationOptions({
       onSuccess: () => {
+        toast.success("Secret archived");
         queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() });
         setArchiveId(null);
       },
+      onError: (e) => toast.error(e.message),
     })
   );
 

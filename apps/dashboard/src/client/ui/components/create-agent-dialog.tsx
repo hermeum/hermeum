@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@kubeclaw/components/ui/dialog";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Template, InstanceInput } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
@@ -67,6 +68,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const { mutate: createInstance, isPending: isCreating } = useMutation(
     trpc.instance.create.mutationOptions({
       onSuccess: () => {
+        toast.success("Agent created");
         onSuccess();
         handleOpenChange(false);
       },

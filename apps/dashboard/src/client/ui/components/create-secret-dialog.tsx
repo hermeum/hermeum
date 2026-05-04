@@ -21,6 +21,7 @@ import {
 } from "@kubeclaw/components/ui/field";
 import { Input } from "@kubeclaw/components/ui/input";
 import { Textarea } from "@kubeclaw/components/ui/textarea";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 
 const schema = z.object({
@@ -55,6 +56,7 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
   } = useMutation(
     trpc.secret.create.mutationOptions({
       onSuccess: () => {
+        toast.success("Secret created");
         queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() });
         handleOpenChange(false);
       },

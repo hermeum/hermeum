@@ -22,6 +22,7 @@ import {
 } from "@kubeclaw/components/ui/field";
 import { Input } from "@kubeclaw/components/ui/input";
 import { Textarea } from "@kubeclaw/components/ui/textarea";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 
 const schema = z.object({
@@ -64,6 +65,7 @@ export function EditSecretDialog({
   } = useMutation(
     trpc.secret.update.mutationOptions({
       onSuccess: () => {
+        toast.success("Secret updated");
         queryClient.invalidateQueries({
           queryKey: trpc.secret.get.queryKey({ id: secretId }),
         });

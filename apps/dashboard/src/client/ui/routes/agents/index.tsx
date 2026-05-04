@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
@@ -55,19 +56,33 @@ function DashboardPage() {
     queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
 
   const { mutate: suspendInstance } = useMutation(
-    trpc.instance.suspend.mutationOptions({ onSuccess: () => setTimeout(invalidateList, 500) })
+    trpc.instance.suspend.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent paused");
+        setTimeout(invalidateList, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
   );
 
   const { mutate: resumeInstance } = useMutation(
-    trpc.instance.resume.mutationOptions({ onSuccess: () => setTimeout(invalidateList, 500) })
+    trpc.instance.resume.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent resumed");
+        setTimeout(invalidateList, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
   );
 
   const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
     trpc.instance.delete.mutationOptions({
       onSuccess: () => {
+        toast.success("Agent deleted");
         invalidateList();
         setDeleteId(null);
       },
+      onError: (e) => toast.error(e.message),
     })
   );
 

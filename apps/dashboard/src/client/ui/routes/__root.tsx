@@ -5,6 +5,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 import { authClient } from "@/client/auth-client";
 import { AppSidebar } from "@/client/ui/components/app-sidebar";
 import {
@@ -44,6 +45,7 @@ function RootLayout() {
       <SidebarInset>
         <Outlet />
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, Pencil, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
@@ -56,6 +57,7 @@ function SecretDetailPage() {
   const { mutate: addEnvVar, isPending: isAdding } = useMutation(
     trpc.secret.addEnvVar.mutationOptions({
       onSuccess: () => {
+        toast.success("Env var added");
         invalidate();
         setAddOpen(false);
         setAddError(null);
@@ -66,16 +68,22 @@ function SecretDetailPage() {
 
   const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
     trpc.secret.archive.mutationOptions({
-      onSuccess: () => navigate({ to: "/secrets" }),
+      onSuccess: () => {
+        toast.success("Secret archived");
+        navigate({ to: "/secrets" });
+      },
+      onError: (e) => toast.error(e.message),
     })
   );
 
   const { mutate: removeEnvVar, isPending: isRemoving } = useMutation(
     trpc.secret.removeEnvVar.mutationOptions({
       onSuccess: () => {
+        toast.success("Env var deleted");
         invalidate();
         setDeleteEnvVarName(null);
       },
+      onError: (e) => toast.error(e.message),
     })
   );
 

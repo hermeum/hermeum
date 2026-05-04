@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Instance } from "@/entities";
 import { InstanceInputSchema } from "@/entities";
@@ -38,6 +39,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
   const { mutate: updateInstance, isPending: isUpdating } = useMutation(
     trpc.instance.update.mutationOptions({
       onSuccess: (updated) => {
+        toast.success("Agent updated");
         queryClient.setQueryData(trpc.instance.get.queryKey({ id: instance.id }), updated);
         queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
         handleOpenChange(false);

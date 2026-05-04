@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@kubeclaw/components/ui/table";
+import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@kubeclaw/components/ui/button";
@@ -81,14 +82,30 @@ function InstanceDetailPage() {
     queryClient.invalidateQueries({ queryKey: trpc.instance.get.queryKey({ id }) });
 
   const { mutate: suspendInstance } = useMutation(
-    trpc.instance.suspend.mutationOptions({ onSuccess: () => setTimeout(invalidateDetail, 500) })
+    trpc.instance.suspend.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent paused");
+        setTimeout(invalidateDetail, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
   );
   const { mutate: resumeInstance } = useMutation(
-    trpc.instance.resume.mutationOptions({ onSuccess: () => setTimeout(invalidateDetail, 500) })
+    trpc.instance.resume.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent resumed");
+        setTimeout(invalidateDetail, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
   );
   const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
     trpc.instance.delete.mutationOptions({
-      onSuccess: () => navigate({ to: "/agents" }),
+      onSuccess: () => {
+        toast.success("Agent deleted");
+        navigate({ to: "/agents" });
+      },
+      onError: (e) => toast.error(e.message),
     })
   );
 
