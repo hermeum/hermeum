@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BotIcon, ChevronsUpDown, KeyRoundIcon, LogOutIcon } from "lucide-react";
+import { BotIcon, ChevronsUpDown, KeyRoundIcon, LogOutIcon, BookOpen } from "lucide-react";
 import { authClient } from "@/client/auth-client";
 import {
   Sidebar,
@@ -23,9 +23,13 @@ interface Session {
   user?: { email?: string | null; name?: string | null };
 }
 
-const navItems = [
+const agentNavItems = [
   { to: "/agents" as const, label: "Agents", icon: BotIcon },
   { to: "/secrets" as const, label: "Secrets", icon: KeyRoundIcon },
+];
+
+const resourceNavItems = [
+  { to: "https://github.com/noahingh/kubeclaw" as const, label: "Documentation", icon: BookOpen },
 ];
 
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
@@ -46,10 +50,23 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
         <SidebarGroup>
           <SidebarGroupLabel>Agents</SidebarGroupLabel>
           <SidebarMenu>
-            {navItems.map(({ to, label, icon: Icon }) => (
+            {agentNavItems.map(({ to, label, icon: Icon }) => (
+              <SidebarMenuItem key={to}>
+                <SidebarMenuButton render={<Link to={to} />} isActive={pathname.startsWith(to)}>
+                  <Icon />
+                  {label}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Resources</SidebarGroupLabel>
+          <SidebarMenu>
+            {resourceNavItems.map(({ to, label, icon: Icon }) => (
               <SidebarMenuItem key={to}>
                 <SidebarMenuButton
-                  render={<Link to={to} />}
+                  render={<a href={to} target="_blank" rel="noopener noreferrer" />}
                   isActive={pathname.startsWith(to)}
                 >
                   <Icon />
@@ -75,9 +92,7 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuItem
-              onClick={() =>
-                authClient.signOut().then(() => window.location.assign("/signin"))
-              }
+              onClick={() => authClient.signOut().then(() => window.location.assign("/signin"))}
             >
               <LogOutIcon className="size-4" />
               Sign out
