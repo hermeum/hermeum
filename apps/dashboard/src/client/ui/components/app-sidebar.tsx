@@ -38,10 +38,7 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
     <Sidebar collapsible="none">
       <SidebarHeader>
         <div className="flex items-center gap-2.5 px-2 py-1">
-          <div className="size-8 rounded-md bg-foreground flex items-center justify-center">
-            <BotIcon className="size-4 text-background" />
-          </div>
-          <span className="font-semibold text-sm">KubeClaw</span>
+          <span className="font-semibold text-sm">Claw Agent</span>
         </div>
       </SidebarHeader>
 
