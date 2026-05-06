@@ -16,6 +16,8 @@ export interface Runtime {
   patchOpenClawInstance: (input: PatchOpenClawInstanceInput) => Promise<Instance>;
   deleteOpenClawInstance: (id: string) => Promise<void>;
 
+  getGatewayToken: (instanceId: string) => Promise<string | null>;
+
   listSecrets: () => Promise<Secret[]>;
   getSecret: (id: string) => Promise<Secret | null>;
   createSecret: (input: CreateSecretInput) => Promise<Secret>;

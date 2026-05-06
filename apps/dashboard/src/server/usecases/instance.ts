@@ -239,6 +239,15 @@ export class InstanceUseCase extends SharedUseCase {
     return this.runtime.patchOpenClawInstance({ id, patch: { suspended: false } });
   }
 
+  async getGatewayToken(ctx: Context, instanceId: string): Promise<string | null> {
+    const instance = await this.runtime.getOpenClawInstance(instanceId);
+    if (!instance) {
+      throw new Error(`OpenClawInstance ${instanceId} not found`);
+    }
+    this.verifyOwnership(ctx, instance);
+    return this.runtime.getGatewayToken(instanceId);
+  }
+
   private verifyOwnership(ctx: Context, resource: { userId: string }): void {
     if (ctx.user!.id !== resource.userId) {
       throw new Error("You don't have permission to perform this action");

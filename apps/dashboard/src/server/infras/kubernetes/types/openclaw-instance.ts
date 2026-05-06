@@ -454,6 +454,30 @@ export interface OpenClawInstanceSpec {
   podAnnotations?: Record<string, string>;
 }
 
+// ─── ManagedResourcesStatus ───────────────────────────────────────────────────
+
+export interface ManagedResourcesStatus {
+  statefulSet?: string;
+  deployment?: string;
+  service?: string;
+  configMap?: string;
+  pvc?: string;
+  chromiumPVC?: string;
+  networkPolicy?: string;
+  podDisruptionBudget?: string;
+  serviceAccount?: string;
+  role?: string;
+  roleBinding?: string;
+  gatewayTokenSecret?: string;
+  prometheusRule?: string;
+  grafanaDashboardOperator?: string;
+  grafanaDashboardInstance?: string;
+  horizontalPodAutoscaler?: string;
+  basicAuthSecret?: string;
+  backupCronJob?: string;
+  tailscaleStateSecret?: string;
+}
+
 // ─── OpenClawInstanceStatus ───────────────────────────────────────────────────
 
 export interface OpenClawInstanceStatus {
@@ -461,6 +485,7 @@ export interface OpenClawInstanceStatus {
   conditions?: k8s.V1Condition[];
   autoUpdate?: AutoUpdateStatus;
   gatewayEndpoint?: string | undefined;
+  managedResources?: ManagedResourcesStatus;
 }
 
 // ─── OpenClawInstance ─────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@clawagent/components/ui/table";
+import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@clawagent/components/ui/button";
@@ -76,6 +77,12 @@ function InstanceDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: instance, isPending, error } = useQuery(trpc.instance.get.queryOptions({ id }));
+  const { data: session } = authClient.useSession();
+  const isOwner = !!session?.user && session.user.id === instance?.userId;
+  const { data: gatewayToken } = useQuery({
+    ...trpc.instance.getGatewayToken.queryOptions({ id }),
+    enabled: isOwner && !!instance?.gatewayEndpoint,
+  });
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -137,23 +144,29 @@ function InstanceDetailPage() {
                   <span className="font-medium">Type:</span> {instance.agentType}
                 </p>
               )}
-              {instance.gatewayEndpoint && (
-                <div className="group flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground font-medium">Endpoint:</span>
-                  <a
-                    href={instance.gatewayEndpoint}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-muted-foreground font-mono hover:underline"
-                  >
-                    {instance.gatewayEndpoint}
-                  </a>
-                  <CopyButton
-                    text={instance.gatewayEndpoint}
-                    className="opacity-0 group-hover:opacity-100"
-                  />
-                </div>
-              )}
+              {instance.gatewayEndpoint && (() => {
+                const base = instance.gatewayEndpoint.startsWith("http")
+                  ? instance.gatewayEndpoint
+                  : `https://${instance.gatewayEndpoint}`;
+                const href = gatewayToken ? `${base}#${gatewayToken}` : base;
+                return (
+                  <div className="group flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground font-medium">Endpoint:</span>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted-foreground font-mono hover:underline"
+                    >
+                      {base}
+                    </a>
+                    <CopyButton
+                      text={href}
+                      className="opacity-0 group-hover:opacity-100"
+                    />
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

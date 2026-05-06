@@ -279,6 +279,41 @@ export class KubernetesClient implements Runtime {
     }
   }
 
+  async getGatewayToken(instanceId: string): Promise<string | null> {
+    let raw: OpenClawInstance | null = null;
+    try {
+      raw = (await this.customObjectsApi.getNamespacedCustomObject({
+        namespace: config.kubernetesNamespace,
+        group: OpenClawGroup.Default,
+        version: OpenClawVersion.V1Alpha1,
+        plural: OpenClawPlural.Instances,
+        name: instanceId,
+      })) as OpenClawInstance;
+    } catch {
+      return null;
+    }
+
+    const secretName = raw?.status?.managedResources?.gatewayTokenSecret;
+    if (!secretName) {
+      return null;
+    }
+
+    try {
+      const secret = await this.coreV1Api.readNamespacedSecret({
+        name: secretName,
+        namespace: config.kubernetesNamespace,
+      });
+      const encoded = secret?.data?.["token"];
+      if (!encoded) {
+        return null;
+      }
+
+      return Buffer.from(encoded, "base64").toString("utf-8");
+    } catch {
+      return null;
+    }
+  }
+
   async createSecret(input: CreateSecretInput): Promise<Secret> {
     const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
     const body = secretToKubernetesSecret({
