@@ -1,19 +1,9 @@
-## Repository Structure
+---
+name: code-architecture
+description: Overview of the monorepo structure, clean architecture layers, dependency rules, and frameworks used in the dashboard app.
+---
 
-This is a pnpm monorepo managed with Turborepo.
-
-```
-clawagent/
-├── apps/
-│   └── dashboard/        # Main web application (Vite + React + TanStack Router)
-├── packages/
-│   ├── components/       # Shared Shadcn/ui components
-│   ├── eslint-config/    # Shared ESLint configuration
-│   └── typescript-config/ # Shared TypeScript configuration
-├── package.json
-├── pnpm-workspace.yaml
-└── turbo.json
-```
+# Code Architecture
 
 ## apps/dashboard — Architecture
 
@@ -36,38 +26,20 @@ src/
 └── router.tsx
 ```
 
-### Layer responsibilities
+## Layer Responsibilities
 
 - **`usecases/`** — Pure business logic. Each file represents a use case. Must not depend on infrastructure directly; depends only on adaptor interfaces defined in `usecases/adaptors/`.
 - **`usecases/adaptors/`** — Port interfaces (TypeScript types/interfaces) that define what the use cases need from the outside world.
 - **`infras/`** — Concrete implementations of the adaptor interfaces (e.g. database clients, Kubernetes API calls). Depends on `usecases/adaptors/`.
 - **`routers/`** — tRPC routers. Thin layer that receives requests, calls use cases, and returns responses. Wires infra implementations into use cases via dependency injection.
 
-### Dependency rule
+## Dependency Rule
 
 ```
-routers -> usecases ->  adaptors (interfaces) <- infras
+routers -> usecases -> adaptors (interfaces) <- infras
               |
               V
            entities
 ```
 
 Outer layers depend on inner layers. Use cases never import from `infras/` or `routers/`.
-
-## Frameworks & Libraries
-
-| Layer | Library |
-|---|---|
-| Server framework | Express |
-| API layer | tRPC v11 |
-| Frontend routing | TanStack Router (file-based) |
-| Data fetching | TanStack Query + `@trpc/tanstack-react-query` |
-| Forms | TanStack Form |
-| UI components | shadcn/ui (Radix + Tailwind CSS v4) |
-| Icons | Lucide React |
-| Kubernetes client | `@kubernetes/client-node` |
-| Schema validation | Zod |
-| Code editor | CodeMirror (`@uiw/react-codemirror`) |
-| Serialization | SuperJSON |
-| Build tool | Vite |
-| Runtime | Node.js + tsx |
