@@ -81,6 +81,9 @@ export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance
   if (instance.suspended !== undefined) {
     spec.suspended = instance.suspended;
   }
+  if (instance.openClawVersion !== undefined) {
+    spec.image = { tag: instance.openClawVersion };
+  }
 
   return {
     apiVersion: `${OpenClawGroup.Default}/${OpenClawVersion.V1Alpha1}`,
@@ -102,6 +105,7 @@ export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
     agentName: raw.metadata?.annotations?.[ClawAgentAnnotation.Name],
     agentDescription: raw.metadata?.annotations?.[ClawAgentAnnotation.Description],
     agentType: raw.metadata?.annotations?.[ClawAgentAnnotation.AgentType],
+    openClawVersion: raw.spec.image?.tag,
     openClawJson: raw.spec.config?.raw,
     envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
