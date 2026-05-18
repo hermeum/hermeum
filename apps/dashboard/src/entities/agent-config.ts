@@ -21,14 +21,6 @@ export const AgentConfigSchema = z
   .object({
     agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
     templates: z.array(TemplateSchema),
-    allowed: z
-      .object({
-        openClawJsonPaths: z.array(z.string()).optional(),
-        skills: z.array(z.string()).optional(),
-        workspaceFiles: z.array(z.string()).optional(),
-        plugins: z.array(z.string()).optional(),
-      })
-      .optional(),
   })
   .superRefine((data, ctx) => {
     for (const [i, template] of data.templates.entries()) {

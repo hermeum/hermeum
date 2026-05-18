@@ -16,15 +16,12 @@ import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-agent-config";
 import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
-import { SharedUseCase } from "./shared";
 
-export class InstanceUseCase extends SharedUseCase {
+export class InstanceUseCase {
   constructor(
     private readonly runtime: Runtime = new KubernetesClient(),
-    config: ConfigAdaptor = new LocalConfig()
-  ) {
-    super(config);
-  }
+    private readonly config: ConfigAdaptor = new LocalConfig()
+  ) {}
 
   getmutatingWebhookJsonPatch(instance: Instance): JsonPatchOp[] | null {
     if (!instance.agentType) return null;
@@ -66,18 +63,6 @@ export class InstanceUseCase extends SharedUseCase {
   async createOpenClawInstance(ctx: Context, instanceInput: InstanceInput): Promise<Instance> {
     instanceInput = InstanceInputSchema.parse(instanceInput);
 
-    if (instanceInput.openClawJson) {
-      this.checkOpenClawJsonAllowed({}, instanceInput.openClawJson);
-    }
-    for (const filePath of Object.keys(instanceInput.workspaceFiles ?? {})) {
-      this.checkWorkspaceFileAllowed(filePath);
-    }
-    for (const skill of instanceInput.skills ?? []) {
-      this.checkSkillAllowed(skill);
-    }
-    for (const plugin of instanceInput.plugins ?? []) {
-      this.checkPluginAllowed(plugin);
-    }
     if (instanceInput.agentType !== undefined) {
       this.checkAgentTypeAllowed(instanceInput.agentType);
     }
@@ -94,18 +79,6 @@ export class InstanceUseCase extends SharedUseCase {
 
     patch = InstanceInputSchema.parse(patch);
 
-    if (patch.openClawJson) {
-      this.checkOpenClawJsonAllowed(instance.openClawJson ?? {}, patch.openClawJson);
-    }
-    for (const filePath of Object.keys(patch.workspaceFiles ?? {})) {
-      this.checkWorkspaceFileAllowed(filePath);
-    }
-    for (const skill of patch.skills ?? []) {
-      this.checkSkillAllowed(skill);
-    }
-    for (const plugin of patch.plugins ?? []) {
-      this.checkPluginAllowed(plugin);
-    }
     if (patch.agentType !== undefined) {
       this.checkAgentTypeAllowed(patch.agentType);
     }
@@ -172,7 +145,6 @@ export class InstanceUseCase extends SharedUseCase {
 
   async installSkill(ctx: Context, instanceId: string, skill: Skill): Promise<Instance> {
     SkillSchema.parse(skill);
-    this.checkSkillAllowed(skill);
 
     const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
@@ -193,7 +165,6 @@ export class InstanceUseCase extends SharedUseCase {
   }
 
   async uninstallSkill(ctx: Context, instanceId: string, skill: Skill): Promise<Instance> {
-    this.checkSkillAllowed(skill);
     const instance = await this.runtime.getOpenClawInstance(instanceId);
     if (!instance) {
       throw new Error(`OpenClawInstance "${instanceId}" not found`);
@@ -247,6 +218,17 @@ export class InstanceUseCase extends SharedUseCase {
     this.verifyOwnership(ctx, instance);
     return this.runtime.getGatewayToken(instanceId);
   }
+
+  private checkAgentTypeAllowed(agentType: string): void {
+    const { agentTypes } = this.config.get();
+    if (!agentTypes) {
+      throw new Error("Agent types are not configured");
+    }
+    if (!(agentType in agentTypes)) {
+      throw new Error(`Agent type "${agentType}" is not configured`);
+    }
+  }
+  
 
   private verifyOwnership(ctx: Context, resource: { userId: string }): void {
     if (ctx.user!.id !== resource.userId) {
