@@ -1,0 +1,43 @@
+FROM node:24-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# ---- deps: install all workspace dependencies ----
+FROM base AS deps
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/dashboard/package.json ./apps/dashboard/
+COPY packages/components/package.json ./packages/components/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+
+RUN pnpm install --frozen-lockfile
+
+# ---- builder: build client, server, and cmd bundles ----
+FROM deps AS builder
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm --filter @clawagent/dashboard build
+
+# ---- runner: lean production image ----
+FROM base AS runner
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY --from=builder /app .
+
+RUN pnpm deploy --filter @clawagent/dashboard --prod /deploy
+
+WORKDIR /deploy
+
+COPY --from=builder /app/apps/dashboard/dist ./dist
+COPY --from=builder /app/apps/dashboard/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/apps/dashboard/src/server/migrations ./src/server/migrations
+
+EXPOSE 3000
+
+CMD ["node", "dist/server/server.js"]
