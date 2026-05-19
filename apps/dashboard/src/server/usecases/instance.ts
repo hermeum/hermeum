@@ -14,7 +14,7 @@ import {
 
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-agent-config";
-import { PatchOpenClawInstanceInput, Runtime } from "./adaptors/runtime";
+import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
 
 export class InstanceUseCase {

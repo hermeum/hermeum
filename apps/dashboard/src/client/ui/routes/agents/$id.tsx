@@ -293,7 +293,7 @@ function InstanceDetailPage() {
               <CardContent>
                 <div className="group flex items-center gap-2">
                   <a
-                    href={instance.gatewayEndpoint}
+                    href={`https://${instance.gatewayEndpoint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-mono text-muted-foreground hover:underline"
@@ -309,7 +309,7 @@ function InstanceDetailPage() {
             </Card>
           )}
 
-          {instance.gatewayToken && (
+          {gatewayToken && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Gateway Token</CardTitle>
@@ -317,7 +317,7 @@ function InstanceDetailPage() {
               <CardContent>
                 <div className="group flex items-center gap-2">
                   <span className="font-mono text-sm text-muted-foreground">
-                    {tokenVisible ? instance.gatewayToken : "•".repeat(32)}
+                    {tokenVisible ? gatewayToken : "•".repeat(32)}
                   </span>
                   <Button
                     variant="ghost"
@@ -328,10 +328,7 @@ function InstanceDetailPage() {
                   >
                     {tokenVisible ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
                   </Button>
-                  <CopyButton
-                    text={instance.gatewayToken}
-                    className="opacity-0 group-hover:opacity-100"
-                  />
+                  <CopyButton text={gatewayToken} className="opacity-0 group-hover:opacity-100" />
                 </div>
               </CardContent>
             </Card>
