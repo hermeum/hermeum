@@ -61,7 +61,7 @@ export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance
 
   const spec: Partial<OpenClawInstanceSpec> = {};
   if (instance.openClawJson !== undefined) {
-    spec.config = { raw: instance.openClawJson };
+    spec.config = { raw: instance.openClawJson, mergeMode: "overwrite" };
   }
   if (instance.envVars !== undefined) {
     spec.env = instance.envVars.map((e) => ({ name: e.name, value: e.value }));
