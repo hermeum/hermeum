@@ -45,6 +45,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@clawagent/components/ui/dropdown-menu";
+import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 export const Route = createFileRoute("/agents/$id")({
   component: InstanceDetailPage,
@@ -190,7 +191,7 @@ function InstanceDetailPage() {
                     <AccordionContent>
                       <CodeMirror
                         value={JSON.stringify(instance.openClawJson, null, 2)}
-                        extensions={[jsonLang()]}
+                        extensions={[jsonLang(), indentationMarkers()]}
                         editable={false}
                         maxHeight="300px"
                         basicSetup={{

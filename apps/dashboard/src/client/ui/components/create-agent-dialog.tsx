@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
+import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 import { cn } from "@clawagent/components/lib/utils";
 import { Button } from "@clawagent/components/ui/button";
@@ -159,7 +160,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
             <p className="text-sm font-medium">Agent config</p>
             <CodeMirror
               value={editorValue}
-              extensions={[yamlLang()]}
+              extensions={[yamlLang(), indentationMarkers()]}
               onChange={setEditorValue}
               className={cn(
                 "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
@@ -172,7 +173,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                 autocompletion: false,
                 lintKeymap: false,
               }}
-              height="300px"
+              height="360px"
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>
