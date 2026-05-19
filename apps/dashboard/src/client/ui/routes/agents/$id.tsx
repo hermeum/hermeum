@@ -145,6 +145,9 @@ function InstanceDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setEditOpen(true)}>
+            Edit
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="outline" size="icon" aria-label="Open actions menu" />}
@@ -163,9 +166,6 @@ function InstanceDetailPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            Edit
-          </Button>
         </div>
       </div>
 
