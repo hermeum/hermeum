@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal } from "lucide-react";
+import { Eye, EyeOff, MoreHorizontal } from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
 import { toast } from "sonner";
@@ -85,6 +85,7 @@ function InstanceDetailPage() {
   });
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [tokenVisible, setTokenVisible] = useState(false);
 
   const invalidateDetail = () =>
     queryClient.invalidateQueries({ queryKey: trpc.instance.get.queryKey({ id }) });
@@ -137,37 +138,10 @@ function InstanceDetailPage() {
           {instance.agentDescription && (
             <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>
           )}
-          {(instance.agentType || instance.gatewayEndpoint) && (
-            <div className="flex flex-col gap-1 mt-1">
-              {instance.agentType && (
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Type:</span> {instance.agentType}
-                </p>
-              )}
-              {instance.gatewayEndpoint && (() => {
-                const base = instance.gatewayEndpoint.startsWith("http")
-                  ? instance.gatewayEndpoint
-                  : `https://${instance.gatewayEndpoint}`;
-                const href = gatewayToken ? `${base}#${gatewayToken}` : base;
-                return (
-                  <div className="group flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground font-medium">Endpoint:</span>
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-muted-foreground font-mono hover:underline"
-                    >
-                      {base}
-                    </a>
-                    <CopyButton
-                      text={href}
-                      className="opacity-0 group-hover:opacity-100"
-                    />
-                  </div>
-                );
-              })()}
-            </div>
+          {instance.agentType && (
+            <p className="text-sm text-muted-foreground mt-1">
+              <span className="font-medium">Type:</span> {instance.agentType}
+            </p>
           )}
         </div>
         <div className="flex gap-2">
@@ -196,12 +170,13 @@ function InstanceDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="agent">
+      <Tabs defaultValue="config">
         <TabsList>
-          <TabsTrigger value="agent">Agent</TabsTrigger>
+          <TabsTrigger value="config">Config</TabsTrigger>
+          <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="agent" className="mt-4 flex flex-col gap-4">
+        <TabsContent value="config" className="mt-4 flex flex-col gap-4">
           {/* openClawJson */}
           {instance.openClawJson && (
             <Card>
@@ -304,6 +279,60 @@ function InstanceDetailPage() {
               </CardHeader>
               <CardContent>
                 <BadgeList items={instance.plugins} max={10} />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="connect" className="mt-4 flex flex-col gap-4">
+          {instance.gatewayEndpoint && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Endpoint</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="group flex items-center gap-2">
+                  <a
+                    href={instance.gatewayEndpoint}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-mono text-muted-foreground hover:underline"
+                  >
+                    {instance.gatewayEndpoint}
+                  </a>
+                  <CopyButton
+                    text={instance.gatewayEndpoint}
+                    className="opacity-0 group-hover:opacity-100"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {instance.gatewayToken && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Gateway Token</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="group flex items-center gap-2">
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {tokenVisible ? instance.gatewayToken : "•".repeat(32)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 opacity-0 group-hover:opacity-100"
+                    onClick={() => setTokenVisible((v) => !v)}
+                    aria-label={tokenVisible ? "Hide token" : "Show token"}
+                  >
+                    {tokenVisible ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                  </Button>
+                  <CopyButton
+                    text={instance.gatewayToken}
+                    className="opacity-0 group-hover:opacity-100"
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
