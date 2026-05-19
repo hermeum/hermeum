@@ -12,7 +12,9 @@
     "better-auth:generate": "pnpm dlx auth generate --config src/server/infras/better-auth/auth.ts --output src/server/infras/better-auth/schema.ts",
     "drizzle:generate": "drizzle-kit generate ",
     "drizzle:migrate": "drizzle-kit migrate",
-    "clean": "rm -rf dist *.tsbuildinfo"
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -59,6 +61,7 @@
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vite": "^7.0.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.0"
   }
 }

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import url from "node:url";
 import path from "node:path";
 import { defineConfig } from "vite";
@@ -68,5 +69,9 @@ export default defineConfig((configEnv) => {
         : configEnv.mode === "cmd"
           ? cmdBuildConfig
           : clientBuildConfig,
+    test: {
+      environment: "node",
+      include: ["src/**/*.test.ts"],
+    },
   };
 });

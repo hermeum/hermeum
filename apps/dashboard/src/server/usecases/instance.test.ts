@@ -1,0 +1,172 @@
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
+vi.mock("../infras/local-agent-config", () => ({ LocalConfig: vi.fn() }));
+
+import { InstanceUseCase } from "./instance";
+import type { ConfigAdaptor } from "./adaptors/config";
+import type { Runtime } from "./adaptors/runtime";
+import type { AgentConfig, JsonPatchOp } from "@/entities";
+import type { Instance } from "@/entities";
+
+function makeConfig(agentTypes?: AgentConfig["agentTypes"]): ConfigAdaptor {
+  return {
+    get: vi.fn().mockReturnValue({
+      agentTypes,
+      templates: [],
+    } satisfies AgentConfig),
+  };
+}
+
+function makeRuntime(): Runtime {
+  return {
+    listOpenClawInstances: vi.fn(),
+    getOpenClawInstance: vi.fn(),
+    createOpenClawInstance: vi.fn(),
+    patchOpenClawInstance: vi.fn(),
+    deleteOpenClawInstance: vi.fn(),
+    listSecrets: vi.fn(),
+    getSecret: vi.fn(),
+    createSecret: vi.fn(),
+    archiveSecret: vi.fn(),
+    patchSecret: vi.fn(),
+    addEnvVar: vi.fn(),
+    updateEnvVar: vi.fn(),
+    removeEnvVar: vi.fn(),
+  } as unknown as Runtime;
+}
+
+function makeInstance(overrides: Partial<Instance> = {}): Instance {
+  return {
+    id: "agent-1",
+    userId: "user-1",
+    ...overrides,
+  } as Instance;
+}
+
+describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
+  it("returns null when instance.agentType is undefined", () => {
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } }),
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: undefined }));
+    expect(result).toBeNull();
+  });
+
+  it("returns null when config.agentTypes is undefined", () => {
+    const useCase = new InstanceUseCase(makeRuntime(), makeConfig(undefined));
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "some-type" }));
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the agentType key is missing from config", () => {
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ "other-type": { mutatingWebhookJsonPatch: [] } })
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "unknown-type" }));
+    expect(result).toBeNull();
+  });
+
+  it("returns the patch unchanged when no Handlebars variables are present", () => {
+    const patch: JsonPatchOp[] = [{ op: "add", path: "/metadata/labels/env", value: "production" }];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "my-type" }));
+    expect(result).toEqual(patch);
+  });
+
+  it("substitutes all five variables in a string value", () => {
+    const patch: JsonPatchOp[] = [
+      {
+        op: "replace",
+        path: "/metadata/annotations/info",
+        value:
+          "id={{agentId}} user={{userId}} name={{agentName}} desc={{agentDescription}} type={{agentType}}",
+      },
+    ];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(
+      makeInstance({
+        agentType: "my-type",
+        id: "abc123",
+        userId: "usr456",
+        agentName: "My Agent",
+        agentDescription: "Does things",
+      })
+    );
+    expect(result![0]!.value).toBe(
+      "id=abc123 user=usr456 name=My Agent desc=Does things type=my-type"
+    );
+  });
+
+  it("defaults agentName and agentDescription to empty string when undefined on instance", () => {
+    const patch: JsonPatchOp[] = [
+      { op: "add", path: "/x", value: "name={{agentName}};desc={{agentDescription}}" },
+    ];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(
+      makeInstance({ agentType: "t", agentName: undefined, agentDescription: undefined }),
+    );
+    expect(result![0]!.value).toBe("name=;desc=");
+  });
+
+  it("passes through ops without a value property unchanged", () => {
+    const patch: JsonPatchOp[] = [{ op: "remove", path: "/metadata/labels/old" }];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "t" }));
+    expect(result).toEqual(patch);
+    expect(result![0]).not.toHaveProperty("value");
+  });
+
+  it("substitutes variables inside a nested object/array value", () => {
+    const patch: JsonPatchOp[] = [
+      {
+        op: "add",
+        path: "/spec/containers/0/env",
+        value: [
+          { name: "AGENT_ID", value: "{{agentId}}" },
+          { name: "USER_ID", value: "{{userId}}" },
+        ],
+      },
+    ];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(
+      makeInstance({ agentType: "t", id: "a1", userId: "u2" }),
+    );
+    expect(result![0]!.value).toEqual([
+      { name: "AGENT_ID", value: "a1" },
+      { name: "USER_ID", value: "u2" },
+    ]);
+  });
+
+  it("handles a mixed patch array with and without value in a single call", () => {
+    const patch: JsonPatchOp[] = [
+      { op: "remove", path: "/old" },
+      { op: "add", path: "/new", value: "{{agentId}}" },
+    ];
+    const useCase = new InstanceUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
+    );
+    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "t", id: "zz9" }));
+    expect(result).toHaveLength(2);
+    expect(result![0]).not.toHaveProperty("value");
+    expect(result![1]!.value).toBe("zz9");
+  });
+});
