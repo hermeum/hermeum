@@ -24,12 +24,12 @@ export const AgentConfigSchema = z
   })
   .superRefine((data, ctx) => {
     for (const [i, template] of data.templates.entries()) {
-      if (template.agentType === undefined) continue;
-      if (!data.agentTypes || !(template.agentType in data.agentTypes)) {
+      if (template.agentInput?.type === undefined) continue;
+      if (!data.agentTypes || !(template.agentInput.type in data.agentTypes)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Template "${template.id}" references unknown agentType "${template.agentType}"`,
-          path: ["templates", i, "agentType"],
+          message: `Template "${template.id}" references unknown agentType "${template.agentInput.type}"`,
+          path: ["templates", i, "agentInput", "type"],
         });
       }
     }

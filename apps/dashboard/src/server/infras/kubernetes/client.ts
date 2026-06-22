@@ -1,28 +1,28 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { EnvVar, Instance, InstanceInput, InstancePhase, Secret, SecretEnvVar } from "@/entities";
+import { Agent, AgentInput, AgentPhase, EnvVar, Secret, SecretEnvVar } from "@/entities";
 import { config } from "@/server/libs/config";
 import {
-  CreateOpenClawInstanceInput,
+  CreateAgentInput,
   CreateSecretInput,
-  PatchOpenClawInstanceInput,
+  PatchAgentInput,
   Runtime,
   SecretPatch,
 } from "../../usecases/adaptors/runtime";
 import {
-  OpenClawInstance,
-  OpenClawInstanceList,
-  OpenClawInstanceSpec,
-} from "./types/openclaw-instance";
+  HermesAgent,
+  HermesAgentList,
+  HermesAgentSpec,
+} from "./types/hermes-agent";
 
-const enum OpenClawGroup {
-  Default = "openclaw.rocks",
+const enum HermesGroup {
+  Default = "agents.hermeum.app",
 }
-const enum OpenClawVersion {
+const enum HermesVersion {
   V1Alpha1 = "v1alpha1",
 }
-const enum OpenClawPlural {
-  Instances = "openclawinstances",
+const enum HermesPlural {
+  Agents = "hermesagents",
 }
 
 const enum ClawAgentLabel {
@@ -42,54 +42,56 @@ const enum ClawAgentAnnotation {
   SecretArchived = "clawagent.ai/secret-archived",
 }
 
-export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance {
+export function agentToHermesAgent(agent: Agent): HermesAgent {
   const labels: Record<string, string> = {
     [ClawAgentLabel.ManagedBy]: ClawAgentLabelValue.ManagedBy,
-    [ClawAgentLabel.UserId]: instance.userId,
+    [ClawAgentLabel.UserId]: agent.userId,
   };
 
   const annotations: Record<string, string> = {};
-  if (instance.agentName !== undefined) {
-    annotations[ClawAgentAnnotation.Name] = instance.agentName;
+  if (agent.name !== undefined) {
+    annotations[ClawAgentAnnotation.Name] = agent.name;
   }
-  if (instance.agentDescription !== undefined) {
-    annotations[ClawAgentAnnotation.Description] = instance.agentDescription;
+  if (agent.description !== undefined) {
+    annotations[ClawAgentAnnotation.Description] = agent.description;
   }
-  if (instance.agentType !== undefined) {
-    annotations[ClawAgentAnnotation.AgentType] = instance.agentType;
+  if (agent.type !== undefined) {
+    annotations[ClawAgentAnnotation.AgentType] = agent.type;
   }
 
-  const spec: Partial<OpenClawInstanceSpec> = {};
-  if (instance.openClawJson !== undefined) {
-    spec.config = { raw: instance.openClawJson, mergeMode: "overwrite" };
+  const hermes: Partial<HermesAgentSpec["hermes"]> = {};
+  if (agent.config !== undefined) {
+    hermes.config = { raw: agent.config };
   }
-  if (instance.envVars !== undefined) {
-    spec.env = instance.envVars.map((e) => ({ name: e.name, value: e.value }));
+  if (agent.envVars !== undefined) {
+    hermes.env = agent.envVars.map((e) => ({ name: e.name, value: e.value }));
   }
-  if (instance.secrets !== undefined) {
-    spec.envFrom = instance.secrets.map((name) => ({ secretRef: { name } }));
+  if (agent.secrets !== undefined) {
+    hermes.envFrom = agent.secrets.map((name) => ({ secretRef: { name } }));
   }
-  if (instance.workspaceFiles !== undefined) {
-    spec.workspace = { initialFiles: instance.workspaceFiles };
+  if (agent.soul !== undefined) {
+    hermes.workspace = { files: { "SOUL.md": agent.soul } };
   }
-  if (instance.skills !== undefined) {
-    spec.skills = instance.skills;
+  if (agent.skills !== undefined) {
+    hermes.skills = agent.skills.map((identifier) => ({ identifier }));
   }
-  if (instance.plugins !== undefined) {
-    spec.plugins = instance.plugins;
+  if (agent.plugins !== undefined) {
+    hermes.plugins = agent.plugins.map((identifier) => ({ identifier }));
   }
-  if (instance.suspended !== undefined) {
-    spec.suspended = instance.suspended;
+  if (agent.version !== undefined) {
+    hermes.image = { tag: agent.version };
   }
-  if (instance.openClawVersion !== undefined) {
-    spec.image = { tag: instance.openClawVersion };
-  }
+
+  const spec: HermesAgentSpec = {
+    ...(agent.suspended !== undefined && { suspend: agent.suspended }),
+    ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
+  };
 
   return {
-    apiVersion: `${OpenClawGroup.Default}/${OpenClawVersion.V1Alpha1}`,
-    kind: "OpenClawInstance",
+    apiVersion: `${HermesGroup.Default}/${HermesVersion.V1Alpha1}`,
+    kind: "HermesAgent",
     metadata: {
-      name: instance.id,
+      name: agent.id,
       namespace: config.kubernetesNamespace,
       labels,
       annotations,
@@ -98,24 +100,25 @@ export function instanceToOpenClawInstance(instance: Instance): OpenClawInstance
   };
 }
 
-export function mapOpenClawInstance(raw: OpenClawInstance): Instance {
+export function mapHermesAgent(raw: HermesAgent): Agent {
   return {
     id: raw.metadata?.name ?? "",
     userId: raw.metadata?.labels?.[ClawAgentLabel.UserId] ?? "",
-    agentName: raw.metadata?.annotations?.[ClawAgentAnnotation.Name],
-    agentDescription: raw.metadata?.annotations?.[ClawAgentAnnotation.Description],
-    agentType: raw.metadata?.annotations?.[ClawAgentAnnotation.AgentType],
-    openClawVersion: raw.spec.image?.tag,
-    openClawJson: raw.spec.config?.raw,
-    envVars: raw.spec.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
-    secrets: raw.spec.envFrom?.flatMap((e) => (e.secretRef?.name ? [e.secretRef.name] : [])),
-    workspaceFiles: raw.spec.workspace?.initialFiles,
-    skills: raw.spec.skills,
-    plugins: raw.spec.plugins,
-    suspended: raw.spec.suspended,
-    phase: raw.status?.phase as InstancePhase | undefined,
+    name: raw.metadata?.annotations?.[ClawAgentAnnotation.Name],
+    description: raw.metadata?.annotations?.[ClawAgentAnnotation.Description],
+    type: raw.metadata?.annotations?.[ClawAgentAnnotation.AgentType],
+    version: raw.spec.hermes?.image?.tag,
+    config: raw.spec.hermes?.config?.raw,
+    envVars: raw.spec.hermes?.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
+    secrets: raw.spec.hermes?.envFrom?.flatMap((e) =>
+      e.secretRef?.name ? [e.secretRef.name] : []
+    ),
+    soul: raw.spec.hermes?.workspace?.files?.["SOUL.md"],
+    skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
+    plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
+    suspended: raw.spec.suspend,
+    phase: raw.status?.phase as AgentPhase | undefined,
     createdAt: raw.metadata?.creationTimestamp,
-    gatewayEndpoint: raw.status?.gatewayEndpoint,
   };
 }
 
@@ -181,62 +184,62 @@ export class KubernetesClient implements Runtime {
     this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
-  async listOpenClawInstances(): Promise<Instance[]> {
+  async listHermesAgents(): Promise<Agent[]> {
     const body = await this.customObjectsApi.listNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
-      group: OpenClawGroup.Default,
-      version: OpenClawVersion.V1Alpha1,
-      plural: OpenClawPlural.Instances,
+      group: HermesGroup.Default,
+      version: HermesVersion.V1Alpha1,
+      plural: HermesPlural.Agents,
       labelSelector: `${ClawAgentLabel.ManagedBy}=${ClawAgentLabelValue.ManagedBy}`,
     });
-    return (body as OpenClawInstanceList).items.map(mapOpenClawInstance);
+    return (body as HermesAgentList).items.map(mapHermesAgent);
   }
 
-  async getOpenClawInstance(id: string): Promise<Instance | null> {
+  async getHermesAgent(id: string): Promise<Agent | null> {
     try {
       const body = await this.customObjectsApi.getNamespacedCustomObject({
         namespace: config.kubernetesNamespace,
-        group: OpenClawGroup.Default,
-        version: OpenClawVersion.V1Alpha1,
-        plural: OpenClawPlural.Instances,
+        group: HermesGroup.Default,
+        version: HermesVersion.V1Alpha1,
+        plural: HermesPlural.Agents,
         name: id,
       });
-      return mapOpenClawInstance(body as OpenClawInstance);
+      return mapHermesAgent(body as HermesAgent);
     } catch {
       return null;
     }
   }
 
-  async createOpenClawInstance(instanceInput: CreateOpenClawInstanceInput): Promise<Instance> {
-    const id = `instance-${Math.random().toString(36).slice(2, 8)}`;
-    const body = instanceToOpenClawInstance({
+  async createHermesAgent(agentInput: CreateAgentInput): Promise<Agent> {
+    const id = `agent-${Math.random().toString(36).slice(2, 8)}`;
+    const body = agentToHermesAgent({
       id,
-      ...instanceInput,
+      ...agentInput,
     });
     const resource = await this.customObjectsApi.createNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
-      group: OpenClawGroup.Default,
-      version: OpenClawVersion.V1Alpha1,
-      plural: OpenClawPlural.Instances,
+      group: HermesGroup.Default,
+      version: HermesVersion.V1Alpha1,
+      plural: HermesPlural.Agents,
       body,
     });
-    return mapOpenClawInstance(resource as OpenClawInstance);
+    return mapHermesAgent(resource as HermesAgent);
   }
 
-  async patchOpenClawInstance({ id, patch }: PatchOpenClawInstanceInput): Promise<Instance> {
+  async patchHermesAgent({ id, patch }: PatchAgentInput): Promise<Agent> {
     const raw = (await this.customObjectsApi.getNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
-      group: OpenClawGroup.Default,
-      version: OpenClawVersion.V1Alpha1,
-      plural: OpenClawPlural.Instances,
+      group: HermesGroup.Default,
+      version: HermesVersion.V1Alpha1,
+      plural: HermesPlural.Agents,
       name: id,
-    })) as OpenClawInstance;
+    })) as HermesAgent;
     if (!raw) {
-      throw new Error(`Instance with id ${id} not found`);
+      throw new Error(`Agent with id ${id} not found`);
     }
 
-    const body = instanceToOpenClawInstance({
-      ...mapOpenClawInstance(raw),
+    const body = agentToHermesAgent({
+      ...mapHermesAgent(raw),
       ...patch,
     });
     if (body.metadata && raw.metadata?.resourceVersion) {
@@ -244,21 +247,21 @@ export class KubernetesClient implements Runtime {
     }
     const resource = await this.customObjectsApi.replaceNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
-      group: OpenClawGroup.Default,
-      version: OpenClawVersion.V1Alpha1,
-      plural: OpenClawPlural.Instances,
+      group: HermesGroup.Default,
+      version: HermesVersion.V1Alpha1,
+      plural: HermesPlural.Agents,
       name: id,
       body,
     });
-    return mapOpenClawInstance(resource as OpenClawInstance);
+    return mapHermesAgent(resource as HermesAgent);
   }
 
-  async deleteOpenClawInstance(id: string): Promise<void> {
+  async deleteHermesAgent(id: string): Promise<void> {
     await this.customObjectsApi.deleteNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
-      group: OpenClawGroup.Default,
-      version: OpenClawVersion.V1Alpha1,
-      plural: OpenClawPlural.Instances,
+      group: HermesGroup.Default,
+      version: HermesVersion.V1Alpha1,
+      plural: HermesPlural.Agents,
       name: id,
     });
   }
@@ -283,21 +286,21 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async getGatewayToken(instanceId: string): Promise<string | null> {
-    let raw: OpenClawInstance | null = null;
+  async getGatewayToken(agentId: string): Promise<string | null> {
+    let raw: HermesAgent | null = null;
     try {
       raw = (await this.customObjectsApi.getNamespacedCustomObject({
         namespace: config.kubernetesNamespace,
-        group: OpenClawGroup.Default,
-        version: OpenClawVersion.V1Alpha1,
-        plural: OpenClawPlural.Instances,
-        name: instanceId,
-      })) as OpenClawInstance;
+        group: HermesGroup.Default,
+        version: HermesVersion.V1Alpha1,
+        plural: HermesPlural.Agents,
+        name: agentId,
+      })) as HermesAgent;
     } catch {
       return null;
     }
 
-    const secretName = raw?.status?.managedResources?.gatewayTokenSecret;
+    const secretName = raw?.status?.managedResources?.hermesSecret;
     if (!secretName) {
       return null;
     }

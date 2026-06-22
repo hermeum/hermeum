@@ -34,11 +34,11 @@ export const StorageSchema = z
 
 export type Storage = z.infer<typeof StorageSchema>;
 
-export const OpenClawJsonSchema = z.record(z.string(), z.unknown()).optional();
+export const ConfigSchema = z.record(z.string(), z.unknown()).optional();
 
-export type OpenClawJson = z.infer<typeof OpenClawJsonSchema>;
+export type Config = z.infer<typeof ConfigSchema>;
 
-export const SelfConfigActionSchema = z.enum(["skills", "config", "workspaceFiles", "envVars"]);
+export const SelfConfigActionSchema = z.enum(["skills", "config", "soul", "envVars"]);
 
 export type SelfConfigAction = z.infer<typeof SelfConfigActionSchema>;
 
@@ -64,42 +64,37 @@ export const EnvVarSchema = z.object({
 
 export type EnvVar = z.infer<typeof EnvVarSchema>;
 
-export const InstanceInputSchema = z.object({
-  agentName: z.string().optional(),
-  agentDescription: z.string().optional(),
-  agentType: z.string().optional(),
-  openClawVersion: z.string().optional(),
-  openClawJson: OpenClawJsonSchema,
+export const AgentInputSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  type: z.string().optional(),
+  version: z.string().optional(),
+  config: ConfigSchema,
   envVars: z.array(EnvVarSchema).optional(),
   secrets: z.array(z.string()).optional(),
-  workspaceFiles: WorkspaceFilesSchema,
+  soul: z.string().optional(),
   skills: SkillsSchema,
   plugins: PluginsSchema,
 });
 
-export type InstanceInput = z.infer<typeof InstanceInputSchema>;
+export type AgentInput = z.infer<typeof AgentInputSchema>;
 
-export const InstancePhaseSchema = z.enum([
+export const AgentPhaseSchema = z.enum([
   "Pending",
-  "Provisioning",
   "Running",
-  "Degraded",
+  "Succeeded",
   "Failed",
-  "Terminating",
-  "BackingUp",
-  "Restoring",
-  "Updating",
+  "Unknown",
   "Suspended",
 ]);
-export type InstancePhase = z.infer<typeof InstancePhaseSchema>;
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
 
-export const InstanceSchema = InstanceInputSchema.extend({
+export const AgentSchema = AgentInputSchema.extend({
   id: z.string().min(1),
   userId: z.string().min(1),
   suspended: z.boolean().optional(),
-  phase: InstancePhaseSchema.optional(),
+  phase: AgentPhaseSchema.optional(),
   createdAt: z.date().optional(),
-  gatewayEndpoint: z.string().optional(),
 }).readonly();
 
-export type Instance = z.infer<typeof InstanceSchema>;
+export type Agent = z.infer<typeof AgentSchema>;

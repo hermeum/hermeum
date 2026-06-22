@@ -20,12 +20,12 @@ import {
 } from "@clawagent/components/ui/dialog";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
-import type { Template, InstanceInput } from "@/entities";
-import { InstanceInputSchema } from "@/entities";
+import type { Template, AgentInput } from "@/entities";
+import { AgentInputSchema } from "@/entities";
 
 const DEFAULT_YAML = stringify({
-  agentName: "Untitled agent",
-  openClawJson: {
+  name: "Untitled agent",
+  config: {
     agents: {
       defaults: {
         model: {
@@ -34,19 +34,17 @@ const DEFAULT_YAML = stringify({
       },
     },
   },
-  workspaceFiles: {
-    "SOUL.md": `## Identity
+  soul: `## Identity
 You are a helpful assistant. Your goal is to answer questions clearly
 and concisely, help with tasks, and make the user's work easier.
 
 ## Core Principles
 - Ask for clarification when a request is ambiguous.
 - Admit when you don't know something rather than guessing.`,
-  },
   envVars: [],
   skills: [],
   plugins: [],
-} as InstanceInput);
+} as AgentInput);
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -68,8 +66,8 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
     }
   }, [templates]);
 
-  const { mutate: createInstance, isPending: isCreating } = useMutation(
-    trpc.instance.create.mutationOptions({
+  const { mutate: createAgent, isPending: isCreating } = useMutation(
+    trpc.agent.create.mutationOptions({
       onSuccess: () => {
         toast.success("Agent created");
         onSuccess();
@@ -92,9 +90,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
-
-    const { id, name, description, ...instanceInput } = template;
-    setEditorValue(stringify(instanceInput));
+    setEditorValue(stringify(template.agentInput));
   }
 
   function handleCreate() {
@@ -106,7 +102,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
       return;
     }
 
-    const result = InstanceInputSchema.safeParse(parsed);
+    const result = AgentInputSchema.safeParse(parsed);
     if (!result.success) {
       const issue = result.error.issues[0]!;
       const path = issue.path.length > 0 ? `/${issue.path.join("/")}` : "";
@@ -115,7 +111,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
     }
 
     setValidationError(null);
-    createInstance(parsed);
+    createAgent(parsed);
   }
 
   return (

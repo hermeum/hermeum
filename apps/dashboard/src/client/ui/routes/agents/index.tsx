@@ -46,17 +46,17 @@ function DashboardPage() {
   const navigate = useNavigate();
 
   const {
-    data: instances,
+    data: agents,
     isPending,
     isFetching,
     error,
-  } = useQuery(trpc.instance.list.queryOptions());
+  } = useQuery(trpc.agent.list.queryOptions());
 
   const invalidateList = () =>
-    queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.agent.list.queryKey() });
 
-  const { mutate: suspendInstance } = useMutation(
-    trpc.instance.suspend.mutationOptions({
+  const { mutate: suspendAgent } = useMutation(
+    trpc.agent.suspend.mutationOptions({
       onSuccess: () => {
         toast.success("Agent paused");
         setTimeout(invalidateList, 500);
@@ -65,8 +65,8 @@ function DashboardPage() {
     })
   );
 
-  const { mutate: resumeInstance } = useMutation(
-    trpc.instance.resume.mutationOptions({
+  const { mutate: resumeAgent } = useMutation(
+    trpc.agent.resume.mutationOptions({
       onSuccess: () => {
         toast.success("Agent resumed");
         setTimeout(invalidateList, 500);
@@ -75,8 +75,8 @@ function DashboardPage() {
     })
   );
 
-  const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
-    trpc.instance.delete.mutationOptions({
+  const { mutate: deleteAgent, isPending: isDeleting } = useMutation(
+    trpc.agent.delete.mutationOptions({
       onSuccess: () => {
         toast.success("Agent deleted");
         invalidateList();
@@ -120,7 +120,7 @@ function DashboardPage() {
       <CreateAgentDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() })}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: trpc.agent.list.queryKey() })}
       />
 
       <Dialog
@@ -142,7 +142,7 @@ function DashboardPage() {
               variant="destructive"
               disabled={isDeleting}
               onClick={() => {
-                if (deleteId) deleteInstance({ id: deleteId });
+                if (deleteId) deleteAgent({ id: deleteId });
               }}
             >
               Delete
@@ -162,32 +162,32 @@ function DashboardPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {instances?.length === 0 ? (
+          {agents?.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center text-muted-foreground">
                 No agents yet.
               </TableCell>
             </TableRow>
           ) : (
-            instances?.map((instance) => (
+            agents?.map((agent) => (
               <TableRow
-                key={instance.id}
+                key={agent.id}
                 className="cursor-pointer"
-                onClick={() => navigate({ to: "/agents/$id", params: { id: instance.id } })}
+                onClick={() => navigate({ to: "/agents/$id", params: { id: agent.id } })}
               >
                 <TableCell className="max-w-32 font-mono text-xs">
                   <div className="group flex items-center gap-1 min-w-0">
-                    <span className="truncate">{instance.id}</span>
-                    <CopyButton text={instance.id} className="opacity-0 group-hover:opacity-100" />
+                    <span className="truncate">{agent.id}</span>
+                    <CopyButton text={agent.id} className="opacity-0 group-hover:opacity-100" />
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{instance.agentName ?? "-"}</TableCell>
+                <TableCell className="font-medium">{agent.name ?? "-"}</TableCell>
                 <TableCell>
-                  <PhaseBadge phase={instance.phase} />
+                  <PhaseBadge phase={agent.phase} />
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {instance.createdAt
-                    ? formatDistanceToNow(instance.createdAt, { addSuffix: true })
+                  {agent.createdAt
+                    ? formatDistanceToNow(agent.createdAt, { addSuffix: true })
                     : "—"}
                 </TableCell>
                 <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
@@ -198,19 +198,19 @@ function DashboardPage() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {instance.suspended ? (
-                        <DropdownMenuItem onClick={() => resumeInstance({ id: instance.id })}>
+                      {agent.suspended ? (
+                        <DropdownMenuItem onClick={() => resumeAgent({ id: agent.id })}>
                           Resume
                         </DropdownMenuItem>
                       ) : (
-                        <DropdownMenuItem onClick={() => suspendInstance({ id: instance.id })}>
+                        <DropdownMenuItem onClick={() => suspendAgent({ id: agent.id })}>
                           Pause
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => setDeleteId(instance.id)}
+                        onClick={() => setDeleteId(agent.id)}
                       >
                         Delete
                       </DropdownMenuItem>

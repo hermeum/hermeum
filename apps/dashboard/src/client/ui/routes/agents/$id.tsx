@@ -48,7 +48,7 @@ import {
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 export const Route = createFileRoute("/agents/$id")({
-  component: InstanceDetailPage,
+  component: AgentDetailPage,
 });
 
 const BADGE_MAX = 10;
@@ -72,27 +72,27 @@ function BadgeList({ items, max = BADGE_MAX }: { items: string[]; max?: number }
   );
 }
 
-function InstanceDetailPage() {
+function AgentDetailPage() {
   const { id } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: instance, isPending, error } = useQuery(trpc.instance.get.queryOptions({ id }));
+  const { data: agent, isPending, error } = useQuery(trpc.agent.get.queryOptions({ id }));
   const { data: session } = authClient.useSession();
-  const isOwner = !!session?.user && session.user.id === instance?.userId;
+  const isOwner = !!session?.user && session.user.id === agent?.userId;
   const { data: gatewayToken } = useQuery({
-    ...trpc.instance.getGatewayToken.queryOptions({ id }),
-    enabled: isOwner && !!instance?.gatewayEndpoint,
+    ...trpc.agent.getGatewayToken.queryOptions({ id }),
+    enabled: isOwner,
   });
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [tokenVisible, setTokenVisible] = useState(false);
 
   const invalidateDetail = () =>
-    queryClient.invalidateQueries({ queryKey: trpc.instance.get.queryKey({ id }) });
+    queryClient.invalidateQueries({ queryKey: trpc.agent.get.queryKey({ id }) });
 
-  const { mutate: suspendInstance } = useMutation(
-    trpc.instance.suspend.mutationOptions({
+  const { mutate: suspendAgent } = useMutation(
+    trpc.agent.suspend.mutationOptions({
       onSuccess: () => {
         toast.success("Agent paused");
         setTimeout(invalidateDetail, 500);
@@ -100,8 +100,8 @@ function InstanceDetailPage() {
       onError: (e) => toast.error(e.message),
     })
   );
-  const { mutate: resumeInstance } = useMutation(
-    trpc.instance.resume.mutationOptions({
+  const { mutate: resumeAgent } = useMutation(
+    trpc.agent.resume.mutationOptions({
       onSuccess: () => {
         toast.success("Agent resumed");
         setTimeout(invalidateDetail, 500);
@@ -109,8 +109,8 @@ function InstanceDetailPage() {
       onError: (e) => toast.error(e.message),
     })
   );
-  const { mutate: deleteInstance, isPending: isDeleting } = useMutation(
-    trpc.instance.delete.mutationOptions({
+  const { mutate: deleteAgent, isPending: isDeleting } = useMutation(
+    trpc.agent.delete.mutationOptions({
       onSuccess: () => {
         toast.success("Agent deleted");
         navigate({ to: "/agents" });
@@ -121,7 +121,7 @@ function InstanceDetailPage() {
 
   if (isPending) return <div className="p-6">Loading…</div>;
   if (error) return <div className="p-6 text-red-500">Error: {error.message}</div>;
-  if (!instance) return <div className="p-6">Not found</div>;
+  if (!agent) return <div className="p-6">Not found</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -129,19 +129,19 @@ function InstanceDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{instance.agentName ?? instance.id}</h1>
-            <PhaseBadge phase={instance.phase} />
+            <h1 className="text-2xl font-bold">{agent.name ?? agent.id}</h1>
+            <PhaseBadge phase={agent.phase} />
           </div>
           <div className="group flex items-center gap-1">
-            <p className="text-sm text-muted-foreground font-mono">{instance.id}</p>
-            <CopyButton text={instance.id} className="opacity-0 group-hover:opacity-100" />
+            <p className="text-sm text-muted-foreground font-mono">{agent.id}</p>
+            <CopyButton text={agent.id} className="opacity-0 group-hover:opacity-100" />
           </div>
-          {instance.agentDescription && (
-            <p className="text-sm text-muted-foreground mt-1">{instance.agentDescription}</p>
+          {agent.description && (
+            <p className="text-sm text-muted-foreground mt-1">{agent.description}</p>
           )}
-          {instance.agentType && (
+          {agent.type && (
             <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium">Type:</span> {instance.agentType}
+              <span className="font-medium">Type:</span> {agent.type}
             </p>
           )}
         </div>
@@ -156,10 +156,10 @@ function InstanceDetailPage() {
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {instance.suspended ? (
-                <DropdownMenuItem onClick={() => resumeInstance({ id })}>Resume</DropdownMenuItem>
+              {agent.suspended ? (
+                <DropdownMenuItem onClick={() => resumeAgent({ id })}>Resume</DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onClick={() => suspendInstance({ id })}>Pause</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => suspendAgent({ id })}>Pause</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
@@ -178,19 +178,19 @@ function InstanceDetailPage() {
         </TabsList>
 
         <TabsContent value="config" className="mt-4 flex flex-col gap-4">
-          {/* openClawJson */}
-          {instance.openClawJson && (
+          {/* config */}
+          {agent.config && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Configuration</CardTitle>
               </CardHeader>
               <CardContent>
                 <Accordion>
-                  <AccordionItem value="openclaw-json">
-                    <AccordionTrigger className="font-mono text-xs">openclaw.json</AccordionTrigger>
+                  <AccordionItem value="config">
+                    <AccordionTrigger className="font-mono text-xs">config.json</AccordionTrigger>
                     <AccordionContent>
                       <CodeMirror
-                        value={JSON.stringify(instance.openClawJson, null, 2)}
+                        value={JSON.stringify(agent.config, null, 2)}
                         extensions={[jsonLang(), indentationMarkers()]}
                         editable={false}
                         maxHeight="300px"
@@ -210,31 +210,29 @@ function InstanceDetailPage() {
             </Card>
           )}
 
-          {/* workspaceFiles */}
-          {instance.workspaceFiles && Object.keys(instance.workspaceFiles).length > 0 && (
+          {/* soul */}
+          {agent.soul && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-medium">Workspace Files</CardTitle>
+                <CardTitle className="text-sm font-medium">Soul</CardTitle>
               </CardHeader>
               <CardContent>
-                <Accordion multiple>
-                  {Object.entries(instance.workspaceFiles).map(([filename, content]) => (
-                    <AccordionItem key={filename} value={filename}>
-                      <AccordionTrigger className="font-mono text-xs">{filename}</AccordionTrigger>
-                      <AccordionContent>
-                        <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
-                          {content}
-                        </pre>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                <Accordion>
+                  <AccordionItem value="SOUL.md">
+                    <AccordionTrigger className="font-mono text-xs">SOUL.md</AccordionTrigger>
+                    <AccordionContent>
+                      <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
+                        {agent.soul}
+                      </pre>
+                    </AccordionContent>
+                  </AccordionItem>
                 </Accordion>
               </CardContent>
             </Card>
           )}
 
           {/* envVars */}
-          {instance.envVars && instance.envVars.length > 0 && (
+          {agent.envVars && agent.envVars.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Environment Variables</CardTitle>
@@ -248,7 +246,7 @@ function InstanceDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {instance.envVars.map((e) => (
+                    {agent.envVars.map((e) => (
                       <TableRow key={e.name}>
                         <TableCell className="font-mono text-xs">{e.name}</TableCell>
                         <TableCell className="font-mono text-xs">{e.value}</TableCell>
@@ -261,55 +259,31 @@ function InstanceDetailPage() {
           )}
 
           {/* skills */}
-          {instance.skills && instance.skills.length > 0 && (
+          {agent.skills && agent.skills.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Skills</CardTitle>
               </CardHeader>
               <CardContent>
-                <BadgeList items={instance.skills} max={10} />
+                <BadgeList items={agent.skills} max={10} />
               </CardContent>
             </Card>
           )}
 
           {/* plugins */}
-          {instance.plugins && instance.plugins.length > 0 && (
+          {agent.plugins && agent.plugins.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Plugins</CardTitle>
               </CardHeader>
               <CardContent>
-                <BadgeList items={instance.plugins} max={10} />
+                <BadgeList items={agent.plugins} max={10} />
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
         <TabsContent value="connect" className="mt-4 flex flex-col gap-4">
-          {instance.gatewayEndpoint && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Endpoint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="group flex items-center gap-2">
-                  <a
-                    href={`https://${instance.gatewayEndpoint}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-mono text-muted-foreground hover:underline"
-                  >
-                    {instance.gatewayEndpoint}
-                  </a>
-                  <CopyButton
-                    text={instance.gatewayEndpoint}
-                    className="opacity-0 group-hover:opacity-100"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {gatewayToken && (
             <Card>
               <CardHeader>
@@ -355,7 +329,7 @@ function InstanceDetailPage() {
             <Button
               variant="destructive"
               disabled={isDeleting}
-              onClick={() => deleteInstance({ id })}
+              onClick={() => deleteAgent({ id })}
             >
               Delete
             </Button>
@@ -363,7 +337,7 @@ function InstanceDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <EditInstanceDialog instance={instance} open={editOpen} onOpenChange={setEditOpen} />
+      <EditInstanceDialog instance={agent} open={editOpen} onOpenChange={setEditOpen} />
     </div>
   );
 }

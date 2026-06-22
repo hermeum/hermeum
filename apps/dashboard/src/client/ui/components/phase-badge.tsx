@@ -1,18 +1,15 @@
 import { cn } from "@clawagent/components/lib/utils";
-import type { InstancePhase } from "@/entities";
+import type { AgentPhase } from "@/entities";
 
-function phaseClass(phase: InstancePhase | undefined): string {
+function phaseClass(phase: AgentPhase | undefined): string {
   switch (phase) {
     case "Running":
       return "bg-green-100 text-green-800";
     case "Pending":
-    case "Provisioning":
-    case "Updating":
-    case "Restoring":
-    case "BackingUp":
       return "bg-yellow-100 text-yellow-800";
+    case "Succeeded":
+      return "bg-blue-100 text-blue-800";
     case "Failed":
-    case "Degraded":
       return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-700";
@@ -20,7 +17,7 @@ function phaseClass(phase: InstancePhase | undefined): string {
 }
 
 interface PhaseBadgeProps {
-  phase: InstancePhase | undefined;
+  phase: AgentPhase | undefined;
   className?: string;
 }
 

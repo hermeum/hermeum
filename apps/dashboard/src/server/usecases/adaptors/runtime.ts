@@ -1,22 +1,22 @@
-import { EnvVar, Instance, InstanceInput, Secret } from "@/entities";
+import { Agent, AgentInput, EnvVar, Secret } from "@/entities";
 
-export type CreateOpenClawInstanceInput = InstanceInput & { userId: string };
-export type PatchOpenClawInstanceInput = {
+export type CreateAgentInput = AgentInput & { userId: string };
+export type PatchAgentInput = {
   id: string;
-  patch: Partial<Omit<Instance, "id" | "userId" | "phase" | "createdAt">>;
+  patch: Partial<Omit<Agent, "id" | "userId" | "phase" | "createdAt">>;
 };
 
 export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
 export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
 
 export interface Runtime {
-  listOpenClawInstances: () => Promise<Instance[]>;
-  getOpenClawInstance: (id: string) => Promise<Instance | null>;
-  createOpenClawInstance: (input: CreateOpenClawInstanceInput) => Promise<Instance>;
-  patchOpenClawInstance: (input: PatchOpenClawInstanceInput) => Promise<Instance>;
-  deleteOpenClawInstance: (id: string) => Promise<void>;
+  listHermesAgents: () => Promise<Agent[]>;
+  getHermesAgent: (id: string) => Promise<Agent | null>;
+  createHermesAgent: (input: CreateAgentInput) => Promise<Agent>;
+  patchHermesAgent: (input: PatchAgentInput) => Promise<Agent>;
+  deleteHermesAgent: (id: string) => Promise<void>;
 
-  getGatewayToken: (instanceId: string) => Promise<string | null>;
+  getGatewayToken: (agentId: string) => Promise<string | null>;
 
   listSecrets: () => Promise<Secret[]>;
   getSecret: (id: string) => Promise<Secret | null>;

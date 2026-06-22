@@ -1,8 +1,8 @@
 import { Router } from "express";
 
-import { mapOpenClawInstance } from "../infras/kubernetes/client.js";
-import { OpenClawInstance } from "../infras/kubernetes/types/openclaw-instance.js";
-import { InstanceUseCase } from "../usecases/instance.js";
+import { mapHermesAgent } from "../infras/kubernetes/client.js";
+import { HermesAgent } from "../infras/kubernetes/types/hermes-agent.js";
+import { AgentUseCase } from "../usecases/agent.js";
 
 type AdmissionOperation = "CREATE" | "UPDATE" | "DELETE" | "CONNECT";
 
@@ -10,7 +10,7 @@ interface AdmissionRequest {
   uid: string;
   operation: AdmissionOperation;
   kind: { group: string; version: string; kind: string };
-  object?: OpenClawInstance;
+  object?: HermesAgent;
 }
 
 interface AdmissionReview {
@@ -25,7 +25,7 @@ interface AdmissionReview {
   };
 }
 
-const usecase = new InstanceUseCase();
+const usecase = new AgentUseCase();
 
 export const webhookRouter = Router();
 
@@ -39,7 +39,7 @@ webhookRouter.post("/mutating", (req, res) => {
   }
 
   if (
-    request.kind.kind !== "OpenClawInstance" ||
+    request.kind.kind !== "HermesAgent" ||
     request.operation === "DELETE" ||
     request.operation === "CONNECT" ||
     !request.object
@@ -52,8 +52,8 @@ webhookRouter.post("/mutating", (req, res) => {
     return;
   }
 
-  const instance = mapOpenClawInstance(request.object);
-  const patch = usecase.getmutatingWebhookJsonPatch(instance);
+  const agent = mapHermesAgent(request.object);
+  const patch = usecase.getmutatingWebhookJsonPatch(agent);
 
   const response: AdmissionReview = {
     apiVersion: body.apiVersion,

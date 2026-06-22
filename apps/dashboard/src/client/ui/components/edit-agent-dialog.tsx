@@ -6,8 +6,8 @@ import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
-import type { Instance } from "@/entities";
-import { InstanceInputSchema } from "@/entities";
+import type { Agent } from "@/entities";
+import { AgentInputSchema } from "@/entities";
 import { cn } from "@clawagent/components/lib/utils";
 import { Button } from "@clawagent/components/ui/button";
 import {
@@ -21,27 +21,27 @@ import {
 } from "@clawagent/components/ui/dialog";
 
 interface EditInstanceDialogProps {
-  instance: Instance;
+  instance: Agent;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-function instanceToYaml(instance: Instance): string {
-  return stringify(InstanceInputSchema.parse(instance));
+function agentToYaml(agent: Agent): string {
+  return stringify(AgentInputSchema.parse(agent));
 }
 
 export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanceDialogProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const [editorValue, setEditorValue] = useState(() => instanceToYaml(instance));
+  const [editorValue, setEditorValue] = useState(() => agentToYaml(instance));
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { mutate: updateInstance, isPending: isUpdating } = useMutation(
-    trpc.instance.update.mutationOptions({
+  const { mutate: updateAgent, isPending: isUpdating } = useMutation(
+    trpc.agent.update.mutationOptions({
       onSuccess: (updated) => {
         toast.success("Agent updated");
-        queryClient.setQueryData(trpc.instance.get.queryKey({ id: instance.id }), updated);
-        queryClient.invalidateQueries({ queryKey: trpc.instance.list.queryKey() });
+        queryClient.setQueryData(trpc.agent.get.queryKey({ id: instance.id }), updated);
+        queryClient.invalidateQueries({ queryKey: trpc.agent.list.queryKey() });
         handleOpenChange(false);
       },
       onError: (error) => {
@@ -52,7 +52,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
-      setEditorValue(instanceToYaml(instance));
+      setEditorValue(agentToYaml(instance));
       setValidationError(null);
     }
     onOpenChange(nextOpen);
@@ -67,7 +67,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
       return;
     }
 
-    const result = InstanceInputSchema.safeParse(parsed);
+    const result = AgentInputSchema.safeParse(parsed);
     if (!result.success) {
       const issue = result.error.issues[0]!;
       const path = issue.path.length > 0 ? `/${issue.path.join("/")}` : "";
@@ -76,7 +76,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
     }
 
     setValidationError(null);
-    updateInstance({ id: instance.id, ...parsed });
+    updateAgent({ id: instance.id, ...parsed });
   }
 
   return (
@@ -86,7 +86,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
           <DialogTitle>Edit agent</DialogTitle>
           <DialogDescription>
             Update the configuration for{" "}
-            <span className="font-medium">{instance.agentName ?? instance.id}</span>.
+            <span className="font-medium">{instance.name ?? instance.id}</span>.
           </DialogDescription>
         </DialogHeader>
 

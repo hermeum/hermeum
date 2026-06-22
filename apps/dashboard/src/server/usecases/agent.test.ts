@@ -3,11 +3,11 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-agent-config", () => ({ LocalConfig: vi.fn() }));
 
-import { InstanceUseCase } from "./instance";
+import { AgentUseCase } from "./agent";
 import type { ConfigAdaptor } from "./adaptors/config";
 import type { Runtime } from "./adaptors/runtime";
 import type { AgentConfig, JsonPatchOp } from "@/entities";
-import type { Instance } from "@/entities";
+import type { Agent } from "@/entities";
 
 function makeConfig(agentTypes?: AgentConfig["agentTypes"]): ConfigAdaptor {
   return {
@@ -20,11 +20,11 @@ function makeConfig(agentTypes?: AgentConfig["agentTypes"]): ConfigAdaptor {
 
 function makeRuntime(): Runtime {
   return {
-    listOpenClawInstances: vi.fn(),
-    getOpenClawInstance: vi.fn(),
-    createOpenClawInstance: vi.fn(),
-    patchOpenClawInstance: vi.fn(),
-    deleteOpenClawInstance: vi.fn(),
+    listHermesAgents: vi.fn(),
+    getHermesAgent: vi.fn(),
+    createHermesAgent: vi.fn(),
+    patchHermesAgent: vi.fn(),
+    deleteHermesAgent: vi.fn(),
     listSecrets: vi.fn(),
     getSecret: vi.fn(),
     createSecret: vi.fn(),
@@ -36,46 +36,46 @@ function makeRuntime(): Runtime {
   } as unknown as Runtime;
 }
 
-function makeInstance(overrides: Partial<Instance> = {}): Instance {
+function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
     id: "agent-1",
     userId: "user-1",
     ...overrides,
-  } as Instance;
+  } as Agent;
 }
 
-describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
-  it("returns null when instance.agentType is undefined", () => {
-    const useCase = new InstanceUseCase(
+describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
+  it("returns null when agent.type is undefined", () => {
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } }),
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: undefined }));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
     expect(result).toBeNull();
   });
 
   it("returns null when config.agentTypes is undefined", () => {
-    const useCase = new InstanceUseCase(makeRuntime(), makeConfig(undefined));
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "some-type" }));
+    const useCase = new AgentUseCase(makeRuntime(), makeConfig(undefined));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "some-type" }));
     expect(result).toBeNull();
   });
 
   it("returns null when the agentType key is missing from config", () => {
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "other-type": { mutatingWebhookJsonPatch: [] } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "unknown-type" }));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "unknown-type" }));
     expect(result).toBeNull();
   });
 
   it("returns the patch unchanged when no Handlebars variables are present", () => {
     const patch: JsonPatchOp[] = [{ op: "add", path: "/metadata/labels/env", value: "production" }];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "my-type" }));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "my-type" }));
     expect(result).toEqual(patch);
   });
 
@@ -88,17 +88,17 @@ describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
           "id={{agentId}} user={{userId}} name={{agentName}} desc={{agentDescription}} type={{agentType}}",
       },
     ];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
     );
     const result = useCase.getmutatingWebhookJsonPatch(
-      makeInstance({
-        agentType: "my-type",
+      makeAgent({
+        type: "my-type",
         id: "abc123",
         userId: "usr456",
-        agentName: "My Agent",
-        agentDescription: "Does things",
+        name: "My Agent",
+        description: "Does things",
       })
     );
     expect(result![0]!.value).toBe(
@@ -106,27 +106,27 @@ describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
     );
   });
 
-  it("defaults agentName and agentDescription to empty string when undefined on instance", () => {
+  it("defaults agentName and agentDescription to empty string when undefined on agent", () => {
     const patch: JsonPatchOp[] = [
       { op: "add", path: "/x", value: "name={{agentName}};desc={{agentDescription}}" },
     ];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
     );
     const result = useCase.getmutatingWebhookJsonPatch(
-      makeInstance({ agentType: "t", agentName: undefined, agentDescription: undefined }),
+      makeAgent({ type: "t", name: undefined, description: undefined }),
     );
     expect(result![0]!.value).toBe("name=;desc=");
   });
 
   it("passes through ops without a value property unchanged", () => {
     const patch: JsonPatchOp[] = [{ op: "remove", path: "/metadata/labels/old" }];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "t" }));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }));
     expect(result).toEqual(patch);
     expect(result![0]).not.toHaveProperty("value");
   });
@@ -142,12 +142,12 @@ describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
         ],
       },
     ];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
     );
     const result = useCase.getmutatingWebhookJsonPatch(
-      makeInstance({ agentType: "t", id: "a1", userId: "u2" }),
+      makeAgent({ type: "t", id: "a1", userId: "u2" }),
     );
     expect(result![0]!.value).toEqual([
       { name: "AGENT_ID", value: "a1" },
@@ -160,11 +160,11 @@ describe("InstanceUseCase.getmutatingWebhookJsonPatch", () => {
       { op: "remove", path: "/old" },
       { op: "add", path: "/new", value: "{{agentId}}" },
     ];
-    const useCase = new InstanceUseCase(
+    const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeInstance({ agentType: "t", id: "zz9" }));
+    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t", id: "zz9" }));
     expect(result).toHaveLength(2);
     expect(result![0]).not.toHaveProperty("value");
     expect(result![1]!.value).toBe("zz9");
