@@ -11,13 +11,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@clawagent/components/ui/sidebar";
+} from "@hermeum/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@clawagent/components/ui/dropdown-menu";
+} from "@hermeum/components/ui/dropdown-menu";
 
 interface Session {
   user?: { email?: string | null; name?: string | null };
@@ -29,7 +29,7 @@ const agentNavItems = [
 ];
 
 const resourceNavItems = [
-  { to: "https://github.com/noahingh/clawagent" as const, label: "Documentation", icon: BookOpen },
+  { to: "https://github.com/hermeum/hermeum" as const, label: "Documentation", icon: BookOpen },
 ];
 
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
@@ -42,7 +42,7 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
     <Sidebar collapsible="none">
       <SidebarHeader>
         <div className="flex items-center gap-2.5 px-2 py-1">
-          <span className="font-semibold text-sm">Claw Agent</span>
+          <span className="font-semibold text-sm">Hermeum</span>
         </div>
       </SidebarHeader>
 

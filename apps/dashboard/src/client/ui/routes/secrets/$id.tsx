@@ -7,8 +7,8 @@ import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
 import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
-import { Badge } from "@clawagent/components/ui/badge";
-import { Button } from "@clawagent/components/ui/button";
+import { Badge } from "@hermeum/components/ui/badge";
+import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -17,13 +17,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@clawagent/components/ui/dropdown-menu";
+} from "@hermeum/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -31,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@clawagent/components/ui/table";
+} from "@hermeum/components/ui/table";
 
 export const Route = createFileRoute("/secrets/$id")({
   component: SecretDetailPage,

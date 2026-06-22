@@ -5,10 +5,10 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
-import { cn } from "@clawagent/components/lib/utils";
-import { Button } from "@clawagent/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@clawagent/components/ui/card";
-import { ScrollArea, ScrollBar } from "@clawagent/components/ui/scroll-area";
+import { cn } from "@hermeum/components/lib/utils";
+import { Button } from "@hermeum/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
+import { ScrollArea, ScrollBar } from "@hermeum/components/ui/scroll-area";
 import {
   Dialog,
   DialogClose,
@@ -17,7 +17,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Template, AgentInput } from "@/entities";

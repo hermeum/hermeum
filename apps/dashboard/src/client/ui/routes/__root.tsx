@@ -11,7 +11,7 @@ import { AppSidebar } from "@/client/ui/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
-} from "@clawagent/components/ui/sidebar";
+} from "@hermeum/components/ui/sidebar";
 
 interface RouterContext {
   queryClient: QueryClient;

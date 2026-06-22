@@ -19,7 +19,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm --filter @clawagent/dashboard build
+RUN pnpm --filter @hermeum/dashboard build
 
 # ---- runner: lean production image ----
 FROM base AS runner
@@ -30,7 +30,7 @@ WORKDIR /app
 
 COPY --from=builder /app .
 
-RUN pnpm deploy --filter @clawagent/dashboard --prod /deploy
+RUN pnpm deploy --filter @hermeum/dashboard --prod /deploy
 
 WORKDIR /deploy
 

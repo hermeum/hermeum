@@ -1,5 +1,5 @@
 {
-  "name": "clawagent",
+  "name": "hermeum",
   "private": true,
   "scripts": {
     "build": "turbo build",

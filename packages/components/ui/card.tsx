@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@clawagent/components/lib/utils"
+import { cn } from "@hermeum/components/lib/utils"
 
 function Card({
   className,

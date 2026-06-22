@@ -1,8 +1,8 @@
 {
-  "extends": "@clawagent/typescript-config/react-library.json",
+  "extends": "@hermeum/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
-      "@clawagent/components/*": ["./*"]
+      "@hermeum/components/*": ["./*"]
     }
   },
   "include": ["ui", "lib", "hooks"]

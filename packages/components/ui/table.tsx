@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "@clawagent/components/lib/utils";
+import { cn } from "@hermeum/components/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (

@@ -25,38 +25,38 @@ const enum HermesPlural {
   Agents = "hermesagents",
 }
 
-const enum ClawAgentLabel {
+const enum HermeumLabel {
   // https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
   ManagedBy = "app.kubernetes.io/managed-by",
-  UserId = "clawagent.ai/user-id",
+  UserId = "hermeum.app/user-id",
 }
-const enum ClawAgentLabelValue {
-  ManagedBy = "clawagent",
+const enum HermeumLabelValue {
+  ManagedBy = "hermeum",
 }
-const enum ClawAgentAnnotation {
-  Name = "clawagent.ai/agent-name",
-  Description = "clawagent.ai/agent-description",
-  AgentType = "clawagent.ai/agent-type",
-  SecretName = "clawagent.ai/secret-name",
-  SecretDescription = "clawagent.ai/secret-description",
-  SecretArchived = "clawagent.ai/secret-archived",
+const enum HermeumAnnotation {
+  Name = "hermeum.app/agent-name",
+  Description = "hermeum.app/agent-description",
+  AgentType = "hermeum.app/agent-type",
+  SecretName = "hermeum.app/secret-name",
+  SecretDescription = "hermeum.app/secret-description",
+  SecretArchived = "hermeum.app/secret-archived",
 }
 
 export function agentToHermesAgent(agent: Agent): HermesAgent {
   const labels: Record<string, string> = {
-    [ClawAgentLabel.ManagedBy]: ClawAgentLabelValue.ManagedBy,
-    [ClawAgentLabel.UserId]: agent.userId,
+    [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
+    [HermeumLabel.UserId]: agent.userId,
   };
 
   const annotations: Record<string, string> = {};
   if (agent.name !== undefined) {
-    annotations[ClawAgentAnnotation.Name] = agent.name;
+    annotations[HermeumAnnotation.Name] = agent.name;
   }
   if (agent.description !== undefined) {
-    annotations[ClawAgentAnnotation.Description] = agent.description;
+    annotations[HermeumAnnotation.Description] = agent.description;
   }
   if (agent.type !== undefined) {
-    annotations[ClawAgentAnnotation.AgentType] = agent.type;
+    annotations[HermeumAnnotation.AgentType] = agent.type;
   }
 
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
@@ -103,10 +103,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
 export function mapHermesAgent(raw: HermesAgent): Agent {
   return {
     id: raw.metadata?.name ?? "",
-    userId: raw.metadata?.labels?.[ClawAgentLabel.UserId] ?? "",
-    name: raw.metadata?.annotations?.[ClawAgentAnnotation.Name],
-    description: raw.metadata?.annotations?.[ClawAgentAnnotation.Description],
-    type: raw.metadata?.annotations?.[ClawAgentAnnotation.AgentType],
+    userId: raw.metadata?.labels?.[HermeumLabel.UserId] ?? "",
+    name: raw.metadata?.annotations?.[HermeumAnnotation.Name],
+    description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
+    type: raw.metadata?.annotations?.[HermeumAnnotation.AgentType],
     version: raw.spec.hermes?.image?.tag,
     config: raw.spec.hermes?.config?.raw,
     envVars: raw.spec.hermes?.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
@@ -134,16 +134,16 @@ export function secretToKubernetesSecret(
       name: secret.id,
       namespace: config.kubernetesNamespace,
       labels: {
-        [ClawAgentLabel.ManagedBy]: ClawAgentLabelValue.ManagedBy,
-        [ClawAgentLabel.UserId]: secret.userId,
+        [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
+        [HermeumLabel.UserId]: secret.userId,
       },
       annotations: {
-        [ClawAgentAnnotation.SecretName]: secret.name,
+        [HermeumAnnotation.SecretName]: secret.name,
         ...(secret.description !== undefined && {
-          [ClawAgentAnnotation.SecretDescription]: secret.description,
+          [HermeumAnnotation.SecretDescription]: secret.description,
         }),
         ...(secret.archived !== undefined && {
-          [ClawAgentAnnotation.SecretArchived]: String(secret.archived),
+          [HermeumAnnotation.SecretArchived]: String(secret.archived),
         }),
       },
     },
@@ -163,11 +163,11 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
   const envVars: SecretEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
   return {
     id: raw.metadata?.name ?? "",
-    userId: raw.metadata?.labels?.[ClawAgentLabel.UserId] ?? "",
-    name: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretName] ?? "",
-    description: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretDescription],
+    userId: raw.metadata?.labels?.[HermeumLabel.UserId] ?? "",
+    name: raw.metadata?.annotations?.[HermeumAnnotation.SecretName] ?? "",
+    description: raw.metadata?.annotations?.[HermeumAnnotation.SecretDescription],
     envVars,
-    archived: raw.metadata?.annotations?.[ClawAgentAnnotation.SecretArchived] === "true",
+    archived: raw.metadata?.annotations?.[HermeumAnnotation.SecretArchived] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -190,7 +190,7 @@ export class KubernetesClient implements Runtime {
       group: HermesGroup.Default,
       version: HermesVersion.V1Alpha1,
       plural: HermesPlural.Agents,
-      labelSelector: `${ClawAgentLabel.ManagedBy}=${ClawAgentLabelValue.ManagedBy}`,
+      labelSelector: `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
     });
     return (body as HermesAgentList).items.map(mapHermesAgent);
   }
@@ -269,7 +269,7 @@ export class KubernetesClient implements Runtime {
   async listSecrets(): Promise<Secret[]> {
     const body = await this.coreV1Api.listNamespacedSecret({
       namespace: config.kubernetesNamespace,
-      labelSelector: `${ClawAgentLabel.ManagedBy}=${ClawAgentLabelValue.ManagedBy}`,
+      labelSelector: `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
     });
     return (body.items ?? []).map(mapKubernetesSecret);
   }

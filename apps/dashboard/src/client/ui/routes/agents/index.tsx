@@ -8,7 +8,7 @@ import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
-import { Button } from "@clawagent/components/ui/button";
+import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -17,14 +17,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@clawagent/components/ui/dropdown-menu";
+} from "@hermeum/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -32,7 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@clawagent/components/ui/table";
+} from "@hermeum/components/ui/table";
 
 export const Route = createFileRoute("/agents/")({
   component: DashboardPage,

@@ -4,21 +4,21 @@ description: Write and maintain project wiki documentation in the wiki/ director
 user-invocable: true
 ---
 
-# ClawAgent Wiki
+# Hermeum Wiki
 
 The wiki lives at `wiki/` in the project root. There are two sections with distinct audiences and purposes:
 
 ```
 wiki/
 ├── contributing/    # Internal guides for contributors
-└── docs/            # User-facing guides for ClawAgent application
+└── docs/            # User-facing guides for Hermeum application
 ```
 
 ## Directory Purposes
 
 ### `wiki/contributing/`
 
-Audience: developers contributing to the ClawAgent codebase.
+Audience: developers contributing to the Hermeum codebase.
 
 Cover topics like:
 - **Code architecture** — clean architecture layers 
@@ -27,10 +27,10 @@ Cover topics like:
 
 ### `wiki/docs/`
 
-Audience: end users and operators running ClawAgent in their Kubernetes cluster.
+Audience: end users and operators running Hermeum in their Kubernetes cluster.
 
 Cover topics like:
-- **Getting started** — what ClawAgent is, prerequisites, installation
+- **Getting started** — what Hermeum is, prerequisites, installation
 - **Configuration** — how to configure the dashboard, environment variables
 - **Troubleshooting** — common issues and fixes
 

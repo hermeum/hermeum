@@ -5,24 +5,24 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { useIsMobile } from "@clawagent/components/hooks/use-mobile"
-import { cn } from "@clawagent/components/lib/utils"
-import { Button } from "@clawagent/components/ui/button"
-import { Input } from "@clawagent/components/ui/input"
-import { Separator } from "@clawagent/components/ui/separator"
+import { useIsMobile } from "@hermeum/components/hooks/use-mobile"
+import { cn } from "@hermeum/components/lib/utils"
+import { Button } from "@hermeum/components/ui/button"
+import { Input } from "@hermeum/components/ui/input"
+import { Separator } from "@hermeum/components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@clawagent/components/ui/sheet"
-import { Skeleton } from "@clawagent/components/ui/skeleton"
+} from "@hermeum/components/ui/sheet"
+import { Skeleton } from "@hermeum/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@clawagent/components/ui/tooltip"
+} from "@hermeum/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"

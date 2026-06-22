@@ -6,15 +6,15 @@ import CodeMirror from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
 import { toast } from "sonner";
 
-import { Badge } from "@clawagent/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@clawagent/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@clawagent/components/ui/tabs";
+import { Badge } from "@hermeum/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@hermeum/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@clawagent/components/ui/accordion";
+} from "@hermeum/components/ui/accordion";
 import {
   Table,
   TableBody,
@@ -22,11 +22,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@clawagent/components/ui/table";
+} from "@hermeum/components/ui/table";
 import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
-import { Button } from "@clawagent/components/ui/button";
+import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
@@ -37,14 +37,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@clawagent/components/ui/dropdown-menu";
+} from "@hermeum/components/ui/dropdown-menu";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 export const Route = createFileRoute("/agents/$id")({

@@ -1,9 +1,9 @@
 {
-  "extends": "@clawagent/typescript-config/react-library.json",
+  "extends": "@hermeum/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@clawagent/components/*": ["../../packages/components/*"]
+      "@hermeum/components/*": ["../../packages/components/*"]
     }
   },
   "include": ["src", "app.config.ts", "drizzle.config.ts"]

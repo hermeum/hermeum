@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent } from "@/entities";
 import { AgentInputSchema } from "@/entities";
-import { cn } from "@clawagent/components/lib/utils";
-import { Button } from "@clawagent/components/ui/button";
+import { cn } from "@hermeum/components/lib/utils";
+import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 
 interface EditInstanceDialogProps {
   instance: Agent;

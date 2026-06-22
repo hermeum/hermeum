@@ -1,7 +1,7 @@
 import * as React from "react"
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
 
-import { cn } from "@clawagent/components/lib/utils"
+import { cn } from "@hermeum/components/lib/utils"
 
 function ScrollArea({
   className,

@@ -1,6 +1,6 @@
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
 
-import { cn } from "@clawagent/components/lib/utils"
+import { cn } from "@hermeum/components/lib/utils"
 
 function Separator({
   className,

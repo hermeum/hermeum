@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-import { Button } from "@clawagent/components/ui/button";
+import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -11,16 +11,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@clawagent/components/ui/dialog";
+} from "@hermeum/components/ui/dialog";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@clawagent/components/ui/field";
-import { Input } from "@clawagent/components/ui/input";
-import { Textarea } from "@clawagent/components/ui/textarea";
+} from "@hermeum/components/ui/field";
+import { Input } from "@hermeum/components/ui/input";
+import { Textarea } from "@hermeum/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 

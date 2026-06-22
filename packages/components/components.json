@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@clawagent/components",
-    "utils": "@clawagent/components/lib/utils",
-    "ui": "@clawagent/components/ui",
-    "lib": "@clawagent/components/lib",
-    "hooks": "@clawagent/components/hooks"
+    "components": "@hermeum/components",
+    "utils": "@hermeum/components/lib/utils",
+    "ui": "@hermeum/components/ui",
+    "lib": "@hermeum/components/lib",
+    "hooks": "@hermeum/components/hooks"
   },
   "menuColor": "default-translucent",
   "menuAccent": "subtle",

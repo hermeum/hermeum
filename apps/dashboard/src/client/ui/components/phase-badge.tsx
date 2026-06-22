@@ -1,4 +1,4 @@
-import { cn } from "@clawagent/components/lib/utils";
+import { cn } from "@hermeum/components/lib/utils";
 import type { AgentPhase } from "@/entities";
 
 function phaseClass(phase: AgentPhase | undefined): string {
