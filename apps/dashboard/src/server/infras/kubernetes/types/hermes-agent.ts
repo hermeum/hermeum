@@ -30,8 +30,13 @@ export interface HermesStorage {
 
 // ─── Workspace ────────────────────────────────────────────────────────────────
 
+export interface HermesDotEnv {
+  secretRef: { name: string };
+}
+
 export interface HermesWorkspace {
   files?: Record<string, string> | undefined;
+  dotEnv?: HermesDotEnv | undefined;
 }
 
 // ─── Plugins & Skills ─────────────────────────────────────────────────────────
@@ -73,13 +78,18 @@ export interface HermesBundle {
 
 // ─── Python & NPM Packages ────────────────────────────────────────────────────
 
-export interface HermesPythonPackages {
-  packages?: string[] | undefined;
+export interface HermesPipPackages {
+  install?: string[] | undefined;
   extraArgs?: string[] | undefined;
 }
 
-export interface HermesNPMPackages {
-  packages?: string[] | undefined;
+export interface HermesNpmPackages {
+  install?: string[] | undefined;
+}
+
+export interface HermesPackages {
+  pip?: HermesPipPackages | undefined;
+  npm?: HermesNpmPackages | undefined;
 }
 
 // ─── Image ────────────────────────────────────────────────────────────────────
@@ -169,8 +179,7 @@ export interface Hermes {
   config?: HermesConfig | undefined;
   storage?: HermesStorage | undefined;
   workspace?: HermesWorkspace | undefined;
-  pythonPackages?: HermesPythonPackages | undefined;
-  npmPackages?: HermesNPMPackages | undefined;
+  packages?: HermesPackages | undefined;
   plugins?: HermesPlugin[] | undefined;
   skills?: HermesSkill[] | undefined;
   crons?: HermesCron[] | undefined;
@@ -248,7 +257,7 @@ export interface SearXNG {
   resources?: k8s.V1ResourceRequirements | undefined;
   configFiles?: Record<string, string> | undefined;
   persistence?: SearXNGPersistence | undefined;
-  extraEnv?: k8s.V1EnvVar[] | undefined;
+  env?: k8s.V1EnvVar[] | undefined;
 }
 
 // ─── Camofox ──────────────────────────────────────────────────────────────────
@@ -270,7 +279,7 @@ export interface Camofox {
   image?: CamofoxImageSpec | undefined;
   resources?: k8s.V1ResourceRequirements | undefined;
   persistence?: CamofoxPersistenceSpec | undefined;
-  extraEnv?: k8s.V1EnvVar[] | undefined;
+  env?: k8s.V1EnvVar[] | undefined;
 }
 
 // ─── HermesAgentSpec ──────────────────────────────────────────────────────────
@@ -308,6 +317,7 @@ export interface ManagedResources {
 
 export interface HermesAgentStatus {
   phase?: HermesAgentPhase | undefined;
+  reason?: string | undefined;
   conditions?: k8s.V1Condition[] | undefined;
   managedResources?: ManagedResources | undefined;
 }
