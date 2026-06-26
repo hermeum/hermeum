@@ -184,7 +184,6 @@ export interface Hermes {
   skills?: HermesSkill[] | undefined;
   crons?: HermesCron[] | undefined;
   bundles?: HermesBundle[] | undefined;
-  env?: k8s.V1EnvVar[] | undefined;
   envFrom?: k8s.V1EnvFromSource[] | undefined;
   resources?: k8s.V1ResourceRequirements | undefined;
   probes?: Probes | undefined;

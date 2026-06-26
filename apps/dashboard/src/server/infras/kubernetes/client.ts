@@ -63,9 +63,6 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.config !== undefined) {
     hermes.config = { raw: agent.config };
   }
-  if (agent.envVars !== undefined) {
-    hermes.env = agent.envVars.map((e) => ({ name: e.name, value: e.value }));
-  }
   if (agent.secrets !== undefined) {
     hermes.envFrom = agent.secrets.map((name) => ({ secretRef: { name } }));
   }
@@ -109,7 +106,6 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     type: raw.metadata?.annotations?.[HermeumAnnotation.AgentType],
     version: raw.spec.hermes?.image?.tag,
     config: raw.spec.hermes?.config?.raw,
-    envVars: raw.spec.hermes?.env?.map((e) => ({ name: e.name, value: e.value ?? "" })),
     secrets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
     ),

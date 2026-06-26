@@ -38,7 +38,7 @@ export const ConfigSchema = z.record(z.string(), z.unknown()).optional();
 
 export type Config = z.infer<typeof ConfigSchema>;
 
-export const SelfConfigActionSchema = z.enum(["skills", "config", "soul", "envVars"]);
+export const SelfConfigActionSchema = z.enum(["skills", "config", "soul"]);
 
 export type SelfConfigAction = z.infer<typeof SelfConfigActionSchema>;
 
@@ -51,26 +51,12 @@ export const SelfConfigureSchema = z
 
 export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
 
-export const EnvVarSchema = z.object({
-  name: z
-    .string()
-    .min(1)
-    .regex(
-      /^[-._a-zA-Z0-9]+$/,
-      "A environment variable name must consist of alphanumeric characters, '-', '_' or '.'"
-    ),
-  value: z.string(),
-});
-
-export type EnvVar = z.infer<typeof EnvVarSchema>;
-
 export const AgentInputSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   type: z.string().optional(),
   version: z.string().optional(),
   config: ConfigSchema,
-  envVars: z.array(EnvVarSchema).optional(),
   secrets: z.array(z.string()).optional(),
   soul: z.string().optional(),
   skills: SkillsSchema,

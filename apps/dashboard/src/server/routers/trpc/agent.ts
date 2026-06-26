@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { Agent, AgentInputSchema, SkillSchema, EnvVarSchema } from "@/entities";
+import { Agent, AgentInputSchema, SkillSchema } from "@/entities";
 import { AgentUseCase } from "@/server/usecases/agent";
 import { protectedProcedure, t } from "./shared.js";
 
@@ -44,24 +44,6 @@ export const agentRouter = t.router({
     .input(z.object({ agentId: z.string().min(1), skill: SkillSchema }))
     .mutation(async ({ ctx, input }): Promise<Agent> => {
       return await usecase.uninstallSkill(ctx, input.agentId, input.skill);
-    }),
-
-  addEnv: protectedProcedure
-    .input(z.object({ id: z.string().min(1), envVar: EnvVarSchema }))
-    .mutation(async ({ ctx, input }): Promise<Agent> => {
-      return await usecase.addEnv(ctx, input.id, input.envVar);
-    }),
-
-  updateEnv: protectedProcedure
-    .input(z.object({ id: z.string().min(1), envVar: EnvVarSchema }))
-    .mutation(async ({ ctx, input }): Promise<Agent> => {
-      return await usecase.updateEnv(ctx, input.id, input.envVar);
-    }),
-
-  removeEnv: protectedProcedure
-    .input(z.object({ id: z.string().min(1), envName: z.string().min(1) }))
-    .mutation(async ({ ctx, input }): Promise<Agent> => {
-      return await usecase.removeEnv(ctx, input.id, input.envName);
     }),
 
   suspend: protectedProcedure

@@ -5,7 +5,6 @@ import {
   AgentInput,
   AgentInputSchema,
   Context,
-  EnvVar,
   JsonPatchOp,
   Skill,
   SkillSchema,
@@ -93,54 +92,6 @@ export class AgentUseCase {
     }
     this.verifyOwnership(ctx, agent);
     return this.runtime.deleteHermesAgent(id);
-  }
-
-  async addEnv(ctx: Context, agentId: string, envVar: EnvVar): Promise<Agent> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const alreadyExists = agent.envVars?.some((e) => e.name === envVar.name);
-    if (alreadyExists) {
-      throw new Error(`Env var "${envVar.name}" already exists`);
-    }
-    return this.runtime.patchHermesAgent({
-      id: agentId,
-      patch: { envVars: [...(agent.envVars ?? []), envVar] },
-    });
-  }
-
-  async updateEnv(ctx: Context, agentId: string, envVar: EnvVar): Promise<Agent> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const envVarExists = agent.envVars?.some((e) => e.name === envVar.name);
-    if (!envVarExists) {
-      throw new Error(`Env var "${envVar.name}" not found`);
-    }
-    return this.runtime.patchHermesAgent({
-      id: agentId,
-      patch: { envVars: agent.envVars?.map((e) => (e.name === envVar.name ? envVar : e)) },
-    });
-  }
-
-  async removeEnv(ctx: Context, agentId: string, envName: string): Promise<Agent> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const envVarExists = agent.envVars?.some((e) => e.name === envName);
-    if (!envVarExists) {
-      throw new Error(`Env var "${envName}" not found`);
-    }
-    return this.runtime.patchHermesAgent({
-      id: agentId,
-      patch: { envVars: agent.envVars?.filter((e) => e.name !== envName) },
-    });
   }
 
   async installSkill(ctx: Context, agentId: string, skill: Skill): Promise<Agent> {
