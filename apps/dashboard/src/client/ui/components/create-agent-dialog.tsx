@@ -61,10 +61,10 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
 
   useEffect(() => {
-    if (templates && templates.length > 0 && selectedTemplateId === null) {
+    if (open && templates && templates.length > 0 && selectedTemplateId === null) {
       handleSelectTemplate(templates[0]!);
     }
-  }, [templates]);
+  }, [open, templates]);
 
   const { mutate: createAgent, isPending: isCreating } = useMutation(
     trpc.agent.create.mutationOptions({
