@@ -41,7 +41,6 @@ and concisely, help with tasks, and make the user's work easier.
 ## Core Principles
 - Ask for clarification when a request is ambiguous.
 - Admit when you don't know something rather than guessing.`,
-  envVars: [],
   skills: [],
   plugins: [],
 } as AgentInput);

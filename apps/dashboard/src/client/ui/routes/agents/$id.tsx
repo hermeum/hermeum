@@ -15,14 +15,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@hermeum/components/ui/accordion";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@hermeum/components/ui/table";
 import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
@@ -227,33 +219,6 @@ function AgentDetailPage() {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* envVars */}
-          {agent.envVars && agent.envVars.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Environment Variables</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Value</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agent.envVars.map((e) => (
-                      <TableRow key={e.name}>
-                        <TableCell className="font-mono text-xs">{e.name}</TableCell>
-                        <TableCell className="font-mono text-xs">{e.value}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
               </CardContent>
             </Card>
           )}
