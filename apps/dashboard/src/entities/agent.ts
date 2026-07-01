@@ -55,7 +55,6 @@ export const AgentInputSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   type: z.string().optional(),
-  config: ConfigSchema,
   soul: z.string().optional(),
   config: ConfigSchema,
   skills: SkillsSchema,
