@@ -9,6 +9,8 @@ export const ConfigSchema = z.object({
   kubernetesNamespace: z.string().default("hermeum"),
   smtpUrl: z.url().optional(),
   allowedEmailDomain: z.string().optional(),
+  hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
+  hermesImageTag: z.string().default("v2026.6.19"),
 });
 
 export const config = ConfigSchema.parse({
@@ -17,4 +19,6 @@ export const config = ConfigSchema.parse({
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
   smtpUrl: process.env.HERMEUM_SMTP_URL,
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
+  hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
+  hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
 });
