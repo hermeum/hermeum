@@ -31,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@hermeum/components/ui/dropdown-menu";
-import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 export const Route = createFileRoute("/agents/$id")({
   component: AgentDetailPage,
@@ -181,7 +180,7 @@ function AgentDetailPage() {
                 <p className="text-sm font-medium">Configuration</p>
                 <CodeMirror
                   value={stringifyYaml(agent.config)}
-                  extensions={[yamlLang(), indentationMarkers()]}
+                  extensions={[yamlLang()]}
                   editable={false}
                   maxHeight="300px"
                   basicSetup={{

@@ -56,11 +56,11 @@ export const AgentInputSchema = z.object({
   description: z.string().optional(),
   type: z.string().optional(),
   version: z.string().optional(),
-  config: ConfigSchema,
-  secrets: z.array(z.string()).optional(),
   soul: z.string().optional(),
+  config: ConfigSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
+  secrets: z.array(z.string()).optional(),
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
