@@ -75,9 +75,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.plugins !== undefined) {
     hermes.plugins = agent.plugins.map((identifier) => ({ identifier }));
   }
-  if (agent.version !== undefined) {
-    hermes.image = { tag: agent.version };
-  }
+  hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
 
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
@@ -104,7 +102,6 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     name: raw.metadata?.annotations?.[HermeumAnnotation.Name],
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     type: raw.metadata?.annotations?.[HermeumAnnotation.AgentType],
-    version: raw.spec.hermes?.image?.tag,
     config: raw.spec.hermes?.config?.raw,
     secrets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
