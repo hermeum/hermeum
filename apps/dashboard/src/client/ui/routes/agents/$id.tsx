@@ -3,18 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, MoreHorizontal } from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
-import { json as jsonLang } from "@codemirror/lang-json";
+import { yaml as yamlLang } from "@codemirror/lang-yaml";
+import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
 
 import { Badge } from "@hermeum/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@hermeum/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@hermeum/components/ui/accordion";
 import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
@@ -163,98 +157,68 @@ function AgentDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="config">
+      <Tabs defaultValue="agent">
         <TabsList>
-          <TabsTrigger value="config">Config</TabsTrigger>
+          <TabsTrigger value="agent">Agent</TabsTrigger>
           <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="config" className="mt-4 flex flex-col gap-4">
-          {/* config */}
-          {agent.config && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Configuration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Accordion>
-                  <AccordionItem value="config">
-                    <AccordionTrigger className="font-mono text-xs">config.json</AccordionTrigger>
-                    <AccordionContent>
-                      <CodeMirror
-                        value={JSON.stringify(agent.config, null, 2)}
-                        extensions={[jsonLang(), indentationMarkers()]}
-                        editable={false}
-                        maxHeight="300px"
-                        basicSetup={{
-                          lineNumbers: true,
-                          foldGutter: true,
-                          searchKeymap: false,
-                          autocompletion: false,
-                          lintKeymap: false,
-                        }}
-                        className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="agent" className="mt-4">
+          <div className="flex flex-col divide-y">
+            {/* soul */}
+            {agent.soul && (
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Soul</p>
+                <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
+                  {agent.soul}
+                </pre>
+              </div>
+            )}
 
-          {/* soul */}
-          {agent.soul && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Soul</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Accordion>
-                  <AccordionItem value="SOUL.md">
-                    <AccordionTrigger className="font-mono text-xs">SOUL.md</AccordionTrigger>
-                    <AccordionContent>
-                      <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
-                        {agent.soul}
-                      </pre>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
-          )}
+            {/* config */}
+            {agent.config && (
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Configuration</p>
+                <CodeMirror
+                  value={stringifyYaml(agent.config)}
+                  extensions={[yamlLang(), indentationMarkers()]}
+                  editable={false}
+                  maxHeight="300px"
+                  basicSetup={{
+                    lineNumbers: true,
+                    foldGutter: true,
+                    searchKeymap: false,
+                    autocompletion: false,
+                    lintKeymap: false,
+                  }}
+                  className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
+                />
+              </div>
+            )}
 
-          {/* skills */}
-          {agent.skills && agent.skills.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Skills</CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* skills */}
+            {agent.skills && agent.skills.length > 0 && (
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Skills</p>
                 <BadgeList items={agent.skills} max={10} />
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* plugins */}
-          {agent.plugins && agent.plugins.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Plugins</CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* plugins */}
+            {agent.plugins && agent.plugins.length > 0 && (
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Plugins</p>
                 <BadgeList items={agent.plugins} max={10} />
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="connect" className="mt-4 flex flex-col gap-4">
-          {gatewayToken && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Gateway Token</CardTitle>
-              </CardHeader>
-              <CardContent>
+        <TabsContent value="connect" className="mt-4">
+          <div className="flex flex-col divide-y">
+            {gatewayToken && (
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Gateway Token</p>
                 <div className="group flex items-center gap-2">
                   <span className="font-mono text-sm text-muted-foreground">
                     {tokenVisible ? gatewayToken : "•".repeat(32)}
@@ -270,9 +234,9 @@ function AgentDetailPage() {
                   </Button>
                   <CopyButton text={gatewayToken} className="opacity-0 group-hover:opacity-100" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
