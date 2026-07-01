@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
-import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 
 import { cn } from "@hermeum/components/lib/utils";
 import { Button } from "@hermeum/components/ui/button";
@@ -155,10 +154,10 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
             <p className="text-sm font-medium">Agent config</p>
             <CodeMirror
               value={editorValue}
-              extensions={[yamlLang(), indentationMarkers()]}
+              extensions={[yamlLang()]}
               onChange={setEditorValue}
               className={cn(
-                "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
+                "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
                 validationError && "border-destructive"
               )}
               basicSetup={{
@@ -168,7 +167,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                 autocompletion: false,
                 lintKeymap: false,
               }}
-              height="360px"
+              maxHeight="360px"
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>

@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
-import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent } from "@/entities";
@@ -93,10 +92,10 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
         <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
           <CodeMirror
             value={editorValue}
-            extensions={[yamlLang(), indentationMarkers()]}
+            extensions={[yamlLang()]}
             onChange={setEditorValue}
             className={cn(
-              "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
+              "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
               validationError && "border-destructive"
             )}
             basicSetup={{
@@ -106,7 +105,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
               autocompletion: false,
               lintKeymap: false,
             }}
-            height="420px"
+            maxHeight="420px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
         </div>
