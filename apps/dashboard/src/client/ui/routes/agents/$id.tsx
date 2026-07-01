@@ -191,7 +191,7 @@ function AgentDetailPage() {
                     autocompletion: false,
                     lintKeymap: false,
                   }}
-                  className="overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none"
+                  className="overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!"
                 />
               </div>
             )}

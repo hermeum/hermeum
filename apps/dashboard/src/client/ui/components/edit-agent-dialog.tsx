@@ -96,7 +96,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
             extensions={[yamlLang(), indentationMarkers()]}
             onChange={setEditorValue}
             className={cn(
-              "overflow-hidden rounded-lg border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none",
+              "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
               validationError && "border-destructive"
             )}
             basicSetup={{
