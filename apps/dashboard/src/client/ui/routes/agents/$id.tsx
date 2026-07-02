@@ -213,7 +213,7 @@ function AgentDetailPage() {
             {agent.config && (
               <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Configuration</p>
-                <CodeEditor value={stringifyYaml(agent.config)} readOnly maxHeight="300px" />
+                <CodeEditor value={stringifyYaml(agent.config).trim()} readOnly maxHeight="300px" />
               </div>
             )}
 
