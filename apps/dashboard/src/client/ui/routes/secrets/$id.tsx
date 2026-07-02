@@ -97,8 +97,8 @@ function SecretDetailPage() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{secret.name}</h1>
-            <Badge variant="secondary">{secret.archived ? "Archived" : "Active"}</Badge>
-            {secret.shared && <Badge variant="outline">Shared</Badge>}
+            <Badge >{secret.archived ? "Archived" : "Active"}</Badge>
+            {secret.shared && <Badge >Shared</Badge>}
           </div>
           <div className="group flex items-center gap-1">
             <p className="font-mono text-sm text-muted-foreground">{secret.id}</p>
