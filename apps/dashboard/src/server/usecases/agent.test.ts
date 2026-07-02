@@ -24,7 +24,7 @@ function makeRuntime(): Runtime {
     getHermesAgent: vi.fn(),
     createHermesAgent: vi.fn(),
     patchHermesAgent: vi.fn(),
-    deleteHermesAgent: vi.fn(),
+    archiveHermesAgent: vi.fn(),
     listSecrets: vi.fn(),
     getSecret: vi.fn(),
     createSecret: vi.fn(),
@@ -48,7 +48,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
   it("returns null when agent.type is undefined", () => {
     const useCase = new AgentUseCase(
       makeRuntime(),
-      makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } }),
+      makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } })
     );
     const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
     expect(result).toBeNull();
@@ -112,10 +112,10 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     ];
     const useCase = new AgentUseCase(
       makeRuntime(),
-      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
     const result = useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t", name: undefined, description: undefined }),
+      makeAgent({ type: "t", name: undefined, description: undefined })
     );
     expect(result![0]!.value).toBe("name=;desc=");
   });
@@ -124,7 +124,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     const patch: JsonPatchOp[] = [{ op: "remove", path: "/metadata/labels/old" }];
     const useCase = new AgentUseCase(
       makeRuntime(),
-      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
     const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }));
     expect(result).toEqual(patch);
@@ -144,10 +144,10 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     ];
     const useCase = new AgentUseCase(
       makeRuntime(),
-      makeConfig({ t: { mutatingWebhookJsonPatch: patch } }),
+      makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
     const result = useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t", id: "a1", userId: "u2" }),
+      makeAgent({ type: "t", id: "a1", userId: "u2" })
     );
     expect(result![0]!.value).toEqual([
       { name: "AGENT_ID", value: "a1" },

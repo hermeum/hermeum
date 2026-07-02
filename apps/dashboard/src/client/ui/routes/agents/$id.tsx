@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Eye, EyeOff, MoreHorizontal } from "lucide-react";
 import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
@@ -60,7 +60,6 @@ function AgentDetailPage() {
   const { id } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { data: agent, isPending, error } = useQuery(trpc.agent.get.queryOptions({ id }));
   const { data: session } = authClient.useSession();
   const isOwner = !!session?.user && session.user.id === agent?.userId;
@@ -69,7 +68,7 @@ function AgentDetailPage() {
     enabled: isOwner,
   });
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [tokenVisible, setTokenVisible] = useState(false);
 
   const invalidateDetail = () =>
@@ -93,11 +92,12 @@ function AgentDetailPage() {
       onError: (e) => toast.error(e.message),
     })
   );
-  const { mutate: deleteAgent, isPending: isDeleting } = useMutation(
-    trpc.agent.delete.mutationOptions({
+  const { mutate: archiveAgent, isPending: isArchiving } = useMutation(
+    trpc.agent.archive.mutationOptions({
       onSuccess: () => {
-        toast.success("Agent deleted");
-        navigate({ to: "/agents" });
+        toast.success("Agent archived");
+        setArchiveOpen(false);
+        setTimeout(invalidateDetail, 500);
       },
       onError: (e) => toast.error(e.message),
     })
@@ -114,7 +114,11 @@ function AgentDetailPage() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{agent.name ?? agent.id}</h1>
-            <PhaseBadge phase={agent.phase} />
+            {agent.archived ? (
+              <Badge variant="secondary">Archived</Badge>
+            ) : (
+              <PhaseBadge phase={agent.phase} />
+            )}
           </div>
           <div className="group flex items-center gap-1">
             <p className="text-sm text-muted-foreground font-mono">{agent.id}</p>
@@ -133,24 +137,26 @@ function AgentDetailPage() {
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline" size="icon" aria-label="Open actions menu" />}
-            >
-              <MoreHorizontal className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {agent.suspended ? (
-                <DropdownMenuItem onClick={() => resumeAgent({ id })}>Resume</DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={() => suspendAgent({ id })}>Pause</DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!agent.archived && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant="outline" size="icon" aria-label="Open actions menu" />}
+              >
+                <MoreHorizontal className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {agent.suspended ? (
+                  <DropdownMenuItem onClick={() => resumeAgent({ id })}>Resume</DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => suspendAgent({ id })}>Pause</DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => setArchiveOpen(true)}>
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -226,22 +232,27 @@ function AgentDetailPage() {
       </Tabs>
 
       <Dialog
-        open={deleteOpen}
+        open={archiveOpen}
         onOpenChange={(open) => {
-          if (!open) setDeleteOpen(false);
+          if (!open) setArchiveOpen(false);
         }}
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete agent</DialogTitle>
+            <DialogTitle>Archive agent</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this agent? This action cannot be undone.
+              The agent will be permanently suspended and cannot be resumed. This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button variant="destructive" disabled={isDeleting} onClick={() => deleteAgent({ id })}>
-              Delete
+            <Button
+              variant="destructive"
+              disabled={isArchiving}
+              onClick={() => archiveAgent({ id })}
+            >
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>

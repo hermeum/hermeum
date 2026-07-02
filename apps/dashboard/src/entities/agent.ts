@@ -78,6 +78,7 @@ export const AgentSchema = AgentInputSchema.extend({
   id: z.string().min(1),
   userId: z.string().min(1),
   suspended: z.boolean().optional(),
+  archived: z.boolean().optional(),
   phase: AgentPhaseSchema.optional(),
   createdAt: z.date().optional(),
 }).readonly();
