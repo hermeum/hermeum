@@ -24,7 +24,7 @@ interface EditInstanceDialogProps {
 }
 
 function agentToYaml(agent: Agent): string {
-  return stringify(AgentInputSchema.parse(agent));
+  return stringify(AgentInputSchema.parse(agent)).trim();
 }
 
 export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanceDialogProps) {

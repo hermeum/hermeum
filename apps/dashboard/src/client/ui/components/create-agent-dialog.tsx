@@ -41,7 +41,7 @@ and concisely, help with tasks, and make the user's work easier.
 - Admit when you don't know something rather than guessing.`,
   skills: [],
   plugins: [],
-} as AgentInput);
+} as AgentInput).trim();
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -87,7 +87,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
-    setEditorValue(stringify(template.agentInput));
+    setEditorValue(stringify(template.agentInput).trim());
   }
 
   function handleCreate() {
