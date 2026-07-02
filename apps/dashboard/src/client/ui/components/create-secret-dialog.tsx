@@ -14,12 +14,14 @@ import {
 } from "@hermeum/components/ui/dialog";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@hermeum/components/ui/field";
 import { Input } from "@hermeum/components/ui/input";
+import { Switch } from "@hermeum/components/ui/switch";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
@@ -27,6 +29,7 @@ import { useTRPC } from "@/router";
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
+  shared: z.boolean(),
 });
 
 interface CreateSecretDialogProps {
@@ -39,12 +42,13 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
   const queryClient = useQueryClient();
 
   const form = useForm({
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", shared: false },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       createSecret({
         name: value.name.trim(),
         description: value.description.trim() || undefined,
+        shared: value.shared,
       });
     },
   });
@@ -121,6 +125,26 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     rows={3}
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="shared">
+              {(field) => (
+                <Field orientation="horizontal">
+                  <FieldContent>
+                    <FieldLabel htmlFor={field.name}>Share with all agents</FieldLabel>
+                    <FieldDescription>
+                      Any agent, including agents owned by other users, will be able to use this
+                      secret.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id={field.name}
+                    name={field.name}
+                    checked={field.state.value}
+                    onCheckedChange={(checked) => field.handleChange(checked)}
                   />
                 </Field>
               )}

@@ -71,7 +71,7 @@ export class AgentUseCase {
     if (agentInput.type !== undefined) {
       this.checkAgentTypeAllowed(agentInput.type);
     }
-    await this.checkSecretsExist(agentInput.secrets);
+    await this.checkSecretsAccessible(ctx, agentInput.secrets);
     return this.runtime.createHermesAgent({ ...agentInput, userId: ctx.user!.id });
   }
 
@@ -87,7 +87,7 @@ export class AgentUseCase {
     if (patch.type !== undefined) {
       this.checkAgentTypeAllowed(patch.type);
     }
-    await this.checkSecretsExist(patch.secrets);
+    await this.checkSecretsAccessible(ctx, patch.secrets);
     return this.runtime.patchHermesAgent({ id, patch });
   }
 
@@ -137,10 +137,10 @@ export class AgentUseCase {
     });
   }
 
-  private async checkSecretsExist(secrets: string[] | undefined): Promise<void> {
+  private async checkSecretsAccessible(ctx: Context, secrets: string[] | undefined): Promise<void> {
     for (const name of secrets ?? []) {
       const secret = await this.runtime.getSecret(name);
-      if (!secret) {
+      if (!secret || (secret.userId !== ctx.user!.id && !secret.shared)) {
         throw new Error(`Secret "${name}" not found`);
       }
       if (secret.archived) {

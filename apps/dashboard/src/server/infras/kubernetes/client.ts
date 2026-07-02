@@ -28,6 +28,7 @@ const enum HermeumLabel {
   ManagedBy = "app.kubernetes.io/managed-by",
   UserId = "hermeum.app/user-id",
   Archived = "hermeum.app/archived",
+  Shared = "hermeum.app/shared",
 }
 const enum HermeumLabelValue {
   ManagedBy = "hermeum",
@@ -128,6 +129,7 @@ export function secretToKubernetesSecret(
         [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
         [HermeumLabel.UserId]: secret.userId,
         [HermeumLabel.Archived]: String(secret.archived ?? false),
+        [HermeumLabel.Shared]: String(secret.shared ?? false),
       },
       annotations: {
         [HermeumAnnotation.Name]: secret.name,
@@ -157,6 +159,7 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     envVars,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
+    shared: raw.metadata?.labels?.[HermeumLabel.Shared] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }

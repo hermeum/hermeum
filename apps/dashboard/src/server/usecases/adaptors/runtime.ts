@@ -1,16 +1,16 @@
 import { Agent, AgentInput, EnvVar, Secret } from "@/entities";
 
+export type ListAgentsFilter = { archived?: boolean | undefined };
 export type CreateAgentInput = AgentInput & { userId: string };
 export type PatchAgentInput = {
   id: string;
   patch: Partial<Omit<Agent, "id" | "userId" | "phase" | "createdAt">>;
 };
 
-export type ListAgentsFilter = { archived?: boolean | undefined };
-
-export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
-export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
 export type ListSecretsFilter = { archived?: boolean | undefined };
+export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description" | "shared">;
+export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived" | "shared">>;
+
 
 export interface Runtime {
   listHermesAgents: (params?: ListAgentsFilter) => Promise<Agent[]>;

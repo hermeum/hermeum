@@ -15,12 +15,14 @@ import {
 } from "@hermeum/components/ui/dialog";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@hermeum/components/ui/field";
 import { Input } from "@hermeum/components/ui/input";
+import { Switch } from "@hermeum/components/ui/switch";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
@@ -28,13 +30,14 @@ import { useTRPC } from "@/router";
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
+  shared: z.boolean(),
 });
 
 interface EditSecretDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   secretId: string;
-  initial: { name: string; description?: string };
+  initial: { name: string; description?: string; shared?: boolean };
 }
 
 export function EditSecretDialog({
@@ -47,13 +50,18 @@ export function EditSecretDialog({
   const queryClient = useQueryClient();
 
   const form = useForm({
-    defaultValues: { name: initial.name, description: initial.description ?? "" },
+    defaultValues: {
+      name: initial.name,
+      description: initial.description ?? "",
+      shared: initial.shared ?? false,
+    },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       updateSecret({
         id: secretId,
         name: value.name.trim(),
         description: value.description.trim() || undefined,
+        shared: value.shared,
       });
     },
   });
@@ -76,9 +84,13 @@ export function EditSecretDialog({
 
   useEffect(() => {
     if (open) {
-      form.reset({ name: initial.name, description: initial.description ?? "" });
+      form.reset({
+        name: initial.name,
+        description: initial.description ?? "",
+        shared: initial.shared ?? false,
+      });
     }
-  }, [open, initial.name, initial.description]);
+  }, [open, initial.name, initial.description, initial.shared]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,6 +144,26 @@ export function EditSecretDialog({
                     rows={3}
                   />
                   <FieldDescription>Optional. Describe what this secret is used for.</FieldDescription>
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="shared">
+              {(field) => (
+                <Field orientation="horizontal">
+                  <FieldContent>
+                    <FieldLabel htmlFor={field.name}>Share with all agents</FieldLabel>
+                    <FieldDescription>
+                      Any agent, including agents owned by other users, will be able to use this
+                      secret.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id={field.name}
+                    name={field.name}
+                    checked={field.state.value}
+                    onCheckedChange={(checked) => field.handleChange(checked)}
+                  />
                 </Field>
               )}
             </form.Field>
