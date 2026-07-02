@@ -27,7 +27,7 @@ export function CodeEditor({
       style={{ wordSpacing: "2.5px" }}
       basicSetup={{
         lineNumbers: false,
-        foldGutter: readOnly,
+        foldGutter: false,
         searchKeymap: false,
         autocompletion: false,
         lintKeymap: false,
