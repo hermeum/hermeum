@@ -201,7 +201,7 @@ function AgentDetailPage() {
           <div className="flex flex-col divide-y">
             {/* soul */}
             {agent.soul && (
-              <div className="py-6 flex flex-col gap-3">
+              <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Soul</p>
                 <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
                   {agent.soul}
@@ -211,7 +211,7 @@ function AgentDetailPage() {
 
             {/* config */}
             {agent.config && (
-              <div className="py-6 flex flex-col gap-3">
+              <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Configuration</p>
                 <CodeEditor value={stringifyYaml(agent.config)} readOnly maxHeight="300px" />
               </div>
@@ -219,7 +219,7 @@ function AgentDetailPage() {
 
             {/* skills */}
             {agent.skills && agent.skills.length > 0 && (
-              <div className="py-6 flex flex-col gap-3">
+              <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Skills</p>
                 <ButtonList items={agent.skills} max={10} />
               </div>
@@ -227,14 +227,14 @@ function AgentDetailPage() {
 
             {/* plugins */}
             {agent.plugins && agent.plugins.length > 0 && (
-              <div className="py-6 flex flex-col gap-3">
+              <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Plugins</p>
                 <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
 
             {/* secrets */}
-            <div className="py-6 flex flex-col gap-3">
+            <div className="py-8 flex flex-col gap-3">
               <p className="text-sm font-medium">Secrets</p>
               {agent.secrets && agent.secrets.length > 0 ? (
                 <Accordion multiple className="w-full border rounded-md px-4">
@@ -287,7 +287,7 @@ function AgentDetailPage() {
         <TabsContent value="connect" className="mt-4">
           <div className="flex flex-col divide-y">
             {gatewayToken && (
-              <div className="py-6 flex flex-col gap-3">
+              <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-medium">Gateway Token</p>
                 <div className="group flex items-center gap-2">
                   <span className="font-mono text-sm text-muted-foreground">
