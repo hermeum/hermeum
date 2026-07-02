@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Eye, EyeOff, MoreHorizontal, RefreshCw } from "lucide-react";
 import { stringify as stringifyYaml } from "yaml";
@@ -14,6 +14,12 @@ import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@hermeum/components/ui/accordion";
 import {
   Dialog,
   DialogClose,
@@ -72,6 +78,16 @@ function AgentDetailPage() {
     ...trpc.agent.getGatewayToken.queryOptions({ id }),
     enabled: isOwner,
   });
+  const secretIds = agent?.secrets ?? [];
+  const secretQueries = useQueries({
+    queries: secretIds.map((secretId) => ({
+      ...trpc.secret.get.queryOptions({ id: secretId }),
+      enabled: secretIds.length > 0,
+    })),
+  });
+  const secrets = secretQueries
+    .map((q) => q.data)
+    .filter((s): s is NonNullable<typeof s> => s != null);
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [tokenVisible, setTokenVisible] = useState(false);
@@ -215,6 +231,57 @@ function AgentDetailPage() {
                 <BadgeList items={agent.plugins} max={10} />
               </div>
             )}
+
+            {/* secrets */}
+            {
+              <div className="py-6 flex flex-col gap-3">
+                <p className="text-sm font-medium">Secrets</p>
+                {agent.secrets && agent.secrets.length > 0 ? (
+                  <Accordion multiple className="w-full border rounded-md px-4">
+                    {secrets?.map((secret) => (
+                      <AccordionItem key={secret.id} value={secret.id}>
+                        <AccordionTrigger className="items-center hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium hover:underline">{secret.name}</span>
+                            <div className="group flex items-center gap-1">
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {secret.id}
+                              </span>
+                              <CopyButton
+                                text={secret.id}
+                                className="opacity-0 group-hover:opacity-100"
+                              />
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          {secret.envVars.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 pb-2">
+                              {secret.envVars.map((v) => (
+                                <Button
+                                  key={v.name}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-auto px-2 py-1 font-mono text-xs"
+                                >
+                                  {v.name}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground pb-2">
+                              No environment variables.
+                            </p>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No secrets attached.</p>
+                )}
+              </div>
+            }
           </div>
         </TabsContent>
 
