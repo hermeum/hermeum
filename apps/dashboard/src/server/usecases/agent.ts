@@ -134,7 +134,7 @@ export class AgentUseCase {
   private async checkSecretsAccessible(ctx: Context, secrets: string[] | undefined): Promise<void> {
     for (const name of secrets ?? []) {
       const secret = await this.runtime.getSecret(name);
-      if (!secret || secret.userId !== ctx.user!.id) {
+      if (!secret || (secret.userId !== ctx.user!.id && !secret.shared)) {
         throw new Error(`Secret "${name}" not found`);
       }
       if (secret.archived) {

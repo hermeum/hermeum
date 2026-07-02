@@ -181,7 +181,10 @@ function SecretsPage() {
                 </TableCell>
                 <TableCell className="font-medium">{secret.name}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{secret.archived ? "Archived" : "Active"}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary">{secret.archived ? "Archived" : "Active"}</Badge>
+                    {secret.shared && <Badge variant="outline">Shared</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   <EnvVarList envVars={secret.envVars} />

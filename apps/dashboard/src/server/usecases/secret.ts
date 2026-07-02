@@ -7,6 +7,7 @@ import { Runtime } from "./adaptors/runtime";
 export const CreateSecretInputSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  shared: z.boolean().optional(),
 });
 export type CreateSecretInput = z.infer<typeof CreateSecretInputSchema>;
 
@@ -18,6 +19,7 @@ export type ListSecretsInput = z.infer<typeof ListSecretsFilterSchema>;
 export const UpdateSecretInputSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  shared: z.boolean().optional(),
 });
 export type UpdateSecretInput = z.infer<typeof UpdateSecretInputSchema>;
 
@@ -45,6 +47,7 @@ export class SecretUseCase {
     return this.runtime.patchSecret(id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
+      ...(input.shared !== undefined && { shared: input.shared }),
     });
   }
 

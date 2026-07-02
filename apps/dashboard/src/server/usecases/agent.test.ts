@@ -270,4 +270,49 @@ describe("AgentUseCase secret ownership validation", () => {
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { secrets: ["secret-1"] })
     ).resolves.toBeDefined();
   });
+
+  it("createHermesAgent succeeds when a referenced secret belongs to another user but is shared", async () => {
+    const runtime = makeRuntime();
+    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSecret({ id: "secret-1", userId: "other-user", shared: true })
+    );
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ secrets: ["secret-1"] })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
+    ).resolves.toBeDefined();
+  });
+
+  it("createHermesAgent throws when a referenced shared secret is archived", async () => {
+    const runtime = makeRuntime();
+    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSecret({ id: "secret-1", userId: "other-user", shared: true, archived: true })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
+    ).rejects.toThrow('Secret "secret-1" is archived');
+  });
+
+  it("updateHermesAgent succeeds when a referenced secret belongs to another user but is shared", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSecret({ id: "secret-1", userId: "other-user", shared: true })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ secrets: ["secret-1"] })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { secrets: ["secret-1"] })
+    ).resolves.toBeDefined();
+  });
 });

@@ -6,8 +6,8 @@ export type PatchAgentInput = {
   patch: Partial<Omit<Agent, "id" | "userId" | "phase" | "createdAt">>;
 };
 
-export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
-export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
+export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description" | "shared">;
+export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived" | "shared">>;
 export type ListSecretsFilter = { archived?: boolean | undefined };
 
 export interface Runtime {
