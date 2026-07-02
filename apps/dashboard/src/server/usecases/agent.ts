@@ -1,4 +1,5 @@
 import Handlebars from "handlebars";
+import { z } from "zod";
 
 import {
   Agent,
@@ -15,6 +16,11 @@ import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-agent-config";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+
+export const ListAgentsFilterSchema = z.object({
+  archived: z.boolean().optional(),
+});
+export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
 export class AgentUseCase {
   constructor(
@@ -51,8 +57,8 @@ export class AgentUseCase {
     }));
   }
 
-  async listHermesAgents(ctx: Context): Promise<Agent[]> {
-    return this.runtime.listHermesAgents();
+  async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
+    return this.runtime.listHermesAgents(input);
   }
 
   async getHermesAgent(ctx: Context, id: string): Promise<Agent | null> {
@@ -85,13 +91,13 @@ export class AgentUseCase {
     return this.runtime.patchHermesAgent({ id, patch });
   }
 
-  async deleteHermesAgent(ctx: Context, id: string): Promise<void> {
+  async archiveHermesAgent(ctx: Context, id: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
     this.verifyOwnership(ctx, agent);
-    return this.runtime.deleteHermesAgent(id);
+    return this.runtime.archiveHermesAgent(id);
   }
 
   async installSkill(ctx: Context, agentId: string, skill: Skill): Promise<Agent> {

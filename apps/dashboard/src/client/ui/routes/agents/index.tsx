@@ -8,7 +8,9 @@ import { useTRPC } from "@/router";
 import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
+import { Badge } from "@hermeum/components/ui/badge";
 import { Button } from "@hermeum/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import {
   Dialog,
   DialogClose,
@@ -42,7 +44,8 @@ function DashboardPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archiveId, setArchiveId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | "active">("all");
   const navigate = useNavigate();
 
   const {
@@ -50,7 +53,7 @@ function DashboardPage() {
     isPending,
     isFetching,
     error,
-  } = useQuery(trpc.agent.list.queryOptions());
+  } = useQuery(trpc.agent.list.queryOptions(tab === "active" ? { archived: false } : undefined));
 
   const invalidateList = () =>
     queryClient.invalidateQueries({ queryKey: trpc.agent.list.queryKey() });
@@ -75,12 +78,12 @@ function DashboardPage() {
     })
   );
 
-  const { mutate: deleteAgent, isPending: isDeleting } = useMutation(
-    trpc.agent.delete.mutationOptions({
+  const { mutate: archiveAgent, isPending: isArchiving } = useMutation(
+    trpc.agent.archive.mutationOptions({
       onSuccess: () => {
-        toast.success("Agent deleted");
+        toast.success("Agent archived");
         invalidateList();
-        setDeleteId(null);
+        setArchiveId(null);
       },
       onError: (e) => toast.error(e.message),
     })
@@ -124,104 +127,121 @@ function DashboardPage() {
       />
 
       <Dialog
-        open={deleteId !== null}
+        open={archiveId !== null}
         onOpenChange={(open) => {
-          if (!open) setDeleteId(null);
+          if (!open) setArchiveId(null);
         }}
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete agent</DialogTitle>
+            <DialogTitle>Archive agent</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this agent? This action cannot be undone.
+              The agent will be permanently suspended and cannot be resumed. This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
             <Button
               variant="destructive"
-              disabled={isDeleting}
+              disabled={isArchiving}
               onClick={() => {
-                if (deleteId) deleteAgent({ id: deleteId });
+                if (archiveId) archiveAgent({ id: archiveId });
               }}
             >
-              Delete
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {agents?.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
-                No agents yet.
-              </TableCell>
-            </TableRow>
-          ) : (
-            agents?.map((agent) => (
-              <TableRow
-                key={agent.id}
-                className="cursor-pointer"
-                onClick={() => navigate({ to: "/agents/$id", params: { id: agent.id } })}
-              >
-                <TableCell className="max-w-32 font-mono text-xs">
-                  <div className="group flex items-center gap-1 min-w-0">
-                    <span className="truncate">{agent.id}</span>
-                    <CopyButton text={agent.id} className="opacity-0 group-hover:opacity-100" />
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">{agent.name ?? "-"}</TableCell>
-                <TableCell>
-                  <PhaseBadge phase={agent.phase} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {agent.createdAt
-                    ? formatDistanceToNow(agent.createdAt, { addSuffix: true })
-                    : "—"}
-                </TableCell>
-                <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={<Button variant="ghost" size="icon" aria-label="Open actions menu" />}
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {agent.suspended ? (
-                        <DropdownMenuItem onClick={() => resumeAgent({ id: agent.id })}>
-                          Resume
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => suspendAgent({ id: agent.id })}>
-                          Pause
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeleteId(agent.id)}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "active")}>
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="active">Active</TabsTrigger>
+        </TabsList>
+        <TabsContent value={tab}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead />
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {agents?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No agents yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                agents?.map((agent) => (
+                  <TableRow
+                    key={agent.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate({ to: "/agents/$id", params: { id: agent.id } })}
+                  >
+                    <TableCell className="max-w-32 font-mono text-xs">
+                      <div className="group flex items-center gap-1 min-w-0">
+                        <span className="truncate">{agent.id}</span>
+                        <CopyButton text={agent.id} className="opacity-0 group-hover:opacity-100" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{agent.name ?? "-"}</TableCell>
+                    <TableCell>
+                      {agent.archived ? (
+                        <Badge variant="secondary">Archived</Badge>
+                      ) : (
+                        <PhaseBadge phase={agent.phase} />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {agent.createdAt
+                        ? formatDistanceToNow(agent.createdAt, { addSuffix: true })
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                      {!agent.archived && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button variant="ghost" size="icon" aria-label="Open actions menu" />
+                            }
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {agent.suspended ? (
+                              <DropdownMenuItem onClick={() => resumeAgent({ id: agent.id })}>
+                                Resume
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => suspendAgent({ id: agent.id })}>
+                                Pause
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setArchiveId(agent.id)}
+                            >
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

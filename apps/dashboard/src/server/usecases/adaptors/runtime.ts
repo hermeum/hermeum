@@ -6,16 +6,18 @@ export type PatchAgentInput = {
   patch: Partial<Omit<Agent, "id" | "userId" | "phase" | "createdAt">>;
 };
 
+export type ListAgentsFilter = { archived?: boolean | undefined };
+
 export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
 export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
 export type ListSecretsFilter = { archived?: boolean | undefined };
 
 export interface Runtime {
-  listHermesAgents: () => Promise<Agent[]>;
+  listHermesAgents: (params?: ListAgentsFilter) => Promise<Agent[]>;
   getHermesAgent: (id: string) => Promise<Agent | null>;
   createHermesAgent: (input: CreateAgentInput) => Promise<Agent>;
   patchHermesAgent: (input: PatchAgentInput) => Promise<Agent>;
-  deleteHermesAgent: (id: string) => Promise<void>;
+  archiveHermesAgent: (id: string) => Promise<Agent>;
 
   getGatewayToken: (agentId: string) => Promise<string | null>;
 
