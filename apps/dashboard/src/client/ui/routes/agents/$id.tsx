@@ -43,21 +43,22 @@ export const Route = createFileRoute("/agents/$id")({
 
 const BADGE_MAX = 10;
 
-function BadgeList({ items, max = BADGE_MAX }: { items: string[]; max?: number }) {
+function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number }) {
   const visible = items.slice(0, max);
   const overflow = items.length - visible.length;
   return (
     <div className="flex flex-wrap gap-2">
       {visible.map((item) => (
-        <Badge key={item} variant="secondary" className="font-mono text-xs">
+        <Button
+          key={item}
+          variant="outline"
+          size="sm"
+          className="h-auto px-2 py-1 font-mono text-xs"
+        >
           {item}
-        </Badge>
+        </Button>
       ))}
-      {overflow > 0 && (
-        <Badge variant="outline" className="text-xs text-muted-foreground">
-          +{overflow} more
-        </Badge>
-      )}
+      {overflow > 0 && <span className="text-xs text-muted-foreground">+{overflow} more</span>}
     </div>
   );
 }
@@ -220,7 +221,7 @@ function AgentDetailPage() {
             {agent.skills && agent.skills.length > 0 && (
               <div className="py-6 flex flex-col gap-3">
                 <p className="text-sm font-medium">Skills</p>
-                <BadgeList items={agent.skills} max={10} />
+                <ButtonList items={agent.skills} max={10} />
               </div>
             )}
 
@@ -228,60 +229,58 @@ function AgentDetailPage() {
             {agent.plugins && agent.plugins.length > 0 && (
               <div className="py-6 flex flex-col gap-3">
                 <p className="text-sm font-medium">Plugins</p>
-                <BadgeList items={agent.plugins} max={10} />
+                <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
 
             {/* secrets */}
-            {
-              <div className="py-6 flex flex-col gap-3">
-                <p className="text-sm font-medium">Secrets</p>
-                {agent.secrets && agent.secrets.length > 0 ? (
-                  <Accordion multiple className="w-full border rounded-md px-4">
-                    {secrets?.map((secret) => (
-                      <AccordionItem key={secret.id} value={secret.id}>
-                        <AccordionTrigger className="items-center hover:no-underline">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium hover:underline">{secret.name}</span>
-                            <div className="group flex items-center gap-1">
-                              <span className="font-mono text-xs text-muted-foreground">
-                                {secret.id}
-                              </span>
-                              <CopyButton
-                                text={secret.id}
-                                className="opacity-0 group-hover:opacity-100"
-                              />
-                            </div>
+            <div className="py-6 flex flex-col gap-3">
+              <p className="text-sm font-medium">Secrets</p>
+              {agent.secrets && agent.secrets.length > 0 ? (
+                <Accordion multiple className="w-full border rounded-md px-4">
+                  {secrets?.map((secret) => (
+                    <AccordionItem key={secret.id} value={secret.id}>
+                      <AccordionTrigger className="items-center hover:no-underline">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium hover:underline">{secret.name}</span>
+                          <div className="group flex items-center gap-1">
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {secret.id}
+                            </span>
+                            <CopyButton
+                              text={secret.id}
+                              className="opacity-0 group-hover:opacity-100"
+                            />
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          {secret.envVars.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 pb-2">
-                              {secret.envVars.map((v) => (
-                                <Button
-                                  key={v.name}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-auto px-2 py-1 font-mono text-xs"
-                                >
-                                  {v.name}
-                                </Button>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground pb-2">
-                              No environment variables.
-                            </p>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No secrets attached.</p>
-                )}
-              </div>
-            }
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {secret.envVars.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 pb-2">
+                            {secret.envVars.map((v) => (
+                              <Button
+                                key={v.name}
+                                variant="outline"
+                                size="sm"
+                                className="h-auto px-2 py-1 font-mono text-xs"
+                              >
+                                {v.name}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground pb-2">
+                            No environment variables.
+                          </p>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                <p className="text-sm text-muted-foreground">No secrets attached.</p>
+              )}
+            </div>
           </div>
         </TabsContent>
 
