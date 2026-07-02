@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, MoreHorizontal } from "lucide-react";
+import { Eye, EyeOff, MoreHorizontal, RefreshCw } from "lucide-react";
 import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
 
@@ -60,7 +60,12 @@ function AgentDetailPage() {
   const { id } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { data: agent, isPending, error } = useQuery(trpc.agent.get.queryOptions({ id }));
+  const {
+    data: agent,
+    isPending,
+    isFetching,
+    error,
+  } = useQuery(trpc.agent.get.queryOptions({ id }));
   const { data: session } = authClient.useSession();
   const isOwner = !!session?.user && session.user.id === agent?.userId;
   const { data: gatewayToken } = useQuery({
@@ -134,6 +139,14 @@ function AgentDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Refresh agent"
+            onClick={invalidateDetail}
+          >
+            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit
           </Button>
