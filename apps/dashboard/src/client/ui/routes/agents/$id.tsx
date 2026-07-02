@@ -139,14 +139,6 @@ function AgentDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Refresh agent"
-            onClick={invalidateDetail}
-          >
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
-          </Button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit
           </Button>
@@ -170,6 +162,14 @@ function AgentDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Refresh agent"
+            onClick={invalidateDetail}
+          >
+            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </div>
 
