@@ -1,15 +1,17 @@
 import { z } from "zod";
 
 import { Agent, AgentInputSchema, SkillSchema } from "@/entities";
-import { AgentUseCase } from "@/server/usecases/agent";
+import { AgentUseCase, ListAgentsFilterSchema } from "@/server/usecases/agent";
 import { protectedProcedure, t } from "./shared.js";
 
 const usecase = new AgentUseCase();
 
 export const agentRouter = t.router({
-  list: protectedProcedure.query(async ({ ctx }): Promise<Agent[]> => {
-    return await usecase.listHermesAgents(ctx);
-  }),
+  list: protectedProcedure
+    .input(ListAgentsFilterSchema.optional())
+    .query(async ({ ctx, input }): Promise<Agent[]> => {
+      return await usecase.listHermesAgents(ctx, input);
+    }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
@@ -17,9 +19,11 @@ export const agentRouter = t.router({
       return await usecase.getHermesAgent(ctx, input.id);
     }),
 
-  create: protectedProcedure.input(AgentInputSchema).mutation(async ({ ctx, input }): Promise<Agent> => {
-    return await usecase.createHermesAgent(ctx, input);
-  }),
+  create: protectedProcedure
+    .input(AgentInputSchema)
+    .mutation(async ({ ctx, input }): Promise<Agent> => {
+      return await usecase.createHermesAgent(ctx, input);
+    }),
 
   update: protectedProcedure
     .input(AgentInputSchema.extend({ id: z.string().min(1) }))
@@ -28,10 +32,10 @@ export const agentRouter = t.router({
       return await usecase.updateHermesAgent(ctx, id, agentInput);
     }),
 
-  delete: protectedProcedure
+  archive: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ ctx, input }): Promise<void> => {
-      return await usecase.deleteHermesAgent(ctx, input.id);
+    .mutation(async ({ ctx, input }): Promise<Agent> => {
+      return await usecase.archiveHermesAgent(ctx, input.id);
     }),
 
   installSkill: protectedProcedure

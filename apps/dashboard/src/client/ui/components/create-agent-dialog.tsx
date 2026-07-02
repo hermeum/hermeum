@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
-import CodeMirror from "@uiw/react-codemirror";
-import { yaml as yamlLang } from "@codemirror/lang-yaml";
 
 import { cn } from "@hermeum/components/lib/utils";
 import { Button } from "@hermeum/components/ui/button";
@@ -21,6 +19,7 @@ import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Template, AgentInput } from "@/entities";
 import { AgentInputSchema } from "@/entities";
+import { CodeEditor } from "@/client/ui/components/code-editor";
 
 const DEFAULT_YAML = stringify({
   name: "Untitled agent",
@@ -152,21 +151,10 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
           {/* Agent config section */}
           <div className="space-y-2">
             <p className="text-sm font-medium">Agent config</p>
-            <CodeMirror
+            <CodeEditor
               value={editorValue}
-              extensions={[yamlLang()]}
               onChange={setEditorValue}
-              className={cn(
-                "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
-                validationError && "border-destructive"
-              )}
-              basicSetup={{
-                lineNumbers: false,
-                foldGutter: false,
-                searchKeymap: false,
-                autocompletion: false,
-                lintKeymap: false,
-              }}
+              invalid={!!validationError}
               maxHeight="360px"
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}

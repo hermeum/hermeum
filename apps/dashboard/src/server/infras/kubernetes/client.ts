@@ -5,16 +5,13 @@ import { config } from "@/server/libs/config";
 import {
   CreateAgentInput,
   CreateSecretInput,
+  ListAgentsFilter,
   ListSecretsFilter,
   PatchAgentInput,
   Runtime,
   SecretPatch,
 } from "../../usecases/adaptors/runtime";
-import {
-  HermesAgent,
-  HermesAgentList,
-  HermesAgentSpec,
-} from "./types/hermes-agent";
+import { HermesAgent, HermesAgentList, HermesAgentSpec } from "./types/hermes-agent";
 
 const enum HermesGroup {
   Default = "agents.hermeum.app",
@@ -46,6 +43,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   const labels: Record<string, string> = {
     [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
     [HermeumLabel.UserId]: agent.userId,
+    [HermeumLabel.Archived]: String(agent.archived ?? false),
   };
 
   const annotations: Record<string, string> = {};
@@ -110,6 +108,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
     plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
     suspended: raw.spec.suspend,
+    archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
     phase: raw.status?.phase as AgentPhase | undefined,
     createdAt: raw.metadata?.creationTimestamp,
   };
@@ -177,13 +176,17 @@ export class KubernetesClient implements Runtime {
     this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
-  async listHermesAgents(): Promise<Agent[]> {
+  async listHermesAgents(params?: ListAgentsFilter): Promise<Agent[]> {
+    const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
+    if (params?.archived !== undefined) {
+      selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);
+    }
     const body = await this.customObjectsApi.listNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
       group: HermesGroup.Default,
       version: HermesVersion.V1Alpha1,
       plural: HermesPlural.Agents,
-      labelSelector: `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
+      labelSelector: selector.join(","),
     });
     return (body as HermesAgentList).items.map(mapHermesAgent);
   }
@@ -249,14 +252,8 @@ export class KubernetesClient implements Runtime {
     return mapHermesAgent(resource as HermesAgent);
   }
 
-  async deleteHermesAgent(id: string): Promise<void> {
-    await this.customObjectsApi.deleteNamespacedCustomObject({
-      namespace: config.kubernetesNamespace,
-      group: HermesGroup.Default,
-      version: HermesVersion.V1Alpha1,
-      plural: HermesPlural.Agents,
-      name: id,
-    });
+  async archiveHermesAgent(id: string): Promise<Agent> {
+    return this.patchHermesAgent({ id, patch: { suspended: true, archived: true } });
   }
 
   async listSecrets(params?: ListSecretsFilter): Promise<Secret[]> {
