@@ -5,7 +5,7 @@ import { config } from "@/server/libs/config";
 import {
   CreateAgentInput,
   CreateSecretInput,
-  ListSecretParams,
+  ListSecretsFilter,
   PatchAgentInput,
   Runtime,
   SecretPatch,
@@ -256,7 +256,7 @@ export class KubernetesClient implements Runtime {
     });
   }
 
-  async listSecrets(params?: ListSecretParams): Promise<Secret[]> {
+  async listSecrets(params?: ListSecretsFilter): Promise<Secret[]> {
     const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
     if (params?.archived !== undefined) {
       selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);

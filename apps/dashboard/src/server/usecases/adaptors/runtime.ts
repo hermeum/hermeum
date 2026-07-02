@@ -8,7 +8,7 @@ export type PatchAgentInput = {
 
 export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description">;
 export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived">>;
-export type ListSecretParams = { archived?: boolean | undefined };
+export type ListSecretsFilter = { archived?: boolean | undefined };
 
 export interface Runtime {
   listHermesAgents: () => Promise<Agent[]>;
@@ -19,7 +19,7 @@ export interface Runtime {
 
   getGatewayToken: (agentId: string) => Promise<string | null>;
 
-  listSecrets: (params?: ListSecretParams) => Promise<Secret[]>;
+  listSecrets: (params?: ListSecretsFilter) => Promise<Secret[]>;
   getSecret: (id: string) => Promise<Secret | null>;
   createSecret: (input: CreateSecretInput) => Promise<Secret>;
   archiveSecret: (id: string) => Promise<Secret>;

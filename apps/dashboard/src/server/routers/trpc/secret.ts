@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EnvVarSchema, Secret } from "@/entities";
 import {
   CreateSecretInputSchema,
-  ListSecretsInputSchema,
+  ListSecretsFilterSchema,
   SecretUseCase,
   UpdateSecretInputSchema,
 } from "@/server/usecases/secret";
@@ -13,7 +13,7 @@ const usecase = new SecretUseCase();
 
 export const secretRouter = t.router({
   list: protectedProcedure
-    .input(ListSecretsInputSchema.optional())
+    .input(ListSecretsFilterSchema.optional())
     .query(async ({ ctx, input }): Promise<Secret[]> => {
       return usecase.listSecrets(ctx, input);
     }),

@@ -10,10 +10,10 @@ export const CreateSecretInputSchema = z.object({
 });
 export type CreateSecretInput = z.infer<typeof CreateSecretInputSchema>;
 
-export const ListSecretsInputSchema = z.object({
+export const ListSecretsFilterSchema = z.object({
   archived: z.boolean().optional(),
 });
-export type ListSecretsInput = z.infer<typeof ListSecretsInputSchema>;
+export type ListSecretsInput = z.infer<typeof ListSecretsFilterSchema>;
 
 export const UpdateSecretInputSchema = z.object({
   name: z.string().min(1).optional(),
