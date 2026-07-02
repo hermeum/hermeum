@@ -10,6 +10,11 @@ export const CreateSecretInputSchema = z.object({
 });
 export type CreateSecretInput = z.infer<typeof CreateSecretInputSchema>;
 
+export const ListSecretsInputSchema = z.object({
+  archived: z.boolean().optional(),
+});
+export type ListSecretsInput = z.infer<typeof ListSecretsInputSchema>;
+
 export const UpdateSecretInputSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
@@ -19,8 +24,8 @@ export type UpdateSecretInput = z.infer<typeof UpdateSecretInputSchema>;
 export class SecretUseCase {
   constructor(private readonly runtime: Runtime = new KubernetesClient()) {}
 
-  async listSecrets(ctx: Context): Promise<Secret[]> {
-    return this.runtime.listSecrets();
+  async listSecrets(ctx: Context, input?: ListSecretsInput): Promise<Secret[]> {
+    return this.runtime.listSecrets(input);
   }
 
   async getSecret(ctx: Context, id: string): Promise<Secret | null> {

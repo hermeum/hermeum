@@ -5,6 +5,7 @@ import { config } from "@/server/libs/config";
 import {
   CreateAgentInput,
   CreateSecretInput,
+  ListSecretParams,
   PatchAgentInput,
   Runtime,
   SecretPatch,
@@ -29,6 +30,7 @@ const enum HermeumLabel {
   // https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
   ManagedBy = "app.kubernetes.io/managed-by",
   UserId = "hermeum.app/user-id",
+  Archived = "hermeum.app/archived",
 }
 const enum HermeumLabelValue {
   ManagedBy = "hermeum",
@@ -37,7 +39,6 @@ const enum HermeumAnnotation {
   Name = "hermeum.app/name",
   Description = "hermeum.app/description",
   Type = "hermeum.app/type",
-  Archived = "hermeum.app/archived",
 }
 
 export function agentToHermesAgent(agent: Agent): HermesAgent {
@@ -127,14 +128,12 @@ export function secretToKubernetesSecret(
       labels: {
         [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
         [HermeumLabel.UserId]: secret.userId,
+        [HermeumLabel.Archived]: String(secret.archived ?? false),
       },
       annotations: {
         [HermeumAnnotation.Name]: secret.name,
         ...(secret.description !== undefined && {
           [HermeumAnnotation.Description]: secret.description,
-        }),
-        ...(secret.archived !== undefined && {
-          [HermeumAnnotation.Archived]: String(secret.archived),
         }),
       },
     },
@@ -158,7 +157,7 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
     name: raw.metadata?.annotations?.[HermeumAnnotation.Name] ?? "",
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     envVars,
-    archived: raw.metadata?.annotations?.[HermeumAnnotation.Archived] === "true",
+    archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -257,10 +256,14 @@ export class KubernetesClient implements Runtime {
     });
   }
 
-  async listSecrets(): Promise<Secret[]> {
+  async listSecrets(params?: ListSecretParams): Promise<Secret[]> {
+    const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
+    if (params?.archived !== undefined) {
+      selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);
+    }
     const body = await this.coreV1Api.listNamespacedSecret({
       namespace: config.kubernetesNamespace,
-      labelSelector: `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
+      labelSelector: selector.join(","),
     });
     return (body.items ?? []).map(mapKubernetesSecret);
   }

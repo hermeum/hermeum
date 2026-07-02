@@ -72,8 +72,10 @@ function SecretsPage() {
   const [tab, setTab] = useState<"all" | "active">("all");
   const navigate = useNavigate();
 
-  const { data: secrets, isPending, error } = useQuery(trpc.secret.list.queryOptions());
-  const visibleSecrets = tab === "active" ? secrets?.filter((s) => !s.archived) : secrets;
+  const { data: secrets, isPending, error } = useQuery(
+    trpc.secret.list.queryOptions(tab === "active" ? { archived: false } : undefined)
+  );
+  const visibleSecrets = secrets;
 
   const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
     trpc.secret.archive.mutationOptions({

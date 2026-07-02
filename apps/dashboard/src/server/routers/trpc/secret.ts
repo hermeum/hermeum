@@ -3,6 +3,7 @@ import { z } from "zod";
 import { EnvVarSchema, Secret } from "@/entities";
 import {
   CreateSecretInputSchema,
+  ListSecretsInputSchema,
   SecretUseCase,
   UpdateSecretInputSchema,
 } from "@/server/usecases/secret";
@@ -11,9 +12,11 @@ import { protectedProcedure, t } from "./shared.js";
 const usecase = new SecretUseCase();
 
 export const secretRouter = t.router({
-  list: protectedProcedure.query(async ({ ctx }): Promise<Secret[]> => {
-    return usecase.listSecrets(ctx);
-  }),
+  list: protectedProcedure
+    .input(ListSecretsInputSchema.optional())
+    .query(async ({ ctx, input }): Promise<Secret[]> => {
+      return usecase.listSecrets(ctx, input);
+    }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
