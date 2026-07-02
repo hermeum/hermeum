@@ -10,3 +10,4 @@ dist
 .tanstack
 
 agent-config.yaml
+.worktrees/
