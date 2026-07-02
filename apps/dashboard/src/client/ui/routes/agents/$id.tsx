@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, MoreHorizontal } from "lucide-react";
-import CodeMirror from "@uiw/react-codemirror";
-import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
 
@@ -14,6 +12,7 @@ import { useTRPC } from "@/router";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
+import { CodeEditor } from "@/client/ui/components/code-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
   Dialog,
@@ -178,20 +177,7 @@ function AgentDetailPage() {
             {agent.config && (
               <div className="py-6 flex flex-col gap-3">
                 <p className="text-sm font-medium">Configuration</p>
-                <CodeMirror
-                  value={stringifyYaml(agent.config)}
-                  extensions={[yamlLang()]}
-                  editable={false}
-                  maxHeight="300px"
-                  basicSetup={{
-                    lineNumbers: true,
-                    foldGutter: true,
-                    searchKeymap: false,
-                    autocompletion: false,
-                    lintKeymap: false,
-                  }}
-                  className="overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!"
-                />
+                <CodeEditor value={stringifyYaml(agent.config)} readOnly maxHeight="300px" />
               </div>
             )}
 
@@ -254,11 +240,7 @@ function AgentDetailPage() {
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
-              variant="destructive"
-              disabled={isDeleting}
-              onClick={() => deleteAgent({ id })}
-            >
+            <Button variant="destructive" disabled={isDeleting} onClick={() => deleteAgent({ id })}>
               Delete
             </Button>
           </DialogFooter>
