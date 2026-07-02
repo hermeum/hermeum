@@ -33,7 +33,7 @@ export function CodeEditor({
         lintKeymap: false,
       }}
       className={cn(
-        "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
+        "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans! [&_.cm-line]:py-[0.15rem]!",
         invalid && "border-destructive"
       )}
     />
