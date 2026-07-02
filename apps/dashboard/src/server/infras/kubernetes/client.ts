@@ -5,6 +5,7 @@ import { config } from "@/server/libs/config";
 import {
   CreateAgentInput,
   CreateSecretInput,
+  ListSecretsFilter,
   PatchAgentInput,
   Runtime,
   SecretPatch,
@@ -29,17 +30,15 @@ const enum HermeumLabel {
   // https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
   ManagedBy = "app.kubernetes.io/managed-by",
   UserId = "hermeum.app/user-id",
+  Archived = "hermeum.app/archived",
 }
 const enum HermeumLabelValue {
   ManagedBy = "hermeum",
 }
 const enum HermeumAnnotation {
-  Name = "hermeum.app/agent-name",
-  Description = "hermeum.app/agent-description",
-  AgentType = "hermeum.app/agent-type",
-  SecretName = "hermeum.app/secret-name",
-  SecretDescription = "hermeum.app/secret-description",
-  SecretArchived = "hermeum.app/secret-archived",
+  Name = "hermeum.app/name",
+  Description = "hermeum.app/description",
+  Type = "hermeum.app/type",
 }
 
 export function agentToHermesAgent(agent: Agent): HermesAgent {
@@ -56,7 +55,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     annotations[HermeumAnnotation.Description] = agent.description;
   }
   if (agent.type !== undefined) {
-    annotations[HermeumAnnotation.AgentType] = agent.type;
+    annotations[HermeumAnnotation.Type] = agent.type;
   }
 
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
@@ -101,7 +100,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     userId: raw.metadata?.labels?.[HermeumLabel.UserId] ?? "",
     name: raw.metadata?.annotations?.[HermeumAnnotation.Name],
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
-    type: raw.metadata?.annotations?.[HermeumAnnotation.AgentType],
+    type: raw.metadata?.annotations?.[HermeumAnnotation.Type],
     config: raw.spec.hermes?.config?.raw,
     secrets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
@@ -129,14 +128,12 @@ export function secretToKubernetesSecret(
       labels: {
         [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
         [HermeumLabel.UserId]: secret.userId,
+        [HermeumLabel.Archived]: String(secret.archived ?? false),
       },
       annotations: {
-        [HermeumAnnotation.SecretName]: secret.name,
+        [HermeumAnnotation.Name]: secret.name,
         ...(secret.description !== undefined && {
-          [HermeumAnnotation.SecretDescription]: secret.description,
-        }),
-        ...(secret.archived !== undefined && {
-          [HermeumAnnotation.SecretArchived]: String(secret.archived),
+          [HermeumAnnotation.Description]: secret.description,
         }),
       },
     },
@@ -157,10 +154,10 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
   return {
     id: raw.metadata?.name ?? "",
     userId: raw.metadata?.labels?.[HermeumLabel.UserId] ?? "",
-    name: raw.metadata?.annotations?.[HermeumAnnotation.SecretName] ?? "",
-    description: raw.metadata?.annotations?.[HermeumAnnotation.SecretDescription],
+    name: raw.metadata?.annotations?.[HermeumAnnotation.Name] ?? "",
+    description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     envVars,
-    archived: raw.metadata?.annotations?.[HermeumAnnotation.SecretArchived] === "true",
+    archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -259,10 +256,14 @@ export class KubernetesClient implements Runtime {
     });
   }
 
-  async listSecrets(): Promise<Secret[]> {
+  async listSecrets(params?: ListSecretsFilter): Promise<Secret[]> {
+    const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
+    if (params?.archived !== undefined) {
+      selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);
+    }
     const body = await this.coreV1Api.listNamespacedSecret({
       namespace: config.kubernetesNamespace,
-      labelSelector: `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
+      labelSelector: selector.join(","),
     });
     return (body.items ?? []).map(mapKubernetesSecret);
   }
