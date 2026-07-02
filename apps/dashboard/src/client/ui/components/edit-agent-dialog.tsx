@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
-import CodeMirror from "@uiw/react-codemirror";
-import { yaml as yamlLang } from "@codemirror/lang-yaml";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent } from "@/entities";
 import { AgentInputSchema } from "@/entities";
-import { cn } from "@hermeum/components/lib/utils";
+import { CodeEditor } from "@/client/ui/components/code-editor";
 import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
@@ -90,21 +88,10 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
-          <CodeMirror
+          <CodeEditor
             value={editorValue}
-            extensions={[yamlLang()]}
             onChange={setEditorValue}
-            className={cn(
-              "overflow-hidden rounded-[0.25rem] border text-sm [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans!",
-              validationError && "border-destructive"
-            )}
-            basicSetup={{
-              lineNumbers: false,
-              foldGutter: false,
-              searchKeymap: false,
-              autocompletion: false,
-              lintKeymap: false,
-            }}
+            invalid={!!validationError}
             maxHeight="420px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
