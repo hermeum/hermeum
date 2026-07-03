@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ConfigSchema } from "./hermes-config";
+
 export const WorkspaceFilesSchema = z.record(z.string(), z.string()).optional();
 
 export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
@@ -33,10 +35,6 @@ export const StorageSchema = z
   .optional();
 
 export type Storage = z.infer<typeof StorageSchema>;
-
-export const ConfigSchema = z.record(z.string(), z.unknown()).optional();
-
-export type Config = z.infer<typeof ConfigSchema>;
 
 export const SelfConfigActionSchema = z.enum(["skills", "config", "soul"]);
 
