@@ -33,11 +33,124 @@ export const ModelSchema = z
 
 export type Model = z.infer<typeof ModelSchema>;
 
+export const WebhookDeliverSchema = z
+  .union([
+    z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]),
+    z.string(),
+  ])
+  .describe(
+    "Destination for the response. Common targets are enumerated; other platform names " +
+      '(e.g. "signal", "matrix", "whatsapp") are also accepted. Defaults to "log".'
+  );
+
+export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
+
+export const WebhookRouteSchema = z
+  .looseObject({
+    events: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Event types this route accepts, e.g. ["pull_request"]. Omit or leave empty to accept all events.'
+      ),
+    secret: z
+      .string()
+      .optional()
+      .describe(
+        "HMAC secret to validate webhook senders. Omit to fall back to the auto-generated " +
+          "WEBHOOK_SECRET environment variable, which is already injected into the agent."
+      ),
+    prompt: z
+      .string()
+      .optional()
+      .describe(
+        "Prompt template for the agent. Supports {dot.notation} access to payload fields " +
+          'and {__raw__} for the whole payload as JSON, e.g. "PR #{number}: {pull_request.title}".'
+      ),
+    skills: z
+      .array(z.string())
+      .optional()
+      .describe("Skill names to load for agent runs triggered by this route."),
+    deliver: WebhookDeliverSchema.optional(),
+    deliver_extra: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "Platform-specific delivery options; values support {dot.notation} templates, " +
+          'e.g. { repo: "{repository.full_name}", pr_number: "{number}" }.'
+      ),
+    deliver_only: z
+      .boolean()
+      .optional()
+      .describe(
+        "If true, skip the agent and deliver the rendered prompt as a literal message. " +
+          "Requires a real deliver target."
+      ),
+  })
+  .describe("A named webhook route that maps incoming events to an agent run or delivery.");
+
+export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
+
+export const WebhookSchema = z
+  .looseObject({
+    enabled: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether the webhook server is enabled. The WEBHOOK_ENABLED=true environment " +
+          "variable is already injected into the agent, so omit this unless disabling."
+      ),
+    extra: z
+      .looseObject({
+        port: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Port the webhook server listens on. The WEBHOOK_PORT environment variable is " +
+              "already injected, so omit this unless a different port is needed."
+          ),
+        secret: z
+          .string()
+          .optional()
+          .describe(
+            "Global fallback HMAC secret for routes without their own. Omit this: an " +
+              "auto-generated WEBHOOK_SECRET environment variable is already injected into the agent."
+          ),
+        rate_limit: z
+          .number()
+          .optional()
+          .describe("Maximum requests per minute. Defaults to 30."),
+        max_body_bytes: z
+          .number()
+          .optional()
+          .describe("Maximum request body size in bytes. Defaults to 1048576 (1 MB)."),
+        routes: z
+          .record(z.string(), WebhookRouteSchema)
+          .optional()
+          .describe("Named webhook routes, keyed by route name (used in the webhook URL path)."),
+      })
+      .optional()
+      .describe("Webhook server settings."),
+  })
+  .describe("Webhook messaging platform configuration.");
+
+export type Webhook = z.infer<typeof WebhookSchema>;
+
+export const PlatformsSchema = z
+  .looseObject({
+    webhook: WebhookSchema.optional(),
+  })
+  .describe("Messaging platform integrations.");
+
+export type Platforms = z.infer<typeof PlatformsSchema>;
+
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema.optional().describe(
       "Model configuration to use."
     ),
+    platforms: PlatformsSchema.optional(),
   })
   .optional()
   .describe(
