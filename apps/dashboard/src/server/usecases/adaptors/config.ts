@@ -1,5 +1,5 @@
-import { AgentConfig } from "@/entities";
+import { HermeumConfig } from "@/entities";
 
 export interface ConfigAdaptor {
-  get(): AgentConfig;
+  get(): HermeumConfig;
 }

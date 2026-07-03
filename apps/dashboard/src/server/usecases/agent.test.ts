@@ -1,20 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
-vi.mock("../infras/local-agent-config", () => ({ LocalConfig: vi.fn() }));
+vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
 
 import { AgentUseCase } from "./agent";
 import type { ConfigAdaptor } from "./adaptors/config";
 import type { Runtime } from "./adaptors/runtime";
-import type { AgentConfig, JsonPatchOp } from "@/entities";
+import type { HermeumConfig, JsonPatchOp } from "@/entities";
 import type { Agent, Context, Secret } from "@/entities";
 
-function makeConfig(agentTypes?: AgentConfig["agentTypes"]): ConfigAdaptor {
+function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): ConfigAdaptor {
   return {
     get: vi.fn().mockReturnValue({
       agentTypes,
       templates: [],
-    } satisfies AgentConfig),
+    } satisfies HermeumConfig),
   };
 }
 

@@ -17,7 +17,7 @@ export const AgentTypeSchema = z.object({
 
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 
-export const AgentConfigSchema = z
+export const HermeumConfigSchema = z
   .object({
     agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
     templates: z.array(TemplateSchema),
@@ -36,7 +36,7 @@ export const AgentConfigSchema = z
   })
   .readonly();
 
-export type AgentConfig = z.infer<typeof AgentConfigSchema>;
+export type HermeumConfig = z.infer<typeof HermeumConfigSchema>;
 
 export type WebhookVariables = {
   agentId: string;
