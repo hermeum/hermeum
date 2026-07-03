@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Config schema for LLM structured output: descriptions guide generation accuracy.
+// Fields not defined here are still allowed (loose objects) so users can configure
+// whatever the Hermes agent supports. 
 export const ModelProviderSchema = z
   .union([z.enum(["novita", "openai", "anthropic", "openrouter"]), z.string()])
   .describe(
