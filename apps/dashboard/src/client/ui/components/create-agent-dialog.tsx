@@ -34,8 +34,8 @@ const DEFAULT_YAML = stringify({
   config: {
     model: {
       provider: "anthropic",
-      default: "claude-sonnet-5"
-    }
+      default: "claude-sonnet-5",
+    },
   },
   skills: [],
   plugins: [],
@@ -181,7 +181,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                         )}
                       >
                         <CardHeader>
-                          <CardTitle>{template.name}</CardTitle>
+                          <CardTitle className="text-base">{template.name}</CardTitle>
                           <CardDescription>{template.description}</CardDescription>
                         </CardHeader>
                       </Card>
@@ -199,7 +199,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
               value={editorValue}
               onChange={setEditorValue}
               invalid={!!validationError}
-              maxHeight={quickStartOpen ? "360px" : "560px"}
+              maxHeight={quickStartOpen ? "220px" : "560px"}
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>
