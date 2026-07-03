@@ -1,11 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { stringify, parse } from "yaml";
 
 import { cn } from "@hermeum/components/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@hermeum/components/ui/collapsible";
 import { Button } from "@hermeum/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
-import { ScrollArea, ScrollBar } from "@hermeum/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
+import { Textarea } from "@hermeum/components/ui/textarea";
 import {
   Dialog,
   DialogClose,
@@ -23,24 +29,17 @@ import { CodeEditor } from "@/client/ui/components/code-editor";
 
 const DEFAULT_YAML = stringify({
   name: "Untitled agent",
+  description: "A blank starting point with the core toolset.",
+  soul: `You are a team agent that can research, write code, run commands, and use tools to help the team end to end.`,
   config: {
-    agents: {
-      defaults: {
-        model: {
-          primary: "anthropic/claude-opus-4-6",
-        },
-      },
-    },
+    model: {
+      provider: "anthropic",
+      default: "claude-sonnet-5"
+    }
   },
-  soul: `## Identity
-You are a helpful assistant. Your goal is to answer questions clearly
-and concisely, help with tasks, and make the user's work easier.
-
-## Core Principles
-- Ask for clarification when a request is ambiguous.
-- Admit when you don't know something rather than guessing.`,
   skills: [],
   plugins: [],
+  secrets: [],
 } as AgentInput).trim();
 
 interface CreateAgentDialogProps {
@@ -54,14 +53,12 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const [editorValue, setEditorValue] = useState(DEFAULT_YAML);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [quickStartOpen, setQuickStartOpen] = useState(true);
+  const [quickStartTab, setQuickStartTab] = useState<"describe" | "template">("describe");
+  const [description, setDescription] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
-
-  useEffect(() => {
-    if (open && templates && templates.length > 0 && selectedTemplateId === null) {
-      handleSelectTemplate(templates[0]!);
-    }
-  }, [open, templates]);
 
   const { mutate: createAgent, isPending: isCreating } = useMutation(
     trpc.agent.create.mutationOptions({
@@ -81,6 +78,10 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
       setEditorValue(DEFAULT_YAML);
       setSelectedTemplateId(null);
       setValidationError(null);
+      setQuickStartOpen(true);
+      setQuickStartTab("describe");
+      setDescription("");
+      setIsGenerating(false);
     }
     onOpenChange(nextOpen);
   }
@@ -88,6 +89,15 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
     setEditorValue(stringify(template.agentInput).trim());
+  }
+
+  function handleGenerate() {
+    if (description.trim().length === 0 || isGenerating) return;
+    setIsGenerating(true);
+    // TODO: wire to agent.generate tRPC endpoint once an LLM backend exists.
+    // For now this is a no-op stub — do not fabricate a config.
+    toast.info("Agent generation isn't available yet.");
+    setIsGenerating(false);
   }
 
   function handleCreate() {
@@ -120,33 +130,67 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto space-y-4">
-          {/* Template section */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Template</p>
-            <ScrollArea className="w-full">
-              <div className="flex gap-2 px-1 py-2">
-                {templates?.map((template) => (
-                  <Card
-                    key={template.id}
-                    size="sm"
-                    onClick={() => handleSelectTemplate(template)}
-                    className={cn(
-                      "w-64 shrink-0 cursor-pointer transition-all",
-                      selectedTemplateId === template.id
-                        ? "ring-2 ring-primary"
-                        : "ring-1 ring-border"
-                    )}
-                  >
-                    <CardHeader>
-                      <CardTitle>{template.name}</CardTitle>
-                      <CardDescription>{template.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </div>
+          {/* Starting point section */}
+          <Collapsible open={quickStartOpen} onOpenChange={setQuickStartOpen}>
+            <CollapsibleTrigger>
+              <span>Quick start</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pb-2">
+              <Tabs
+                value={quickStartTab}
+                onValueChange={(value) => setQuickStartTab(value as "describe" | "template")}
+              >
+                <TabsList className="w-full">
+                  <TabsTrigger value="describe">Describe your agent</TabsTrigger>
+                  <TabsTrigger value="template">Template</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="describe">
+                  <div className="rounded-[0.25rem] border p-3">
+                    <Textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Reviews new pull requests and leaves inline comments on risky changes."
+                      className="min-h-24 border-transparent px-0 py-0 focus-visible:border-transparent"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={handleGenerate}
+                        disabled={description.trim().length === 0 || isGenerating}
+                      >
+                        {isGenerating ? "Generating…" : "Generate"}
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="template">
+                  <div className="grid grid-cols-2 gap-3 px-1 py-2">
+                    {templates?.map((template) => (
+                      <Card
+                        key={template.id}
+                        size="sm"
+                        onClick={() => handleSelectTemplate(template)}
+                        className={cn(
+                          "cursor-pointer transition-all",
+                          selectedTemplateId === template.id
+                            ? "ring-2 ring-primary"
+                            : "ring-1 ring-border"
+                        )}
+                      >
+                        <CardHeader>
+                          <CardTitle>{template.name}</CardTitle>
+                          <CardDescription>{template.description}</CardDescription>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Agent config section */}
           <div className="space-y-2">
@@ -155,7 +199,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
               value={editorValue}
               onChange={setEditorValue}
               invalid={!!validationError}
-              maxHeight="360px"
+              maxHeight={quickStartOpen ? "360px" : "560px"}
             />
             {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           </div>
