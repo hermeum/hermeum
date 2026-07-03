@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { Template } from "@/entities";
-import { LocalConfig } from "@/server/infras/local-agent-config";
+import { LocalConfig } from "@/server/infras/local-hermeum-config";
 import { TemplateUseCase } from "@/server/usecases/template";
 import { protectedProcedure, t } from "./shared.js";
 
