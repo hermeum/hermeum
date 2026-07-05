@@ -1,4 +1,4 @@
-import { Agent, AgentInput, EnvVar, Secret } from "@/entities";
+import { Agent, AgentInput, EnvVar, SharedEnvSet } from "@/entities";
 
 export type ListAgentsFilter = { archived?: boolean | undefined };
 export type CreateAgentInput = AgentInput & { userId: string };
@@ -7,10 +7,9 @@ export type PatchAgentInput = {
   patch: Partial<Omit<Agent, "id" | "userId" | "phase" | "createdAt">>;
 };
 
-export type ListSecretsFilter = { archived?: boolean | undefined };
-export type CreateSecretInput = Pick<Secret, "userId" | "name" | "description" | "shared">;
-export type SecretPatch = Partial<Pick<Secret, "name" | "description" | "archived" | "shared">>;
-
+export type ListSharedEnvSetsFilter = { archived?: boolean | undefined };
+export type CreateSharedEnvSetInput = Pick<SharedEnvSet, "userId" | "name" | "description">;
+export type SharedEnvSetPatch = Partial<Pick<SharedEnvSet, "name" | "description" | "archived">>;
 
 export interface Runtime {
   listHermesAgents: (params?: ListAgentsFilter) => Promise<Agent[]>;
@@ -21,12 +20,12 @@ export interface Runtime {
 
   getGatewayToken: (agentId: string) => Promise<string | null>;
 
-  listSecrets: (params?: ListSecretsFilter) => Promise<Secret[]>;
-  getSecret: (id: string) => Promise<Secret | null>;
-  createSecret: (input: CreateSecretInput) => Promise<Secret>;
-  archiveSecret: (id: string) => Promise<Secret>;
-  patchSecret: (id: string, patch: SecretPatch) => Promise<Secret>;
-  addEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
-  updateEnvVar: (id: string, envVar: EnvVar) => Promise<Secret>;
-  removeEnvVar: (id: string, name: string) => Promise<Secret>;
+  listSharedEnvSets: (params?: ListSharedEnvSetsFilter) => Promise<SharedEnvSet[]>;
+  getSharedEnvSet: (id: string) => Promise<SharedEnvSet | null>;
+  createSharedEnvSet: (input: CreateSharedEnvSetInput) => Promise<SharedEnvSet>;
+  archiveSharedEnvSet: (id: string) => Promise<SharedEnvSet>;
+  patchSharedEnvSet: (id: string, patch: SharedEnvSetPatch) => Promise<SharedEnvSet>;
+  addEnvVar: (id: string, envVar: EnvVar) => Promise<SharedEnvSet>;
+  updateEnvVar: (id: string, envVar: EnvVar) => Promise<SharedEnvSet>;
+  removeEnvVar: (id: string, name: string) => Promise<SharedEnvSet>;
 }

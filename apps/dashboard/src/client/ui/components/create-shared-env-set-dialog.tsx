@@ -12,16 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@hermeum/components/ui/dialog";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@hermeum/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@hermeum/components/ui/field";
 import { Input } from "@hermeum/components/ui/input";
-import { Switch } from "@hermeum/components/ui/switch";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
@@ -29,39 +21,37 @@ import { useTRPC } from "@/router";
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
-  shared: z.boolean(),
 });
 
-interface CreateSecretDialogProps {
+interface CreateSharedEnvSetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogProps) {
+export function CreateSharedEnvSetDialog({ open, onOpenChange }: CreateSharedEnvSetDialogProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const form = useForm({
-    defaultValues: { name: "", description: "", shared: false },
+    defaultValues: { name: "", description: "" },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
-      createSecret({
+      createEnvSet({
         name: value.name.trim(),
         description: value.description.trim() || undefined,
-        shared: value.shared,
       });
     },
   });
 
   const {
-    mutate: createSecret,
+    mutate: createEnvSet,
     isPending,
     error: mutationError,
   } = useMutation(
-    trpc.secret.create.mutationOptions({
+    trpc.sharedEnvSet.create.mutationOptions({
       onSuccess: () => {
-        toast.success("Secret created");
-        queryClient.invalidateQueries({ queryKey: trpc.secret.list.queryKey() });
+        toast.success("Shared env set created");
+        queryClient.invalidateQueries({ queryKey: trpc.sharedEnvSet.list.queryKey() });
         handleOpenChange(false);
       },
     })
@@ -70,7 +60,7 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
   function handleOpenChange(next: boolean) {
     if (!next) {
       form.reset();
-    } 
+    }
 
     onOpenChange(next);
   }
@@ -79,9 +69,9 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create secret</DialogTitle>
+          <DialogTitle>Create shared env set</DialogTitle>
           <DialogDescription>
-            Give your secret a name and an optional description.
+            Give your env set a name and an optional description.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,7 +91,7 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
                     <Input
                       id={field.name}
                       name={field.name}
-                      placeholder="My Secret"
+                      placeholder="My Env Set"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -120,31 +110,11 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
                   <Textarea
                     id={field.name}
                     name={field.name}
-                    placeholder="What is this secret for?"
+                    placeholder="What is this env set for?"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     rows={3}
-                  />
-                </Field>
-              )}
-            </form.Field>
-
-            <form.Field name="shared">
-              {(field) => (
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor={field.name}>Share with all agents</FieldLabel>
-                    <FieldDescription>
-                      Any agent, including agents owned by other users, will be able to use this
-                      secret.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch
-                    id={field.name}
-                    name={field.name}
-                    checked={field.state.value}
-                    onCheckedChange={(checked) => field.handleChange(checked)}
                   />
                 </Field>
               )}
@@ -156,7 +126,7 @@ export function CreateSecretDialog({ open, onOpenChange }: CreateSecretDialogPro
           <DialogFooter className="mt-6">
             <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Creating…" : "Create secret"}
+              {isPending ? "Creating…" : "Create env set"}
             </Button>
           </DialogFooter>
         </form>

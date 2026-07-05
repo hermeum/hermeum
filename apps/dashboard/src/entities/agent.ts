@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { ConfigSchema } from "./hermes-config";
-import { EnvVarSchema } from "./secret";
+import { EnvVarSchema } from "./shared-env-set";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
@@ -76,7 +76,7 @@ export const AgentInputSchema = z.object({
   config: ConfigSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
-  secrets: z.array(z.string()).optional(),
+  sharedEnvSets: z.array(z.string()).optional(),
   env: EnvSchema,
 });
 

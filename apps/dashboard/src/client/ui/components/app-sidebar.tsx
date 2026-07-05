@@ -25,7 +25,7 @@ interface Session {
 
 const agentNavItems = [
   { to: "/agents" as const, label: "Agents", icon: BotIcon },
-  { to: "/secrets" as const, label: "Secrets", icon: KeyRoundIcon },
+  { to: "/shared-env-sets" as const, label: "Shared Env Sets", icon: KeyRoundIcon },
 ];
 
 const resourceNavItems = [

@@ -15,14 +15,12 @@ import {
 } from "@hermeum/components/ui/dialog";
 import {
   Field,
-  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@hermeum/components/ui/field";
 import { Input } from "@hermeum/components/ui/input";
-import { Switch } from "@hermeum/components/ui/switch";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
@@ -30,22 +28,21 @@ import { useTRPC } from "@/router";
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
-  shared: z.boolean(),
 });
 
-interface EditSecretDialogProps {
+interface EditSharedEnvSetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  secretId: string;
-  initial: { name: string; description?: string; shared?: boolean };
+  setId: string;
+  initial: { name: string; description?: string };
 }
 
-export function EditSecretDialog({
+export function EditSharedEnvSetDialog({
   open,
   onOpenChange,
-  secretId,
+  setId,
   initial,
-}: EditSecretDialogProps) {
+}: EditSharedEnvSetDialogProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -53,29 +50,27 @@ export function EditSecretDialog({
     defaultValues: {
       name: initial.name,
       description: initial.description ?? "",
-      shared: initial.shared ?? false,
     },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
-      updateSecret({
-        id: secretId,
+      updateEnvSet({
+        id: setId,
         name: value.name.trim(),
         description: value.description.trim() || undefined,
-        shared: value.shared,
       });
     },
   });
 
   const {
-    mutate: updateSecret,
+    mutate: updateEnvSet,
     isPending,
     error: mutationError,
   } = useMutation(
-    trpc.secret.update.mutationOptions({
+    trpc.sharedEnvSet.update.mutationOptions({
       onSuccess: () => {
-        toast.success("Secret updated");
+        toast.success("Shared env set updated");
         queryClient.invalidateQueries({
-          queryKey: trpc.secret.get.queryKey({ id: secretId }),
+          queryKey: trpc.sharedEnvSet.get.queryKey({ id: setId }),
         });
         onOpenChange(false);
       },
@@ -87,19 +82,16 @@ export function EditSecretDialog({
       form.reset({
         name: initial.name,
         description: initial.description ?? "",
-        shared: initial.shared ?? false,
       });
     }
-  }, [open, initial.name, initial.description, initial.shared]);
+  }, [open, initial.name, initial.description]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit secret</DialogTitle>
-          <DialogDescription>
-            Update the name or description of this secret.
-          </DialogDescription>
+          <DialogTitle>Edit shared env set</DialogTitle>
+          <DialogDescription>Update the name or description of this env set.</DialogDescription>
         </DialogHeader>
 
         <form
@@ -118,7 +110,7 @@ export function EditSecretDialog({
                     <Input
                       id={field.name}
                       name={field.name}
-                      placeholder="My Secret"
+                      placeholder="My Env Set"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -137,33 +129,15 @@ export function EditSecretDialog({
                   <Textarea
                     id={field.name}
                     name={field.name}
-                    placeholder="What is this secret for?"
+                    placeholder="What is this env set for?"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     rows={3}
                   />
-                  <FieldDescription>Optional. Describe what this secret is used for.</FieldDescription>
-                </Field>
-              )}
-            </form.Field>
-
-            <form.Field name="shared">
-              {(field) => (
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor={field.name}>Share with all agents</FieldLabel>
-                    <FieldDescription>
-                      Any agent, including agents owned by other users, will be able to use this
-                      secret.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch
-                    id={field.name}
-                    name={field.name}
-                    checked={field.state.value}
-                    onCheckedChange={(checked) => field.handleChange(checked)}
-                  />
+                  <FieldDescription>
+                    Optional. Describe what this env set is used for.
+                  </FieldDescription>
                 </Field>
               )}
             </form.Field>

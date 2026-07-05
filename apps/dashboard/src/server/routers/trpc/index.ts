@@ -1,13 +1,13 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { t, createTRPContext } from "./shared.js";
 import { agentRouter } from "./agent.js";
-import { secretRouter } from "./secret.js";
+import { sharedEnvSetRouter } from "./shared-env-set.js";
 import { templateRouter } from "./template.js";
 
 export const appRouter = t.router({
   agent: agentRouter,
   template: templateRouter,
-  secret: secretRouter,
+  sharedEnvSet: sharedEnvSetRouter,
 });
 
 export type AppRouter = typeof appRouter;

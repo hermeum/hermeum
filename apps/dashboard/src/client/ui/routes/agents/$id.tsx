@@ -79,14 +79,14 @@ function AgentDetailPage() {
     ...trpc.agent.getGatewayToken.queryOptions({ id }),
     enabled: isOwner,
   });
-  const secretIds = agent?.secrets ?? [];
-  const secretQueries = useQueries({
-    queries: secretIds.map((secretId) => ({
-      ...trpc.secret.get.queryOptions({ id: secretId }),
-      enabled: secretIds.length > 0,
+  const envSetIds = agent?.sharedEnvSets ?? [];
+  const envSetQueries = useQueries({
+    queries: envSetIds.map((setId) => ({
+      ...trpc.sharedEnvSet.get.queryOptions({ id: setId }),
+      enabled: envSetIds.length > 0,
     })),
   });
-  const secrets = secretQueries
+  const envSets = envSetQueries
     .map((q) => q.data)
     .filter((s): s is NonNullable<typeof s> => s != null);
   const [editOpen, setEditOpen] = useState(false);
@@ -233,31 +233,31 @@ function AgentDetailPage() {
               </div>
             )}
 
-            {/* secrets */}
+            {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">
-              <p className="text-sm font-medium">Secrets</p>
-              {agent.secrets && agent.secrets.length > 0 ? (
+              <p className="text-sm font-medium">Shared Env Sets</p>
+              {agent.sharedEnvSets && agent.sharedEnvSets.length > 0 ? (
                 <Accordion multiple className="w-full border rounded-md px-4">
-                  {secrets?.map((secret) => (
-                    <AccordionItem key={secret.id} value={secret.id}>
+                  {envSets?.map((envSet) => (
+                    <AccordionItem key={envSet.id} value={envSet.id}>
                       <AccordionTrigger className="items-center hover:no-underline">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium hover:underline">{secret.name}</span>
+                          <span className="font-medium hover:underline">{envSet.name}</span>
                           <div className="group flex items-center gap-1">
                             <span className="font-mono text-xs text-muted-foreground">
-                              {secret.id}
+                              {envSet.id}
                             </span>
                             <CopyButton
-                              text={secret.id}
+                              text={envSet.id}
                               className="opacity-0 group-hover:opacity-100"
                             />
                           </div>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        {secret.envVars.length > 0 ? (
+                        {envSet.envVars.length > 0 ? (
                           <div className="flex flex-wrap gap-2 pb-2">
-                            {secret.envVars.map((v) => (
+                            {envSet.envVars.map((v) => (
                               <Button
                                 key={v.name}
                                 variant="outline"
@@ -278,7 +278,7 @@ function AgentDetailPage() {
                   ))}
                 </Accordion>
               ) : (
-                <p className="text-sm text-muted-foreground">No secrets attached.</p>
+                <p className="text-sm text-muted-foreground">No shared env sets attached.</p>
               )}
             </div>
           </div>

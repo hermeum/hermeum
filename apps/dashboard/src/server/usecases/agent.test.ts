@@ -7,7 +7,7 @@ import { AgentUseCase } from "./agent";
 import type { ConfigAdaptor } from "./adaptors/config";
 import type { Runtime } from "./adaptors/runtime";
 import type { HermeumConfig, JsonPatchOp } from "@/entities";
-import type { Agent, Context, Secret } from "@/entities";
+import type { Agent, Context, SharedEnvSet } from "@/entities";
 
 function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): ConfigAdaptor {
   return {
@@ -25,11 +25,11 @@ function makeRuntime(): Runtime {
     createHermesAgent: vi.fn(),
     patchHermesAgent: vi.fn(),
     archiveHermesAgent: vi.fn(),
-    listSecrets: vi.fn(),
-    getSecret: vi.fn(),
-    createSecret: vi.fn(),
-    archiveSecret: vi.fn(),
-    patchSecret: vi.fn(),
+    listSharedEnvSets: vi.fn(),
+    getSharedEnvSet: vi.fn(),
+    createSharedEnvSet: vi.fn(),
+    archiveSharedEnvSet: vi.fn(),
+    patchSharedEnvSet: vi.fn(),
     addEnvVar: vi.fn(),
     updateEnvVar: vi.fn(),
     removeEnvVar: vi.fn(),
@@ -51,11 +51,11 @@ function makeCtx(userId = "user-1"): Context {
   };
 }
 
-function makeSecret(overrides: Partial<Secret> = {}): Secret {
+function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
   return {
-    id: "secret-1",
+    id: "envset-1",
     userId: "user-1",
-    name: "My Secret",
+    name: "My Env Set",
     envVars: [],
     ...overrides,
   };
@@ -188,131 +188,89 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
   });
 });
 
-describe("AgentUseCase secret ownership validation", () => {
-  it("createHermesAgent throws when a referenced secret belongs to another user", async () => {
+describe("AgentUseCase shared env set validation", () => {
+  it("createHermesAgent succeeds when a referenced env set belongs to the same user", async () => {
     const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "other-user" })
-    );
-    const useCase = new AgentUseCase(runtime, makeConfig());
-
-    await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
-    ).rejects.toThrow('Secret "secret-1" not found');
-  });
-
-  it("createHermesAgent succeeds when a referenced secret belongs to the same user", async () => {
-    const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "user-1" })
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSharedEnvSet({ id: "envset-1", userId: "user-1" })
     );
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ secrets: ["secret-1"] })
+      makeAgent({ sharedEnvSets: ["envset-1"] })
     );
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
+      useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
     ).resolves.toBeDefined();
   });
 
-  it("createHermesAgent throws when a referenced secret is archived", async () => {
+  it("createHermesAgent succeeds when a referenced env set belongs to another user", async () => {
     const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "user-1", archived: true })
-    );
-    const useCase = new AgentUseCase(runtime, makeConfig());
-
-    await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
-    ).rejects.toThrow('Secret "secret-1" is archived');
-  });
-
-  it("createHermesAgent throws when a referenced secret does not exist", async () => {
-    const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    const useCase = new AgentUseCase(runtime, makeConfig());
-
-    await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
-    ).rejects.toThrow('Secret "secret-1" not found');
-  });
-
-  it("updateHermesAgent throws when a referenced secret belongs to another user", async () => {
-    const runtime = makeRuntime();
-    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ userId: "user-1" })
-    );
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "other-user" })
-    );
-    const useCase = new AgentUseCase(runtime, makeConfig());
-
-    await expect(
-      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { secrets: ["secret-1"] })
-    ).rejects.toThrow('Secret "secret-1" not found');
-  });
-
-  it("updateHermesAgent succeeds when a referenced secret belongs to the same user", async () => {
-    const runtime = makeRuntime();
-    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ userId: "user-1" })
-    );
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "user-1" })
-    );
-    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ secrets: ["secret-1"] })
-    );
-    const useCase = new AgentUseCase(runtime, makeConfig());
-
-    await expect(
-      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { secrets: ["secret-1"] })
-    ).resolves.toBeDefined();
-  });
-
-  it("createHermesAgent succeeds when a referenced secret belongs to another user but is shared", async () => {
-    const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "other-user", shared: true })
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSharedEnvSet({ id: "envset-1", userId: "other-user" })
     );
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ secrets: ["secret-1"] })
+      makeAgent({ sharedEnvSets: ["envset-1"] })
     );
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
+      useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
     ).resolves.toBeDefined();
   });
 
-  it("createHermesAgent throws when a referenced shared secret is archived", async () => {
+  it("createHermesAgent throws when a referenced env set is archived", async () => {
     const runtime = makeRuntime();
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "other-user", shared: true, archived: true })
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSharedEnvSet({ id: "envset-1", userId: "user-1", archived: true })
     );
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await expect(
-      useCase.createHermesAgent(makeCtx("user-1"), { secrets: ["secret-1"] })
-    ).rejects.toThrow('Secret "secret-1" is archived');
+      useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
+    ).rejects.toThrow('Shared env set "envset-1" is archived');
   });
 
-  it("updateHermesAgent succeeds when a referenced secret belongs to another user but is shared", async () => {
+  it("createHermesAgent throws when a referenced env set does not exist", async () => {
+    const runtime = makeRuntime();
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
+    ).rejects.toThrow('Shared env set "envset-1" not found');
+  });
+
+  it("updateHermesAgent succeeds when a referenced env set belongs to another user", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ userId: "user-1" })
     );
-    (runtime.getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeSecret({ id: "secret-1", userId: "other-user", shared: true })
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSharedEnvSet({ id: "envset-1", userId: "other-user" })
     );
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ secrets: ["secret-1"] })
+      makeAgent({ sharedEnvSets: ["envset-1"] })
     );
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await expect(
-      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { secrets: ["secret-1"] })
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { sharedEnvSets: ["envset-1"] })
     ).resolves.toBeDefined();
+  });
+
+  it("updateHermesAgent throws when a referenced env set is archived", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSharedEnvSet({ id: "envset-1", archived: true })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { sharedEnvSets: ["envset-1"] })
+    ).rejects.toThrow('Shared env set "envset-1" is archived');
   });
 });

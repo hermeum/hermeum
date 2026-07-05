@@ -3,4 +3,4 @@ export * from "./agent";
 export * from "./hermes-config";
 export * from "./template";
 export * from "./hermeum-config";
-export * from "./secret";
+export * from "./shared-env-set";
