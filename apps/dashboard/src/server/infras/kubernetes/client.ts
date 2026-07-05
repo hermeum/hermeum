@@ -28,9 +28,11 @@ const enum HermeumLabel {
   ManagedBy = "app.kubernetes.io/managed-by",
   UserId = "hermeum.app/user-id",
   Archived = "hermeum.app/archived",
+  Resource = "hermeum.app/resource",
 }
 const enum HermeumLabelValue {
   ManagedBy = "hermeum",
+  SharedEnvSet = "shared-env-set",
 }
 const enum HermeumAnnotation {
   Name = "hermeum.app/name",
@@ -126,6 +128,7 @@ export function sharedEnvSetToKubernetesSecret(
       namespace: config.kubernetesNamespace,
       labels: {
         [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
+        [HermeumLabel.Resource]: HermeumLabelValue.SharedEnvSet,
         [HermeumLabel.UserId]: envSet.userId,
         [HermeumLabel.Archived]: String(envSet.archived ?? false),
       },
@@ -146,6 +149,14 @@ function decodeSecretData(data: Record<string, string>): Record<string, string> 
     result[key] = Buffer.from(b64Value, "base64").toString("utf-8");
   }
   return result;
+}
+
+function isSharedEnvSetSecret(raw: k8s.V1Secret): boolean {
+  const labels = raw.metadata?.labels;
+  return (
+    labels?.[HermeumLabel.ManagedBy] === HermeumLabelValue.ManagedBy &&
+    labels?.[HermeumLabel.Resource] === HermeumLabelValue.SharedEnvSet
+  );
 }
 
 function mapKubernetesSecretToSharedEnvSet(raw: k8s.V1Secret): SharedEnvSet {
@@ -254,7 +265,10 @@ export class KubernetesClient implements Runtime {
   }
 
   async listSharedEnvSets(params?: ListSharedEnvSetsFilter): Promise<SharedEnvSet[]> {
-    const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
+    const selector = [
+      `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
+      `${HermeumLabel.Resource}=${HermeumLabelValue.SharedEnvSet}`,
+    ];
     if (params?.archived !== undefined) {
       selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);
     }
@@ -271,6 +285,9 @@ export class KubernetesClient implements Runtime {
         name: id,
         namespace: config.kubernetesNamespace,
       });
+      if (!isSharedEnvSetSecret(body)) {
+        return null;
+      }
       return mapKubernetesSecretToSharedEnvSet(body);
     } catch {
       return null;
