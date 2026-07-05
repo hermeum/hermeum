@@ -5,7 +5,7 @@ import { MoreHorizontal, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
-import { EditSecretDialog } from "@/client/ui/components/edit-secret-dialog";
+import { EditSharedEnvSetDialog } from "@/client/ui/components/edit-shared-env-set-dialog";
 import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Button } from "@hermeum/components/ui/button";
@@ -33,18 +33,18 @@ import {
   TableRow,
 } from "@hermeum/components/ui/table";
 
-export const Route = createFileRoute("/secrets/$id")({
-  component: SecretDetailPage,
+export const Route = createFileRoute("/shared-env-sets/$id")({
+  component: SharedEnvSetDetailPage,
 });
 
-function SecretDetailPage() {
+function SharedEnvSetDetailPage() {
   const { id } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const queryKey = trpc.secret.get.queryKey({ id });
+  const queryKey = trpc.sharedEnvSet.get.queryKey({ id });
 
   const navigate = useNavigate();
-  const { data: secret, isPending, error } = useQuery(trpc.secret.get.queryOptions({ id }));
+  const { data: envSet, isPending, error } = useQuery(trpc.sharedEnvSet.get.queryOptions({ id }));
 
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -55,7 +55,7 @@ function SecretDetailPage() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
   const { mutate: addEnvVar, isPending: isAdding } = useMutation(
-    trpc.secret.addEnvVar.mutationOptions({
+    trpc.sharedEnvSet.addEnvVar.mutationOptions({
       onSuccess: () => {
         toast.success("Env var added");
         invalidate();
@@ -66,18 +66,18 @@ function SecretDetailPage() {
     })
   );
 
-  const { mutate: archiveSecret, isPending: isArchiving } = useMutation(
-    trpc.secret.archive.mutationOptions({
+  const { mutate: archiveEnvSet, isPending: isArchiving } = useMutation(
+    trpc.sharedEnvSet.archive.mutationOptions({
       onSuccess: () => {
-        toast.success("Secret archived");
-        navigate({ to: "/secrets" });
+        toast.success("Shared env set archived");
+        navigate({ to: "/shared-env-sets" });
       },
       onError: (e) => toast.error(e.message),
     })
   );
 
   const { mutate: removeEnvVar, isPending: isRemoving } = useMutation(
-    trpc.secret.removeEnvVar.mutationOptions({
+    trpc.sharedEnvSet.removeEnvVar.mutationOptions({
       onSuccess: () => {
         toast.success("Env var deleted");
         invalidate();
@@ -89,23 +89,22 @@ function SecretDetailPage() {
 
   if (isPending) return <div className="p-6">Loading…</div>;
   if (error) return <div className="p-6 text-destructive">Error: {error.message}</div>;
-  if (!secret) return <div className="p-6">Not found</div>;
+  if (!envSet) return <div className="p-6">Not found</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{secret.name}</h1>
-            <Badge >{secret.archived ? "Archived" : "Active"}</Badge>
-            {secret.shared && <Badge >Shared</Badge>}
+            <h1 className="text-2xl font-bold">{envSet.name}</h1>
+            <Badge>{envSet.archived ? "Archived" : "Active"}</Badge>
           </div>
           <div className="group flex items-center gap-1">
-            <p className="font-mono text-sm text-muted-foreground">{secret.id}</p>
-            <CopyButton text={secret.id} className="opacity-0 group-hover:opacity-100" />
+            <p className="font-mono text-sm text-muted-foreground">{envSet.id}</p>
+            <CopyButton text={envSet.id} className="opacity-0 group-hover:opacity-100" />
           </div>
-          {secret.description && (
-            <p className="mt-1 text-sm text-muted-foreground">{secret.description}</p>
+          {envSet.description && (
+            <p className="mt-1 text-sm text-muted-foreground">{envSet.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -154,14 +153,14 @@ function SecretDetailPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {secret.envVars.length === 0 ? (
+            {envSet.envVars.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} className="text-muted-foreground">
                   No environment variables yet.
                 </TableCell>
               </TableRow>
             ) : (
-              secret.envVars.map((v) => (
+              envSet.envVars.map((v) => (
                 <TableRow key={v.name}>
                   <TableCell className="font-mono text-xs">{v.name}</TableCell>
                   <TableCell className="w-10">
@@ -190,21 +189,20 @@ function SecretDetailPage() {
         </Table>
       </div>
 
-      <EditSecretDialog
+      <EditSharedEnvSetDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        secretId={id}
+        setId={id}
         initial={{
-          name: secret.name,
-          ...(secret.description && { description: secret.description }),
-          ...(secret.shared !== undefined && { shared: secret.shared }),
+          name: envSet.name,
+          ...(envSet.description && { description: envSet.description }),
         }}
       />
 
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Archive secret</DialogTitle>
+            <DialogTitle>Archive shared env set</DialogTitle>
             <DialogDescription>
               You will no longer be able to use it in your agents, but existing agents using it will
               not be affected.
@@ -215,7 +213,7 @@ function SecretDetailPage() {
             <Button
               variant="destructive"
               disabled={isArchiving}
-              onClick={() => archiveSecret({ id })}
+              onClick={() => archiveEnvSet({ id })}
             >
               Archive
             </Button>
@@ -244,7 +242,7 @@ function SecretDetailPage() {
               variant="destructive"
               disabled={isRemoving}
               onClick={() => {
-                if (deleteEnvVarName) removeEnvVar({ secretId: id, name: deleteEnvVarName });
+                if (deleteEnvVarName) removeEnvVar({ setId: id, name: deleteEnvVarName });
               }}
             >
               Delete
@@ -258,7 +256,7 @@ function SecretDetailPage() {
         onOpenChange={setAddOpen}
         isPending={isAdding}
         error={addError}
-        onSubmit={(envVar) => addEnvVar({ secretId: id, envVar })}
+        onSubmit={(envVar) => addEnvVar({ setId: id, envVar })}
       />
     </div>
   );

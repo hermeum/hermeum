@@ -1,6 +1,25 @@
 import { z } from "zod";
 
 import { ConfigSchema } from "./hermes-config";
+import { EnvVarSchema } from "./shared-env-set";
+
+export const ENV_SECRET_SENTINEL = "<secret>";
+
+export const AgentEnvVarSchema = EnvVarSchema.extend({
+  sensitive: z
+    .boolean()
+    .optional()
+    .describe(
+      "Mark true for credentials (API keys, tokens). Sensitive values are stored " +
+        'in a managed secret and read back as the literal placeholder "<secret>".'
+    ),
+});
+
+export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
+
+export const EnvSchema = z.array(AgentEnvVarSchema).max(20).optional();
+
+export type Env = z.infer<typeof EnvSchema>;
 
 export const WorkspaceFilesSchema = z.record(z.string(), z.string()).optional();
 
@@ -57,7 +76,8 @@ export const AgentInputSchema = z.object({
   config: ConfigSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
-  secrets: z.array(z.string()).optional(),
+  sharedEnvSets: z.array(z.string()).optional(),
+  env: EnvSchema,
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;

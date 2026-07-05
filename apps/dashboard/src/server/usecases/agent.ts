@@ -71,7 +71,7 @@ export class AgentUseCase {
     if (agentInput.type !== undefined) {
       this.checkAgentTypeAllowed(agentInput.type);
     }
-    await this.checkSecretsAccessible(ctx, agentInput.secrets);
+    await this.checkSharedEnvSetsAccessible(agentInput.sharedEnvSets);
     return this.runtime.createHermesAgent({ ...agentInput, userId: ctx.user!.id });
   }
 
@@ -87,7 +87,7 @@ export class AgentUseCase {
     if (patch.type !== undefined) {
       this.checkAgentTypeAllowed(patch.type);
     }
-    await this.checkSecretsAccessible(ctx, patch.secrets);
+    await this.checkSharedEnvSetsAccessible(patch.sharedEnvSets);
     return this.runtime.patchHermesAgent({ id, patch });
   }
 
@@ -137,14 +137,14 @@ export class AgentUseCase {
     });
   }
 
-  private async checkSecretsAccessible(ctx: Context, secrets: string[] | undefined): Promise<void> {
-    for (const name of secrets ?? []) {
-      const secret = await this.runtime.getSecret(name);
-      if (!secret || (secret.userId !== ctx.user!.id && !secret.shared)) {
-        throw new Error(`Secret "${name}" not found`);
+  private async checkSharedEnvSetsAccessible(setIds: string[] | undefined): Promise<void> {
+    for (const id of setIds ?? []) {
+      const envSet = await this.runtime.getSharedEnvSet(id);
+      if (!envSet) {
+        throw new Error(`Shared env set "${id}" not found`);
       }
-      if (secret.archived) {
-        throw new Error(`Secret "${name}" is archived`);
+      if (envSet.archived) {
+        throw new Error(`Shared env set "${id}" is archived`);
       }
     }
   }

@@ -11,12 +11,7 @@ import {
   DialogTitle,
 } from "@hermeum/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "@hermeum/components/ui/alert";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@hermeum/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@hermeum/components/ui/field";
 import { Input } from "@hermeum/components/ui/input";
 import { TriangleAlert } from "lucide-react";
 import { EnvVarSchema } from "@/entities";
@@ -68,7 +63,7 @@ export function EnvVarDialog({
           <TriangleAlert className="size-4" />
           <AlertTitle>Restart required</AlertTitle>
           <AlertDescription>
-            Agents using this secret must be restarted to apply this change.
+            Agents using this env set must be restarted to apply this change.
           </AlertDescription>
         </Alert>
 

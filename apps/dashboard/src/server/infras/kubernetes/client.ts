@@ -1,15 +1,15 @@
 import * as k8s from "@kubernetes/client-node";
 
-import { Agent, AgentInput, AgentPhase, EnvVar, Secret, SecretEnvVar } from "@/entities";
+import { Agent, AgentPhase, EnvVar, SharedEnvSet, SharedEnvSetEnvVar } from "@/entities";
 import { config } from "@/server/libs/config";
 import {
   CreateAgentInput,
-  CreateSecretInput,
+  CreateSharedEnvSetInput,
   ListAgentsFilter,
-  ListSecretsFilter,
+  ListSharedEnvSetsFilter,
   PatchAgentInput,
   Runtime,
-  SecretPatch,
+  SharedEnvSetPatch,
 } from "../../usecases/adaptors/runtime";
 import { HermesAgent, HermesAgentList, HermesAgentSpec } from "./types/hermes-agent";
 
@@ -28,10 +28,11 @@ const enum HermeumLabel {
   ManagedBy = "app.kubernetes.io/managed-by",
   UserId = "hermeum.app/user-id",
   Archived = "hermeum.app/archived",
-  Shared = "hermeum.app/shared",
+  Resource = "hermeum.app/resource",
 }
 const enum HermeumLabelValue {
   ManagedBy = "hermeum",
+  SharedEnvSet = "shared-env-set",
 }
 const enum HermeumAnnotation {
   Name = "hermeum.app/name",
@@ -61,8 +62,8 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.config !== undefined) {
     hermes.config = { raw: agent.config };
   }
-  if (agent.secrets !== undefined) {
-    hermes.envFrom = agent.secrets.map((name) => ({ secretRef: { name } }));
+  if (agent.sharedEnvSets !== undefined) {
+    hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
   }
   if (agent.soul !== undefined) {
     hermes.workspace = { files: { "SOUL.md": agent.soul } };
@@ -101,7 +102,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     type: raw.metadata?.annotations?.[HermeumAnnotation.Type],
     config: raw.spec.hermes?.config?.raw,
-    secrets: raw.spec.hermes?.envFrom?.flatMap((e) =>
+    sharedEnvSets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
     ),
     soul: raw.spec.hermes?.workspace?.files?.["SOUL.md"],
@@ -114,8 +115,8 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
   };
 }
 
-export function secretToKubernetesSecret(
-  secret: Secret,
+export function sharedEnvSetToKubernetesSecret(
+  envSet: SharedEnvSet,
   data?: Record<string, string>
 ): k8s.V1Secret {
   return {
@@ -123,18 +124,18 @@ export function secretToKubernetesSecret(
     kind: "Secret",
     type: "Opaque",
     metadata: {
-      name: secret.id,
+      name: envSet.id,
       namespace: config.kubernetesNamespace,
       labels: {
         [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
-        [HermeumLabel.UserId]: secret.userId,
-        [HermeumLabel.Archived]: String(secret.archived ?? false),
-        [HermeumLabel.Shared]: String(secret.shared ?? false),
+        [HermeumLabel.Resource]: HermeumLabelValue.SharedEnvSet,
+        [HermeumLabel.UserId]: envSet.userId,
+        [HermeumLabel.Archived]: String(envSet.archived ?? false),
       },
       annotations: {
-        [HermeumAnnotation.Name]: secret.name,
-        ...(secret.description !== undefined && {
-          [HermeumAnnotation.Description]: secret.description,
+        [HermeumAnnotation.Name]: envSet.name,
+        ...(envSet.description !== undefined && {
+          [HermeumAnnotation.Description]: envSet.description,
         }),
       },
     },
@@ -150,8 +151,16 @@ function decodeSecretData(data: Record<string, string>): Record<string, string> 
   return result;
 }
 
-function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
-  const envVars: SecretEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
+function isSharedEnvSetSecret(raw: k8s.V1Secret): boolean {
+  const labels = raw.metadata?.labels;
+  return (
+    labels?.[HermeumLabel.ManagedBy] === HermeumLabelValue.ManagedBy &&
+    labels?.[HermeumLabel.Resource] === HermeumLabelValue.SharedEnvSet
+  );
+}
+
+function mapKubernetesSecretToSharedEnvSet(raw: k8s.V1Secret): SharedEnvSet {
+  const envVars: SharedEnvSetEnvVar[] = Object.keys(raw.data ?? {}).map((name) => ({ name }));
   return {
     id: raw.metadata?.name ?? "",
     userId: raw.metadata?.labels?.[HermeumLabel.UserId] ?? "",
@@ -159,7 +168,6 @@ function mapKubernetesSecret(raw: k8s.V1Secret): Secret {
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     envVars,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
-    shared: raw.metadata?.labels?.[HermeumLabel.Shared] === "true",
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
@@ -256,8 +264,11 @@ export class KubernetesClient implements Runtime {
     return this.patchHermesAgent({ id, patch: { suspended: true, archived: true } });
   }
 
-  async listSecrets(params?: ListSecretsFilter): Promise<Secret[]> {
-    const selector = [`${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`];
+  async listSharedEnvSets(params?: ListSharedEnvSetsFilter): Promise<SharedEnvSet[]> {
+    const selector = [
+      `${HermeumLabel.ManagedBy}=${HermeumLabelValue.ManagedBy}`,
+      `${HermeumLabel.Resource}=${HermeumLabelValue.SharedEnvSet}`,
+    ];
     if (params?.archived !== undefined) {
       selector.push(`${HermeumLabel.Archived}=${String(params.archived)}`);
     }
@@ -265,16 +276,19 @@ export class KubernetesClient implements Runtime {
       namespace: config.kubernetesNamespace,
       labelSelector: selector.join(","),
     });
-    return (body.items ?? []).map(mapKubernetesSecret);
+    return (body.items ?? []).map(mapKubernetesSecretToSharedEnvSet);
   }
 
-  async getSecret(id: string): Promise<Secret | null> {
+  async getSharedEnvSet(id: string): Promise<SharedEnvSet | null> {
     try {
       const body = await this.coreV1Api.readNamespacedSecret({
         name: id,
         namespace: config.kubernetesNamespace,
       });
-      return mapKubernetesSecret(body);
+      if (!isSharedEnvSetSecret(body)) {
+        return null;
+      }
+      return mapKubernetesSecretToSharedEnvSet(body);
     } catch {
       return null;
     }
@@ -315,9 +329,9 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async createSecret(input: CreateSecretInput): Promise<Secret> {
-    const id = `secret-${Math.random().toString(36).slice(2, 8)}`;
-    const body = secretToKubernetesSecret({
+  async createSharedEnvSet(input: CreateSharedEnvSetInput): Promise<SharedEnvSet> {
+    const id = `envset-${Math.random().toString(36).slice(2, 8)}`;
+    const body = sharedEnvSetToKubernetesSecret({
       id,
       envVars: [],
       ...input,
@@ -326,25 +340,25 @@ export class KubernetesClient implements Runtime {
       namespace: config.kubernetesNamespace,
       body,
     });
-    return mapKubernetesSecret(resource);
+    return mapKubernetesSecretToSharedEnvSet(resource);
   }
 
-  async archiveSecret(id: string): Promise<Secret> {
-    return this.patchSecret(id, { archived: true });
+  async archiveSharedEnvSet(id: string): Promise<SharedEnvSet> {
+    return this.patchSharedEnvSet(id, { archived: true });
   }
 
-  async patchSecret(id: string, patch: SecretPatch): Promise<Secret> {
+  async patchSharedEnvSet(id: string, patch: SharedEnvSetPatch): Promise<SharedEnvSet> {
     const raw = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: config.kubernetesNamespace,
     });
     if (!raw) {
-      throw new Error(`Secret with id ${id} not found`);
+      throw new Error(`Shared env set with id ${id} not found`);
     }
     const { data } = raw;
-    const body = secretToKubernetesSecret(
+    const body = sharedEnvSetToKubernetesSecret(
       {
-        ...mapKubernetesSecret(raw),
+        ...mapKubernetesSecretToSharedEnvSet(raw),
         ...patch,
       },
       data
@@ -357,10 +371,10 @@ export class KubernetesClient implements Runtime {
       namespace: config.kubernetesNamespace,
       body,
     });
-    return mapKubernetesSecret(resource);
+    return mapKubernetesSecretToSharedEnvSet(resource);
   }
 
-  async addEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+  async addEnvVar(id: string, envVar: EnvVar): Promise<SharedEnvSet> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: config.kubernetesNamespace,
@@ -370,7 +384,7 @@ export class KubernetesClient implements Runtime {
     return this._applyStringData(id, current, stringData);
   }
 
-  async updateEnvVar(id: string, envVar: EnvVar): Promise<Secret> {
+  async updateEnvVar(id: string, envVar: EnvVar): Promise<SharedEnvSet> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: config.kubernetesNamespace,
@@ -380,7 +394,7 @@ export class KubernetesClient implements Runtime {
     return this._applyStringData(id, current, stringData);
   }
 
-  async removeEnvVar(id: string, name: string): Promise<Secret> {
+  async removeEnvVar(id: string, name: string): Promise<SharedEnvSet> {
     const current = await this.coreV1Api.readNamespacedSecret({
       name: id,
       namespace: config.kubernetesNamespace,
@@ -394,7 +408,7 @@ export class KubernetesClient implements Runtime {
     id: string,
     current: k8s.V1Secret,
     stringData: Record<string, string>
-  ): Promise<Secret> {
+  ): Promise<SharedEnvSet> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: _data, ...rest } = current;
     const body = await this.coreV1Api.replaceNamespacedSecret({
@@ -411,6 +425,6 @@ export class KubernetesClient implements Runtime {
         stringData,
       },
     });
-    return mapKubernetesSecret(body);
+    return mapKubernetesSecretToSharedEnvSet(body);
   }
 }
