@@ -31,7 +31,8 @@ export interface HermesStorage {
 // ─── Workspace ────────────────────────────────────────────────────────────────
 
 export interface HermesDotEnv {
-  secretRef: { name: string };
+  secretRef?: { name: string } | undefined;
+  configMapRef?: { name: string } | undefined;
 }
 
 export interface HermesWorkspace {
