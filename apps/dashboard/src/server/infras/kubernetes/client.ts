@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import * as k8s from "@kubernetes/client-node";
 
 import {
@@ -48,6 +50,9 @@ const enum HermeumAnnotation {
   Description = "hermeum.app/description",
   Type = "hermeum.app/type",
 }
+const enum HermeumPodAnnotation {
+  EnvHash = "hermeum.app/env-hash",
+}
 
 export function agentEnvResourceName(agentId: string): string {
   return `${agentId}-dot-env`;
@@ -71,6 +76,16 @@ export function splitAgentEnv(env: Env): {
 
 export function maskSensitiveEnv(env: Env): Env {
   return env?.map((v) => (v.sensitive ? { ...v, value: ENV_SECRET_SENTINEL } : v));
+}
+
+// Deterministic fingerprint of env content, stamped onto the pod template via
+// podAnnotations so the StatefulSet rolls its pods whenever env changes.
+export function hashAgentEnv(env: Env): string {
+  const canonical = [...(env ?? [])]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((v) => `${v.name}=${v.value}|${v.sensitive ?? false}`)
+    .join("\n");
+  return createHash("sha256").update(canonical).digest("hex");
 }
 
 export function agentEnvToConfigMap(
@@ -160,6 +175,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
+    podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
   return {
@@ -280,6 +296,8 @@ export class KubernetesClient implements Runtime {
     return (body as HermesAgentList).items.map(mapHermesAgent);
   }
 
+  // Real (unmasked) env — callers are responsible for masking before this
+  // reaches an API response.
   private async getHermesAgentEnv(agentId: string): Promise<Env> {
     const name = agentEnvResourceName(agentId);
     const [configMap, secret] = await Promise.all([
@@ -294,9 +312,9 @@ export class KubernetesClient implements Runtime {
       name,
       value,
     }));
-    const sensitive = Object.keys(secret?.data ?? {}).map((name) => ({
+    const sensitive = Object.entries(decodeSecretData(secret?.data ?? {})).map(([name, value]) => ({
       name,
-      value: ENV_SECRET_SENTINEL,
+      value,
       sensitive: true,
     }));
     return [...nonSensitive, ...sensitive];
@@ -305,7 +323,7 @@ export class KubernetesClient implements Runtime {
   private async createHermesAgentEnv(
     agent: Pick<Agent, "id" | "userId" | "archived">,
     env: Env
-  ): Promise<Env> {
+  ): Promise<void> {
     const { configMapData, secretData } = splitAgentEnv(env);
     await this.coreV1Api.createNamespacedConfigMap({
       namespace: config.kubernetesNamespace,
@@ -315,7 +333,32 @@ export class KubernetesClient implements Runtime {
       namespace: config.kubernetesNamespace,
       body: agentEnvToSecret(agent, secretData),
     });
-    return maskSensitiveEnv(env);
+  }
+
+  // Sensitive values round-trip through the client as the ENV_SECRET_SENTINEL
+  // placeholder (never the real value), so an unchanged sensitive var arrives
+  // here still holding the sentinel — swap it back for the value already in
+  // the Secret instead of overwriting it with the literal placeholder string.
+  private async resolveMaskedEnv(agentId: string, env: Env): Promise<Env> {
+    const name = agentEnvResourceName(agentId);
+    const currentSecret = await this.coreV1Api.readNamespacedSecret({
+      name,
+      namespace: config.kubernetesNamespace,
+    });
+    const existingSecretData = decodeSecretData(currentSecret.data ?? {});
+
+    return env?.map((v) => {
+      if (v.sensitive && v.value === ENV_SECRET_SENTINEL) {
+        const existingValue = existingSecretData[v.name];
+        if (existingValue === undefined) {
+          throw new Error(
+            `Cannot preserve value for sensitive env var "${v.name}": no existing secret value found`
+          );
+        }
+        return { ...v, value: existingValue };
+      }
+      return v;
+    });
   }
 
   private async patchHermesAgentEnv(agentId: string, env: Env): Promise<Env> {
@@ -328,21 +371,7 @@ export class KubernetesClient implements Runtime {
       name,
       namespace: config.kubernetesNamespace,
     });
-    const existingSecretData = decodeSecretData(currentSecret.data ?? {});
-
-    const resolvedEnv = env?.map((v) => {
-      if (v.sensitive && v.value === ENV_SECRET_SENTINEL) {
-        const existingValue = existingSecretData[v.name];
-        if (existingValue === undefined) {
-          throw new Error(
-            `Cannot preserve value for sensitive env var "${v.name}": no existing secret value found`
-          );
-        }
-        return { ...v, value: existingValue };
-      }
-      return v;
-    });
-    const { configMapData, secretData } = splitAgentEnv(resolvedEnv);
+    const { configMapData, secretData } = splitAgentEnv(env);
 
     await this.coreV1Api.replaceNamespacedConfigMap({
       name,
@@ -357,7 +386,7 @@ export class KubernetesClient implements Runtime {
       body: { ...restSecret, stringData: secretData },
     });
 
-    return maskSensitiveEnv(resolvedEnv);
+    return env;
   }
 
   async getHermesAgent(id: string): Promise<Agent | null> {
@@ -369,7 +398,8 @@ export class KubernetesClient implements Runtime {
         plural: HermesPlural.Agents,
         name: id,
       });
-      return { ...mapHermesAgent(body as HermesAgent), env: await this.getHermesAgentEnv(id) };
+      const env = await this.getHermesAgentEnv(id);
+      return { ...mapHermesAgent(body as HermesAgent), env: maskSensitiveEnv(env) };
     } catch {
       return null;
     }
@@ -378,7 +408,7 @@ export class KubernetesClient implements Runtime {
   async createHermesAgent(agentInput: CreateAgentInput): Promise<Agent> {
     const id = `agent-${Math.random().toString(36).slice(2, 8)}`;
     const agent = { id, ...agentInput };
-    const env = await this.createHermesAgentEnv(agent, agent.env);
+    await this.createHermesAgentEnv(agent, agent.env);
     const body = agentToHermesAgent(agent);
     const resource = await this.customObjectsApi.createNamespacedCustomObject({
       namespace: config.kubernetesNamespace,
@@ -387,7 +417,7 @@ export class KubernetesClient implements Runtime {
       plural: HermesPlural.Agents,
       body,
     });
-    return { ...mapHermesAgent(resource as HermesAgent), env };
+    return { ...mapHermesAgent(resource as HermesAgent), env: maskSensitiveEnv(agent.env) };
   }
 
   async patchHermesAgent({ id, patch }: PatchAgentInput): Promise<Agent> {
@@ -402,9 +432,18 @@ export class KubernetesClient implements Runtime {
       throw new Error(`Agent with id ${id} not found`);
     }
 
+    // Resolve the real (unmasked) env before building the CR body, so the
+    // hash agentToHermesAgent stamps into podAnnotations reflects the actual
+    // stored content — and stays stable across patches that don't touch env.
+    const env =
+      patch.env !== undefined
+        ? await this.patchHermesAgentEnv(id, await this.resolveMaskedEnv(id, patch.env))
+        : await this.getHermesAgentEnv(id);
+
     const merged = {
       ...mapHermesAgent(raw),
       ...patch,
+      env,
     };
     const body = agentToHermesAgent(merged);
     if (body.metadata && raw.metadata?.resourceVersion) {
@@ -419,12 +458,7 @@ export class KubernetesClient implements Runtime {
       body,
     });
 
-    const env =
-      patch.env !== undefined
-        ? await this.patchHermesAgentEnv(id, patch.env)
-        : await this.getHermesAgentEnv(id);
-
-    return { ...mapHermesAgent(resource as HermesAgent), env };
+    return { ...mapHermesAgent(resource as HermesAgent), env: maskSensitiveEnv(env) };
   }
 
   async archiveHermesAgent(id: string): Promise<Agent> {

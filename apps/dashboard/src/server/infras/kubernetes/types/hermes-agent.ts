@@ -293,6 +293,7 @@ export interface HermesAgentSpec {
   sidecars?: k8s.V1Container[] | undefined;
   extraVolumes?: k8s.V1Volume[] | undefined;
   extraVolumeMounts?: k8s.V1VolumeMount[] | undefined;
+  podAnnotations?: Record<string, string> | undefined;
   searxng?: SearXNG | undefined;
   camofox?: Camofox | undefined;
 }
