@@ -21,7 +21,7 @@ import {
   Runtime,
   SharedEnvSetPatch,
 } from "../../usecases/adaptors/runtime";
-import { HermesAgent, HermesAgentList, HermesAgentSpec } from "./types/hermes-agent";
+import { HermesAgent, HermesAgentList, HermesAgentSpec, HermesConfig } from "./types/hermes-agent";
 
 const enum HermesGroup {
   Default = "agents.hermeum.app",
@@ -151,7 +151,20 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
 
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
   if (agent.config !== undefined) {
-    hermes.config = { raw: agent.config };
+    // The Hermes agent has no api_server section in config.yaml — it belongs to
+    // the CR's dedicated config.apiServer field, so keep it out of raw.
+    const { api_server: apiServer, ...rawConfig } = agent.config;
+    hermes.config = { raw: rawConfig };
+    if (apiServer !== undefined) {
+      hermes.config.apiServer = {
+        ...(apiServer.enabled !== undefined && { enabled: apiServer.enabled }),
+        ...(apiServer.port !== undefined && { port: apiServer.port }),
+        ...(apiServer.cors_origins !== undefined && { corsOrigins: apiServer.cors_origins }),
+        ...(apiServer.enabled === true && {
+          existingSecret: { name: agentEnvResourceName(agent.id), key: "API_SERVER_KEY" },
+        }),
+      };
+    }
     const webhook = agent.config.platforms?.webhook;
     if (webhook !== undefined) {
       hermes.config.webhook = {
@@ -201,6 +214,24 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   };
 }
 
+// Rebuild the agent config from the CR: api_server lives in the dedicated
+// config.apiServer field (not raw), so fold it back in for round-tripping.
+// existingSecret is derived from the agent id at build time and is not mapped back.
+export function mapHermesConfig(config: HermesConfig | undefined): Agent["config"] {
+  const apiServer = config?.apiServer;
+  if (apiServer === undefined) {
+    return config?.raw;
+  }
+  return {
+    ...config?.raw,
+    api_server: {
+      ...(apiServer.enabled !== undefined && { enabled: apiServer.enabled }),
+      ...(apiServer.port !== undefined && { port: apiServer.port }),
+      ...(apiServer.corsOrigins !== undefined && { cors_origins: apiServer.corsOrigins }),
+    },
+  };
+}
+
 export function mapHermesAgent(raw: HermesAgent): Agent {
   return {
     id: raw.metadata?.name ?? "",
@@ -208,7 +239,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     name: raw.metadata?.annotations?.[HermeumAnnotation.Name],
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     type: raw.metadata?.annotations?.[HermeumAnnotation.Type],
-    config: raw.spec.hermes?.config?.raw,
+    config: mapHermesConfig(raw.spec.hermes?.config),
     sharedEnvSets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
     ),

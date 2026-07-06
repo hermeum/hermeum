@@ -81,15 +81,21 @@ const AgentInputObjectSchema = z.object({
 });
 
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
-  if (data.config?.platforms?.webhook?.enabled !== true) return;
-  const hasSecret = data.env?.some((v) => v.name === "WEBHOOK_SECRET" && v.sensitive === true);
-  if (!hasSecret) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message:
-        'Env var "WEBHOOK_SECRET" (sensitive) is required when config.platforms.webhook.enabled is true.',
-      path: ["env"],
-    });
+  const requireSensitiveEnv = (name: string, enabledPath: string) => {
+    const hasVar = data.env?.some((v) => v.name === name && v.sensitive === true);
+    if (!hasVar) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Env var "${name}" (sensitive) is required when ${enabledPath} is true.`,
+        path: ["env"],
+      });
+    }
+  };
+  if (data.config?.platforms?.webhook?.enabled === true) {
+    requireSensitiveEnv("WEBHOOK_SECRET", "config.platforms.webhook.enabled");
+  }
+  if (data.config?.api_server?.enabled === true) {
+    requireSensitiveEnv("API_SERVER_KEY", "config.api_server.enabled");
   }
 });
 

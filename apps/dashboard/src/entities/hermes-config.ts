@@ -135,9 +135,10 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
-// config.yaml support for the API server isn't officially released upstream yet (only
-// env vars are documented), but it's added here so Hermeum can generate declarative
-// agent config ahead of that release.
+// The Hermes agent has no api_server section in config.yaml (the API server is
+// configured via env vars upstream), so this field is never written to the raw
+// agent config. It maps to the HermesAgent CR's config.apiServer field, which the
+// operator turns into API_SERVER_* environment variables.
 export const ApiServerSchema = z
   .looseObject({
     enabled: z
@@ -155,13 +156,6 @@ export const ApiServerSchema = z
         "HTTP server port. Corresponds to the API_SERVER_PORT environment variable. " +
           "Defaults to 8642."
       ),
-    host: z
-      .string()
-      .optional()
-      .describe(
-        "Bind address. Corresponds to the API_SERVER_HOST environment variable. " +
-          "Defaults to 127.0.0.1 (localhost only)."
-      ),
     cors_origins: z
       .array(z.string())
       .optional()
@@ -171,8 +165,8 @@ export const ApiServerSchema = z
       ),
   })
   .describe(
-    "API server configuration. The bearer auth token (API_SERVER_KEY) is a credential " +
-      "and must be set via the agent's env vars (marked sensitive), not here."
+    "API server configuration. Requires the API_SERVER_KEY environment variable " +
+      "(the bearer auth token, marked sensitive) to be set when enabled=true."
   );
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
