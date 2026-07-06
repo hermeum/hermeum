@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Config schema for LLM structured output: descriptions guide generation accuracy.
 // Fields not defined here are still allowed (loose objects) so users can configure
-// whatever the Hermes agent supports. 
+// whatever the Hermes agent supports.
 export const ModelProviderSchema = z
   .union([z.enum(["novita", "openai", "anthropic", "openrouter"]), z.string()])
   .describe(
@@ -34,10 +34,7 @@ export const ModelSchema = z
 export type Model = z.infer<typeof ModelSchema>;
 
 export const WebhookDeliverSchema = z
-  .union([
-    z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]),
-    z.string(),
-  ])
+  .union([z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]), z.string()])
   .describe(
     "Destination for the response. Common targets are enumerated; other platform names " +
       '(e.g. "signal", "matrix", "whatsapp") are also accepted. Defaults to "log".'
@@ -117,10 +114,7 @@ export const WebhookSchema = z
             "Global fallback HMAC secret for routes without their own. Omit this: an " +
               "auto-generated WEBHOOK_SECRET environment variable is already injected into the agent."
           ),
-        rate_limit: z
-          .number()
-          .optional()
-          .describe("Maximum requests per minute. Defaults to 30."),
+        rate_limit: z.number().optional().describe("Maximum requests per minute. Defaults to 30."),
         max_body_bytes: z
           .number()
           .optional()
@@ -145,12 +139,53 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
+// config.yaml support for the API server isn't officially released upstream yet (only
+// env vars are documented), but it's added here so Hermeum can generate declarative
+// agent config ahead of that release.
+export const ApiServerSchema = z
+  .looseObject({
+    enabled: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether the API server is enabled. Corresponds to the API_SERVER_ENABLED " +
+          "environment variable. Defaults to false."
+      ),
+    port: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "HTTP server port. Corresponds to the API_SERVER_PORT environment variable. " +
+          "Defaults to 8642."
+      ),
+    host: z
+      .string()
+      .optional()
+      .describe(
+        "Bind address. Corresponds to the API_SERVER_HOST environment variable. " +
+          "Defaults to 127.0.0.1 (localhost only)."
+      ),
+    cors_origins: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Allowed browser origins. Corresponds to the comma-separated " +
+          "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
+      ),
+  })
+  .describe(
+    "API server configuration. The bearer auth token (API_SERVER_KEY) is a credential " +
+      "and must be set via the agent's env vars (marked sensitive), not here."
+  );
+
+export type ApiServer = z.infer<typeof ApiServerSchema>;
+
 export const ConfigSchema = z
   .looseObject({
-    model: ModelSchema.optional().describe(
-      "Model configuration to use."
-    ),
+    model: ModelSchema.optional().describe("Model configuration to use."),
     platforms: PlatformsSchema.optional(),
+    api_server: ApiServerSchema.optional(),
   })
   .optional()
   .describe(
