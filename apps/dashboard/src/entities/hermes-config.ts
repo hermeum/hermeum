@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Config schema for LLM structured output: descriptions guide generation accuracy.
 // Fields not defined here are still allowed (loose objects) so users can configure
-// whatever the Hermes agent supports. 
+// whatever the Hermes agent supports.
 export const ModelProviderSchema = z
   .union([z.enum(["novita", "openai", "anthropic", "openrouter"]), z.string()])
   .describe(
@@ -34,10 +34,7 @@ export const ModelSchema = z
 export type Model = z.infer<typeof ModelSchema>;
 
 export const WebhookDeliverSchema = z
-  .union([
-    z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]),
-    z.string(),
-  ])
+  .union([z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]), z.string()])
   .describe(
     "Destination for the response. Common targets are enumerated; other platform names " +
       '(e.g. "signal", "matrix", "whatsapp") are also accepted. Defaults to "log".'
@@ -93,10 +90,7 @@ export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
   .looseObject({
-    enabled: z
-      .boolean()
-      .optional()
-      .describe("Whether the webhook server is enabled."),
+    enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
       .looseObject({
         port: z
@@ -106,10 +100,7 @@ export const WebhookSchema = z
           .describe(
             "Port the webhook server listens on. Defaults to 8644; omit this unless a different port is needed."
           ),
-        rate_limit: z
-          .number()
-          .optional()
-          .describe("Maximum requests per minute. Defaults to 30."),
+        rate_limit: z.number().optional().describe("Maximum requests per minute. Defaults to 30."),
         max_body_bytes: z
           .number()
           .optional()
@@ -139,9 +130,7 @@ export type Platforms = z.infer<typeof PlatformsSchema>;
 
 export const ConfigSchema = z
   .looseObject({
-    model: ModelSchema.optional().describe(
-      "Model configuration to use."
-    ),
+    model: ModelSchema.optional().describe("Model configuration to use."),
     platforms: PlatformsSchema.optional(),
   })
   .optional()
