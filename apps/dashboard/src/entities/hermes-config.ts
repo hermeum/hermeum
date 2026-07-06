@@ -4,7 +4,7 @@ import { z } from "zod";
 // Fields not defined here are still allowed (loose objects) so users can configure
 // whatever the Hermes agent supports. 
 export const ModelProviderSchema = z
-  .union([z.enum(["novita", "openai", "anthropic", "openrouter"]), z.string()])
+  .union([z.enum(["novita", "openai-api", "anthropic", "openrouter"]), z.string()])
   .describe(
     "LLM provider that serves the model. Prefer one of the known providers; " +
       "any other provider name is also accepted."
@@ -29,7 +29,11 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
-  .describe("LLM model configuration for the agent.");
+  .describe(
+    "LLM model configuration for the agent. Credentials must be set as an " +
+      "environment variable depending on provider, e.g. OPENAI_API_KEY is " +
+      'required when provider is "openai-api".'
+  );
 
 export type Model = z.infer<typeof ModelSchema>;
 
