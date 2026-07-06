@@ -4,6 +4,7 @@ import {
   agentEnvResourceName,
   agentToHermesAgent,
   hashAgentEnv,
+  mapHermesConfig,
   maskSensitiveEnv,
   splitAgentEnv,
 } from "./client";
@@ -130,6 +131,75 @@ describe("agentToHermesAgent config.webhook wiring", () => {
     const hermesAgent = agentToHermesAgent(makeAgent({ config: { platforms: {} } }));
     expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
     expect(hermesAgent.spec.hermes?.config?.raw).toEqual({ platforms: {} });
+  });
+});
+
+describe("agentToHermesAgent config.apiServer wiring", () => {
+  it("maps api_server fields, derives existingSecret when enabled, and strips it from raw", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        config: {
+          model: { provider: "anthropic", default: "claude-sonnet-5" },
+          api_server: { enabled: true, port: 8642, cors_origins: ["https://app.example.com"] },
+        },
+      })
+    );
+    expect(hermesAgent.spec.hermes?.config?.apiServer).toEqual({
+      enabled: true,
+      port: 8642,
+      corsOrigins: ["https://app.example.com"],
+      existingSecret: { name: "agent-1-dot-env", key: "API_SERVER_KEY" },
+    });
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
+      model: { provider: "anthropic", default: "claude-sonnet-5" },
+    });
+  });
+
+  it("omits existingSecret when the api server is disabled", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { api_server: { enabled: false } } })
+    );
+    expect(hermesAgent.spec.hermes?.config?.apiServer).toEqual({ enabled: false });
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({});
+  });
+
+  it("leaves config.apiServer undefined when there's no api_server", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent({ config: { platforms: {} } }));
+    expect(hermesAgent.spec.hermes?.config?.apiServer).toBeUndefined();
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({ platforms: {} });
+  });
+});
+
+describe("mapHermesConfig", () => {
+  it("folds apiServer back into config as snake_case api_server without existingSecret", () => {
+    expect(
+      mapHermesConfig({
+        raw: { platforms: {} },
+        apiServer: {
+          enabled: true,
+          port: 8642,
+          corsOrigins: ["https://app.example.com"],
+          existingSecret: { name: "agent-1-dot-env", key: "API_SERVER_KEY" },
+        },
+      })
+    ).toEqual({
+      platforms: {},
+      api_server: { enabled: true, port: 8642, cors_origins: ["https://app.example.com"] },
+    });
+  });
+
+  it("returns raw unchanged when apiServer is absent", () => {
+    expect(mapHermesConfig({ raw: { platforms: {} } })).toEqual({ platforms: {} });
+    expect(mapHermesConfig(undefined)).toBeUndefined();
+  });
+
+  it("round-trips an agent config through the CR", () => {
+    const config = {
+      model: { provider: "anthropic", default: "claude-sonnet-5" },
+      api_server: { enabled: true, port: 8642 },
+    };
+    const hermesAgent = agentToHermesAgent(makeAgent({ config }));
+    expect(mapHermesConfig(hermesAgent.spec.hermes?.config)).toEqual(config);
   });
 });
 
