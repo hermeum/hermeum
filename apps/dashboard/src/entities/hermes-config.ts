@@ -4,7 +4,10 @@ import { z } from "zod";
 // Fields not defined here are still allowed (loose objects) so users can configure
 // whatever the Hermes agent supports. 
 export const ModelProviderSchema = z
-  .union([z.enum(["novita", "openai-api", "anthropic", "openrouter"]), z.string()])
+  .union([
+    z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
+    z.string(),
+  ])
   .describe(
     "LLM provider that serves the model. Prefer one of the known providers; " +
       "any other provider name is also accepted."
