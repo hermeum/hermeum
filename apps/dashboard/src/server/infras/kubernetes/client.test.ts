@@ -107,6 +107,32 @@ describe("agentToHermesAgent workspace.dotEnv wiring", () => {
   });
 });
 
+describe("agentToHermesAgent config.webhook wiring", () => {
+  it("maps enabled and extra.port, and derives secretRef when enabled", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 8644 } } } } })
+    );
+    expect(hermesAgent.spec.hermes?.config?.webhook).toEqual({
+      enabled: true,
+      port: 8644,
+      secretRef: { name: "agent-1-dot-env", key: "WEBHOOK_SECRET" },
+    });
+  });
+
+  it("omits secretRef when webhook is disabled", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { platforms: { webhook: { enabled: false } } } })
+    );
+    expect(hermesAgent.spec.hermes?.config?.webhook).toEqual({ enabled: false });
+  });
+
+  it("leaves config.webhook undefined when there's no platforms.webhook", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent({ config: { platforms: {} } }));
+    expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({ platforms: {} });
+  });
+});
+
 describe("agentToHermesAgent podAnnotations wiring", () => {
   it("stamps an env-hash annotation derived from agent.env", () => {
     const env = [{ name: "REGION", value: "us-east-1" }];

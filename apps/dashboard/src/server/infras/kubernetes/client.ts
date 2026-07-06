@@ -152,6 +152,16 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
   if (agent.config !== undefined) {
     hermes.config = { raw: agent.config };
+    const webhook = agent.config.platforms?.webhook;
+    if (webhook !== undefined) {
+      hermes.config.webhook = {
+        ...(webhook.enabled !== undefined && { enabled: webhook.enabled }),
+        ...(webhook.extra?.port !== undefined && { port: webhook.extra.port }),
+        ...(webhook.enabled === true && {
+          secretRef: { name: agentEnvResourceName(agent.id), key: "WEBHOOK_SECRET" },
+        }),
+      };
+    }
   }
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
