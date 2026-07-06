@@ -68,7 +68,7 @@ export const SelfConfigureSchema = z
 
 export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
 
-export const AgentInputSchema = z.object({
+const AgentInputObjectSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   type: z.string().optional(),
@@ -78,6 +78,19 @@ export const AgentInputSchema = z.object({
   plugins: PluginsSchema,
   sharedEnvSets: z.array(z.string()).optional(),
   env: EnvSchema,
+});
+
+export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
+  if (data.config?.platforms?.webhook?.enabled !== true) return;
+  const hasSecret = data.env?.some((v) => v.name === "WEBHOOK_SECRET" && v.sensitive === true);
+  if (!hasSecret) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        'Env var "WEBHOOK_SECRET" (sensitive) is required when config.platforms.webhook.enabled is true.',
+      path: ["env"],
+    });
+  }
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
@@ -92,7 +105,7 @@ export const AgentPhaseSchema = z.enum([
 ]);
 export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
 
-export const AgentSchema = AgentInputSchema.extend({
+export const AgentSchema = AgentInputObjectSchema.extend({
   id: z.string().min(1),
   userId: z.string().min(1),
   suspended: z.boolean().optional(),

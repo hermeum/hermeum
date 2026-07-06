@@ -97,13 +97,7 @@ export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
   .looseObject({
-    enabled: z
-      .boolean()
-      .optional()
-      .describe(
-        "Whether the webhook server is enabled. The WEBHOOK_ENABLED=true environment " +
-          "variable is already injected into the agent, so omit this unless disabling."
-      ),
+    enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
       .looseObject({
         port: z
@@ -111,15 +105,7 @@ export const WebhookSchema = z
           .int()
           .optional()
           .describe(
-            "Port the webhook server listens on. The WEBHOOK_PORT environment variable is " +
-              "already injected, so omit this unless a different port is needed."
-          ),
-        secret: z
-          .string()
-          .optional()
-          .describe(
-            "Global fallback HMAC secret for routes without their own. Omit this: an " +
-              "auto-generated WEBHOOK_SECRET environment variable is already injected into the agent."
+            "Port the webhook server listens on. Defaults to 8644; omit this unless a different port is needed."
           ),
         rate_limit: z.number().optional().describe("Maximum requests per minute. Defaults to 30."),
         max_body_bytes: z
@@ -134,7 +120,10 @@ export const WebhookSchema = z
       .optional()
       .describe("Webhook server settings."),
   })
-  .describe("Webhook messaging platform configuration.");
+  .describe(
+    "Webhook messaging platform configuration. Requires the WEBHOOK_SECRET environment " +
+      "variable to be set when enabled=true."
+  );
 
 export type Webhook = z.infer<typeof WebhookSchema>;
 
