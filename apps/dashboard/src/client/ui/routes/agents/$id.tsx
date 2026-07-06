@@ -233,6 +233,25 @@ function AgentDetailPage() {
               </div>
             )}
 
+            {/* env */}
+            {agent.env && agent.env.length > 0 && (
+              <div className="py-8 flex flex-col gap-3">
+                <p className="text-sm font-medium">Environment Variables</p>
+                <div className="flex flex-wrap gap-2">
+                  {agent.env.map((v) => (
+                    <Button
+                      key={v.name}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto px-2 py-1 font-mono text-xs"
+                    >
+                      {v.name}={v.value}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">
               <p className="text-sm font-medium">Shared Env Sets</p>

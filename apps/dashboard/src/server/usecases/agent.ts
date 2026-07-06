@@ -6,6 +6,7 @@ import {
   AgentInput,
   AgentInputSchema,
   Context,
+  Env,
   JsonPatchOp,
   Skill,
   SkillSchema,
@@ -88,7 +89,20 @@ export class AgentUseCase {
       this.checkAgentTypeAllowed(patch.type);
     }
     await this.checkSharedEnvSetsAccessible(patch.sharedEnvSets);
+    if (patch.env !== undefined) {
+      this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
+    }
     return this.runtime.patchHermesAgent({ id, patch });
+  }
+
+  private checkEnvSensitivityNotDowngraded(existingEnv: Env, patchEnv: Env): void {
+    const existingByName = new Map((existingEnv ?? []).map((v) => [v.name, v]));
+    for (const v of patchEnv ?? []) {
+      const prev = existingByName.get(v.name);
+      if (prev?.sensitive && !v.sensitive) {
+        throw new Error(`Env var "${v.name}" is sensitive and cannot be marked as non-sensitive`);
+      }
+    }
   }
 
   async archiveHermesAgent(ctx: Context, id: string): Promise<Agent> {

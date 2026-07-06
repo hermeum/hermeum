@@ -40,6 +40,7 @@ const DEFAULT_YAML = stringify({
   skills: [],
   plugins: [],
   sharedEnvSets: [],
+  env: [],
 } as AgentInput).trim();
 
 interface CreateAgentDialogProps {

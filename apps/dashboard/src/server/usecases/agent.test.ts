@@ -274,3 +274,76 @@ describe("AgentUseCase shared env set validation", () => {
     ).rejects.toThrow('Shared env set "envset-1" is archived');
   });
 });
+
+describe("AgentUseCase env sensitivity validation", () => {
+  it("updateHermesAgent throws when flipping a sensitive env var to non-sensitive", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({
+        userId: "user-1",
+        env: [{ name: "API_KEY", value: "<secret>", sensitive: true }],
+      })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+        env: [{ name: "API_KEY", value: "plain", sensitive: false }],
+      })
+    ).rejects.toThrow('Env var "API_KEY" is sensitive and cannot be marked as non-sensitive');
+  });
+
+  it("updateHermesAgent throws when omitting sensitive on a previously sensitive env var", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({
+        userId: "user-1",
+        env: [{ name: "API_KEY", value: "<secret>", sensitive: true }],
+      })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+        env: [{ name: "API_KEY", value: "<secret>" }],
+      })
+    ).rejects.toThrow('Env var "API_KEY" is sensitive and cannot be marked as non-sensitive');
+  });
+
+  it("updateHermesAgent allows flipping a non-sensitive env var to sensitive", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1", env: [{ name: "REGION", value: "us-east-1" }] })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ env: [{ name: "REGION", value: "<secret>", sensitive: true }] })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+        env: [{ name: "REGION", value: "us-east-1", sensitive: true }],
+      })
+    ).resolves.toBeDefined();
+  });
+
+  it("updateHermesAgent allows adding new env vars and removing existing ones", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({
+        userId: "user-1",
+        env: [{ name: "API_KEY", value: "<secret>", sensitive: true }],
+      })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ env: [{ name: "NEW_VAR", value: "hello" }] })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await expect(
+      useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+        env: [{ name: "NEW_VAR", value: "hello" }],
+      })
+    ).resolves.toBeDefined();
+  });
+});
