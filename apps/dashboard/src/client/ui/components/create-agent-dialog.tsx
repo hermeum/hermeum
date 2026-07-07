@@ -57,7 +57,6 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const [quickStartOpen, setQuickStartOpen] = useState(true);
   const [quickStartTab, setQuickStartTab] = useState<"describe" | "template">("describe");
   const [description, setDescription] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
 
@@ -74,6 +73,19 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
     })
   );
 
+  const { mutate: generateAgent, isPending: isGenerating } = useMutation(
+    trpc.agentConfig.create.mutationOptions({
+      onSuccess: (agentInput) => {
+        setEditorValue(stringify(agentInput).trim());
+        setSelectedTemplateId(null);
+        setValidationError(null);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    })
+  );
+
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setEditorValue(DEFAULT_YAML);
@@ -82,7 +94,6 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
       setQuickStartOpen(true);
       setQuickStartTab("describe");
       setDescription("");
-      setIsGenerating(false);
     }
     onOpenChange(nextOpen);
   }
@@ -94,11 +105,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   function handleGenerate() {
     if (description.trim().length === 0 || isGenerating) return;
-    setIsGenerating(true);
-    // TODO: wire to agent.generate tRPC endpoint once an LLM backend exists.
-    // For now this is a no-op stub — do not fabricate a config.
-    toast.info("Agent generation isn't available yet.");
-    setIsGenerating(false);
+    generateAgent({ prompt: description.trim() });
   }
 
   function handleCreate() {
