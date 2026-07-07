@@ -3,37 +3,31 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createProviderRegistry, generateText, Output } from "ai";
 import { createOllama } from "ai-sdk-ollama";
 
-import { AgentInput, AgentInputObjectSchema, ENV_PLACEHOLDER_SENTINEL } from "@/entities";
+import {
+  AgentInput,
+  AgentInputObjectSchema,
+  ENV_PLACEHOLDER_SENTINEL,
+  ENV_SECRET_SENTINEL,
+} from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { ConfigGenerator } from "../../usecases/adaptors/generator";
 
-const SYSTEM_PROMPT = `You generate Hermes agent definitions for the Hermeum dashboard.
+// Field semantics live in the output schema's .describe() texts; this prompt
+// only carries the task framing and cross-field rules.
+const SYSTEM_PROMPT = `You generate Hermes agent definitions for the Hermeum dashboard — a JSON
+object that prefills the create-agent form for an autonomous LLM agent deployed to
+Kubernetes. Field semantics are defined by the output schema.
 
-A Hermes agent is an autonomous LLM agent deployed to Kubernetes. You return a JSON
-object that prefills the create-agent form:
-- name: short and descriptive.
-- description: one or two sentences.
-- soul: the agent's persona and operating instructions in markdown (like a system prompt).
-- config: the agent runtime config.
-  - config.model: which LLM the agent itself uses. provider is one of anthropic,
-    openrouter, zai, kimi-coding, openai-api, ollama-cloud (others allowed);
-    "default" is the model id. Each provider needs its credential as a sensitive
-    env var (e.g. OPENAI_API_KEY for openai-api, ANTHROPIC_API_KEY for anthropic).
-  - config.platforms.webhook: enable only if the user wants to trigger the agent
-    via webhooks; define routes under platforms.webhook.extra.routes.
-  - config.api_server: enable only if the user wants a direct HTTP API.
-- skills: only include skills the user explicitly asked for.
-- env: environment variables. Credentials must have sensitive: true and the literal
-  value "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess secret values.
-  When config.platforms.webhook.enabled is true, env MUST include
-  {"name":"WEBHOOK_SECRET","value":"${ENV_PLACEHOLDER_SENTINEL}","sensitive":true}.
-  When config.api_server.enabled is true, env MUST include
-  {"name":"API_SERVER_KEY","value":"${ENV_PLACEHOLDER_SENTINEL}","sensitive":true}.
-  Sensitive values shown as "<secret>" in an existing definition are stored secrets —
-  keep them as the literal "<secret>" when revising.
-
-Only enable features the request calls for. Prefer minimal, valid output.`;
+Rules:
+- Credentials in env must have sensitive: true and the literal value
+  "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess secret values.
+- When config.platforms.webhook.enabled is true, env MUST include a sensitive
+  WEBHOOK_SECRET; when config.api_server.enabled is true, a sensitive
+  API_SERVER_KEY (both with value "${ENV_PLACEHOLDER_SENTINEL}").
+- Sensitive values shown as "${ENV_SECRET_SENTINEL}" in an existing definition are stored
+  secrets — keep them as the literal "${ENV_SECRET_SENTINEL}" when revising.
+- Only enable features the request calls for. Prefer minimal, valid output.`;
 
 export class AiConfigGenerator implements ConfigGenerator {
   // Lazy: built on first use so the dashboard boots without any AI config
