@@ -32,7 +32,6 @@
     "@trpc/tanstack-react-query": "^11.15.0",
     "@uiw/react-codemirror": "^4.25.9",
     "ai": "^7.0.16",
-    "ai-sdk-ollama": "^4.0.0",
     "better-auth": "^1.6.5",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
