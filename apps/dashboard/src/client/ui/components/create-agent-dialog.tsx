@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { stringify, parse } from "yaml";
+import { Document, parse, Scalar } from "yaml";
 
 import { cn } from "@hermeum/components/lib/utils";
 import {
@@ -27,7 +27,19 @@ import type { Template, AgentInput } from "@/entities";
 import { AgentInputSchema } from "@/entities";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 
-const DEFAULT_YAML = stringify({
+// Renders `soul` as a literal block (`|`) instead of yaml's default folded
+// style (`>-`), which collapses newlines into blank-line-separated runs and
+// hard-wraps lines — unreadable for multi-paragraph markdown.
+function stringifyAgentInput(input: AgentInput): string {
+  const doc = new Document(input);
+  const soul = doc.get("soul", true);
+  if (soul instanceof Scalar && typeof soul.value === "string") {
+    soul.type = Scalar.BLOCK_LITERAL;
+  }
+  return doc.toString().trim();
+}
+
+const DEFAULT_YAML = stringifyAgentInput({
   name: "Untitled agent",
   description: "A blank starting point with the core toolset.",
   soul: `You are a team agent that can research, write code, run commands, and use tools to help the team end to end.`,
@@ -41,7 +53,7 @@ const DEFAULT_YAML = stringify({
   skills: [],
   plugins: [],
   sharedEnvSets: [],
-} as AgentInput).trim();
+});
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -76,7 +88,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const { mutate: generateAgent, isPending: isGenerating } = useMutation(
     trpc.agentConfig.create.mutationOptions({
       onSuccess: (agentInput) => {
-        setEditorValue(stringify(agentInput).trim());
+        setEditorValue(stringifyAgentInput(agentInput));
         setSelectedTemplateId(null);
         setValidationError(null);
       },
@@ -100,7 +112,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
 
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
-    setEditorValue(stringify(template.agentInput).trim());
+    setEditorValue(stringifyAgentInput(template.agentInput));
   }
 
   function handleGenerate() {
