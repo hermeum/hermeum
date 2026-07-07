@@ -37,10 +37,10 @@ const DEFAULT_YAML = stringify({
       default: "claude-sonnet-5",
     },
   },
+  env: [],
   skills: [],
   plugins: [],
   sharedEnvSets: [],
-  env: [],
 } as AgentInput).trim();
 
 interface CreateAgentDialogProps {

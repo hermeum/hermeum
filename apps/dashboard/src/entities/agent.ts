@@ -105,13 +105,13 @@ export const AgentInputObjectSchema = z.object({
         "principles. Focus on durable communication traits, not task-specific instructions."
     ),
   config: ConfigSchema,
+  env: EnvSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
   sharedEnvSets: z
     .array(z.string())
     .optional()
     .describe("Ids of dashboard-managed shared env sets. Omit — users select these in the UI."),
-  env: EnvSchema,
 });
 
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {

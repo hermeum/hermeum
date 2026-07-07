@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createProviderRegistry, generateText, Output } from "ai";
+import { createProviderRegistry, generateText, NoObjectGeneratedError, Output } from "ai";
 import { createOllama } from "ai-sdk-ollama";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
@@ -26,20 +26,40 @@ export class AiSdkGenerator implements AiGenerator {
     this.registry ??= createProviderRegistry({
       anthropic: createAnthropic(baseURL),
       openai: createOpenAI(baseURL),
-      ollama: createOllama(baseURL),
+      // Unlike the anthropic/openai SDKs, ai-sdk-ollama does not read its
+      // credential env var itself; pass it for Ollama Cloud / remote servers.
+      ollama: createOllama({
+        ...baseURL,
+        ...(process.env.OLLAMA_API_KEY ? { apiKey: process.env.OLLAMA_API_KEY } : {}),
+      }),
     });
     return this.registry.languageModel(config.aiModel as `${string}:${string}`);
   }
 
   async generateAgentInput(input: { system: string; prompt: string }): Promise<AgentInput> {
-    // Do not enable providerOptions.openai.strictJsonSchema — the schema
-    // uses looseObject/record/optionals, which strict mode rejects.
-    const result = await generateText({
-      model: this.model(),
-      system: input.system,
-      prompt: input.prompt,
-      output: Output.object({ schema: AgentInputObjectSchema }),
-    });
-    return result.output;
+    try {
+      // Do not enable providerOptions.openai.strictJsonSchema — the schema
+      // uses looseObject/record/optionals, which strict mode rejects.
+      const result = await generateText({
+        model: this.model(),
+        system: input.system,
+        prompt: input.prompt,
+        output: Output.object({ schema: AgentInputObjectSchema }),
+      });
+      return result.output;
+    } catch (e) {
+      // Surface the model response in the message: the default one only says
+      // parsing failed, hiding whether the output was truncated (finishReason
+      // "length"), empty, or wrapped in non-JSON prose.
+      if (NoObjectGeneratedError.isInstance(e)) {
+        const text = e.text ?? "";
+        throw new Error(
+          `AI generation returned an unusable response (finishReason: ${e.finishReason}, ` +
+            `${text.length} chars): ${text.slice(0, 300) || "<empty>"}`,
+          { cause: e }
+        );
+      }
+      throw e;
+    }
   }
 }
