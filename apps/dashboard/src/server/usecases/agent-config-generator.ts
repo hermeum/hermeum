@@ -17,8 +17,8 @@ export type Prompt = z.infer<typeof PromptSchema>;
 
 // Field semantics live in the output schema's .describe() texts; this prompt
 // only carries the task framing and cross-field rules.
-export const AGENT_INPUT_SYSTEM_PROMPT = `You generate Hermes agent definitions for the Hermeum dashboard — a JSON
-object that prefills the create-agent form for an autonomous LLM agent deployed to
+export const AGENT_INPUT_SYSTEM_PROMPT = `You generate Hermes agent definitions — a JSON
+object that prefills the form for an autonomous Hermes agent deployed to
 Kubernetes. Field semantics are defined by the output schema.
 
 Rules:

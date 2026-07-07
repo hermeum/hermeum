@@ -101,8 +101,8 @@ export const AgentInputObjectSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The agent's persistent identity in markdown — its persona, tone, and behavioral " +
-        "principles. Focus on durable communication traits, not task-specific instructions."
+      "The agent's persistent identity in markdown — persona, tone, and behavioral " +
+        "principles, not task-specific instructions."
     ),
   config: ConfigSchema,
   env: EnvSchema,
