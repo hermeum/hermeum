@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 
-import { AgentInputSchema } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -72,5 +73,31 @@ describe("AgentInputSchema api server key validation", () => {
   it("succeeds when the api server is disabled regardless of env", () => {
     const result = AgentInputSchema.safeParse({ config: { api_server: { enabled: false } } });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("AgentInputObjectSchema as LLM structured-output schema", () => {
+  it("accepts a representative generated payload", () => {
+    const result = AgentInputObjectSchema.safeParse({
+      name: "pr-reviewer",
+      description: "Reviews GitHub pull requests.",
+      soul: "# PR Reviewer\nBe thorough and kind.",
+      config: {
+        model: { provider: "anthropic", default: "claude-sonnet-5" },
+        platforms: { webhook: { enabled: true } },
+      },
+      skills: ["npm:@hermeum/github-review"],
+      env: [{ name: "WEBHOOK_SECRET", value: "<fill-me>", sensitive: true }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid skill string", () => {
+    const result = AgentInputObjectSchema.safeParse({ skills: ["bad skill!"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("is convertible to JSON Schema for the AI SDK", () => {
+    expect(() => z.toJSONSchema(AgentInputObjectSchema)).not.toThrow();
   });
 });

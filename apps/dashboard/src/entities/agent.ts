@@ -5,6 +5,11 @@ import { EnvVarSchema } from "./shared-env-set";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
+// Placeholder for generated sensitive env values the user must fill in.
+// Distinct from ENV_SECRET_SENTINEL, which the kubernetes client interprets
+// as "reuse the value already stored in the Secret".
+export const ENV_PLACEHOLDER_SENTINEL = "<fill-me>";
+
 export const AgentEnvVarSchema = EnvVarSchema.extend({
   sensitive: z
     .boolean()
@@ -17,7 +22,11 @@ export const AgentEnvVarSchema = EnvVarSchema.extend({
 
 export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
 
-export const EnvSchema = z.array(AgentEnvVarSchema).max(20).optional();
+export const EnvSchema = z
+  .array(AgentEnvVarSchema)
+  .max(20)
+  .optional()
+  .describe("Environment variables the agent needs. Credentials must be marked sensitive.");
 
 export type Env = z.infer<typeof EnvSchema>;
 
@@ -37,11 +46,19 @@ export const SkillSchema = z
 
 export type Skill = string;
 
-export const SkillsSchema = z.array(SkillSchema).max(20).optional();
+export const SkillsSchema = z
+  .array(SkillSchema)
+  .max(20)
+  .optional()
+  .describe("Skill identifiers to install.");
 
 export type Skills = z.infer<typeof SkillsSchema>;
 
-export const PluginsSchema = z.array(z.string()).max(20).optional();
+export const PluginsSchema = z
+  .array(z.string())
+  .max(20)
+  .optional()
+  .describe("Plugin identifiers to install.");
 
 export type Plugins = z.infer<typeof PluginsSchema>;
 
@@ -68,15 +85,32 @@ export const SelfConfigureSchema = z
 
 export type SelfConfigure = z.infer<typeof SelfConfigureSchema>;
 
-const AgentInputObjectSchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  type: z.string().optional(),
-  soul: z.string().optional(),
+// Also used as the LLM structured-output schema for agent config generation:
+// the .describe() texts guide the model.
+export const AgentInputObjectSchema = z.object({
+  name: z.string().optional().describe("Short human-readable agent name."),
+  description: z
+    .string()
+    .optional()
+    .describe("One or two sentences describing what the agent does."),
+  type: z
+    .string()
+    .optional()
+    .describe("Agent type key from the dashboard's configured agent types."),
+  soul: z
+    .string()
+    .optional()
+    .describe(
+      "The agent's persistent identity in markdown — its persona, tone, and behavioral " +
+        "principles. Focus on durable communication traits, not task-specific instructions."
+    ),
   config: ConfigSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
-  sharedEnvSets: z.array(z.string()).optional(),
+  sharedEnvSets: z
+    .array(z.string())
+    .optional()
+    .describe("Ids of dashboard-managed shared env sets. Omit — users select these in the UI."),
   env: EnvSchema,
 });
 
