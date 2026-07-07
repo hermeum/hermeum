@@ -69,6 +69,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const [quickStartOpen, setQuickStartOpen] = useState(true);
   const [quickStartTab, setQuickStartTab] = useState<"describe" | "template">("describe");
   const [description, setDescription] = useState("");
+  const [selectedName, setSelectedName] = useState<string | null>(null);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
 
@@ -91,6 +92,8 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
         setEditorValue(stringifyAgentInput(agentInput));
         setSelectedTemplateId(null);
         setValidationError(null);
+        setSelectedName(agentInput.name);
+        setQuickStartOpen(false);
       },
       onError: (error) => {
         toast.error(error.message);
@@ -106,6 +109,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
       setQuickStartOpen(true);
       setQuickStartTab("describe");
       setDescription("");
+      setSelectedName(null);
     }
     onOpenChange(nextOpen);
   }
@@ -113,6 +117,8 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
     setEditorValue(stringifyAgentInput(template.agentInput));
+    setSelectedName(template.name);
+    setQuickStartOpen(false);
   }
 
   function handleGenerate() {
@@ -153,7 +159,14 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
           {/* Starting point section */}
           <Collapsible open={quickStartOpen} onOpenChange={setQuickStartOpen}>
             <CollapsibleTrigger>
-              <span>Quick start</span>
+              <span className="flex min-w-0 items-baseline gap-1.5">
+                <span>Quick start</span>
+                {selectedName && (
+                  <span className="truncate font-normal text-muted-foreground">
+                    · {selectedName}
+                  </span>
+                )}
+              </span>
             </CollapsibleTrigger>
             <CollapsibleContent className="pb-2">
               <Tabs
