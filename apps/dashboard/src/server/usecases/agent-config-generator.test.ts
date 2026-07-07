@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../infras/ai/generator", () => ({ AiConfigGenerator: vi.fn() }));
+vi.mock("../infras/ai-sdk", () => ({ AiSdkGenerator: vi.fn() }));
 
 import type { AgentInput, Context } from "@/entities";
 import { AgentInputSchema } from "@/entities";
 
-import { AgentConfigGeneratorUseCase } from "./agent-config-generator";
-import type { ConfigGenerator } from "./adaptors/generator";
+import { AgentConfigGeneratorUseCase, AGENT_INPUT_SYSTEM_PROMPT } from "./agent-config-generator";
+import type { AiGenerator } from "./adaptors/generator";
 
-function makeGenerator(output: AgentInput = {}): ConfigGenerator {
-  return { generate: vi.fn().mockResolvedValue(output) };
+function makeGenerator(output: AgentInput = {}): AiGenerator {
+  return { generateAgentInput: vi.fn().mockResolvedValue(output) };
 }
 
 function makeCtx(userId = "user-1"): Context {
@@ -26,13 +26,16 @@ describe("AgentConfigGeneratorUseCase.create", () => {
 
     const result = await useCase.create(makeCtx(), "A PR review agent");
 
-    expect(generator.generate).toHaveBeenCalledWith(expect.stringContaining("A PR review agent"));
+    expect(generator.generateAgentInput).toHaveBeenCalledWith({
+      system: AGENT_INPUT_SYSTEM_PROMPT,
+      prompt: expect.stringContaining("A PR review agent"),
+    });
     expect(result.name).toBe("pr-reviewer");
   });
 
   it("throws when the generator returns an invalid shape", async () => {
     const generator = {
-      generate: vi.fn().mockResolvedValue({ skills: ["bad skill!"] }),
+      generateAgentInput: vi.fn().mockResolvedValue({ skills: ["bad skill!"] }),
     };
     const useCase = new AgentConfigGeneratorUseCase(generator);
 
@@ -48,9 +51,13 @@ describe("AgentConfigGeneratorUseCase.update", () => {
 
     await useCase.update(makeCtx(), current, "rename it");
 
-    const prompt = (generator.generate as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
-    expect(prompt).toContain('"old-agent"');
-    expect(prompt).toContain("rename it");
+    const input = (generator.generateAgentInput as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      system: string;
+      prompt: string;
+    };
+    expect(input.system).toBe(AGENT_INPUT_SYSTEM_PROMPT);
+    expect(input.prompt).toContain('"old-agent"');
+    expect(input.prompt).toContain("rename it");
   });
 
   it("preserves <secret> for vars that were already sensitive", async () => {

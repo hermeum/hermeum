@@ -9,32 +9,51 @@ import {
   ENV_SECRET_SENTINEL,
 } from "@/entities";
 
-import { AiConfigGenerator } from "../infras/ai/generator";
-import { ConfigGenerator } from "./adaptors/generator";
+import { AiSdkGenerator } from "../infras/ai-sdk";
+import { AiGenerator } from "./adaptors/generator";
 
 export const PromptSchema = z.string().min(1).max(4000);
 export type Prompt = z.infer<typeof PromptSchema>;
 
+// Field semantics live in the output schema's .describe() texts; this prompt
+// only carries the task framing and cross-field rules.
+export const AGENT_INPUT_SYSTEM_PROMPT = `You generate Hermes agent definitions for the Hermeum dashboard — a JSON
+object that prefills the create-agent form for an autonomous LLM agent deployed to
+Kubernetes. Field semantics are defined by the output schema.
+
+Rules:
+- Credentials in env must have sensitive: true and the literal value
+  "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess secret values.
+- When config.platforms.webhook.enabled is true, env MUST include a sensitive
+  WEBHOOK_SECRET; when config.api_server.enabled is true, a sensitive
+  API_SERVER_KEY (both with value "${ENV_PLACEHOLDER_SENTINEL}").
+- Sensitive values shown as "${ENV_SECRET_SENTINEL}" in an existing definition are stored
+  secrets — keep them as the literal "${ENV_SECRET_SENTINEL}" when revising.
+- Only enable features the request calls for. Prefer minimal, valid output.`;
+
 export class AgentConfigGeneratorUseCase {
-  constructor(private readonly generator: ConfigGenerator = new AiConfigGenerator()) {}
+  constructor(private readonly generator: AiGenerator = new AiSdkGenerator()) {}
 
   async create(ctx: Context, prompt: Prompt): Promise<AgentInput> {
     prompt = PromptSchema.parse(prompt);
-    const output = await this.generator.generate(
-      `Create a new Hermes agent definition from this request:\n\n${prompt}`
-    );
+    const output = await this.generator.generateAgentInput({
+      system: AGENT_INPUT_SYSTEM_PROMPT,
+      prompt: `Create a new Hermes agent definition from this request:\n\n${prompt}`,
+    });
     return this.finalize(output);
   }
 
   async update(ctx: Context, current: AgentInput, prompt: Prompt): Promise<AgentInput> {
     prompt = PromptSchema.parse(prompt);
-    const output = await this.generator.generate(
-      "Here is an existing Hermes agent definition as JSON:\n\n" +
+    const output = await this.generator.generateAgentInput({
+      system: AGENT_INPUT_SYSTEM_PROMPT,
+      prompt:
+        "Here is an existing Hermes agent definition as JSON:\n\n" +
         JSON.stringify(current, null, 2) +
         "\n\nApply the following change and return the FULL revised definition " +
         "(keep everything not affected by the change unchanged):\n\n" +
-        prompt
-    );
+        prompt,
+    });
     return this.finalize(output, current.env ?? []);
   }
 
