@@ -11,6 +11,11 @@ export const ConfigSchema = z.object({
   allowedEmailDomain: z.string().optional(),
   hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
   hermesImageTag: z.string().default("v2026.6.19"),
+  aiModel: z
+    .string()
+    .regex(/^[\w.-]+:.+$/, 'Expected "provider:model", e.g. "anthropic:claude-sonnet-5"')
+    .optional(),
+  aiBaseUrl: z.url().optional(),
 });
 
 export const config = ConfigSchema.parse({
@@ -21,4 +26,6 @@ export const config = ConfigSchema.parse({
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
+  aiModel: process.env.HERMEUM_AI_MODEL,
+  aiBaseUrl: process.env.HERMEUM_AI_BASE_URL,
 });
