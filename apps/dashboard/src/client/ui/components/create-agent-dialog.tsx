@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Document, parse, Scalar } from "yaml";
 
+import { LoaderCircle } from "lucide-react";
+
 import { cn } from "@hermeum/components/lib/utils";
 import {
   Collapsible,
@@ -92,7 +94,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
         setEditorValue(stringifyAgentInput(agentInput));
         setSelectedTemplateId(null);
         setValidationError(null);
-        setSelectedName(agentInput.name);
+        setSelectedName(agentInput.name ?? null);
         setQuickStartOpen(false);
       },
       onError: (error) => {
@@ -183,6 +185,12 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          handleGenerate();
+                        }
+                      }}
                       placeholder="Reviews new pull requests and leaves inline comments on risky changes."
                       className="min-h-24 border-transparent px-0 py-0 focus-visible:border-transparent"
                     />
@@ -193,6 +201,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                         onClick={handleGenerate}
                         disabled={description.trim().length === 0 || isGenerating}
                       >
+                        {isGenerating && <LoaderCircle className="animate-spin" />}
                         {isGenerating ? "Generating…" : "Generate"}
                       </Button>
                     </div>
