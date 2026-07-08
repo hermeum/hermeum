@@ -76,6 +76,22 @@ describe("AgentInputSchema api server key validation", () => {
   });
 });
 
+describe("AgentInputSchema env placeholder validation", () => {
+  it("fails when an env var still has the fill-me placeholder value", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "API_KEY", value: "<fill-me>", sensitive: true }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when env values are real, non-placeholder strings", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "API_KEY", value: "sk-real-value", sensitive: true }],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("AgentInputObjectSchema as LLM structured-output schema", () => {
   it("accepts a representative generated payload", () => {
     const result = AgentInputObjectSchema.safeParse({

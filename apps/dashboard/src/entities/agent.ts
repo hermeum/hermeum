@@ -131,6 +131,18 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
   if (data.config?.api_server?.enabled === true) {
     requireSensitiveEnv("API_SERVER_KEY", "config.api_server.enabled");
   }
+
+  data.env?.forEach((v, i) => {
+    if (v.value === ENV_PLACEHOLDER_SENTINEL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          `Env var "${v.name}" still has the placeholder value ` +
+          `"${ENV_PLACEHOLDER_SENTINEL}" — replace it with a real value.`,
+        path: ["env", i, "value"],
+      });
+    }
+  });
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
