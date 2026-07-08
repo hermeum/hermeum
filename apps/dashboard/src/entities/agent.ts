@@ -5,22 +5,27 @@ import { EnvVarSchema } from "./shared-env-set";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
-// Placeholder for generated sensitive env values the user must fill in.
-// Distinct from ENV_SECRET_SENTINEL, which the kubernetes client interprets
-// as "reuse the value already stored in the Secret".
 export const ENV_PLACEHOLDER_SENTINEL = "<fill-me>";
 
 export const AgentEnvVarSchema = EnvVarSchema.extend({
   value: z.string().describe(
-    `Env var value. Sensitive values must use the literal placeholder "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess a real secret value. If an existing definition shows a sensitive value as "${ENV_SECRET_SENTINEL}", that's a stored secret — keep it as the literal "${ENV_SECRET_SENTINEL}" when revising, don't replace or guess its value.
+    `An environment variable value.
+
+# Placeholders
+- "${ENV_PLACEHOLDER_SENTINEL}": A placeholder for a value that needs to be filled in by the user.
+- "${ENV_SECRET_SENTINEL}": A sentinel value indicating an existing secret. \
+It will be replaced with the actual secret value when the agent is deployed, \
+but should not be used in new definitions.
 
 Example:
   name: OPENAI_API_KEY
-  value: "${ENV_PLACEHOLDER_SENTINEL}"
+  value: "sk-proj-XXXXX"
   sensitive: true`
   ),
   sensitive: z.boolean().optional().describe("Mark true for credentials (API keys, tokens)."),
-});
+}).describe(
+  "An agent environment variable."
+);
 
 export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
 
@@ -28,13 +33,9 @@ export const EnvSchema = z
   .array(AgentEnvVarSchema)
   .max(20)
   .optional()
-  .describe("Environment variables the agent needs. Credentials must be marked sensitive.");
+  .describe("Environment variables the agent needs.");
 
 export type Env = z.infer<typeof EnvSchema>;
-
-export const WorkspaceFilesSchema = z.record(z.string(), z.string()).optional();
-
-export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
 
 export const SkillSchema = z
   .string()
