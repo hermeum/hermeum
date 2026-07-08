@@ -157,7 +157,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
           <DialogDescription>Start from a template or describe what you need.</DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto space-y-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto space-y-4">
           {/* Starting point section */}
           <Collapsible open={quickStartOpen} onOpenChange={setQuickStartOpen}>
             <CollapsibleTrigger>

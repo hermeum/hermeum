@@ -87,7 +87,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto space-y-2">
           <CodeEditor
             value={editorValue}
             onChange={setEditorValue}
