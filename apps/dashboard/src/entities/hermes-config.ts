@@ -6,7 +6,6 @@ import { z } from "zod";
 
 // Model
 // https://hermes-agent.nousresearch.com/docs/integrations/providers
-//
 export const ModelProviderSchema = z
   .union([
     z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
@@ -49,7 +48,6 @@ export type Model = z.infer<typeof ModelSchema>;
 
 // Webhook
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
-//
 export const WebhookDeliverSchema = z
   .enum([
     "log",
@@ -82,7 +80,7 @@ export const DeliverExtraSchema = z
       .optional()
       .describe(
         "Destination chat/channel id for chat-based deliver targets. If omitted, the" +
-"response is sent to that platform's configured home channel."
+          "response is sent to that platform's configured home channel."
       ),
     repo: z
       .string()
@@ -153,11 +151,12 @@ If omitted, the entire payload is dumped into the prompt (same as {__raw__} alon
       ),
   })
   .describe(
-    `A named webhook route that maps incoming events to an agent run or delivery. The route's key becomes part of the webhook URL path. 
+    `A named webhook route that maps incoming events to an agent run or delivery. \
+The route's key becomes part of the webhook URL path. 
 
 Example — "review GitHub pull requests":
   github-pr-review:
-    events: ["pull_request"]
+    events: [pull_request]
     prompt: |
       Review this pull request:
       Repository: {repository.full_name}
@@ -198,7 +197,10 @@ export const WebhookSchema = z
       .optional()
       .describe("Webhook server settings."),
   })
-  .describe("Webhook messaging platform configuration.");
+  .describe(
+    `Webhook messaging platform configuration. \
+Note that setting enabled: true requires a sensitive WEBHOOK_SECRET env var.`
+  );
 
 export type Webhook = z.infer<typeof WebhookSchema>;
 
@@ -210,6 +212,9 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
+// API server
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
+//
 // The Hermes agent has no api_server section in config.yaml (the API server is
 // configured via env vars upstream), so this field is never written to the raw
 // agent config. It maps to the HermesAgent CR's config.apiServer field, which the
@@ -240,12 +245,12 @@ export const ApiServerSchema = z
       ),
   })
   .describe(
-    `API server configuration.
-Setting enabled: true requires a sensitive API_SERVER_KEY env var — it's the bearer token clients use to call the server.
+    `API server configuration. \
+Note that setting enabled: true requires a sensitive API_SERVER_KEY env var — \
+it's the bearer token clients use to call the server.
 
 Example — expose the agent over HTTP for a browser client:
   enabled: true
-  port: 8642
   cors_origins: [https://app.example.com]`
   );
 
