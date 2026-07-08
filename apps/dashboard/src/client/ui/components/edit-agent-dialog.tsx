@@ -4,7 +4,7 @@ import { stringify, parse } from "yaml";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent } from "@/entities";
-import { AgentInputSchema } from "@/entities";
+import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 import { Button } from "@hermeum/components/ui/button";
 import {
@@ -24,7 +24,7 @@ interface EditInstanceDialogProps {
 }
 
 function agentToYaml(agent: Agent): string {
-  return stringify(AgentInputSchema.parse(agent)).trim();
+  return stringify(AgentInputObjectSchema.parse(agent)).trim();
 }
 
 export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanceDialogProps) {

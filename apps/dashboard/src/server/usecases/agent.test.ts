@@ -460,7 +460,9 @@ describe("AgentUseCase generated env scrubbing", () => {
     const result = await useCase.generateAgentInput(makeCtx(), "prompt");
 
     expect(result.env).toEqual([{ name: "WEBHOOK_SECRET", value: "<fill-me>", sensitive: true }]);
-    expect(AgentInputSchema.safeParse(result).success).toBe(true);
+    // The prefill still needs a real secret before it can be created — AgentInputSchema
+    // rejects the unfilled placeholder.
+    expect(AgentInputSchema.safeParse(result).success).toBe(false);
   });
 
   it("appends a sensitive API_SERVER_KEY when the api server is enabled but missing", async () => {
@@ -472,7 +474,9 @@ describe("AgentUseCase generated env scrubbing", () => {
     const result = await useCase.generateAgentInput(makeCtx(), "prompt");
 
     expect(result.env).toEqual([{ name: "API_SERVER_KEY", value: "<fill-me>", sensitive: true }]);
-    expect(AgentInputSchema.safeParse(result).success).toBe(true);
+    // The prefill still needs a real secret before it can be created — AgentInputSchema
+    // rejects the unfilled placeholder.
+    expect(AgentInputSchema.safeParse(result).success).toBe(false);
   });
 
   it("does not duplicate WEBHOOK_SECRET when already present", async () => {
