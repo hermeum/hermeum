@@ -20,6 +20,7 @@ import {
 import { AiSdkGenerator } from "../infras/ai-sdk";
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-hermeum-config";
+import { AGENT_INPUT_SYSTEM_PROMPT } from "./agent-prompt";
 import { AiGenerator } from "./adaptors/generator";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
@@ -31,22 +32,6 @@ export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
 export const PromptSchema = z.string().min(1).max(4000);
 export type Prompt = z.infer<typeof PromptSchema>;
-
-// Field semantics live in the output schema's .describe() texts; this prompt
-// only carries the task framing and cross-field rules.
-export const AGENT_INPUT_SYSTEM_PROMPT = `You generate Hermes agent definitions — a JSON
-object that prefills the form for an autonomous Hermes agent deployed to
-Kubernetes. Field semantics are defined by the output schema.
-
-Rules:
-- Credentials in env must have sensitive: true and the literal value
-  "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess secret values.
-- When config.platforms.webhook.enabled is true, env MUST include a sensitive
-  WEBHOOK_SECRET; when config.api_server.enabled is true, a sensitive
-  API_SERVER_KEY (both with value "${ENV_PLACEHOLDER_SENTINEL}").
-- Sensitive values shown as "${ENV_SECRET_SENTINEL}" in an existing definition are stored
-  secrets — keep them as the literal "${ENV_SECRET_SENTINEL}" when revising.
-- Only enable features the request calls for. Prefer minimal, valid output.`;
 
 export class AgentUseCase {
   constructor(

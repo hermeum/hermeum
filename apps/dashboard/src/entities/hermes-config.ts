@@ -32,11 +32,7 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
-  .describe(
-    "LLM model configuration for the agent. Credentials must be set as an " +
-      "environment variable depending on provider, e.g. OPENAI_API_KEY is " +
-      'required when provider is "openai-api".'
-  );
+  .describe("LLM model configuration for the agent.");
 
 export type Model = z.infer<typeof ModelSchema>;
 
@@ -55,21 +51,15 @@ export const WebhookRouteSchema = z
       .array(z.string())
       .optional()
       .describe(
-        'Event types this route accepts, e.g. ["pull_request"]. Omit or leave empty to accept all events.'
-      ),
-    secret: z
-      .string()
-      .optional()
-      .describe(
-        "HMAC secret to validate webhook senders. Omit to fall back to the auto-generated " +
-          "WEBHOOK_SECRET environment variable, which is already injected into the agent."
+        "Event types this route accepts. If empty, all events are accepted." +
+          "Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload."
       ),
     prompt: z
       .string()
       .optional()
       .describe(
-        "Prompt template for the agent. Supports {dot.notation} access to payload fields " +
-          'and {__raw__} for the whole payload as JSON, e.g. "PR #{number}: {pull_request.title}".'
+        "Template string with dot-notation payload access (e.g. {pull_request.title})." +
+          "If omitted, the full JSON payload is dumped into the prompt."
       ),
     skills: z
       .array(z.string())
@@ -120,10 +110,7 @@ export const WebhookSchema = z
       .optional()
       .describe("Webhook server settings."),
   })
-  .describe(
-    "Webhook messaging platform configuration. Requires the WEBHOOK_SECRET environment " +
-      "variable to be set when enabled=true."
-  );
+  .describe("Webhook messaging platform configuration.");
 
 export type Webhook = z.infer<typeof WebhookSchema>;
 
@@ -164,10 +151,7 @@ export const ApiServerSchema = z
           "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
       ),
   })
-  .describe(
-    "API server configuration. Requires the API_SERVER_KEY environment variable " +
-      "(the bearer auth token, marked sensitive) to be set when enabled=true."
-  );
+  .describe("API server configuration.");
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
 
