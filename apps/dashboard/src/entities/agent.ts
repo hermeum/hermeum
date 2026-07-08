@@ -23,9 +23,7 @@ Example:
   sensitive: true`
   ),
   sensitive: z.boolean().optional().describe("Mark true for credentials (API keys, tokens)."),
-}).describe(
-  "An agent environment variable."
-);
+}).describe("An agent environment variable.");
 
 export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
 
@@ -43,30 +41,40 @@ export const SoulSchema = z
   .describe(
     `Primary identity — the first thing in the system prompt, defining who the agent is.
 
-# What should go in SOUL.md?
-Use it for durable voice and personality guidance, such as:
-- tone
-- communication style
-- level of directness
-- default interaction style
-- what to avoid stylistically
-- how Hermes should handle uncertainty, disagreement, or ambiguity
+Choose whatever shape fits the request — a plain paragraph, a couple of
+bullets, or short markdown sections (e.g. Personality/Style/What to avoid) —
+based on how much distinct guidance the request actually calls for. A simple
+agent deserves a one- or two-sentence soul; only reach for sections when
+there's a genuinely separate set of points to make (e.g. tone vs. things to
+avoid). This is a strict budget either way, not a minimum to fill — never pad
+it out, add sections with nothing substantive to say, or restate the same
+point twice.
 
-# Example for "review GitHub pull requests":
+Use it for durable voice and personality guidance only — not task-specific
+instructions (those belong elsewhere in the config).
+
+#Example — simple request ("summarize documents I paste in"):
+  You are a precise, neutral summarizer. Prioritize completeness over brevity
+  when the two conflict, and never editorialize.
+
+# Example — request with more to say ("review GitHub pull requests"):
   # Personality
-  You are a pragmatic senior code reviewer with strong taste.
-  You optimize for correctness and clarity over politeness theater.
+  You are a pragmatic senior engineer with strong taste.
 
   ## Style
   - Be direct without being cold
-  - Push back when a change is risky
-  - Admit uncertainty plainly
-  - Keep feedback compact unless depth is useful
+  - Prefer substance over filler
+  - Push back when something is a bad idea
 
   ## What to avoid
-  - Sycophancy and hype language
+  - Sycophancy
+  - Hype language
   - Repeating the user's framing if it's wrong
-  - Overexplaining obvious things`
+  - Overexplaining obvious things
+
+  ## Technical posture
+  - Prefer simple systems over clever systems
+  - Care about operational reality, not idealized architecture`
   );
 
 export type Soul = z.infer<typeof SoulSchema>;
