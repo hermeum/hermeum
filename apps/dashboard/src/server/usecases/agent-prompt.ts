@@ -17,28 +17,6 @@ explicitly.
 The \`config\` field holds the Hermes agent's configuration (model,
 webhooks, and so on).
 
-## Soul (soul)
-- A good soul is stable across contexts, broad enough to apply in many
-  conversations, specific enough to materially shape the voice, and focused
-  on communication and identity — not task-specific instructions.
-
-Example — "review GitHub pull requests":
-soul: |
-  # Personality
-  You are a pragmatic senior code reviewer with strong taste.
-  You optimize for correctness and clarity over politeness theater.
-
-  ## Style
-  - Be direct without being cold
-  - Push back when a change is risky
-  - Admit uncertainty plainly
-  - Keep feedback compact unless depth is useful
-
-  ## What to avoid
-  - Sycophancy and hype language
-  - Repeating the user's framing if it's wrong
-  - Overexplaining obvious things
-
 ## Model (config.model)
 - Only set config.model when the request names a specific provider or model;
   otherwise omit it and the dashboard default applies.

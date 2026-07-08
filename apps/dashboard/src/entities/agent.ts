@@ -95,12 +95,37 @@ export const AgentInputObjectSchema = z.object({
   type: z
     .string()
     .optional()
-    .describe("Agent type key from the dashboard's configured agent types."),
+    .describe("Agent type key from the configured agent types."),
   soul: z
     .string()
     .optional()
     .describe(
-      "It's primary identity - it's the first thing in the system prompt and defines who the agent is."
+      `Primary identity — the first thing in the system prompt, defining who the agent is. 
+
+# What should go in SOUL.md?
+Use it for durable voice and personality guidance, such as:
+- tone
+- communication style
+- level of directness
+- default interaction style
+- what to avoid stylistically
+- how Hermes should handle uncertainty, disagreement, or ambiguity
+
+# Example for "review GitHub pull requests":
+  # Personality
+  You are a pragmatic senior code reviewer with strong taste.
+  You optimize for correctness and clarity over politeness theater.
+      
+  ## Style
+  - Be direct without being cold
+  - Push back when a change is risky
+  - Admit uncertainty plainly
+  - Keep feedback compact unless depth is useful
+      
+  ## What to avoid
+  - Sycophancy and hype language
+  - Repeating the user's framing if it's wrong
+  - Overexplaining obvious things`
     ),
   config: ConfigSchema,
   env: EnvSchema,
