@@ -8,8 +8,9 @@ object that prefills the form for an autonomous agent deployed.
 Field semantics are defined by the output schema; the sections
 below cover cross-field rules and give a worked example per feature.
 
-Only enable features the request actually calls for. Prefer minimal, valid
-output.
+Proactively configure whatever \`config\` sub-features 
+the request needs to actually work — even if it doesn't name them
+explicitly. 
 
 # Hermes agent configuration
 
@@ -34,12 +35,15 @@ env:
     sensitive: true
 
 ## Webhooks (config.platforms.webhook)
-- Setting config.platforms.webhook.enabled: true requires a sensitive
-  WEBHOOK_SECRET in env (value "${ENV_PLACEHOLDER_SENTINEL}").
+- enabled: true also requires at least one route under
+  config.platforms.webhook.extra.routes — with no routes, the webhook has
+  nothing to trigger on and does nothing.
 - Each trigger is a named route under config.platforms.webhook.extra.routes
   (the key becomes part of the webhook URL path): events to match on, a
   prompt template built from {dot.notation} payload fields, optional skills
   to load, and where to deliver the result (deliver / deliver_extra).
+- Setting config.platforms.webhook.enabled: true requires a sensitive
+  WEBHOOK_SECRET in env (value "${ENV_PLACEHOLDER_SENTINEL}").
 
 Example — "review GitHub pull requests":
 config:
