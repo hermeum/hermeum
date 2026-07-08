@@ -7,16 +7,51 @@ import { z } from "zod";
 // Model
 // https://hermes-agent.nousresearch.com/docs/integrations/providers
 export const ModelProviderSchema = z
-  .union([
-    z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
-    z.string(),
+  .enum([
+    "nous",
+    "openai-codex",
+    "copilot",
+    "copilot-acp",
+    "anthropic",
+    "openrouter",
+    "novita",
+    "zai",
+    "kimi-coding",
+    "kimi-coding-cn",
+    "arcee",
+    "gmi",
+    "minimax",
+    "minimax-cn",
+    "xai",
+    "xai-oauth",
+    "alibaba",
+    "alibaba-coding-plan",
+    "kilocode",
+    "xiaomi",
+    "tencent-tokenhub",
+    "opencode-zen",
+    "opencode-go",
+    "deepseek",
+    "huggingface",
+    "gemini",
+    "vertex",
+    "openai-api",
+    "azure-foundry",
+    "bedrock",
+    "nvidia",
+    "ollama-cloud",
+    "qwen-oauth",
+    "minimax-oauth",
+    "stepfun",
+    "lmstudio",
+    "custom",
   ])
   .describe("LLM provider that serves the model.");
 
 export type ModelProvider = z.infer<typeof ModelProviderSchema>;
 
 export const ModelSchema = z
-  .object({
+  .looseObject({
     provider: ModelProviderSchema,
     default: z
       .string()
@@ -71,10 +106,14 @@ export const WebhookDeliverSchema = z
   ])
   .optional()
   .describe(
-    `Destination for the response. Defaults to "log".
+    `Where to send the response.
 
-- github_comment: posts the response as a PR/issue comment via the gh CLI — requires \
-deliver_extra.repo and deliver_extra.pr_number.`
+- log: writes the response to the gateway log only. Use only when the request \
+has no delivery target (e.g. internal monitoring/testing).
+- github_comment: posts the response as a PR/issue comment via the gh CLI — \
+requires deliver_extra.repo and deliver_extra.pr_number.
+- Any other value: routes the response to that chat platform's home channel, \
+or a specific chat via deliver_extra.chat_id.`
   );
 
 export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
