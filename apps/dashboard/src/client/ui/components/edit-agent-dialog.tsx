@@ -78,7 +78,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex flex-col sm:max-w-xl max-h-[min(600px,calc(100dvh-4rem))]">
+      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[min(600px,calc(100dvh-4rem))]">
         <DialogHeader>
           <DialogTitle>Edit agent</DialogTitle>
           <DialogDescription>
