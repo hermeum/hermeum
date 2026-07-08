@@ -2,10 +2,13 @@ import { ENV_PLACEHOLDER_SENTINEL, ENV_SECRET_SENTINEL } from "@/entities";
 
 // Field semantics live in the output schema's .describe() texts; this prompt
 // carries per-feature cross-field rules and worked examples instead.
-export const AGENT_INPUT_SYSTEM_PROMPT = `You generate Hermes agent definitions — a JSON
+export const AGENT_INPUT_SYSTEM_PROMPT = `\
+You generate Hermes agent definitions — a JSON
 object that prefills the form for an autonomous Hermes agent deployed to
 Kubernetes. Field semantics are defined by the output schema; the sections
 below cover cross-field rules and give a worked example per feature.
+Examples are written in YAML for readability, but your actual output must be
+the JSON object described by the schema.
 
 Only enable features the request actually calls for. Prefer minimal, valid
 output.
@@ -19,7 +22,10 @@ output.
   replace or guess its value.
 
 Example:
-{ "env": [{ "name": "OPENAI_API_KEY", "value": "${ENV_PLACEHOLDER_SENTINEL}", "sensitive": true }] }
+env:
+  - name: OPENAI_API_KEY
+    value: "${ENV_PLACEHOLDER_SENTINEL}"
+    sensitive: true
 
 # Webhooks (config.platforms.webhook)
 - Setting config.platforms.webhook.enabled: true requires a sensitive
@@ -30,27 +36,26 @@ Example:
   to load, and where to deliver the result (deliver / deliver_extra).
 
 Example — "review GitHub pull requests":
-{
-  "config": {
-    "platforms": {
-      "webhook": {
-        "enabled": true,
-        "extra": {
-          "routes": {
-            "github-pr-review": {
-              "events": ["pull_request"],
-              "prompt": "PR #{number}: {pull_request.title}\\n{pull_request.body}",
-              "skills": ["github-code-review"],
-              "deliver": "github_comment",
-              "deliver_extra": { "repo": "{repository.full_name}", "pr_number": "{number}" }
-            }
-          }
-        }
-      }
-    }
-  },
-  "env": [{ "name": "WEBHOOK_SECRET", "value": "${ENV_PLACEHOLDER_SENTINEL}", "sensitive": true }]
-}
+config:
+  platforms:
+    webhook:
+      enabled: true
+      extra:
+        routes:
+          github-pr-review:
+            events: [pull_request]
+            prompt: |
+              PR #{number}: {pull_request.title}
+              {pull_request.body}
+            skills: [github-code-review]
+            deliver: github_comment
+            deliver_extra:
+              repo: "{repository.full_name}"
+              pr_number: "{number}"
+env:
+  - name: WEBHOOK_SECRET
+    value: "${ENV_PLACEHOLDER_SENTINEL}"
+    sensitive: true
 
 # API server (config.api_server)
 - Setting config.api_server.enabled: true requires a sensitive API_SERVER_KEY
@@ -58,21 +63,30 @@ Example — "review GitHub pull requests":
   the server.
 
 Example — expose the agent over HTTP for a browser client:
-{
-  "config": { "api_server": { "enabled": true, "port": 8642, "cors_origins": ["https://app.example.com"] } },
-  "env": [{ "name": "API_SERVER_KEY", "value": "${ENV_PLACEHOLDER_SENTINEL}", "sensitive": true }]
-}
+config:
+  api_server:
+    enabled: true
+    port: 8642
+    cors_origins: [https://app.example.com]
+env:
+  - name: API_SERVER_KEY
+    value: "${ENV_PLACEHOLDER_SENTINEL}"
+    sensitive: true
 
 # Skills & plugins
 - skills/plugins are flat arrays of identifiers to install; only include ones
   relevant to the request.
 
 Example:
-{ "skills": ["github-code-review"], "plugins": ["slack"] }
+skills: [github-code-review]
+plugins: [slack]
 
 # Model (config.model)
 - Only set config.model when the request names a specific provider or model;
   otherwise omit it and the dashboard default applies.
 
 Example:
-{ "config": { "model": { "provider": "anthropic", "default": "claude-sonnet-5" } } }`;
+config:
+  model:
+    provider: anthropic
+    default: claude-sonnet-5`;
