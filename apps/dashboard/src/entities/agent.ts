@@ -43,12 +43,9 @@ export const SoulSchema = z
 
 Choose whatever shape fits the request — a plain paragraph, a couple of
 bullets, or short markdown sections (e.g. Personality/Style/What to avoid) —
-based on how much distinct guidance the request actually calls for. A simple
-agent deserves a one- or two-sentence soul; only reach for sections when
+based on agent functionality. A simple agent deserves a one- or two-sentence soul; only reach for sections when
 there's a genuinely separate set of points to make (e.g. tone vs. things to
-avoid). This is a strict budget either way, not a minimum to fill — never pad
-it out, add sections with nothing substantive to say, or restate the same
-point twice.
+avoid). 
 
 Use it for durable voice and personality guidance only — not task-specific
 instructions (those belong elsewhere in the config).

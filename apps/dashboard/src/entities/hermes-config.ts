@@ -16,7 +16,7 @@ export const ModelProviderSchema = z
 export type ModelProvider = z.infer<typeof ModelProviderSchema>;
 
 export const ModelSchema = z
-  .looseObject({
+  .object({
     provider: ModelProviderSchema,
     default: z
       .string()
@@ -69,12 +69,18 @@ export const WebhookDeliverSchema = z
     "bluebubbles",
     "qqbot",
   ])
-  .describe('Destination for the response. Defaults to "log".');
+  .optional()
+  .describe(
+    `Destination for the response. Defaults to "log".
+
+- github_comment: posts the response as a PR/issue comment via the gh CLI — requires \
+deliver_extra.repo and deliver_extra.pr_number.`
+  );
 
 export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
 
 export const DeliverExtraSchema = z
-  .looseObject({
+  .object({
     chat_id: z
       .string()
       .optional()
@@ -93,6 +99,7 @@ export const DeliverExtraSchema = z
         "Pull request / issue number to comment on. Required when deliver: github_comment."
       ),
   })
+  .optional()
   .describe(
     `Platform-specific delivery options; values support {dot.notation} templates.
 
@@ -106,7 +113,7 @@ Example: { repo: "{repository.full_name}", pr_number: "{number}" }`
 export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 
 export const WebhookRouteSchema = z
-  .looseObject({
+  .object({
     events: z
       .array(z.string())
       .optional()
@@ -140,8 +147,8 @@ If omitted, the entire payload is dumped into the prompt (same as {__raw__} alon
       .array(z.string())
       .optional()
       .describe("Skill names to load for agent runs triggered by this route."),
-    deliver: WebhookDeliverSchema.optional(),
-    deliver_extra: DeliverExtraSchema.optional(),
+    deliver: WebhookDeliverSchema,
+    deliver_extra: DeliverExtraSchema,
     deliver_only: z
       .boolean()
       .optional()
@@ -173,10 +180,10 @@ Example — "review GitHub pull requests":
 export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
-  .looseObject({
+  .object({
     enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
-      .looseObject({
+      .object({
         port: z
           .number()
           .int()
@@ -192,7 +199,10 @@ export const WebhookSchema = z
         routes: z
           .record(z.string(), WebhookRouteSchema)
           .optional()
-          .describe("Named webhook routes, keyed by route name (used in the webhook URL path)."),
+          .describe(
+            "Named webhook routes, keyed by route name (used in the webhook URL path). " +
+              '"-" is preferred over "_" for the route name, e.g. "github-pr-review".'
+          ),
       })
       .optional()
       .describe("Webhook server settings."),
@@ -220,7 +230,7 @@ export type Platforms = z.infer<typeof PlatformsSchema>;
 // agent config. It maps to the HermesAgent CR's config.apiServer field, which the
 // operator turns into API_SERVER_* environment variables.
 export const ApiServerSchema = z
-  .looseObject({
+  .object({
     enabled: z
       .boolean()
       .optional()

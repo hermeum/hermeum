@@ -37,9 +37,7 @@ placeholder-sounding content:
   not a generic template.
 - \`soul\` should be written for this agent's actual job and tone, using the
   request's own domain language where possible — not a reused boilerplate
-  personality. Pick whatever shape (paragraph, bullets, or short sections)
-  matches how much the request actually calls for, and stay within the
-  schema's strict length budget either way — don't pad it out.
+  personality.
 - Only set \`config\` sub-features (model, webhooks, api_server) that the
   request actually needs to work. Infer the ones required to fulfill the
   request even if unstated (e.g. "on every new GitHub issue" implies a
@@ -47,8 +45,6 @@ placeholder-sounding content:
 - Webhook routes, prompts, and skills should be built from what the request
   says triggers the agent and what it should do — not copied from an
   unrelated example.
-- Never invent a field or property name that isn't explicitly defined in the
-  schema, even one that seems plausible but you must only ever set documented ones.
 - When the request is ambiguous or gives no basis for a field, omit that
   field rather than guessing or inventing detail that wasn't asked for.`;
 
