@@ -32,11 +32,7 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
-  .describe(
-    "LLM model configuration for the agent. Credentials must be set as an " +
-      "environment variable depending on provider, e.g. OPENAI_API_KEY is " +
-      'required when provider is "openai-api".'
-  );
+  .describe("LLM model configuration for the agent.");
 
 export type Model = z.infer<typeof ModelSchema>;
 
@@ -120,10 +116,7 @@ export const WebhookSchema = z
       .optional()
       .describe("Webhook server settings."),
   })
-  .describe(
-    "Webhook messaging platform configuration. Requires the WEBHOOK_SECRET environment " +
-      "variable to be set when enabled=true."
-  );
+  .describe("Webhook messaging platform configuration.");
 
 export type Webhook = z.infer<typeof WebhookSchema>;
 
@@ -164,10 +157,7 @@ export const ApiServerSchema = z
           "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
       ),
   })
-  .describe(
-    "API server configuration. Requires the API_SERVER_KEY environment variable " +
-      "(the bearer auth token, marked sensitive) to be set when enabled=true."
-  );
+  .describe("API server configuration.");
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
 

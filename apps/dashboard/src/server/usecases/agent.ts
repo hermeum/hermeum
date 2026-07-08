@@ -44,6 +44,14 @@ Rules:
 - When config.platforms.webhook.enabled is true, env MUST include a sensitive
   WEBHOOK_SECRET; when config.api_server.enabled is true, a sensitive
   API_SERVER_KEY (both with value "${ENV_PLACEHOLDER_SENTINEL}").
+- For webhook-triggered agents, add a named route under
+  config.platforms.webhook.extra.routes (the key becomes part of the webhook
+  URL path). E.g. for a GitHub PR review agent: events: ["pull_request"],
+  prompt built from {dot.notation} payload fields (e.g. "PR #{number}:
+  {pull_request.title}"), skills naming a relevant code-review skill,
+  deliver: "github_comment", and deliver_extra: { repo:
+  "{repository.full_name}", pr_number: "{number}" } so the review posts back
+  to the PR.
 - Sensitive values shown as "${ENV_SECRET_SENTINEL}" in an existing definition are stored
   secrets — keep them as the literal "${ENV_SECRET_SENTINEL}" when revising.
 - Only enable features the request calls for. Prefer minimal, valid output.`;
