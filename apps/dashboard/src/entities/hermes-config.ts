@@ -51,14 +51,14 @@ export const WebhookRouteSchema = z
       .array(z.string())
       .optional()
       .describe(
-        'Event types this route accepts. If empty, all events are accepted.' + 
-          'Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload.'
+        "Event types this route accepts. If empty, all events are accepted." +
+          "Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload."
       ),
     prompt: z
       .string()
       .optional()
       .describe(
-        "Template string with dot-notation payload access (e.g. {pull_request.title})." + 
+        "Template string with dot-notation payload access (e.g. {pull_request.title})." +
           "If omitted, the full JSON payload is dumped into the prompt."
       ),
     skills: z

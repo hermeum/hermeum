@@ -1,4 +1,4 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { anthropic, createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createProviderRegistry, generateText, NoObjectGeneratedError, Output } from "ai";
 
@@ -31,13 +31,18 @@ export class AiSdkGenerator implements AiGenerator {
 
   async generateAgentInput(input: { system: string; prompt: string }): Promise<AgentInput> {
     try {
-      // Do not enable providerOptions.openai.strictJsonSchema — the schema
-      // uses looseObject/record/optionals, which strict mode rejects.
+      // Explicitly disable strict JSON schema mode — the schema uses
+      // looseObject/record/optionals, which strict mode rejects. Chat
+      // Completions models default this to false, but Responses API models
+      // (e.g. gpt-5.5) default it to true, so it must be set here.
       const result = await generateText({
         model: this.model(),
         system: input.system,
         prompt: input.prompt,
         output: Output.object({ schema: AgentInputObjectSchema }),
+        providerOptions: {
+          openai: { strictJsonSchema: false },
+        },
       });
       return result.output;
     } catch (e) {
