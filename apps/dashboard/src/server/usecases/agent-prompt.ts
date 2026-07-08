@@ -35,9 +35,6 @@ env:
     sensitive: true
 
 ## Webhooks (config.platforms.webhook)
-- enabled: true also requires at least one route under
-  config.platforms.webhook.extra.routes — with no routes, the webhook has
-  nothing to trigger on and does nothing.
 - Each trigger is a named route under config.platforms.webhook.extra.routes
   (the key becomes part of the webhook URL path): events to match on, a
   prompt template built from {dot.notation} payload fields, optional skills
