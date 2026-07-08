@@ -4,6 +4,9 @@
 
 import { z } from "zod";
 
+// Model
+// https://hermes-agent.nousresearch.com/docs/integrations/providers
+//
 export const ModelProviderSchema = z
   .union([
     z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
@@ -44,14 +47,65 @@ Example:
 
 export type Model = z.infer<typeof ModelSchema>;
 
+// Webhook
+// https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
+//
 export const WebhookDeliverSchema = z
-  .union([z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]), z.string()])
-  .describe(
-    "Destination for the response. Common targets are enumerated; other platform names " +
-      '(e.g. "signal", "matrix", "whatsapp") are also accepted. Defaults to "log".'
-  );
+  .enum([
+    "log",
+    "github_comment",
+    "telegram",
+    "discord",
+    "slack",
+    "signal",
+    "sms",
+    "whatsapp",
+    "matrix",
+    "mattermost",
+    "homeassistant",
+    "email",
+    "dingtalk",
+    "feishu",
+    "wecom",
+    "weixin",
+    "bluebubbles",
+    "qqbot",
+  ])
+  .describe('Destination for the response. Defaults to "log".');
 
 export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
+
+export const DeliverExtraSchema = z
+  .looseObject({
+    chat_id: z
+      .string()
+      .optional()
+      .describe(
+        "Destination chat/channel id for chat-based deliver targets. If omitted, the" +
+"response is sent to that platform's configured home channel."
+      ),
+    repo: z
+      .string()
+      .optional()
+      .describe('Repository in "owner/repo" form. Required when deliver: github_comment.'),
+    pr_number: z
+      .string()
+      .optional()
+      .describe(
+        "Pull request / issue number to comment on. Required when deliver: github_comment."
+      ),
+  })
+  .describe(
+    `Platform-specific delivery options; values support {dot.notation} templates.
+
+- deliver: github_comment — requires repo and pr_number. Posts the response as a PR/issue \
+comment via the gh CLI, which must be installed and authenticated on the gateway host.
+- All other chat-based targets use the platform's configured home channel, or set chat_id to target a specific chat.
+
+Example: { repo: "{repository.full_name}", pr_number: "{number}" }`
+  );
+
+export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 
 export const WebhookRouteSchema = z
   .looseObject({
@@ -59,28 +113,37 @@ export const WebhookRouteSchema = z
       .array(z.string())
       .optional()
       .describe(
-        "Event types this route accepts. If empty, all events are accepted." +
-          "Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload."
+        `Event types this route accepts.
+
+In most cases you don't need to set this — omit it (or leave it empty) to accept \
+all events, which is fine for most routes. Only set it when the route should filter \
+to specific event types.
+
+- Source: read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload.
+- Example: ["pull_request"] to react only to PR events.`
       ),
     prompt: z
       .string()
       .optional()
       .describe(
-        "Template string with dot-notation payload access (e.g. {pull_request.title})." +
-          "If omitted, the full JSON payload is dumped into the prompt."
+        `Template string built from the webhook payload using dot-notation.
+
+- {pull_request.title} resolves to payload["pull_request"]["title"]
+- {repository.full_name} resolves to payload["repository"]["full_name"]
+
+Don't guess at dot-notation paths for a payload shape you don't actually know — \
+if you're unsure what the payload looks like, use {__raw__} instead, a special \
+token that dumps the entire payload as indented JSON. \
+Useful for monitoring alerts or generic webhooks where the agent needs the full context.
+
+If omitted, the entire payload is dumped into the prompt (same as {__raw__} alone).`
       ),
     skills: z
       .array(z.string())
       .optional()
       .describe("Skill names to load for agent runs triggered by this route."),
     deliver: WebhookDeliverSchema.optional(),
-    deliver_extra: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe(
-        "Platform-specific delivery options; values support {dot.notation} templates, " +
-          'e.g. { repo: "{repository.full_name}", pr_number: "{number}" }.'
-      ),
+    deliver_extra: DeliverExtraSchema.optional(),
     deliver_only: z
       .boolean()
       .optional()
@@ -90,33 +153,29 @@ export const WebhookRouteSchema = z
       ),
   })
   .describe(
-    `A named webhook route that maps incoming events to an agent run or delivery. The route's key (under config.platforms.webhook.extra.routes) becomes part of the webhook URL path. Example — "review GitHub pull requests":
-github-pr-review:
-  events: [pull_request]
-  prompt: |
-    Review this pull request:
-    Repository: {repository.full_name}
-    PR #{number}: {pull_request.title}
-    Diff URL: {pull_request.diff_url}
-  skills:
-    - github-code-review
-  deliver: github_comment
-  deliver_extra:
-    repo: "{repository.full_name}"
-    pr_number: "{number}"`
+    `A named webhook route that maps incoming events to an agent run or delivery. The route's key becomes part of the webhook URL path. 
+
+Example — "review GitHub pull requests":
+  github-pr-review:
+    events: ["pull_request"]
+    prompt: |
+      Review this pull request:
+      Repository: {repository.full_name}
+      PR #{number}: {pull_request.title}
+      Diff URL: {pull_request.diff_url}
+    skills:
+      - github-code-review
+    deliver: github_comment
+    deliver_extra:
+      repo: "{repository.full_name}"
+      pr_number: "{number}"`
   );
 
 export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
   .looseObject({
-    enabled: z
-      .boolean()
-      .optional()
-      .describe(
-        "Whether the webhook server is enabled. Setting this to true requires a " +
-          "sensitive WEBHOOK_SECRET env var."
-      ),
+    enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
       .looseObject({
         port: z
