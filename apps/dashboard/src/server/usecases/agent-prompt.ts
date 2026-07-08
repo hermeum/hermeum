@@ -27,10 +27,10 @@ webhooks, and so on).
 Example:
 config:
   model:
-    provider: anthropic
-    default: claude-sonnet-5
+    provider: openai-api
+    default: gpt-5.5
 env:
-  - name: ANTHROPIC_API_KEY
+  - name: OPENAI_API_KEY
     value: "${ENV_PLACEHOLDER_SENTINEL}"
     sensitive: true
 
