@@ -51,21 +51,15 @@ export const WebhookRouteSchema = z
       .array(z.string())
       .optional()
       .describe(
-        'Event types this route accepts, e.g. ["pull_request"]. Omit or leave empty to accept all events.'
-      ),
-    secret: z
-      .string()
-      .optional()
-      .describe(
-        "HMAC secret to validate webhook senders. Omit to fall back to the auto-generated " +
-          "WEBHOOK_SECRET environment variable, which is already injected into the agent."
+        'Event types this route accepts. If empty, all events are accepted.' + 
+          'Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload.'
       ),
     prompt: z
       .string()
       .optional()
       .describe(
-        "Prompt template for the agent. Supports {dot.notation} access to payload fields " +
-          'and {__raw__} for the whole payload as JSON, e.g. "PR #{number}: {pull_request.title}".'
+        "Template string with dot-notation payload access (e.g. {pull_request.title})." + 
+          "If omitted, the full JSON payload is dumped into the prompt."
       ),
     skills: z
       .array(z.string())

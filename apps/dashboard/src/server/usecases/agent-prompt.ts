@@ -14,18 +14,24 @@ output.
 # Hermes agent configuration
 
 The \`config\` field holds the Hermes agent's configuration (model,
-webhooks, and so on). Each sub-field below is optional — set only the ones
-the request calls for and leave the rest out of \`config\` entirely.
+webhooks, and so on). 
 
-## Model
+## Model (config.model)
 - Only set config.model when the request names a specific provider or model;
   otherwise omit it and the dashboard default applies.
+- Setting config.model requires a sensitive env var for the provider's API key
+  (e.g. ANTHROPIC_API_KEY for provider: anthropic, OPENAI_API_KEY for
+  provider: openai-api), value "${ENV_PLACEHOLDER_SENTINEL}".
 
 Example:
 config:
   model:
     provider: anthropic
     default: claude-sonnet-5
+env:
+  - name: ANTHROPIC_API_KEY
+    value: "${ENV_PLACEHOLDER_SENTINEL}"
+    sensitive: true
 
 ## Webhooks (config.platforms.webhook)
 - Setting config.platforms.webhook.enabled: true requires a sensitive
@@ -45,9 +51,12 @@ config:
           github-pr-review:
             events: [pull_request]
             prompt: |
+              Review this pull request:
+              Repository: {repository.full_name}
               PR #{number}: {pull_request.title}
-              {pull_request.body}
-            skills: [github-code-review]
+              Diff URL: {pull_request.diff_url}
+            skills: 
+              - github-code-review
             deliver: github_comment
             deliver_extra:
               repo: "{repository.full_name}"
@@ -84,12 +93,4 @@ Example:
 env:
   - name: OPENAI_API_KEY
     value: "${ENV_PLACEHOLDER_SENTINEL}"
-    sensitive: true
-
-# Skills & plugins
-- skills/plugins are flat arrays of identifiers to install; only include ones
-  relevant to the request.
-
-Example:
-skills: [github-code-review]
-plugins: [slack]`;
+    sensitive: true`;
