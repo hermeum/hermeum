@@ -1,17 +1,15 @@
-import { z } from "zod";
-
 // Config schema for LLM structured output: descriptions guide generation accuracy.
 // Fields not defined here are still allowed (loose objects) so users can configure
 // whatever the Hermes agent supports.
+
+import { z } from "zod";
+
 export const ModelProviderSchema = z
   .union([
     z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
     z.string(),
   ])
-  .describe(
-    "LLM provider that serves the model. Prefer one of the known providers; " +
-      "any other provider name is also accepted."
-  );
+  .describe("LLM provider that serves the model.");
 
 export type ModelProvider = z.infer<typeof ModelProviderSchema>;
 
@@ -32,7 +30,17 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
-  .describe("LLM model configuration for the agent.");
+  .describe(
+    `LLM model configuration for the agent. \
+Only set this when the request names a specific provider or model; otherwise omit it.
+
+Setting this requires an env var for the provider's API key \
+(e.g. ANTHROPIC_API_KEY for provider: anthropic, OPENAI_API_KEY for provider: openai-api).
+
+Example:
+  provider: openai-api
+  default: gpt-5.5`
+  );
 
 export type Model = z.infer<typeof ModelSchema>;
 
@@ -81,13 +89,34 @@ export const WebhookRouteSchema = z
           "Requires a real deliver target."
       ),
   })
-  .describe("A named webhook route that maps incoming events to an agent run or delivery.");
+  .describe(
+    `A named webhook route that maps incoming events to an agent run or delivery. The route's key (under config.platforms.webhook.extra.routes) becomes part of the webhook URL path. Example — "review GitHub pull requests":
+github-pr-review:
+  events: [pull_request]
+  prompt: |
+    Review this pull request:
+    Repository: {repository.full_name}
+    PR #{number}: {pull_request.title}
+    Diff URL: {pull_request.diff_url}
+  skills:
+    - github-code-review
+  deliver: github_comment
+  deliver_extra:
+    repo: "{repository.full_name}"
+    pr_number: "{number}"`
+  );
 
 export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
   .looseObject({
-    enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
+    enabled: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether the webhook server is enabled. Setting this to true requires a " +
+          "sensitive WEBHOOK_SECRET env var."
+      ),
     extra: z
       .looseObject({
         port: z
@@ -151,7 +180,15 @@ export const ApiServerSchema = z
           "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
       ),
   })
-  .describe("API server configuration.");
+  .describe(
+    `API server configuration.
+Setting enabled: true requires a sensitive API_SERVER_KEY env var — it's the bearer token clients use to call the server.
+
+Example — expose the agent over HTTP for a browser client:
+  enabled: true
+  port: 8642
+  cors_origins: [https://app.example.com]`
+  );
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
 

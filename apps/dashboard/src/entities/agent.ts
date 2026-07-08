@@ -11,12 +11,15 @@ export const ENV_SECRET_SENTINEL = "<secret>";
 export const ENV_PLACEHOLDER_SENTINEL = "<fill-me>";
 
 export const AgentEnvVarSchema = EnvVarSchema.extend({
-  sensitive: z
-    .boolean()
-    .optional()
-    .describe(
-      "Mark true for credentials (API keys, tokens)."
-    ),
+  value: z.string().describe(
+    `Env var value. Sensitive values must use the literal placeholder "${ENV_PLACEHOLDER_SENTINEL}" — never invent or guess a real secret value. If an existing definition shows a sensitive value as "${ENV_SECRET_SENTINEL}", that's a stored secret — keep it as the literal "${ENV_SECRET_SENTINEL}" when revising, don't replace or guess its value.
+
+Example:
+  name: OPENAI_API_KEY
+  value: "${ENV_PLACEHOLDER_SENTINEL}"
+  sensitive: true`
+  ),
+  sensitive: z.boolean().optional().describe("Mark true for credentials (API keys, tokens)."),
 });
 
 export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
@@ -92,10 +95,7 @@ export const AgentInputObjectSchema = z.object({
     .string()
     .optional()
     .describe("One or two sentences describing what the agent does."),
-  type: z
-    .string()
-    .optional()
-    .describe("Agent type key from the configured agent types."),
+  type: z.string().optional().describe("Agent type key from the configured agent types."),
   soul: z
     .string()
     .optional()
