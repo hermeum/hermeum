@@ -15,8 +15,7 @@ export const AgentEnvVarSchema = EnvVarSchema.extend({
     .boolean()
     .optional()
     .describe(
-      "Mark true for credentials (API keys, tokens). Sensitive values are stored " +
-        'in a managed secret and read back as the literal placeholder "<secret>".'
+      "Mark true for credentials (API keys, tokens)."
     ),
 });
 
@@ -101,8 +100,7 @@ export const AgentInputObjectSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The agent's persistent identity in markdown — persona, tone, and behavioral " +
-        "principles, not task-specific instructions."
+      "It's primary identity - it's the first thing in the system prompt and defines who the agent is."
     ),
   config: ConfigSchema,
   env: EnvSchema,
@@ -111,7 +109,7 @@ export const AgentInputObjectSchema = z.object({
   sharedEnvSets: z
     .array(z.string())
     .optional()
-    .describe("Ids of dashboard-managed shared env sets. Omit — users select these in the UI."),
+    .describe("Ids of dashboard-managed shared env sets."),
 });
 
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
