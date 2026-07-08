@@ -4,7 +4,8 @@ vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
 vi.mock("../infras/ai-sdk", () => ({ AiSdkGenerator: vi.fn() }));
 
-import { AgentUseCase, AGENT_INPUT_SYSTEM_PROMPT } from "./agent";
+import { AgentUseCase } from "./agent";
+import { AGENT_INPUT_SYSTEM_PROMPT } from "./agent-input-system-prompt";
 import type { AiGenerator } from "./adaptors/generator";
 import type { ConfigAdaptor } from "./adaptors/config";
 import type { Runtime } from "./adaptors/runtime";
