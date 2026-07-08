@@ -11,8 +11,8 @@ export const ConfigSchema = z.object({
   allowedEmailDomain: z.string().optional(),
   hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
   hermesImageTag: z.string().default("v2026.6.19"),
-  aiModel: z.string().min(1).optional(),
-  aiBaseUrl: z.url().optional(),
+  openaiModel: z.string().min(1).default("gpt-5.5"),
+  openaiBaseUrl: z.url().optional(),
 });
 
 export const config = ConfigSchema.parse({
@@ -23,6 +23,6 @@ export const config = ConfigSchema.parse({
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
-  aiModel: process.env.HERMEUM_AI_MODEL,
-  aiBaseUrl: process.env.HERMEUM_AI_BASE_URL,
+  openaiModel: process.env.HERMEUM_OPENAI_MODEL,
+  openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
 });

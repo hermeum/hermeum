@@ -12,15 +12,15 @@ export class AiSdkGenerator implements AiGenerator {
   private openai: ReturnType<typeof createOpenAI> | undefined;
 
   private model() {
-    if (!config.aiModel) {
+    if (!config.openaiModel) {
       throw new Error(
         "AI config generation is not configured: set HERMEUM_AI_MODEL to an OpenAI model id, " +
           'e.g. "gpt-5.5".'
       );
     }
-    const baseURL = config.aiBaseUrl ? { baseURL: config.aiBaseUrl } : {};
+    const baseURL = config.openaiBaseUrl ? { baseURL: config.openaiBaseUrl } : {};
     this.openai ??= createOpenAI(baseURL);
-    return this.openai(config.aiModel);
+    return this.openai(config.openaiModel);
   }
 
   async generateAgentInput(input: { system: string; prompt: string }): Promise<AgentInput> {
