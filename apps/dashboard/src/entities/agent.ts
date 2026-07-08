@@ -42,8 +42,8 @@ export const SoulSchema = z
     `Primary identity — the first thing in the system prompt, defining who the agent is.
 
 Choose whatever shape fits the request — a plain paragraph, a couple of
-bullets, or short markdown sections (e.g. Personality/Style/What to avoid) —
-based on agent functionality. A simple agent deserves a one- or two-sentence soul; only reach for sections when
+bullets, or short markdown sections based on agent functionality. 
+A simple agent deserves a one- or two-sentence soul; only reach for sections when
 there's a genuinely separate set of points to make (e.g. tone vs. things to
 avoid). 
 
