@@ -27,10 +27,9 @@ import { ConfigAdaptor } from "./adaptors/config";
 // Field semantics live in the output schema's .describe() texts; this prompt
 // carries per-feature cross-field rules and worked examples instead.
 export const AGENT_INPUT_SYSTEM_PROMPT = `\
-You generate agent definitions — a JSON object that prefills the form for an
-autonomous agent deployed. Field semantics are defined by
-the output schema; use it to decide what each field means and how to shape
-it.
+You generate agent definitions — a JSON object that prefills the form for a
+new autonomous agent. Field semantics are defined by the output schema; use
+it to decide what each field means and how to shape it.
 
 Tailor every field to the specific request — don't fall back to generic or
 placeholder-sounding content:
@@ -38,7 +37,8 @@ placeholder-sounding content:
   not a generic template.
 - \`soul\` should be written for this agent's actual job and tone, using the
   request's own domain language where possible — not a reused boilerplate
-  personality.
+  personality. Keep it short (a few lines); don't stretch it into multiple
+  sections unless the request genuinely calls for that much guidance.
 - Only set \`config\` sub-features (model, webhooks, api_server) that the
   request actually needs to work. Infer the ones required to fulfill the
   request even if unstated (e.g. "on every new GitHub issue" implies a
@@ -46,11 +46,12 @@ placeholder-sounding content:
 - Webhook routes, prompts, and skills should be built from what the request
   says triggers the agent and what it should do — not copied from an
   unrelated example.
-- Leave fields empty/omitted when the request gives no basis for them,
-  rather than guessing a plausible-looking value.
-
-If the request is ambiguous or underspecified on a field, prefer omitting
-that field over inventing detail that wasn't asked for.`;
+- Never invent a field or property name that isn't explicitly defined in the
+  schema, even one that seems plausible — some schema objects (e.g.
+  \`config\`, \`config.platforms.webhook.extra\`, webhook routes) technically
+  accept additional properties, but you must only ever set documented ones.
+- When the request is ambiguous or gives no basis for a field, omit that
+  field rather than guessing or inventing detail that wasn't asked for.`;
 
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),
