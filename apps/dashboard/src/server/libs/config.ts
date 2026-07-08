@@ -11,10 +11,7 @@ export const ConfigSchema = z.object({
   allowedEmailDomain: z.string().optional(),
   hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
   hermesImageTag: z.string().default("v2026.6.19"),
-  aiModel: z
-    .string()
-    .regex(/^[\w.-]+:.+$/, 'Expected "provider:model", e.g. "anthropic:claude-sonnet-5"')
-    .optional(),
+  aiModel: z.string().min(1).optional(),
   aiBaseUrl: z.url().optional(),
 });
 
