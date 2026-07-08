@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Document, parse, Scalar } from "yaml";
 
+import { LoaderCircle } from "lucide-react";
+
 import { cn } from "@hermeum/components/lib/utils";
 import {
   Collapsible,
@@ -69,6 +71,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   const [quickStartOpen, setQuickStartOpen] = useState(true);
   const [quickStartTab, setQuickStartTab] = useState<"describe" | "template">("describe");
   const [description, setDescription] = useState("");
+  const [selectedName, setSelectedName] = useState<string | null>(null);
 
   const { data: templates } = useQuery(trpc.template.list.queryOptions());
 
@@ -91,6 +94,8 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
         setEditorValue(stringifyAgentInput(agentInput));
         setSelectedTemplateId(null);
         setValidationError(null);
+        setSelectedName(agentInput.name ?? null);
+        setQuickStartOpen(false);
       },
       onError: (error) => {
         toast.error(error.message);
@@ -106,6 +111,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
       setQuickStartOpen(true);
       setQuickStartTab("describe");
       setDescription("");
+      setSelectedName(null);
     }
     onOpenChange(nextOpen);
   }
@@ -113,6 +119,8 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
   function handleSelectTemplate(template: Template) {
     setSelectedTemplateId(template.id);
     setEditorValue(stringifyAgentInput(template.agentInput));
+    setSelectedName(template.name);
+    setQuickStartOpen(false);
   }
 
   function handleGenerate() {
@@ -153,7 +161,14 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
           {/* Starting point section */}
           <Collapsible open={quickStartOpen} onOpenChange={setQuickStartOpen}>
             <CollapsibleTrigger>
-              <span>Quick start</span>
+              <span className="flex min-w-0 items-baseline gap-1.5">
+                <span>Quick start</span>
+                {selectedName && (
+                  <span className="truncate font-normal text-muted-foreground">
+                    · {selectedName}
+                  </span>
+                )}
+              </span>
             </CollapsibleTrigger>
             <CollapsibleContent className="pb-2">
               <Tabs
@@ -170,6 +185,12 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          handleGenerate();
+                        }
+                      }}
                       placeholder="Reviews new pull requests and leaves inline comments on risky changes."
                       className="min-h-24 border-transparent px-0 py-0 focus-visible:border-transparent"
                     />
@@ -180,6 +201,7 @@ export function CreateAgentDialog({ open, onOpenChange, onSuccess }: CreateAgent
                         onClick={handleGenerate}
                         disabled={description.trim().length === 0 || isGenerating}
                       >
+                        {isGenerating && <LoaderCircle className="animate-spin" />}
                         {isGenerating ? "Generating…" : "Generate"}
                       </Button>
                     </div>
