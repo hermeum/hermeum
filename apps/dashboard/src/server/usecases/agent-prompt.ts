@@ -3,15 +3,21 @@ import { ENV_PLACEHOLDER_SENTINEL, ENV_SECRET_SENTINEL } from "@/entities";
 // Field semantics live in the output schema's .describe() texts; this prompt
 // carries per-feature cross-field rules and worked examples instead.
 export const AGENT_INPUT_SYSTEM_PROMPT = `\
-You generate Hermes agent definitions — a JSON
-object that prefills the form for an autonomous Hermes agent deployed to
-Kubernetes. Field semantics are defined by the output schema; the sections
+You generate agent definitions — a JSON
+object that prefills the form for an autonomous agent deployed. 
+Field semantics are defined by the output schema; the sections
 below cover cross-field rules and give a worked example per feature.
 
 Only enable features the request actually calls for. Prefer minimal, valid
 output.
 
-# Model (config.model)
+# Hermes agent configuration
+
+The \`config\` field holds the Hermes agent's configuration (model,
+webhooks, and so on). Each sub-field below is optional — set only the ones
+the request calls for and leave the rest out of \`config\` entirely.
+
+## Model
 - Only set config.model when the request names a specific provider or model;
   otherwise omit it and the dashboard default applies.
 
@@ -21,7 +27,7 @@ config:
     provider: anthropic
     default: claude-sonnet-5
 
-# Webhooks (config.platforms.webhook)
+## Webhooks (config.platforms.webhook)
 - Setting config.platforms.webhook.enabled: true requires a sensitive
   WEBHOOK_SECRET in env (value "${ENV_PLACEHOLDER_SENTINEL}").
 - Each trigger is a named route under config.platforms.webhook.extra.routes
@@ -51,7 +57,7 @@ env:
     value: "${ENV_PLACEHOLDER_SENTINEL}"
     sensitive: true
 
-# API server (config.api_server)
+## API server (config.api_server)
 - Setting config.api_server.enabled: true requires a sensitive API_SERVER_KEY
   in env (value "${ENV_PLACEHOLDER_SENTINEL}") — it's the bearer token clients use to call
   the server.
