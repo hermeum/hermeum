@@ -5,6 +5,7 @@ loadEnv();
 
 export const ConfigSchema = z.object({
   agentConfigPath: z.string().default("./agent-config.yaml"),
+  databaseDialect: z.enum(["postgres", "sqlite"]).default("sqlite"),
   databaseUrl: z.url(),
   kubernetesNamespace: z.string().default("hermeum"),
   smtpUrl: z.url().optional(),
@@ -17,6 +18,7 @@ export const ConfigSchema = z.object({
 
 export const config = ConfigSchema.parse({
   agentConfigPath: process.env.HERMEUM_CONFIG_PATH,
+  databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
   smtpUrl: process.env.HERMEUM_SMTP_URL,

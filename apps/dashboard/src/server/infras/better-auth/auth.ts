@@ -3,17 +3,30 @@ import { createAuthMiddleware, APIError } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
+import Database from "better-sqlite3";
+import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
+import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
 import nodemailer from "nodemailer";
 
 import { config } from "@/server/libs/config";
-import * as schema from "./schema";
+import * as pgSchema from "./schema.postgres";
+import * as sqliteSchema from "./schema.sqlite";
 
-const client = postgres(config.databaseUrl);
-export const db = drizzle(client, { schema });
+function createAdapter() {
+  if (config.databaseDialect === "sqlite") {
+    // Accept both "file:./path.db" and "file:///abs/path.db" forms
+    const client = new Database(config.databaseUrl.replace(/^file:(\/\/)?/, ""));
+    const db = drizzleSqlite(client, { schema: sqliteSchema });
+    return drizzleAdapter(db, { provider: "sqlite", schema: sqliteSchema });
+  }
+
+  const client = postgres(config.databaseUrl);
+  const db = drizzlePg(client, { schema: pgSchema });
+  return drizzleAdapter(db, { provider: "pg", schema: pgSchema });
+}
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg", schema }),
+  database: createAdapter(),
   basePath: "/auth",
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
