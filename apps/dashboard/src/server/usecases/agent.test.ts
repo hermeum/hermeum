@@ -93,17 +93,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     expect(result).toBeNull();
   });
 
-  it("returns the patch unchanged when no Handlebars variables are present", () => {
-    const patch: JsonPatchOp[] = [{ op: "add", path: "/metadata/labels/env", value: "production" }];
-    const useCase = new AgentUseCase(
-      makeRuntime(),
-      makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
-    );
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "my-type" }));
-    expect(result).toEqual(patch);
-  });
-
-  it("substitutes all five variables in a string value", () => {
+  it("returns the patch verbatim, including Handlebars-style placeholders", () => {
     const patch: JsonPatchOp[] = [
       {
         op: "replace",
@@ -125,23 +115,10 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
         description: "Does things",
       })
     );
+    expect(result).toEqual(patch);
     expect(result![0]!.value).toBe(
-      "id=abc123 user=usr456 name=My Agent desc=Does things type=my-type"
+      "id={{agentId}} user={{userId}} name={{agentName}} desc={{agentDescription}} type={{agentType}}"
     );
-  });
-
-  it("defaults agentName and agentDescription to empty string when undefined on agent", () => {
-    const patch: JsonPatchOp[] = [
-      { op: "add", path: "/x", value: "name={{agentName}};desc={{agentDescription}}" },
-    ];
-    const useCase = new AgentUseCase(
-      makeRuntime(),
-      makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
-    );
-    const result = useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t", name: undefined, description: undefined })
-    );
-    expect(result![0]!.value).toBe("name=;desc=");
   });
 
   it("passes through ops without a value property unchanged", () => {
@@ -155,7 +132,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     expect(result![0]).not.toHaveProperty("value");
   });
 
-  it("substitutes variables inside a nested object/array value", () => {
+  it("passes through nested object/array values without substitution", () => {
     const patch: JsonPatchOp[] = [
       {
         op: "add",
@@ -173,10 +150,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     const result = useCase.getmutatingWebhookJsonPatch(
       makeAgent({ type: "t", id: "a1", userId: "u2" })
     );
-    expect(result![0]!.value).toEqual([
-      { name: "AGENT_ID", value: "a1" },
-      { name: "USER_ID", value: "u2" },
-    ]);
+    expect(result).toEqual(patch);
   });
 
   it("handles a mixed patch array with and without value in a single call", () => {
@@ -191,7 +165,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t", id: "zz9" }));
     expect(result).toHaveLength(2);
     expect(result![0]).not.toHaveProperty("value");
-    expect(result![1]!.value).toBe("zz9");
+    expect(result![1]!.value).toBe("{{agentId}}");
   });
 });
 

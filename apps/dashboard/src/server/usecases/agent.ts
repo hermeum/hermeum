@@ -1,4 +1,3 @@
-import Handlebars from "handlebars";
 import { z } from "zod";
 
 import {
@@ -14,7 +13,6 @@ import {
   JsonPatchOp,
   Skill,
   SkillSchema,
-  WebhookVariables,
 } from "@/entities";
 
 import { AiSdkGenerator } from "../infras/ai-sdk";
@@ -68,28 +66,7 @@ export class AgentUseCase {
     const { agentTypes } = this.config.get();
     const agentType = agentTypes?.[agent.type];
     if (!agentType) return null;
-    return this.substituteVariables(agentType.mutatingWebhookJsonPatch, agent);
-  }
-
-  private substituteVariables(patch: JsonPatchOp[], agent: Agent): JsonPatchOp[] {
-    const vars: WebhookVariables = {
-      agentId: agent.id,
-      userId: agent.userId,
-      agentName: agent.name ?? "",
-      agentDescription: agent.description ?? "",
-      agentType: agent.type ?? "",
-    };
-
-    const substituteValue = (v: unknown): unknown => {
-      const json = JSON.stringify(v);
-      const substituted = Handlebars.compile(json, { noEscape: true })(vars);
-      return JSON.parse(substituted);
-    };
-
-    return patch.map((op) => ({
-      ...op,
-      ...(op.value !== undefined && { value: substituteValue(op.value) }),
-    }));
+    return agentType.mutatingWebhookJsonPatch;
   }
 
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
