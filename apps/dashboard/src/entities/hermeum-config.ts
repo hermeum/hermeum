@@ -37,11 +37,3 @@ export const HermeumConfigSchema = z
   .readonly();
 
 export type HermeumConfig = z.infer<typeof HermeumConfigSchema>;
-
-export type WebhookVariables = {
-  agentId: string;
-  userId: string;
-  agentName: string;
-  agentDescription: string;
-  agentType: string;
-};
