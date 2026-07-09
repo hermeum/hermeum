@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Document, parse, Scalar } from "yaml";
+import { parse } from "yaml";
 
 import { LoaderCircle } from "lucide-react";
 
@@ -25,21 +25,10 @@ import {
 } from "@hermeum/components/ui/dialog";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
-import type { Template, AgentInput } from "@/entities";
+import type { Template } from "@/entities";
 import { AgentInputSchema } from "@/entities";
 import { CodeEditor } from "@/client/ui/components/code-editor";
-
-// Renders `soul` as a literal block (`|`) instead of yaml's default folded
-// style (`>-`), which collapses newlines into blank-line-separated runs and
-// hard-wraps lines — unreadable for multi-paragraph markdown.
-function stringifyAgentInput(input: AgentInput): string {
-  const doc = new Document(input);
-  const soul = doc.get("soul", true);
-  if (soul instanceof Scalar && typeof soul.value === "string") {
-    soul.type = Scalar.BLOCK_LITERAL;
-  }
-  return doc.toString().trim();
-}
+import { stringifyAgentInput } from "@/client/ui/components/agent-yaml";
 
 const DEFAULT_YAML = stringifyAgentInput({
   name: "Untitled agent",
