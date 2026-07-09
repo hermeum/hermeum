@@ -4,7 +4,7 @@ import { ConfigAdaptor } from "./adaptors/config";
 export class TemplateUseCase {
   constructor(private readonly config: ConfigAdaptor) {}
 
-  list(ctx: Context): Template[] {
+  list(_ctx: Context): Template[] {
     return this.config.get().templates;
   }
 
