@@ -20,10 +20,33 @@ import {
 import { AiSdkGenerator } from "../infras/ai-sdk";
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { LocalConfig } from "../infras/local-hermeum-config";
-import { AGENT_INPUT_SYSTEM_PROMPT } from "./agent-prompt";
 import { AiGenerator } from "./adaptors/generator";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+
+// Field semantics live in the output schema's .describe() texts; this prompt
+// carries per-feature cross-field rules and worked examples instead.
+export const AGENT_INPUT_SYSTEM_PROMPT = `\
+You generate agent definitions — a JSON object that prefills the form for a
+new autonomous agent. Field semantics are defined by the output schema; use
+it to decide what each field means and how to shape it.
+
+Tailor every field to the specific request — don't fall back to generic or
+placeholder-sounding content:
+- \`name\` and \`description\` should reflect what this particular agent does,
+  not a generic template.
+- \`soul\` should be written for this agent's actual job and tone, using the
+  request's own domain language where possible — not a reused boilerplate
+  personality.
+- Only set \`config\` sub-features (model, webhooks, api_server) that the
+  request actually needs to work. Infer the ones required to fulfill the
+  request even if unstated (e.g. "on every new GitHub issue" implies a
+  webhook route), but don't add unrelated ones "just in case".
+- Webhook routes, prompts, and skills should be built from what the request
+  says triggers the agent and what it should do — not copied from an
+  unrelated example.
+- When the request is ambiguous or gives no basis for a field, omit that
+  field rather than guessing or inventing detail that wasn't asked for.`;
 
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),

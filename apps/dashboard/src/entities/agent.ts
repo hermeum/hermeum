@@ -5,19 +5,25 @@ import { EnvVarSchema } from "./shared-env-set";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
-// Placeholder for generated sensitive env values the user must fill in.
-// Distinct from ENV_SECRET_SENTINEL, which the kubernetes client interprets
-// as "reuse the value already stored in the Secret".
 export const ENV_PLACEHOLDER_SENTINEL = "<fill-me>";
 
 export const AgentEnvVarSchema = EnvVarSchema.extend({
-  sensitive: z
-    .boolean()
-    .optional()
-    .describe(
-      "Mark true for credentials (API keys, tokens)."
-    ),
-});
+  value: z.string().describe(
+    `An environment variable value.
+
+# Placeholders
+- "${ENV_PLACEHOLDER_SENTINEL}": A placeholder for a value that needs to be filled in by the user.
+- "${ENV_SECRET_SENTINEL}": A sentinel value indicating an existing secret. \
+It will be replaced with the actual secret value when the agent is deployed, \
+but should not be used in new definitions.
+
+Example:
+  name: OPENAI_API_KEY
+  value: "sk-proj-XXXXX"
+  sensitive: true`
+  ),
+  sensitive: z.boolean().optional().describe("Mark true for credentials (API keys, tokens)."),
+}).describe("An agent environment variable.");
 
 export type AgentEnvVar = z.infer<typeof AgentEnvVarSchema>;
 
@@ -25,13 +31,50 @@ export const EnvSchema = z
   .array(AgentEnvVarSchema)
   .max(20)
   .optional()
-  .describe("Environment variables the agent needs. Credentials must be marked sensitive.");
+  .describe("Environment variables the agent needs.");
 
 export type Env = z.infer<typeof EnvSchema>;
 
-export const WorkspaceFilesSchema = z.record(z.string(), z.string()).optional();
+export const SoulSchema = z
+  .string()
+  .optional()
+  .describe(
+    `Primary identity — the first thing in the system prompt, defining who the agent is.
 
-export type WorkspaceFiles = z.infer<typeof WorkspaceFilesSchema>;
+Choose whatever shape fits the request — a plain paragraph, a couple of
+bullets, or short markdown sections based on agent functionality. 
+A simple agent deserves a one- or two-sentence soul; only reach for sections when
+there's a genuinely separate set of points to make (e.g. tone vs. things to
+avoid). 
+
+Use it for durable voice and personality guidance only — not task-specific
+instructions (those belong elsewhere in the config).
+
+#Example — simple request ("summarize documents I paste in"):
+  You are a precise, neutral summarizer. Prioritize completeness over brevity
+  when the two conflict, and never editorialize.
+
+# Example — request with more to say ("review GitHub pull requests"):
+  # Personality
+  You are a pragmatic senior engineer with strong taste.
+
+  ## Style
+  - Be direct without being cold
+  - Prefer substance over filler
+  - Push back when something is a bad idea
+
+  ## What to avoid
+  - Sycophancy
+  - Hype language
+  - Repeating the user's framing if it's wrong
+  - Overexplaining obvious things
+
+  ## Technical posture
+  - Prefer simple systems over clever systems
+  - Care about operational reality, not idealized architecture`
+  );
+
+export type Soul = z.infer<typeof SoulSchema>;
 
 export const SkillSchema = z
   .string()
@@ -92,16 +135,8 @@ export const AgentInputObjectSchema = z.object({
     .string()
     .optional()
     .describe("One or two sentences describing what the agent does."),
-  type: z
-    .string()
-    .optional()
-    .describe("Agent type key from the dashboard's configured agent types."),
-  soul: z
-    .string()
-    .optional()
-    .describe(
-      "It's primary identity - it's the first thing in the system prompt and defines who the agent is."
-    ),
+  type: z.string().optional().describe("Agent type key from the configured agent types."),
+  soul: SoulSchema,
   config: ConfigSchema,
   env: EnvSchema,
   skills: SkillsSchema,

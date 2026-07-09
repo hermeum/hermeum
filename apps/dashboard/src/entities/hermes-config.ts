@@ -1,17 +1,52 @@
-import { z } from "zod";
-
 // Config schema for LLM structured output: descriptions guide generation accuracy.
 // Fields not defined here are still allowed (loose objects) so users can configure
 // whatever the Hermes agent supports.
+
+import { z } from "zod";
+
+// Model
+// https://hermes-agent.nousresearch.com/docs/integrations/providers
 export const ModelProviderSchema = z
-  .union([
-    z.enum(["anthropic", "openrouter", "zai", "kimi-coding", "openai-api", "ollama-cloud"]),
-    z.string(),
+  .enum([
+    "nous",
+    "openai-codex",
+    "copilot",
+    "copilot-acp",
+    "anthropic",
+    "openrouter",
+    "novita",
+    "zai",
+    "kimi-coding",
+    "kimi-coding-cn",
+    "arcee",
+    "gmi",
+    "minimax",
+    "minimax-cn",
+    "xai",
+    "xai-oauth",
+    "alibaba",
+    "alibaba-coding-plan",
+    "kilocode",
+    "xiaomi",
+    "tencent-tokenhub",
+    "opencode-zen",
+    "opencode-go",
+    "deepseek",
+    "huggingface",
+    "gemini",
+    "vertex",
+    "openai-api",
+    "azure-foundry",
+    "bedrock",
+    "nvidia",
+    "ollama-cloud",
+    "qwen-oauth",
+    "minimax-oauth",
+    "stepfun",
+    "lmstudio",
+    "custom",
   ])
-  .describe(
-    "LLM provider that serves the model. Prefer one of the known providers; " +
-      "any other provider name is also accepted."
-  );
+  .describe("LLM provider that serves the model.");
 
 export type ModelProvider = z.infer<typeof ModelProviderSchema>;
 
@@ -32,47 +67,127 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
-  .describe("LLM model configuration for the agent.");
+  .describe(
+    `LLM model configuration for the agent. \
+Only set this when the request names a specific provider or model; otherwise omit it.
+
+Setting this requires an env var for the provider's API key \
+(e.g. ANTHROPIC_API_KEY for provider: anthropic, OPENAI_API_KEY for provider: openai-api).
+
+Example:
+  provider: openai-api
+  default: gpt-5.5`
+  );
 
 export type Model = z.infer<typeof ModelSchema>;
 
+// Webhook
+// https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
 export const WebhookDeliverSchema = z
-  .union([z.enum(["log", "github_comment", "telegram", "discord", "slack", "email"]), z.string()])
+  .enum([
+    "log",
+    "github_comment",
+    "telegram",
+    "discord",
+    "slack",
+    "signal",
+    "sms",
+    "whatsapp",
+    "matrix",
+    "mattermost",
+    "homeassistant",
+    "email",
+    "dingtalk",
+    "feishu",
+    "wecom",
+    "weixin",
+    "bluebubbles",
+    "qqbot",
+  ])
+  .optional()
   .describe(
-    "Destination for the response. Common targets are enumerated; other platform names " +
-      '(e.g. "signal", "matrix", "whatsapp") are also accepted. Defaults to "log".'
+    `Where to send the response.
+
+- log: writes the response to the gateway log only. Use only when the request \
+has no delivery target (e.g. internal monitoring/testing).
+- github_comment: posts the response as a PR/issue comment via the gh CLI — \
+requires deliver_extra.repo and deliver_extra.pr_number.
+- Any other value: routes the response to that chat platform's home channel, \
+or a specific chat via deliver_extra.chat_id.`
   );
 
 export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
 
+export const DeliverExtraSchema = z
+  .object({
+    chat_id: z
+      .string()
+      .optional()
+      .describe(
+        "Destination chat/channel id for chat-based deliver targets. If omitted, the" +
+          "response is sent to that platform's configured home channel."
+      ),
+    repo: z
+      .string()
+      .optional()
+      .describe('Repository in "owner/repo" form. Required when deliver: github_comment.'),
+    pr_number: z
+      .string()
+      .optional()
+      .describe(
+        "Pull request / issue number to comment on. Required when deliver: github_comment."
+      ),
+  })
+  .optional()
+  .describe(
+    `Platform-specific delivery options; values support {dot.notation} templates.
+
+- deliver: github_comment — requires repo and pr_number. Posts the response as a PR/issue \
+comment via the gh CLI, which must be installed and authenticated on the gateway host.
+- All other chat-based targets use the platform's configured home channel, or set chat_id to target a specific chat.
+
+Example: { repo: "{repository.full_name}", pr_number: "{number}" }`
+  );
+
+export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
+
 export const WebhookRouteSchema = z
-  .looseObject({
+  .object({
     events: z
       .array(z.string())
       .optional()
       .describe(
-        "Event types this route accepts. If empty, all events are accepted." +
-          "Event type is read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload."
+        `Event types this route accepts.
+
+In most cases you don't need to set this — omit it (or leave it empty) to accept \
+all events, which is fine for most routes. Only set it when the route should filter \
+to specific event types.
+
+- Source: read from X-GitHub-Event, X-GitLab-Event, or event_type in the payload.
+- Example: ["pull_request"] to react only to PR events.`
       ),
     prompt: z
       .string()
       .optional()
       .describe(
-        "Template string with dot-notation payload access (e.g. {pull_request.title})." +
-          "If omitted, the full JSON payload is dumped into the prompt."
+        `Template string built from the webhook payload using dot-notation.
+
+- {pull_request.title} resolves to payload["pull_request"]["title"]
+- {repository.full_name} resolves to payload["repository"]["full_name"]
+
+Don't guess at dot-notation paths for a payload shape you don't actually know — \
+if you're unsure what the payload looks like, use {__raw__} instead, a special \
+token that dumps the entire payload as indented JSON. \
+Useful for monitoring alerts or generic webhooks where the agent needs the full context.
+
+If omitted, the entire payload is dumped into the prompt (same as {__raw__} alone).`
       ),
     skills: z
       .array(z.string())
       .optional()
       .describe("Skill names to load for agent runs triggered by this route."),
-    deliver: WebhookDeliverSchema.optional(),
-    deliver_extra: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe(
-        "Platform-specific delivery options; values support {dot.notation} templates, " +
-          'e.g. { repo: "{repository.full_name}", pr_number: "{number}" }.'
-      ),
+    deliver: WebhookDeliverSchema,
+    deliver_extra: DeliverExtraSchema,
     deliver_only: z
       .boolean()
       .optional()
@@ -81,15 +196,33 @@ export const WebhookRouteSchema = z
           "Requires a real deliver target."
       ),
   })
-  .describe("A named webhook route that maps incoming events to an agent run or delivery.");
+  .describe(
+    `A named webhook route that maps incoming events to an agent run or delivery. \
+The route's key becomes part of the webhook URL path. 
+
+Example — "review GitHub pull requests":
+  github-pr-review:
+    events: [pull_request]
+    prompt: |
+      Review this pull request:
+      Repository: {repository.full_name}
+      PR #{number}: {pull_request.title}
+      Diff URL: {pull_request.diff_url}
+    skills:
+      - github-code-review
+    deliver: github_comment
+    deliver_extra:
+      repo: "{repository.full_name}"
+      pr_number: "{number}"`
+  );
 
 export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
-  .looseObject({
+  .object({
     enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
-      .looseObject({
+      .object({
         port: z
           .number()
           .int()
@@ -105,12 +238,18 @@ export const WebhookSchema = z
         routes: z
           .record(z.string(), WebhookRouteSchema)
           .optional()
-          .describe("Named webhook routes, keyed by route name (used in the webhook URL path)."),
+          .describe(
+            "Named webhook routes, keyed by route name (used in the webhook URL path). " +
+              '"-" is preferred over "_" for the route name, e.g. "github-pr-review".'
+          ),
       })
       .optional()
       .describe("Webhook server settings."),
   })
-  .describe("Webhook messaging platform configuration.");
+  .describe(
+    `Webhook messaging platform configuration. \
+Note that setting enabled: true requires a sensitive WEBHOOK_SECRET env var.`
+  );
 
 export type Webhook = z.infer<typeof WebhookSchema>;
 
@@ -122,12 +261,15 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
+// API server
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
+//
 // The Hermes agent has no api_server section in config.yaml (the API server is
 // configured via env vars upstream), so this field is never written to the raw
 // agent config. It maps to the HermesAgent CR's config.apiServer field, which the
 // operator turns into API_SERVER_* environment variables.
 export const ApiServerSchema = z
-  .looseObject({
+  .object({
     enabled: z
       .boolean()
       .optional()
@@ -151,7 +293,15 @@ export const ApiServerSchema = z
           "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
       ),
   })
-  .describe("API server configuration.");
+  .describe(
+    `API server configuration. \
+Note that setting enabled: true requires a sensitive API_SERVER_KEY env var — \
+it's the bearer token clients use to call the server.
+
+Example — expose the agent over HTTP for a browser client:
+  enabled: true
+  cors_origins: [https://app.example.com]`
+  );
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
 
