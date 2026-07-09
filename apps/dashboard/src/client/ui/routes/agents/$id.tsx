@@ -156,9 +156,11 @@ function AgentDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            Edit
-          </Button>
+          {!agent.archived && (
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              Edit
+            </Button>
+          )}
           {!agent.archived && (
             <DropdownMenu>
               <DropdownMenuTrigger
