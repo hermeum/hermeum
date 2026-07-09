@@ -108,41 +108,47 @@ function SharedEnvSetDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="size-3.5" />
-            Edit
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline" size="icon" aria-label="More actions" />}
-            >
-              <Button variant="outline" size="icon" aria-label="Open actions menu">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onClick={() => setArchiveOpen(true)}>
-                Archive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!envSet.archived && (
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          )}
+          {!envSet.archived && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant="outline" size="icon" aria-label="More actions" />}
+              >
+                <Button variant="outline" size="icon" aria-label="Open actions menu">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem variant="destructive" onClick={() => setArchiveOpen(true)}>
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Environment variables</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setAddError(null);
-              setAddOpen(true);
-            }}
-          >
-            <Plus className="size-3.5" />
-            Add env
-          </Button>
+          {!envSet.archived && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setAddError(null);
+                setAddOpen(true);
+              }}
+            >
+              <Plus className="size-3.5" />
+              Add env
+            </Button>
+          )}
         </div>
 
         <Table>
@@ -164,23 +170,25 @@ function SharedEnvSetDetailPage() {
                 <TableRow key={v.name}>
                   <TableCell className="font-mono text-xs">{v.name}</TableCell>
                   <TableCell className="w-10">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" size="icon" aria-label="Open actions menu" />
-                        }
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleteEnvVarName(v.name)}
+                    {!envSet.archived && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" size="icon" aria-label="Open actions menu" />
+                          }
                         >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <MoreHorizontal className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeleteEnvVarName(v.name)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
