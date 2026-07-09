@@ -72,6 +72,9 @@ export default defineConfig((configEnv) => {
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],
+      env: {
+        HERMEUM_DATABASE_URL: "file:./test.db",
+      },
     },
   };
 });
