@@ -45,7 +45,7 @@ function DashboardPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [archiveId, setArchiveId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"all" | "active">("all");
+  const [tab, setTab] = useState<"all" | "active">("active");
   const navigate = useNavigate();
 
   const {
@@ -157,8 +157,8 @@ function DashboardPage() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "active")}>
         <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
         <TabsContent value={tab}>
           <Table>
