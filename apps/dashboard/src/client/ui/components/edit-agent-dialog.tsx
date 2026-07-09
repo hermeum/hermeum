@@ -133,7 +133,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto space-y-2">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto space-y-2 p-px">
           <CodeEditor
             value={editorValue}
             onChange={setEditorValue}
@@ -142,36 +142,36 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
             maxHeight="360px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
+        </div>
 
-          <div className="rounded-[0.25rem] border p-3">
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleRevise();
-                }
-              }}
-              placeholder="Ask AI to change something…"
-              className="min-h-9 border-transparent px-0 py-0 focus-visible:border-transparent"
-            />
-            <div className="flex justify-end gap-2">
-              {previousValue !== null && (
-                <Button variant="ghost" size="xs" onClick={handleUndoRevision}>
-                  Undo revision
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={handleRevise}
-                disabled={prompt.trim().length === 0 || isRevising}
-              >
-                {isRevising && <LoaderCircle className="animate-spin" />}
-                {isRevising ? "Revising…" : "Revise"}
+        <div className="shrink-0 rounded-[0.25rem] border p-3">
+          <Textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                handleRevise();
+              }
+            }}
+            placeholder="Ask AI to change something…"
+            className="min-h-9 border-transparent px-0 py-0 focus-visible:border-transparent"
+          />
+          <div className="flex justify-end gap-2">
+            {previousValue !== null && (
+              <Button variant="ghost" size="xs" onClick={handleUndoRevision}>
+                Undo revision
               </Button>
-            </div>
+            )}
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={handleRevise}
+              disabled={prompt.trim().length === 0 || isRevising}
+            >
+              {isRevising && <LoaderCircle className="animate-spin" />}
+              {isRevising ? "Revising…" : "Revise"}
+            </Button>
           </div>
         </div>
 
