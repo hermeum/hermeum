@@ -261,6 +261,37 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
+// Slack
+// https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack
+//
+// Only the essential fields are validated here; the rest pass through
+// via looseObject so users can configure whatever the Hermes agent supports.
+export const SlackSchema = z
+  .looseObject({
+    allowed_channels: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Slack channel IDs the bot is allowed to respond in. Messages from " +
+          "channels not in this list are silently ignored."
+      ),
+    unauthorized_dm_behavior: z
+      .literal("ignore")
+      .default("ignore")
+      .optional()
+      .describe(
+        "What happens when an unauthorized user DMs the bot. Always \"ignore\" " +
+          "(silently drop); the upstream \"pair\" default is intentionally disallowed."
+      ),
+  })
+  .describe(
+    `Slack messaging platform configuration. \
+Requires env vars: SLACK_BOT_TOKEN (sensitive), SLACK_APP_TOKEN (sensitive), \
+SLACK_HOME_CHANNEL, and SLACK_ALLOWED_USERS.`
+  );
+
+export type Slack = z.infer<typeof SlackSchema>;
+
 // API server
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
 //
@@ -351,9 +382,10 @@ export type Web = z.infer<typeof WebSchema>;
 
 export const ConfigSchema = z
   .looseObject({
-    model: ModelSchema.optional().describe("Model configuration to use."),
+    model: ModelSchema.optional(),
     platforms: PlatformsSchema.optional(),
     api_server: ApiServerSchema.optional(),
+    slack: SlackSchema.optional(),
     web: WebSchema.optional(),
   })
   .optional()
