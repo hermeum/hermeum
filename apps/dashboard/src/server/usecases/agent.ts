@@ -19,6 +19,7 @@ import { LocalConfig } from "../infras/local-hermeum-config";
 import { AiGenerator } from "./adaptors/generator";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+import { verifyOwnership } from "./authz";
 
 // Field semantics live in the output schema's .describe() texts; this prompt
 // carries per-feature cross-field rules and worked examples instead.
@@ -78,10 +79,7 @@ export class AgentUseCase {
   async createHermesAgent(ctx: Context, agentInput: AgentInput): Promise<Agent> {
     agentInput = AgentInputSchema.parse(agentInput);
 
-    if (agentInput.type !== undefined) {
-      this.checkAgentTypeAllowed(agentInput.type);
-    }
-    await this.checkSharedEnvSetsAccessible(agentInput.sharedEnvSets);
+    await this.checkAgentInputAllowed(agentInput);
     return this.runtime.createHermesAgent({ ...agentInput, userId: ctx.user!.id });
   }
 
@@ -90,14 +88,11 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
 
     patch = AgentInputSchema.parse(patch);
 
-    if (patch.type !== undefined) {
-      this.checkAgentTypeAllowed(patch.type);
-    }
-    await this.checkSharedEnvSetsAccessible(patch.sharedEnvSets);
+    await this.checkAgentInputAllowed(patch);
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
     }
@@ -119,20 +114,8 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.archiveHermesAgent(id);
-  }
-
-  private async checkSharedEnvSetsAccessible(setIds: string[] | undefined): Promise<void> {
-    for (const id of setIds ?? []) {
-      const envSet = await this.runtime.getSharedEnvSet(id);
-      if (!envSet) {
-        throw new Error(`Shared env set "${id}" not found`);
-      }
-      if (envSet.archived) {
-        throw new Error(`Shared env set "${id}" is archived`);
-      }
-    }
   }
 
   async suspendHermesAgent(ctx: Context, id: string): Promise<Agent> {
@@ -140,7 +123,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
   }
 
@@ -149,7 +132,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
   }
 
@@ -158,23 +141,30 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${agentId} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.getGatewayToken(agentId);
   }
 
-  private checkAgentTypeAllowed(agentType: string): void {
-    const { agentTypes } = this.config.get();
-    if (!agentTypes) {
-      throw new Error("Agent types are not configured");
+  private async checkAgentInputAllowed(
+    input: Pick<AgentInput, "type" | "sharedEnvSets">
+  ): Promise<void> {
+    if (input.type !== undefined) {
+      const { agentTypes } = this.config.get();
+      if (!agentTypes) {
+        throw new Error("Agent types are not configured");
+      }
+      if (!(input.type in agentTypes)) {
+        throw new Error(`Agent type "${input.type}" is not configured`);
+      }
     }
-    if (!(agentType in agentTypes)) {
-      throw new Error(`Agent type "${agentType}" is not configured`);
-    }
-  }
-
-  private verifyOwnership(ctx: Context, resource: { userId: string }): void {
-    if (ctx.user!.id !== resource.userId) {
-      throw new Error("You don't have permission to perform this action");
+    for (const id of input.sharedEnvSets ?? []) {
+      const envSet = await this.runtime.getSharedEnvSet(id);
+      if (!envSet) {
+        throw new Error(`Shared env set "${id}" not found`);
+      }
+      if (envSet.archived) {
+        throw new Error(`Shared env set "${id}" is archived`);
+      }
     }
   }
 

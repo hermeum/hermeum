@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Context, EnvVar, EnvVarSchema, SharedEnvSet } from "@/entities";
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { Runtime } from "./adaptors/runtime";
+import { verifyOwnership } from "./authz";
 
 export const CreateSharedEnvSetInputSchema = z.object({
   name: z.string().min(1),
@@ -45,7 +46,7 @@ export class SharedEnvSetUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${id}" not found`);
     }
-    this.verifyOwnership(ctx, envSet);
+    verifyOwnership(ctx, envSet);
     return this.runtime.patchSharedEnvSet(id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
@@ -57,7 +58,7 @@ export class SharedEnvSetUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${id}" not found`);
     }
-    this.verifyOwnership(ctx, envSet);
+    verifyOwnership(ctx, envSet);
     return this.runtime.archiveSharedEnvSet(id);
   }
 
@@ -67,7 +68,7 @@ export class SharedEnvSetUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    this.verifyOwnership(ctx, envSet);
+    verifyOwnership(ctx, envSet);
     if (envSet.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" already exists in shared env set "${setId}"`);
     }
@@ -80,7 +81,7 @@ export class SharedEnvSetUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    this.verifyOwnership(ctx, envSet);
+    verifyOwnership(ctx, envSet);
     if (!envSet.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" not found in shared env set "${setId}"`);
     }
@@ -92,16 +93,10 @@ export class SharedEnvSetUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    this.verifyOwnership(ctx, envSet);
+    verifyOwnership(ctx, envSet);
     if (!envSet.envVars.some((e) => e.name === name)) {
       throw new Error(`Env var "${name}" not found in shared env set "${setId}"`);
     }
     return this.runtime.removeEnvVar(setId, name);
-  }
-
-  private verifyOwnership(ctx: Context, resource: { userId: string }): void {
-    if (ctx.user!.id !== resource.userId) {
-      throw new Error("You don't have permission to perform this action");
-    }
   }
 }
