@@ -104,6 +104,118 @@ export const PluginsSchema = z
 
 export type Plugins = z.infer<typeof PluginsSchema>;
 
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/cron#schedule-formats
+// Relative delay ("30m", "2h", "1d") | interval ("every 30m") |
+// 5-field cron expression ("0 9 * * *") | ISO timestamp ("2026-03-15T09:00:00")
+const CRON_SCHEDULE_PATTERN =
+  /^\d+[mhd]$|^every \d+[mhd]$|^[0-9*/,-]+(?:\s+[0-9*/,-]+){4}$|^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$/;
+
+export const CronScheduleSchema = z
+  .string()
+  .regex(
+    CRON_SCHEDULE_PATTERN,
+    'Schedule must be a relative delay ("30m", "2h", "1d"), an interval ("every 30m"), ' +
+      'a 5-field cron expression ("0 9 * * *"), or an ISO timestamp ("2026-03-15T09:00:00").'
+  )
+  .describe(
+    `When to run this cron.
+
+- Relative delay (one-shot): "30m", "2h", "1d"
+- Interval (recurring): "every 30m", "every 2h", "every 1d"
+- Cron expression (5-field): "0 9 * * *" (daily at 9am), "0 */6 * * *" (every 6 hours)
+- ISO timestamp (one-time): "2026-03-15T09:00:00"`
+  );
+
+export type CronSchedule = z.infer<typeof CronScheduleSchema>;
+
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/cron#delivery-options
+const CRON_DELIVER_PLATFORMS = [
+  "origin",
+  "local",
+  "telegram",
+  "discord",
+  "slack",
+  "whatsapp",
+  "signal",
+  "matrix",
+  "mattermost",
+  "email",
+  "sms",
+  "homeassistant",
+  "dingtalk",
+  "feishu",
+  "wecom",
+  "weixin",
+  "bluebubbles",
+  "qqbot",
+  "all",
+] as const;
+
+// Only the platform prefix is validated — anything after ":" (a chat id, channel
+// name, or topic) is passed through as-is.
+function isKnownCronDeliverPlatform(target: string): boolean {
+  const platform = target.split(":")[0] ?? "";
+  return (CRON_DELIVER_PLATFORMS as readonly string[]).includes(platform);
+}
+
+export const CronDeliverSchema = z
+  .string()
+  .refine((value) => value.split(",").every(isKnownCronDeliverPlatform), {
+    message:
+      `Deliver must be one of ${CRON_DELIVER_PLATFORMS.join(", ")}, optionally with a ` +
+      '":target" suffix (e.g. "telegram:123456"), or a comma-separated list of these ' +
+      '(e.g. "telegram,discord").',
+  })
+  .optional()
+  .describe(
+    `Where to send the cron's output.
+
+- "origin": back to the source that created the cron.
+- "local": save to ~/.hermes/cron/output/.
+- "all": fan out to every connected home channel.
+- A platform home channel: "telegram", "discord", "slack", "whatsapp", "signal", "matrix", \
+"mattermost", "email", "sms", "homeassistant", "dingtalk", "feishu", "wecom", "weixin", \
+"bluebubbles", "qqbot".
+- A specific target: "telegram:123456", "discord:#engineering" (not validated further).
+- Comma-separated fan-out: "telegram,discord".`
+  );
+
+export type CronDeliver = z.infer<typeof CronDeliverSchema>;
+
+export const AgentCronSchema = z
+  .object({
+    name: z.string().min(1).describe("Cron job name."),
+    schedule: CronScheduleSchema,
+    prompt: z.string().min(1).describe("Prompt to run when this cron triggers."),
+    deliver: CronDeliverSchema,
+    repeat: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Number of times to repeat the run. Omit to run once per trigger."),
+    skills: z.array(z.string()).optional().describe("Skill names to load for this cron's run."),
+  })
+  .describe(
+    `A scheduled cron job that triggers an agent run.
+
+Example — daily standup summary:
+  name: daily-standup
+  schedule: "0 9 * * *"
+  prompt: Summarize yesterday's activity across tracked repos.
+  deliver: slack`
+  );
+
+export type AgentCron = z.infer<typeof AgentCronSchema>;
+
+export const CronsSchema = z
+  .array(AgentCronSchema)
+  .max(20)
+  .optional()
+  .describe("Scheduled cron jobs for the agent.");
+
+export type Crons = z.infer<typeof CronsSchema>;
+
 export const StorageSchema = z
   .object({
     enabled: z.boolean().default(true),
@@ -141,6 +253,7 @@ export const AgentInputObjectSchema = z.object({
   env: EnvSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
+  crons: CronsSchema,
   sharedEnvSets: z
     .array(z.string())
     .optional()

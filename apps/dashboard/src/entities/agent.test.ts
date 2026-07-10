@@ -92,6 +92,123 @@ describe("AgentInputSchema env placeholder validation", () => {
   });
 });
 
+describe("AgentInputSchema crons validation", () => {
+  function makeCron(overrides: Record<string, unknown> = {}) {
+    return {
+      name: "daily-standup",
+      schedule: "0 9 * * *",
+      prompt: "Summarize yesterday's activity.",
+      ...overrides,
+    };
+  }
+
+  it("accepts a full valid cron", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "slack", repeat: 3, skills: ["standup-summarizer"] })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a cron missing name", () => {
+    const cron = makeCron();
+    delete (cron as Record<string, unknown>).name;
+    const result = AgentInputSchema.safeParse({ crons: [cron] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a cron missing schedule", () => {
+    const cron = makeCron();
+    delete (cron as Record<string, unknown>).schedule;
+    const result = AgentInputSchema.safeParse({ crons: [cron] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a cron missing prompt", () => {
+    const cron = makeCron();
+    delete (cron as Record<string, unknown>).prompt;
+    const result = AgentInputSchema.safeParse({ crons: [cron] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects deliver: github_comment (not a valid cron delivery target)", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "github_comment" })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unrecognized deliver platform", () => {
+    const result = AgentInputSchema.safeParse({ crons: [makeCron({ deliver: "carrier-pigeon" })] });
+    expect(result.success).toBe(false);
+  });
+
+  it.each(["slack", "origin", "local", "all"])("accepts deliver: %s", (deliver) => {
+    const result = AgentInputSchema.safeParse({ crons: [makeCron({ deliver })] });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a deliver target with a :target suffix", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "telegram:123456" })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a deliver target with a topic suffix", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "telegram:-100123:17585" })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a comma-separated fan-out deliver value", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "telegram,discord" })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a malformed comma-separated deliver value", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ deliver: "telegram,,discord" })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it.each(["30m", "2h", "1d", "every 30m", "every 2h", "0 */6 * * *", "2026-03-15T09:00:00"])(
+    "accepts schedule: %s",
+    (schedule) => {
+      const result = AgentInputSchema.safeParse({ crons: [makeCron({ schedule })] });
+      expect(result.success).toBe(true);
+    }
+  );
+
+  it.each(["daily", "every", "30 minutes", "0 9 * *"])(
+    "rejects invalid schedule: %s",
+    (schedule) => {
+      const result = AgentInputSchema.safeParse({ crons: [makeCron({ schedule })] });
+      expect(result.success).toBe(false);
+    }
+  );
+
+  it("rejects a non-positive repeat", () => {
+    const result = AgentInputSchema.safeParse({ crons: [makeCron({ repeat: 0 })] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a non-integer repeat", () => {
+    const result = AgentInputSchema.safeParse({ crons: [makeCron({ repeat: 1.5 })] });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts loose skill strings that would fail the strict top-level SkillSchema", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ skills: ["bad skill!"] })],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("AgentInputObjectSchema as LLM structured-output schema", () => {
   it("accepts a representative generated payload", () => {
     const result = AgentInputObjectSchema.safeParse({
