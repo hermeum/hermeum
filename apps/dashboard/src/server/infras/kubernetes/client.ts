@@ -150,7 +150,12 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   }
 
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
+  // Enable the SearXNG sidecar when the agent asks for the searxng backend.
+  let searxngEnabled = false;
   if (agent.config !== undefined) {
+    searxngEnabled =
+      agent.config.web?.search_backend === "searxng" ||
+      agent.config.web?.backend === "searxng";
     // The Hermes agent has no api_server section in config.yaml — it belongs to
     // the CR's dedicated config.apiServer field, so keep it out of raw.
     const { api_server: apiServer, ...rawConfig } = agent.config;
@@ -207,6 +212,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
+    ...(searxngEnabled && { searxng: { enabled: true } }),
     podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
