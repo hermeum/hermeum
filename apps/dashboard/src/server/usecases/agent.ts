@@ -21,6 +21,7 @@ import { LocalConfig } from "../infras/local-hermeum-config";
 import { AiGenerator } from "./adaptors/generator";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
+import { verifyOwnership } from "./authz";
 
 // Field semantics live in the output schema's .describe() texts; this prompt
 // carries per-feature cross-field rules and worked examples instead.
@@ -92,7 +93,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
 
     patch = AgentInputSchema.parse(patch);
 
@@ -121,7 +122,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.archiveHermesAgent(id);
   }
 
@@ -132,7 +133,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent "${agentId}" not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     const current = agent.skills ?? [];
     if (current.includes(skill)) {
       throw new Error(`Skill "${skill}" is already installed on agent "${agentId}"`);
@@ -151,7 +152,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent "${agentId}" not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     const current = agent.skills ?? [];
     if (!current.includes(skill)) {
       throw new Error(`Skill "${skill}" is not installed on agent "${agentId}"`);
@@ -179,7 +180,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
   }
 
@@ -188,7 +189,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
   }
 
@@ -197,7 +198,7 @@ export class AgentUseCase {
     if (!agent) {
       throw new Error(`HermesAgent ${agentId} not found`);
     }
-    this.verifyOwnership(ctx, agent);
+    verifyOwnership(ctx, agent);
     return this.runtime.getGatewayToken(agentId);
   }
 
@@ -208,12 +209,6 @@ export class AgentUseCase {
     }
     if (!(agentType in agentTypes)) {
       throw new Error(`Agent type "${agentType}" is not configured`);
-    }
-  }
-
-  private verifyOwnership(ctx: Context, resource: { userId: string }): void {
-    if (ctx.user!.id !== resource.userId) {
-      throw new Error("You don't have permission to perform this action");
     }
   }
 
