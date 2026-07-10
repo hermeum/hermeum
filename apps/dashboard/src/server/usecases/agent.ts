@@ -11,8 +11,6 @@ import {
   ENV_SECRET_SENTINEL,
   Env,
   JsonPatchOp,
-  Skill,
-  SkillSchema,
 } from "@/entities";
 
 import { AiSdkGenerator } from "../infras/ai-sdk";
@@ -123,43 +121,6 @@ export class AgentUseCase {
     }
     this.verifyOwnership(ctx, agent);
     return this.runtime.archiveHermesAgent(id);
-  }
-
-  async installSkill(ctx: Context, agentId: string, skill: Skill): Promise<Agent> {
-    SkillSchema.parse(skill);
-
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent "${agentId}" not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const current = agent.skills ?? [];
-    if (current.includes(skill)) {
-      throw new Error(`Skill "${skill}" is already installed on agent "${agentId}"`);
-    }
-    if (current.length >= 20) {
-      throw new Error("Agent already has the maximum of 20 skills");
-    }
-    return this.runtime.patchHermesAgent({
-      id: agentId,
-      patch: { skills: [...current, skill] },
-    });
-  }
-
-  async uninstallSkill(ctx: Context, agentId: string, skill: Skill): Promise<Agent> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent "${agentId}" not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const current = agent.skills ?? [];
-    if (!current.includes(skill)) {
-      throw new Error(`Skill "${skill}" is not installed on agent "${agentId}"`);
-    }
-    return this.runtime.patchHermesAgent({
-      id: agentId,
-      patch: { skills: current.filter((s) => s !== skill) },
-    });
   }
 
   private async checkSharedEnvSetsAccessible(setIds: string[] | undefined): Promise<void> {
