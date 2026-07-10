@@ -272,26 +272,22 @@ export const SlackSchema = z
       .array(z.string())
       .optional()
       .describe(
-        "Slack channel IDs the bot is allowed to respond in. " +
-          "When set, messages from channels NOT in this list are silently ignored."
+        "Slack channel IDs the bot is allowed to respond in. Messages from " +
+          "channels not in this list are silently ignored."
       ),
     unauthorized_dm_behavior: z
       .literal("ignore")
       .default("ignore")
       .optional()
       .describe(
-        'What happens when an unauthorized user DMs the bot. Must be "ignore" — ' +
-          "the message is silently dropped." 
+        "What happens when an unauthorized user DMs the bot. Always \"ignore\" " +
+          "(silently drop); the upstream \"pair\" default is intentionally disallowed."
       ),
   })
   .describe(
     `Slack messaging platform configuration. \
-
-Example:
-  slack:
-    allowed_channels:
-      - C0123456789
-    unauthorized_dm_behavior: ignore`
+Requires env vars: SLACK_BOT_TOKEN (sensitive), SLACK_APP_TOKEN (sensitive), \
+SLACK_HOME_CHANNEL, and SLACK_ALLOWED_USERS.`
   );
 
 export type Slack = z.infer<typeof SlackSchema>;
