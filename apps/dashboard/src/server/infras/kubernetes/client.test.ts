@@ -110,6 +110,36 @@ describe("agentToHermesAgent workspace.dotEnv wiring", () => {
   });
 });
 
+describe("agentToHermesAgent packages wiring", () => {
+  it("nests pip and npm install lists under the CR shape", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ packages: { pip: ["requests", "pandas==2.1.0"], npm: ["typescript"] } })
+    );
+    expect(hermesAgent.spec.hermes?.packages).toEqual({
+      pip: { install: ["requests", "pandas==2.1.0"] },
+      npm: { install: ["typescript"] },
+    });
+  });
+
+  it("omits pip/npm keys that are undefined", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent({ packages: { pip: ["requests"] } }));
+    expect(hermesAgent.spec.hermes?.packages).toEqual({ pip: { install: ["requests"] } });
+  });
+
+  it("leaves packages undefined when not set on the agent", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.packages).toBeUndefined();
+  });
+
+  it("round-trips through mapHermesAgent back to flat arrays", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ packages: { pip: ["requests"], npm: ["typescript"] } })
+    );
+    const roundTripped = mapHermesAgent(hermesAgent);
+    expect(roundTripped.packages).toEqual({ pip: ["requests"], npm: ["typescript"] });
+  });
+});
+
 describe("agentToHermesAgent config.webhook wiring", () => {
   it("maps enabled and extra.port, and derives secretRef when enabled", () => {
     const hermesAgent = agentToHermesAgent(

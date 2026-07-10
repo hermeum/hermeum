@@ -193,6 +193,12 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.plugins !== undefined) {
     hermes.plugins = agent.plugins.map((identifier) => ({ identifier }));
   }
+  if (agent.packages !== undefined) {
+    hermes.packages = {
+      ...(agent.packages.pip !== undefined && { pip: { install: agent.packages.pip } }),
+      ...(agent.packages.npm !== undefined && { npm: { install: agent.packages.npm } }),
+    };
+  }
   if (agent.crons !== undefined) {
     hermes.crons = agent.crons;
   }
@@ -249,6 +255,14 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     soul: raw.spec.hermes?.workspace?.files?.["SOUL.md"],
     skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
     plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
+    packages: raw.spec.hermes?.packages && {
+      ...(raw.spec.hermes.packages.pip?.install !== undefined && {
+        pip: raw.spec.hermes.packages.pip.install,
+      }),
+      ...(raw.spec.hermes.packages.npm?.install !== undefined && {
+        npm: raw.spec.hermes.packages.npm.install,
+      }),
+    },
     // prompt is required by AgentCronSchema; dashboard-authored crons always set it.
     crons: raw.spec.hermes?.crons?.map((c) => ({
       name: c.name,
