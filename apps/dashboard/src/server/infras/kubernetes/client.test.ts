@@ -10,6 +10,7 @@ import {
   splitAgentEnv,
 } from "./client";
 import type { Agent } from "@/entities";
+import type { HermesAgent } from "./types/hermes-agent";
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -231,6 +232,74 @@ describe("mapHermesConfig", () => {
     };
     const hermesAgent = agentToHermesAgent(makeAgent({ config }));
     expect(mapHermesConfig(hermesAgent.spec.hermes?.config)).toEqual(config);
+  });
+});
+
+describe("agentToHermesAgent crons wiring", () => {
+  it("maps agent.crons straight onto hermes.crons", () => {
+    const crons = [
+      {
+        name: "daily-standup",
+        schedule: "0 9 * * *",
+        prompt: "Summarize yesterday's activity.",
+        deliver: "slack" as const,
+        repeat: 3,
+        skills: ["standup-summarizer"],
+      },
+    ];
+    const hermesAgent = agentToHermesAgent(makeAgent({ crons }));
+    expect(hermesAgent.spec.hermes?.crons).toEqual(crons);
+  });
+
+  it("leaves hermes.crons undefined when agent.crons is undefined", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.crons).toBeUndefined();
+  });
+});
+
+describe("mapHermesAgent crons round-trip", () => {
+  function makeRawAgent(crons: unknown): HermesAgent {
+    return {
+      spec: { hermes: { crons } },
+    } as unknown as HermesAgent;
+  }
+
+  it("round-trips supported fields", () => {
+    const crons = [
+      {
+        name: "daily-standup",
+        schedule: "0 9 * * *",
+        prompt: "Summarize yesterday's activity.",
+        deliver: "slack",
+        repeat: 3,
+        skills: ["standup-summarizer"],
+      },
+    ];
+    const agent = mapHermesAgent(makeRawAgent(crons));
+    expect(agent.crons).toEqual(crons);
+  });
+
+  it("strips unsupported HermesCron fields (script, noAgent, workdir, profile)", () => {
+    const rawCrons = [
+      {
+        name: "cleanup",
+        schedule: "0 0 * * *",
+        prompt: "Clean up temp files.",
+        script: "rm -rf /tmp/*",
+        noAgent: true,
+        workdir: "/tmp",
+        profile: "default",
+      },
+    ];
+    const agent = mapHermesAgent(makeRawAgent(rawCrons));
+    expect(agent.crons).toEqual([
+      { name: "cleanup", schedule: "0 0 * * *", prompt: "Clean up temp files." },
+    ]);
+  });
+
+  it("returns undefined when there are no crons", () => {
+    const agent = mapHermesAgent(makeRawAgent(undefined));
+    expect(agent.crons).toBeUndefined();
   });
 });
 

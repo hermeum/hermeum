@@ -199,6 +199,9 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       ...(agent.packages.npm !== undefined && { npm: { install: agent.packages.npm } }),
     };
   }
+  if (agent.crons !== undefined) {
+    hermes.crons = agent.crons;
+  }
   hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
 
   const spec: HermesAgentSpec = {
@@ -260,6 +263,15 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
         npm: raw.spec.hermes.packages.npm.install,
       }),
     },
+    // prompt is required by AgentCronSchema; dashboard-authored crons always set it.
+    crons: raw.spec.hermes?.crons?.map((c) => ({
+      name: c.name,
+      schedule: c.schedule,
+      prompt: c.prompt as string,
+      ...(c.deliver !== undefined && { deliver: c.deliver }),
+      ...(c.repeat !== undefined && { repeat: c.repeat }),
+      ...(c.skills !== undefined && { skills: c.skills }),
+    })),
     suspended: raw.spec.suspend,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
     phase: raw.status?.phase as AgentPhase | undefined,
