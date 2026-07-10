@@ -114,6 +114,38 @@ describe("AgentInputSchema packages validation", () => {
     const result = AgentInputSchema.safeParse({ packages: { pip: [123] } });
     expect(result.success).toBe(false);
   });
+
+  it("accepts valid pip specifiers (name, version pin, extras, chained constraints)", () => {
+    const result = AgentInputSchema.safeParse({
+      packages: {
+        pip: ["requests", "pandas==2.1.0", "mypackage[extra1,extra2]>=1.0", "numpy>=1.20,<2.0"],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects pip specifiers with shell metacharacters or whitespace", () => {
+    for (const bad of ["requests; rm -rf /", "package with space", "$(evil)", "a|b", "`x`"]) {
+      const result = AgentInputSchema.safeParse({ packages: { pip: [bad] } });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("accepts valid npm specifiers (name, scoped, versioned)", () => {
+    const result = AgentInputSchema.safeParse({
+      packages: {
+        npm: ["typescript", "typescript@^5.0.0", "@anthropic-ai/sdk", "@anthropic-ai/sdk@1.2.3"],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects npm specifiers with shell metacharacters or whitespace", () => {
+    for (const bad of ["typescript; rm -rf /", "package with space", "$(evil)", "a|b", "`x`"]) {
+      const result = AgentInputSchema.safeParse({ packages: { npm: [bad] } });
+      expect(result.success).toBe(false);
+    }
+  });
 });
 
 describe("AgentInputObjectSchema as LLM structured-output schema", () => {

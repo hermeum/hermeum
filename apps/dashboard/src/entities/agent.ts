@@ -104,17 +104,41 @@ export const PluginsSchema = z
 
 export type Plugins = z.infer<typeof PluginsSchema>;
 
+export const PipPackageSchema = z
+  .string()
+  .min(1)
+  .max(128, "Package specifier exceeds maximum length of 128 characters")
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9,_-]+\])?([<>=!~]=?[A-Za-z0-9.*+]+(,[<>=!~]=?[A-Za-z0-9.*+]+)*)?$/,
+    "Invalid pip package specifier. Expected a name, optionally followed by extras and a " +
+      'version constraint, e.g. "requests" or "pandas==2.1.0".'
+  );
+
+export type PipPackage = z.infer<typeof PipPackageSchema>;
+
+export const NpmPackageSchema = z
+  .string()
+  .min(1)
+  .max(128, "Package specifier exceeds maximum length of 128 characters")
+  .regex(
+    /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(@[A-Za-z0-9^~.*+<>=-]+)?$/,
+    "Invalid npm package specifier. Expected a name, optionally scoped and followed by a " +
+      'version, e.g. "typescript" or "@anthropic-ai/sdk@^1.0.0".'
+  );
+
+export type NpmPackage = z.infer<typeof NpmPackageSchema>;
+
 export const PackagesSchema = z
   .object({
     pip: z
-      .array(z.string())
+      .array(PipPackageSchema)
       .max(50)
       .optional()
       .describe(
         'Python package specifiers to install via `uv pip install` (e.g. "requests", "pandas==2.1.0").'
       ),
     npm: z
-      .array(z.string())
+      .array(NpmPackageSchema)
       .max(50)
       .optional()
       .describe(
