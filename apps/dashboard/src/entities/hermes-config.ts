@@ -380,6 +380,31 @@ Example — free self-hosted search with Firecrawl extraction:
 
 export type Web = z.infer<typeof WebSchema>;
 
+// Browser
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/browser
+export const BrowserCloudProviderSchema = z
+  .enum(["browserbase", "browser-use", "firecrawl", "camofox"])
+  .describe(
+    'Browser automation provider. Prefer "camofox" - it is natively' + 
+      "supported provisions a self-hosted Camofox sidecar in the agent's pod — no API key required." + 
+      "The others require their respective API-key env vars.");
+
+export type BrowserCloudProvider = z.infer<typeof BrowserCloudProviderSchema>;
+
+export const BrowserSchema = z
+  .looseObject({
+    cloud_provider: BrowserCloudProviderSchema.optional(),
+  })
+  .optional()
+  .describe(
+    `Browser automation configuration.
+
+Example — self-hosted anti-detection browsing:
+  cloud_provider: "camofox"`
+  );
+
+export type Browser = z.infer<typeof BrowserSchema>;
+
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema.optional(),
@@ -387,6 +412,7 @@ export const ConfigSchema = z
     api_server: ApiServerSchema.optional(),
     slack: SlackSchema.optional(),
     web: WebSchema.optional(),
+    browser: BrowserSchema,
   })
   .optional()
   .describe(

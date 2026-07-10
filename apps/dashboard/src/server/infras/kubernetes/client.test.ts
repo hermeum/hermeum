@@ -238,6 +238,39 @@ describe("agentToHermesAgent spec.searxng wiring", () => {
   });
 });
 
+describe("agentToHermesAgent spec.camofox wiring", () => {
+  it("enables camofox and keeps browser in raw when cloud_provider is camofox", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { browser: { cloud_provider: "camofox" } } })
+    );
+    expect(hermesAgent.spec.camofox).toEqual({ enabled: true });
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
+      browser: { cloud_provider: "camofox" },
+    });
+  });
+
+  it("leaves camofox undefined for a non-camofox cloud provider", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { browser: { cloud_provider: "browserbase" } } })
+    );
+    expect(hermesAgent.spec.camofox).toBeUndefined();
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
+      browser: { cloud_provider: "browserbase" },
+    });
+  });
+
+  it("leaves camofox undefined when browser config is absent", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.camofox).toBeUndefined();
+  });
+
+  it("round-trips browser config through the CR", () => {
+    const config = { browser: { cloud_provider: "camofox" as const } };
+    const hermesAgent = agentToHermesAgent(makeAgent({ config }));
+    expect(mapHermesConfig(hermesAgent.spec.hermes?.config)).toEqual(config);
+  });
+});
+
 describe("mapHermesConfig", () => {
   it("folds apiServer back into config as snake_case api_server without existingSecret", () => {
     expect(

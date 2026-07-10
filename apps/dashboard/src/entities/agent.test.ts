@@ -318,3 +318,26 @@ describe("AgentInputSchema web config validation", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("AgentInputSchema browser config validation", () => {
+  it("accepts cloud_provider: camofox", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { browser: { cloud_provider: "camofox" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a cloud provider", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { browser: { cloud_provider: "browserbase" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown cloud provider", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { browser: { cloud_provider: "playwright" } },
+    });
+    expect(result.success).toBe(false);
+  });
+});

@@ -150,12 +150,15 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   }
 
   const hermes: Partial<HermesAgentSpec["hermes"]> = {};
-  // Enable the SearXNG sidecar when the agent asks for the searxng backend.
+  // Enable self-hosted sidecars when the agent asks for them.
+  // SearXNG: web search backend; Camofox: browser automation cloud provider.
   let searxngEnabled = false;
+  let camofoxEnabled = false;
   if (agent.config !== undefined) {
     searxngEnabled =
       agent.config.web?.search_backend === "searxng" ||
       agent.config.web?.backend === "searxng";
+    camofoxEnabled = agent.config.browser?.cloud_provider === "camofox";
     // The Hermes agent has no api_server section in config.yaml — it belongs to
     // the CR's dedicated config.apiServer field, so keep it out of raw.
     const { api_server: apiServer, ...rawConfig } = agent.config;
@@ -213,6 +216,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
     ...(searxngEnabled && { searxng: { enabled: true } }),
+    ...(camofoxEnabled && { camofox: { enabled: true } }),
     podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
