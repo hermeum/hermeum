@@ -6,5 +6,5 @@
       "@hermeum/components/*": ["../../packages/components/*"]
     }
   },
-  "include": ["src", "app.config.ts", "drizzle.config.ts"]
+  "include": ["src", "scripts", "app.config.ts", "drizzle.config.ts"]
 }

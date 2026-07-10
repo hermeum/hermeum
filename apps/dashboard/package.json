@@ -14,7 +14,8 @@
     "drizzle:migrate": "drizzle-kit migrate --config drizzle.config.${HERMEUM_DATABASE_DIALECT:-sqlite}.ts",
     "clean": "rm -rf dist *.tsbuildinfo",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval": "tsx scripts/generate-agent-inputs.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.8",
