@@ -202,6 +202,42 @@ describe("agentToHermesAgent config.apiServer wiring", () => {
   });
 });
 
+describe("agentToHermesAgent spec.searxng wiring", () => {
+  it("enables searxng and keeps web in raw when search_backend is searxng", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { web: { search_backend: "searxng", extract_backend: "firecrawl" } } })
+    );
+    expect(hermesAgent.spec.searxng).toEqual({ enabled: true });
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
+      web: { search_backend: "searxng", extract_backend: "firecrawl" },
+    });
+  });
+
+  it("enables searxng when backend is searxng (single-backend form)", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent({ config: { web: { backend: "searxng" } } }));
+    expect(hermesAgent.spec.searxng).toEqual({ enabled: true });
+  });
+
+  it("leaves searxng undefined for a non-searxng backend", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { web: { search_backend: "firecrawl" } } })
+    );
+    expect(hermesAgent.spec.searxng).toBeUndefined();
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({ web: { search_backend: "firecrawl" } });
+  });
+
+  it("leaves searxng undefined when web config is absent", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.searxng).toBeUndefined();
+  });
+
+  it("round-trips web config through the CR", () => {
+    const config = { web: { search_backend: "searxng" as const } };
+    const hermesAgent = agentToHermesAgent(makeAgent({ config }));
+    expect(mapHermesConfig(hermesAgent.spec.hermes?.config)).toEqual(config);
+  });
+});
+
 describe("mapHermesConfig", () => {
   it("folds apiServer back into config as snake_case api_server without existingSecret", () => {
     expect(

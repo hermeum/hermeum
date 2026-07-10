@@ -290,3 +290,31 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
     expect(() => z.toJSONSchema(AgentInputObjectSchema)).not.toThrow();
   });
 });
+
+describe("AgentInputSchema web config validation", () => {
+  it("accepts a searxng search_backend with a paired extract_backend", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { web: { search_backend: "searxng", extract_backend: "firecrawl" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts the single-backend form", () => {
+    const result = AgentInputSchema.safeParse({ config: { web: { backend: "searxng" } } });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown search backend", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { web: { search_backend: "google" } },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an extract backend that doesn't support extraction", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { web: { extract_backend: "ddgs" } },
+    });
+    expect(result.success).toBe(false);
+  });
+});

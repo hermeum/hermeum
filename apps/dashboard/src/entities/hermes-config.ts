@@ -336,12 +336,57 @@ Example — expose the agent over HTTP for a browser client:
 
 export type ApiServer = z.infer<typeof ApiServerSchema>;
 
+// Web Search & Extract
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search
+export const WebSearchBackendSchema = z
+  .enum(["firecrawl", "searxng", "brave-free", "ddgs", "tavily", "exa", "parallel", "xai"])
+  .describe("Web search backend provider.");
+
+export type WebSearchBackend = z.infer<typeof WebSearchBackendSchema>;
+
+export const WebExtractBackendSchema = z
+  .enum(["firecrawl", "tavily", "exa", "parallel"])
+  .describe(
+    "Web extract backend provider. Only Firecrawl, Tavily, Exa, and Parallel " +
+      "support extraction; the others are search-only."
+  );
+
+export type WebExtractBackend = z.infer<typeof WebExtractBackendSchema>;
+
+export const WebSchema = z
+  .looseObject({
+    backend: WebSearchBackendSchema.optional().describe(
+      "Single backend for both search and extract. Use search_backend / " +
+        "extract_backend to set them independently."
+    ),
+    search_backend: WebSearchBackendSchema.optional().describe(
+      'Backend for the web_search tool. Prefer "searxng" — it is natively ' +
+        "supported and provisions a self-hosted SearXNG sidecar in the agent's " +
+        "pod with no external API key required."
+    ),
+    extract_backend: WebExtractBackendSchema.optional().describe(
+      "Backend for the web_extract tool. Required only when search_backend is " +
+        "search-only (e.g. searxng, ddgs) and you also need URL extraction."
+    ),
+  })
+  .describe(
+    `Web search & extract configuration. \
+The agent uses these backends for its web_search and web_extract tools.
+
+Example — free self-hosted search with Firecrawl extraction:
+  search_backend: "searxng"
+  extract_backend: "firecrawl"`
+  );
+
+export type Web = z.infer<typeof WebSchema>;
+
 export const ConfigSchema = z
   .looseObject({
-    model: ModelSchema.optional().describe("Model configuration to use."),
+    model: ModelSchema.optional(),
     platforms: PlatformsSchema.optional(),
     api_server: ApiServerSchema.optional(),
     slack: SlackSchema.optional(),
+    web: WebSchema.optional(),
   })
   .optional()
   .describe(
