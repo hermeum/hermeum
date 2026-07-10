@@ -67,6 +67,7 @@ export const ModelSchema = z
           'e.g. "https://api.novita.ai/openai/v1". Omit to use the provider default.'
       ),
   })
+  .optional()
   .describe(
     `LLM model configuration for the agent. \
 Only set this when the request names a specific provider or model; otherwise omit it.
@@ -246,6 +247,7 @@ export const WebhookSchema = z
       .optional()
       .describe("Webhook server settings."),
   })
+  .optional()
   .describe(
     `Webhook messaging platform configuration. \
 Note that setting enabled: true requires a sensitive WEBHOOK_SECRET env var.`
@@ -255,8 +257,9 @@ export type Webhook = z.infer<typeof WebhookSchema>;
 
 export const PlatformsSchema = z
   .looseObject({
-    webhook: WebhookSchema.optional(),
+    webhook: WebhookSchema,
   })
+  .optional()
   .describe("Messaging platform integrations.");
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
@@ -284,6 +287,7 @@ export const SlackSchema = z
           "(silently drop); the upstream \"pair\" default is intentionally disallowed."
       ),
   })
+  .optional()
   .describe(
     `Slack messaging platform configuration. \
 Requires env vars: SLACK_BOT_TOKEN (sensitive), SLACK_APP_TOKEN (sensitive), \
@@ -324,6 +328,7 @@ export const ApiServerSchema = z
           "API_SERVER_CORS_ORIGINS environment variable. Omit to disable CORS."
       ),
   })
+  .optional()
   .describe(
     `API server configuration. \
 Note that setting enabled: true requires a sensitive API_SERVER_KEY env var — \
@@ -369,6 +374,7 @@ export const WebSchema = z
         "search-only (e.g. searxng, ddgs) and you also need URL extraction."
     ),
   })
+  .optional()
   .describe(
     `Web search & extract configuration. \
 The agent uses these backends for its web_search and web_extract tools.
@@ -407,11 +413,11 @@ export type Browser = z.infer<typeof BrowserSchema>;
 
 export const ConfigSchema = z
   .looseObject({
-    model: ModelSchema.optional(),
-    platforms: PlatformsSchema.optional(),
-    api_server: ApiServerSchema.optional(),
-    slack: SlackSchema.optional(),
-    web: WebSchema.optional(),
+    model: ModelSchema,
+    platforms: PlatformsSchema,
+    api_server: ApiServerSchema,
+    slack: SlackSchema,
+    web: WebSchema,
     browser: BrowserSchema,
   })
   .optional()
