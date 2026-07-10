@@ -92,6 +92,30 @@ describe("AgentInputSchema env placeholder validation", () => {
   });
 });
 
+describe("AgentInputSchema packages validation", () => {
+  it("succeeds with pip and npm package lists", () => {
+    const result = AgentInputSchema.safeParse({
+      packages: { pip: ["requests", "pandas==2.1.0"], npm: ["typescript"] },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when packages is omitted entirely", () => {
+    const result = AgentInputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds with only pip or only npm set", () => {
+    expect(AgentInputSchema.safeParse({ packages: { pip: ["requests"] } }).success).toBe(true);
+    expect(AgentInputSchema.safeParse({ packages: { npm: ["typescript"] } }).success).toBe(true);
+  });
+
+  it("fails when a package entry is not a string", () => {
+    const result = AgentInputSchema.safeParse({ packages: { pip: [123] } });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("AgentInputObjectSchema as LLM structured-output schema", () => {
   it("accepts a representative generated payload", () => {
     const result = AgentInputObjectSchema.safeParse({

@@ -235,6 +235,21 @@ function AgentDetailPage() {
               </div>
             )}
 
+            {/* packages */}
+            {agent.packages?.pip && agent.packages.pip.length > 0 && (
+              <div className="py-8 flex flex-col gap-3">
+                <p className="text-sm font-medium">Python Packages</p>
+                <ButtonList items={agent.packages.pip} max={10} />
+              </div>
+            )}
+
+            {agent.packages?.npm && agent.packages.npm.length > 0 && (
+              <div className="py-8 flex flex-col gap-3">
+                <p className="text-sm font-medium">npm Packages</p>
+                <ButtonList items={agent.packages.npm} max={10} />
+              </div>
+            )}
+
             {/* env */}
             {agent.env && agent.env.length > 0 && (
               <div className="py-8 flex flex-col gap-3">

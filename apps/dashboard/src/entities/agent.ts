@@ -104,6 +104,28 @@ export const PluginsSchema = z
 
 export type Plugins = z.infer<typeof PluginsSchema>;
 
+export const PackagesSchema = z
+  .object({
+    pip: z
+      .array(z.string())
+      .max(50)
+      .optional()
+      .describe(
+        'Python package specifiers to install via `uv pip install` (e.g. "requests", "pandas==2.1.0").'
+      ),
+    npm: z
+      .array(z.string())
+      .max(50)
+      .optional()
+      .describe(
+        'npm package specifiers to install via `npm install` (e.g. "@anthropic-ai/sdk", "typescript@^5.0.0").'
+      ),
+  })
+  .optional()
+  .describe("Python and npm packages to pre-install before the agent starts.");
+
+export type Packages = z.infer<typeof PackagesSchema>;
+
 export const StorageSchema = z
   .object({
     enabled: z.boolean().default(true),
@@ -141,6 +163,7 @@ export const AgentInputObjectSchema = z.object({
   env: EnvSchema,
   skills: SkillsSchema,
   plugins: PluginsSchema,
+  packages: PackagesSchema,
   sharedEnvSets: z
     .array(z.string())
     .optional()
