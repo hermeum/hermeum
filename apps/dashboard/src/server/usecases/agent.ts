@@ -81,10 +81,7 @@ export class AgentUseCase {
   async createHermesAgent(ctx: Context, agentInput: AgentInput): Promise<Agent> {
     agentInput = AgentInputSchema.parse(agentInput);
 
-    if (agentInput.type !== undefined) {
-      this.checkAgentTypeAllowed(agentInput.type);
-    }
-    await this.checkSharedEnvSetsAccessible(agentInput.sharedEnvSets);
+    await this.checkAgentInputAllowed(agentInput);
     return this.runtime.createHermesAgent({ ...agentInput, userId: ctx.user!.id });
   }
 
@@ -97,10 +94,7 @@ export class AgentUseCase {
 
     patch = AgentInputSchema.parse(patch);
 
-    if (patch.type !== undefined) {
-      this.checkAgentTypeAllowed(patch.type);
-    }
-    await this.checkSharedEnvSetsAccessible(patch.sharedEnvSets);
+    await this.checkAgentInputAllowed(patch);
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
     }
@@ -163,18 +157,6 @@ export class AgentUseCase {
     });
   }
 
-  private async checkSharedEnvSetsAccessible(setIds: string[] | undefined): Promise<void> {
-    for (const id of setIds ?? []) {
-      const envSet = await this.runtime.getSharedEnvSet(id);
-      if (!envSet) {
-        throw new Error(`Shared env set "${id}" not found`);
-      }
-      if (envSet.archived) {
-        throw new Error(`Shared env set "${id}" is archived`);
-      }
-    }
-  }
-
   async suspendHermesAgent(ctx: Context, id: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
@@ -202,13 +184,26 @@ export class AgentUseCase {
     return this.runtime.getGatewayToken(agentId);
   }
 
-  private checkAgentTypeAllowed(agentType: string): void {
-    const { agentTypes } = this.config.get();
-    if (!agentTypes) {
-      throw new Error("Agent types are not configured");
+  private async checkAgentInputAllowed(
+    input: Pick<AgentInput, "type" | "sharedEnvSets">
+  ): Promise<void> {
+    if (input.type !== undefined) {
+      const { agentTypes } = this.config.get();
+      if (!agentTypes) {
+        throw new Error("Agent types are not configured");
+      }
+      if (!(input.type in agentTypes)) {
+        throw new Error(`Agent type "${input.type}" is not configured`);
+      }
     }
-    if (!(agentType in agentTypes)) {
-      throw new Error(`Agent type "${agentType}" is not configured`);
+    for (const id of input.sharedEnvSets ?? []) {
+      const envSet = await this.runtime.getSharedEnvSet(id);
+      if (!envSet) {
+        throw new Error(`Shared env set "${id}" not found`);
+      }
+      if (envSet.archived) {
+        throw new Error(`Shared env set "${id}" is archived`);
+      }
     }
   }
 
