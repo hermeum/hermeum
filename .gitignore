@@ -11,3 +11,4 @@ dist
 
 agent-config.yaml
 .worktrees/
+.wtp.yml
