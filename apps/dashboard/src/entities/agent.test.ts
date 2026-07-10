@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -288,6 +288,70 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
 
   it("is convertible to JSON Schema for the AI SDK", () => {
     expect(() => z.toJSONSchema(AgentInputObjectSchema)).not.toThrow();
+  });
+});
+
+describe("SkillSchema identifier formats", () => {
+  // https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#supported-hub-sources
+
+  const valid: string[] = [
+    "axolotl",
+    "gif-search",
+    "standup-summarizer",
+    "npm:@hermeum/github-review",
+    "pack:./local/skill",
+    "official/security/1password",
+    "official/migration/openclaw-migration",
+    "skills-sh/vercel-labs/agent-skills/vercel-react-best-practices",
+    "browse-sh/airbnb.com/search-listings-ddgioa",
+    "clawhub/some-org/some-skill",
+    "lobehub/some-org/some-skill",
+    "claude-marketplace/some-org/some-skill",
+    "well-known:https://mintlify.com/docs/.well-known/skills/mintlify",
+    "https://sharethis.chat/SKILL.md",
+    "https://example.com/my-skill/SKILL.md",
+    "openai/skills/k8s",
+    "anthropics/skills/pdf",
+    "owner/repo/skills/my-workflow",
+  ];
+
+  it.each(valid)("accepts %s", (identifier) => {
+    expect(SkillSchema.safeParse(identifier).success).toBe(true);
+  });
+
+  const invalid: string[] = [
+    "bad skill!",
+    "npm:",
+    "pack:",
+    "official/",
+    "skills-sh/",
+    "browse-sh/",
+    "clawhub/",
+    "lobehub/",
+    "claude-marketplace/",
+    "well-known:not-a-url",
+    "ftp://example.com/SKILL.md",
+    "http://",
+    "https://",
+    "/openai",
+    "openai/",
+    "1bad",
+    "with space",
+  ];
+
+  it.each(invalid)("rejects %s", (identifier) => {
+    const result = SkillSchema.safeParse(identifier);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a skill exceeding 128 characters", () => {
+    const result = SkillSchema.safeParse("a".repeat(129));
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a 128-character skill", () => {
+    const result = SkillSchema.safeParse("a".repeat(128));
+    expect(result.success).toBe(true);
   });
 });
 
