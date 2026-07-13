@@ -3,7 +3,7 @@ import { parse } from "yaml";
 
 import { HermeumConfig, HermeumConfigSchema } from "@/entities";
 import { config } from "@/server/libs/config";
-import { ConfigAdaptor } from "../usecases/adaptors/config";
+import { ConfigAdaptor } from "../adaptors/config";
 
 export class LocalConfig implements ConfigAdaptor {
   private cache: HermeumConfig;

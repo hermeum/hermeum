@@ -2,7 +2,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import SuperJSON from "superjson";
 import { fromNodeHeaders } from "better-auth/node";
 import type { Request } from "express";
-import { auth } from "@/server/infras/better-auth/auth.js";
+import { auth } from "@/server/routers/better-auth/auth.js";
 import type { Context as TRPCContext, Session, User } from "@/entities/index.js";
 
 export const createTRPContext = async ({ req }: { req: Request }): Promise<TRPCContext> => {

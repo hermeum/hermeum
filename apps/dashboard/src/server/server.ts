@@ -7,7 +7,7 @@ import { toNodeHandler } from "better-auth/node";
 import { config } from "./libs/config";
 import { trpcMiddleware } from "@/server/routers/trpc/index.js";
 import { webhookRouter } from "./routers/webhook";
-import { auth } from "./infras/better-auth/auth";
+import { auth } from "./routers/better-auth/auth";
 
 const PORT = typeof process.env.PORT !== "undefined" ? parseInt(process.env.PORT, 10) : 3000;
 const HMR_PORT =

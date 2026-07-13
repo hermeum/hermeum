@@ -7,7 +7,7 @@
 //
 // Requires HERMEUM_OPENAI_MODEL (or the default) and a valid API key in env.
 
-import { AiSdkGenerator } from "@/server/infras/ai-sdk";
+import { AiSdkGenerator } from "@/server/usecases/infras/ai-sdk";
 import { AgentUseCase } from "@/server/usecases/agent";
 import type { ConfigAdaptor } from "@/server/usecases/adaptors/config";
 import type { Context, HermeumConfig } from "@/entities";

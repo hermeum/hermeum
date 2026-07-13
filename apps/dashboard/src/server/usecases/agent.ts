@@ -13,9 +13,9 @@ import {
   JsonPatchOp,
 } from "@/entities";
 
-import { AiSdkGenerator } from "../infras/ai-sdk";
-import { KubernetesClient } from "../infras/kubernetes/client";
-import { LocalConfig } from "../infras/local-hermeum-config";
+import { AiSdkGenerator } from "./infras/ai-sdk";
+import { KubernetesClient } from "./infras/kubernetes/client";
+import { LocalConfig } from "./infras/local-hermeum-config";
 import { AiGenerator } from "./adaptors/generator";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";

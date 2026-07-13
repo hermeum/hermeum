@@ -4,7 +4,7 @@ import { generateText, isStepCount, NoObjectGeneratedError, Output, tool, ToolSe
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 import { config } from "@/server/libs/config";
 
-import { AiGenerator, AiGeneratorTool } from "../usecases/adaptors/generator";
+import { AiGenerator, AiGeneratorTool } from "../adaptors/generator";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toToolSet(tools?: Record<string, AiGeneratorTool<any>>): ToolSet | undefined {
