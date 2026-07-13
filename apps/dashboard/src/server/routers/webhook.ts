@@ -1,7 +1,7 @@
 import { Router } from "express";
 
-import { mapHermesAgent } from "../infras/kubernetes/client.js";
-import { HermesAgent } from "../infras/kubernetes/types/hermes-agent.js";
+import { mapHermesAgent } from "../usecases/infras/kubernetes/client.js";
+import { HermesAgent } from "../usecases/infras/kubernetes/types/hermes-agent.js";
 import { AgentUseCase } from "../usecases/agent.js";
 
 type AdmissionOperation = "CREATE" | "UPDATE" | "DELETE" | "CONNECT";
