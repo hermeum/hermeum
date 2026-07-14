@@ -2,14 +2,12 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { parse } from "yaml";
 import { toast } from "sonner";
-import { LoaderCircle } from "lucide-react";
 import { useTRPC } from "@/router";
 import type { Agent, AgentInput } from "@/entities";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 import { stringifyAgentInput } from "@/client/ui/components/agent-yaml";
 import { Button } from "@hermeum/components/ui/button";
-import { Textarea } from "@hermeum/components/ui/textarea";
 import {
   Dialog,
   DialogClose,
@@ -35,8 +33,6 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
   const queryClient = useQueryClient();
   const [editorValue, setEditorValue] = useState(() => agentToYaml(instance));
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState("");
-  const [previousValue, setPreviousValue] = useState<string | null>(null);
 
   const { mutate: updateAgent, isPending: isUpdating } = useMutation(
     trpc.agent.update.mutationOptions({
@@ -52,36 +48,16 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
     })
   );
 
-  const { mutate: reviseAgent, isPending: isRevising } = useMutation(
-    trpc.agentConfig.update.mutationOptions({
-      onSuccess: (revised) => {
-        setPreviousValue(editorValue);
-        setEditorValue(stringifyAgentInput(revised));
-        setPrompt("");
-        setValidationError(null);
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    })
-  );
-
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setEditorValue(agentToYaml(instance));
       setValidationError(null);
-      setPrompt("");
-      setPreviousValue(null);
     }
     onOpenChange(nextOpen);
   }
 
   // Parses the editor content, surfacing errors via `validationError`.
-  // `schema` differs by caller: revise accepts drafts (object schema only),
-  // save requires the full refined schema.
-  function parseEditor(
-    schema: typeof AgentInputObjectSchema | typeof AgentInputSchema
-  ): AgentInput | null {
+  function parseEditor(): AgentInput | null {
     let parsed: unknown;
     try {
       parsed = parse(editorValue) ?? {};
@@ -90,7 +66,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
       return null;
     }
 
-    const result = schema.safeParse(parsed);
+    const result = AgentInputSchema.safeParse(parsed);
     if (!result.success) {
       const issue = result.error.issues[0]!;
       const path = issue.path.length > 0 ? `/${issue.path.join("/")}` : "";
@@ -102,22 +78,8 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
     return result.data;
   }
 
-  function handleRevise() {
-    if (prompt.trim().length === 0 || isRevising) return;
-    const config = parseEditor(AgentInputObjectSchema);
-    if (!config) return;
-    reviseAgent({ prompt: prompt.trim(), config });
-  }
-
-  function handleUndoRevision() {
-    if (previousValue === null) return;
-    setEditorValue(previousValue);
-    setPreviousValue(null);
-    setValidationError(null);
-  }
-
   function handleSave() {
-    const config = parseEditor(AgentInputSchema);
+    const config = parseEditor();
     if (!config) return;
     updateAgent({ id: instance.id, ...config });
   }
@@ -137,47 +99,15 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
           <CodeEditor
             value={editorValue}
             onChange={setEditorValue}
-            readOnly={isRevising}
             invalid={!!validationError}
             maxHeight="360px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
         </div>
 
-        <div className="shrink-0 rounded-[0.25rem] border p-3">
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                handleRevise();
-              }
-            }}
-            placeholder="Ask AI to change something…"
-            className="min-h-9 border-transparent px-0 py-0 focus-visible:border-transparent"
-          />
-          <div className="flex justify-end gap-2">
-            {previousValue !== null && (
-              <Button variant="ghost" size="xs" onClick={handleUndoRevision}>
-                Undo revision
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={handleRevise}
-              disabled={prompt.trim().length === 0 || isRevising}
-            >
-              {isRevising && <LoaderCircle className="animate-spin" />}
-              {isRevising ? "Revising…" : "Revise"}
-            </Button>
-          </div>
-        </div>
-
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button onClick={handleSave} disabled={isUpdating || isRevising}>
+          <Button onClick={handleSave} disabled={isUpdating}>
             {isUpdating ? "Saving…" : "Save changes"}
           </Button>
         </DialogFooter>
