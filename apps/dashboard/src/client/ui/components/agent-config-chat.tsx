@@ -1,0 +1,154 @@
+import { useEffect, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import type { UIDataTypes, UIMessage } from "ai";
+import { ArrowUp, Check, LoaderCircle } from "lucide-react";
+
+import { cn } from "@hermeum/components/lib/utils";
+import { Button } from "@hermeum/components/ui/button";
+import { Textarea } from "@hermeum/components/ui/textarea";
+import type { AgentInput } from "@/entities";
+import { AgentInputObjectSchema } from "@/entities";
+
+type AgentConfigChatMessage = UIMessage<
+  unknown,
+  UIDataTypes,
+  { updateAgentConfig: { input: AgentInput; output: string } }
+>;
+
+interface AgentConfigChatProps {
+  // Called at send time so each turn carries the latest editor draft,
+  // including hand edits made between messages.
+  getConfig: () => AgentInput | undefined;
+  onConfigUpdate: (config: AgentInput) => void;
+}
+
+export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatProps) {
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Latest-ref so the onToolCall closure (captured once by the Chat
+  // instance) never applies updates through a stale callback.
+  const callbacksRef = useRef({ getConfig, onConfigUpdate });
+  callbacksRef.current = { getConfig, onConfigUpdate };
+
+  const { messages, sendMessage, status, error, addToolOutput } =
+    useChat<AgentConfigChatMessage>({
+      transport: new DefaultChatTransport({ api: "/chat/agent-config" }),
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+      async onToolCall({ toolCall }) {
+        if (toolCall.dynamic || toolCall.toolName !== "updateAgentConfig") return;
+        const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0]!;
+          addToolOutput({
+            tool: "updateAgentConfig",
+            toolCallId: toolCall.toolCallId,
+            state: "output-error",
+            errorText: `Invalid agent config: ${issue.message} (path: /${issue.path.join("/")})`,
+          });
+          return;
+        }
+        callbacksRef.current.onConfigUpdate(parsed.data);
+        addToolOutput({
+          tool: "updateAgentConfig",
+          toolCallId: toolCall.toolCallId,
+          output: "Applied to the editor.",
+          // The automatic follow-up request should also carry the draft it
+          // just produced.
+          options: { body: { config: parsed.data } },
+        });
+      },
+    });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages]);
+
+  function handleSend() {
+    const text = input.trim();
+    if (text.length === 0 || status !== "ready") return;
+    sendMessage({ text }, { body: { config: callbacksRef.current.getConfig() } });
+    setInput("");
+  }
+
+  const isBusy = status === "submitted" || status === "streaming";
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto py-2 pr-1">
+        {messages.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Describe the agent you need and refine it through conversation.
+          </p>
+        )}
+        {messages.map((message) => (
+          <div key={message.id} className="space-y-2">
+            {message.parts.map((part, index) => {
+              if (part.type === "text") {
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "whitespace-pre-wrap text-sm",
+                      message.role === "user"
+                        ? "ml-8 w-fit justify-self-end rounded-lg bg-muted px-3 py-2"
+                        : "mr-8"
+                    )}
+                  >
+                    {part.text}
+                  </div>
+                );
+              }
+              if (part.type === "tool-updateAgentConfig") {
+                return (
+                  <div
+                    key={index}
+                    className="flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                  >
+                    {part.state === "output-available" ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <LoaderCircle className="size-3 animate-spin" />
+                    )}
+                    {part.state === "output-error" ? "Config update failed" : "Config updated"}
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        ))}
+        {status === "submitted" && (
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+        )}
+        {error && <p className="text-sm text-destructive">{error.message}</p>}
+      </div>
+
+      <div className="shrink-0 rounded-[0.25rem] border p-3">
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="Reviews new pull requests and leaves inline comments on risky changes."
+          className="min-h-16 border-transparent px-0 py-0 focus-visible:border-transparent"
+        />
+        <div className="flex justify-end">
+          <Button
+            size="icon-sm"
+            aria-label="Send message"
+            onClick={handleSend}
+            disabled={input.trim().length === 0 || isBusy}
+          >
+            {isBusy ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
