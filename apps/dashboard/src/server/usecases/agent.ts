@@ -2,10 +2,7 @@ import { z } from "zod";
 
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
-import { KubernetesClient } from "../infras/kubernetes/client";
-import { FileAdaptor } from "./adaptors/file";
-import { Runtime } from "./adaptors/runtime";
-import { FilesUseCase, HermeumConfigLoadable } from "./mixin";
+import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
 import { verifyOwnership } from "./authz";
 
 export const ListAgentsFilterSchema = z.object({
@@ -13,14 +10,7 @@ export const ListAgentsFilterSchema = z.object({
 });
 export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
-export class AgentUseCase extends HermeumConfigLoadable(FilesUseCase) {
-  constructor(
-    private readonly runtime: Runtime = new KubernetesClient(),
-    files?: FileAdaptor
-  ) {
-    super(files);
-  }
-
+export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
   async getmutatingWebhookJsonPatch(agent: Agent): Promise<JsonPatchOp[] | null> {
     if (!agent.type) return null;
     const { agentTypes } = await this.loadHermeumConfig();

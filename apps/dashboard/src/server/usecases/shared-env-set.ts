@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 import { Context, EnvVar, EnvVarSchema, SharedEnvSet } from "@/entities";
-import { KubernetesClient } from "../infras/kubernetes/client";
-import { Runtime } from "./adaptors/runtime";
+import { BaseUseCase } from "./mixin";
 import { verifyOwnership } from "./authz";
 
 export const CreateSharedEnvSetInputSchema = z.object({
@@ -22,8 +21,7 @@ export const UpdateSharedEnvSetInputSchema = z.object({
 });
 export type UpdateSharedEnvSetInput = z.infer<typeof UpdateSharedEnvSetInputSchema>;
 
-export class SharedEnvSetUseCase {
-  constructor(private readonly runtime: Runtime = new KubernetesClient()) {}
+export class SharedEnvSetUseCase extends BaseUseCase {
 
   async listSharedEnvSets(ctx: Context, input?: ListSharedEnvSetsInput): Promise<SharedEnvSet[]> {
     return this.runtime.listSharedEnvSets(input);

@@ -46,7 +46,7 @@ const callOptions = {} as ToolExecutionOptions<never>;
 
 describe("ChatUseCase.getAgentConfigContext", () => {
   it("uses the base system prompt when no agent types are configured", async () => {
-    const useCase = new ChatUseCase(makeFiles({}, undefined));
+    const useCase = new ChatUseCase(undefined, makeFiles({}, undefined));
 
     const { instructions } = await useCase.getAgentConfigContext();
 
@@ -55,6 +55,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("appends the configured agent types to the instructions", async () => {
     const useCase = new ChatUseCase(
+      undefined,
       makeFiles(
         {},
         {
@@ -72,7 +73,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("notes the missing draft when no current config is given", async () => {
-    const useCase = new ChatUseCase(makeFiles());
+    const useCase = new ChatUseCase(undefined, makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext();
 
@@ -80,7 +81,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("embeds the current config as JSON in the prompt", async () => {
-    const useCase = new ChatUseCase(makeFiles());
+    const useCase = new ChatUseCase(undefined, makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext({ name: "pr-reviewer" });
 
@@ -88,7 +89,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes a client-side updateAgentConfig tool", async () => {
-    const useCase = new ChatUseCase(makeFiles());
+    const useCase = new ChatUseCase(undefined, makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -100,7 +101,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes listDocuments and readDocument as server-executed tools", async () => {
-    const useCase = new ChatUseCase(makeFiles());
+    const useCase = new ChatUseCase(undefined, makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -110,6 +111,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("lists documents with the frontmatter description when present", async () => {
     const useCase = new ChatUseCase(
+      undefined,
       makeFiles({
         model: { content: "# Model", data: { description: "Model configuration" } },
         webhook: { content: "# Webhook" },
@@ -126,6 +128,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("reads multiple documents in one call", async () => {
     const useCase = new ChatUseCase(
+      undefined,
       makeFiles({
         model: { content: "# Model doc" },
         webhook: { content: "# Webhook doc" },
@@ -144,7 +147,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("returns a per-entry error for unknown names without failing the batch", async () => {
-    const useCase = new ChatUseCase(makeFiles({ model: { content: "# Model doc" } }));
+    const useCase = new ChatUseCase(undefined, makeFiles({ model: { content: "# Model doc" } }));
 
     const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "nope"] }, callOptions);
@@ -159,7 +162,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("rejects path-traversal document names without touching the adaptor", async () => {
     const files = makeFiles({ model: { content: "# Model doc" } });
-    const useCase = new ChatUseCase(files);
+    const useCase = new ChatUseCase(undefined, files);
 
     const { tools } = await useCase.getAgentConfigContext();
     vi.mocked(files.readFile).mockClear();

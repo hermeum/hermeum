@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
-import { FilesUseCase, HermeumConfigLoadable } from "./mixin";
+import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
 
 const DOCS_PATH = "./docs/agent-config";
 
@@ -17,7 +17,7 @@ export interface AgentConfigContext {
   tools: ToolSet;
 }
 
-export class ChatUseCase extends HermeumConfigLoadable(FilesUseCase) {
+export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
   // client-side tool the model uses to apply config changes.
