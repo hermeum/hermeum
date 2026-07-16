@@ -1,6 +1,6 @@
 import { parse } from "yaml";
 
-import { HermeumConfig, HermeumConfigSchema } from "@/entities";
+import { Context, HermeumConfig, HermeumConfigSchema, User } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
@@ -38,6 +38,28 @@ export function HermeumConfigLoadable<TBase extends Constructor<{ files: FileAda
         this.#cachedHermeumConfig = HermeumConfigSchema.parse(raw);
       }
       return this.#cachedHermeumConfig;
+    }
+  };
+}
+
+// Mixin adding resource-ownership authorization to a use case class. The
+// protectedProcedure router gate guarantees a session is present, but the
+// Context type still carries a nullable user, so requireUser centralizes the
+// non-null assertion as defense-in-depth. Compose with:
+//   class MyUseCase extends OwnershipGuarded(BaseUseCase) { ... }
+export function OwnershipGuarded<TBase extends Constructor>(Base: TBase) {
+  return class extends Base {
+    requireUser(ctx: Context): User {
+      if (!ctx.user) {
+        throw new Error("Not authenticated");
+      }
+      return ctx.user;
+    }
+
+    verifyOwnership(ctx: Context, resource: { userId: string }): void {
+      if (this.requireUser(ctx).id !== resource.userId) {
+        throw new Error("You don't have permission to perform this action");
+      }
     }
   };
 }
