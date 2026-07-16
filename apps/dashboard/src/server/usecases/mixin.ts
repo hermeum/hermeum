@@ -3,7 +3,14 @@ import { parse } from "yaml";
 import { HermeumConfig, HermeumConfigSchema } from "@/entities";
 import { config } from "@/server/libs/config";
 
+import { LocalFiles } from "../infras/local-files";
 import { FileAdaptor } from "./adaptors/file";
+
+// Core base class for use cases that read local files; mixins like
+// HermeumConfigLoadable build on the injected adaptor.
+export class FilesUseCase {
+  constructor(readonly files: FileAdaptor = new LocalFiles()) {}
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T = object> = new (...args: any[]) => T;

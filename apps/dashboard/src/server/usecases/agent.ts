@@ -5,8 +5,7 @@ import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { FileAdaptor } from "./adaptors/file";
 import { Runtime } from "./adaptors/runtime";
-import { FilesUseCase } from "./base";
-import { HermeumConfigLoadable } from "./hermeum-config";
+import { FilesUseCase, HermeumConfigLoadable } from "./mixin";
 import { verifyOwnership } from "./authz";
 
 export const ListAgentsFilterSchema = z.object({

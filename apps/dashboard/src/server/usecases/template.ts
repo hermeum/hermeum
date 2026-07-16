@@ -1,6 +1,5 @@
 import { Context, Template } from "@/entities";
-import { FilesUseCase } from "./base";
-import { HermeumConfigLoadable } from "./hermeum-config";
+import { FilesUseCase, HermeumConfigLoadable } from "./mixin";
 
 export class TemplateUseCase extends HermeumConfigLoadable(FilesUseCase) {
   async list(_ctx: Context): Promise<Template[]> {
