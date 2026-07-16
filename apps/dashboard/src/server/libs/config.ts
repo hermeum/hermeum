@@ -11,7 +11,7 @@ export const ConfigSchema = z.object({
   smtpUrl: z.url().optional(),
   allowedEmailDomain: z.string().optional(),
   hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
-  hermesImageTag: z.string().default("v2026.6.19"),
+  hermesImageTag: z.string().default("v2026.7.7.2"),
   openaiModel: z.string().min(1).default("gpt-5.5"),
   openaiBaseUrl: z.url().optional(),
 });
