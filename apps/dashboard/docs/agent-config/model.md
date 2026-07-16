@@ -1,3 +1,7 @@
+---
+description: LLM model configuration (`config.model`) — providers, model ids, base URLs, and required API-key env vars.
+---
+
 # LLM model configuration (`config.model`)
 
 Configures which LLM provider and model the Hermes agent uses. Only set this

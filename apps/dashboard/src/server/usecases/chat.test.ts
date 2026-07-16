@@ -18,12 +18,16 @@ function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): ConfigAdaptor {
   };
 }
 
-function makeDocuments(docs: Record<string, string> = {}): DocumentAdaptor {
+type Doc = { content: string; data?: Record<string, unknown> };
+
+function makeDocuments(docs: Record<string, Doc> = {}): DocumentAdaptor {
   return {
-    list: vi
+    list: vi.fn().mockResolvedValue(Object.keys(docs)),
+    read: vi
       .fn()
-      .mockResolvedValue(Object.keys(docs).map((name) => ({ name, description: `${name} doc` }))),
-    read: vi.fn().mockImplementation(async (name: string) => docs[name] ?? null),
+      .mockImplementation(async (name: string) =>
+        name in docs ? { content: docs[name].content, data: docs[name].data ?? {} } : null
+      ),
   };
 }
 
@@ -91,19 +95,30 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.readDocument?.execute).toBeDefined();
   });
 
-  it("lists the adaptor's documents", async () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments({ model: "# Model" }));
+  it("lists documents with the frontmatter description when present", async () => {
+    const useCase = new ChatUseCase(
+      makeConfig(),
+      makeDocuments({
+        model: { content: "# Model", data: { description: "Model configuration" } },
+        webhook: { content: "# Webhook" },
+      })
+    );
 
     const { tools } = useCase.getAgentConfigContext();
     const result = await tools.listDocuments!.execute!({}, callOptions);
 
-    expect(result).toEqual({ documents: [{ name: "model", description: "model doc" }] });
+    expect(result).toEqual({
+      documents: [{ name: "model", description: "Model configuration" }, { name: "webhook" }],
+    });
   });
 
   it("reads multiple documents in one call", async () => {
     const useCase = new ChatUseCase(
       makeConfig(),
-      makeDocuments({ model: "# Model doc", webhook: "# Webhook doc" })
+      makeDocuments({
+        model: { content: "# Model doc" },
+        webhook: { content: "# Webhook doc" },
+      })
     );
 
     const { tools } = useCase.getAgentConfigContext();
@@ -118,7 +133,10 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("returns a per-entry error for unknown names without failing the batch", async () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments({ model: "# Model doc" }));
+    const useCase = new ChatUseCase(
+      makeConfig(),
+      makeDocuments({ model: { content: "# Model doc" } })
+    );
 
     const { tools } = useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "nope"] }, callOptions);

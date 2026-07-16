@@ -54,7 +54,17 @@ export class ChatUseCase {
           "List the available Hermes agent configuration documents, with a " +
           "one-line description of each.",
         inputSchema: z.object({}),
-        execute: async () => ({ documents: await this.documents.list() }),
+        execute: async () => {
+          const names = await this.documents.list();
+          return {
+            documents: await Promise.all(
+              names.map(async (name) => {
+                const description = (await this.documents.read(name))?.data.description;
+                return typeof description === "string" ? { name, description } : { name };
+              })
+            ),
+          };
+        },
       }),
       readDocument: tool({
         description:
@@ -66,13 +76,13 @@ export class ChatUseCase {
         execute: async ({ names }) => ({
           documents: await Promise.all(
             names.map(async (name) => {
-              const content = await this.documents.read(name);
-              return content === null
+              const file = await this.documents.read(name);
+              return file === null
                 ? {
                     name,
                     error: `Document "${name}" not found. Call listDocuments for available names.`,
                   }
-                : { name, content };
+                : { name, content: file.content };
             })
           ),
         }),
