@@ -3,7 +3,9 @@ import type { ToolExecutionOptions } from "ai";
 import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
-vi.mock("@/server/libs/config", () => ({ config: { agentConfigPath: "./agent-config.yaml" } }));
+vi.mock("@/server/libs/config", () => ({
+  config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/agent-config" },
+}));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { File, FileAdaptor } from "./adaptors/file";

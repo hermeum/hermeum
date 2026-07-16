@@ -2,10 +2,11 @@ import { tool, ToolSet } from "ai";
 import { z } from "zod";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
+import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
 
-const DOCS_PATH = "./docs/agent-config";
+const DOCS_PATH = config.docsPath;
 
 // Document names come from the LLM; only simple slugs are accepted so a
 // crafted name can't traverse outside DOCS_PATH.
