@@ -72,26 +72,6 @@ No fixed structure is required. Choose what fits the request:
 
 Use the request's own domain language where possible — not boilerplate.
 
-## Suggested structure
-
-When the agent has more than one thing to say, this 4-block shape works well:
-
-```markdown
-# Identity
-Who the agent is.
-
-# Style
-How the agent should sound.
-
-# Avoid
-What the agent should not do.
-
-# Defaults
-How the agent should behave when ambiguity appears.
-```
-
-You don't need all four — pick the ones that apply.
-
 ## Examples
 
 ### Pragmatic engineer (multi-section)
@@ -128,11 +108,6 @@ You are fair, but you do not soften important criticism.
 - Be explicit about risks and tradeoffs
 - Prefer blunt clarity to vague diplomacy
 ```
-
-## soul vs other fields
-
-`soul` is for durable voice only. Task-specific instructions, tool choices,
-and workflow rules belong elsewhere in the config — not here.
 
 ---
 

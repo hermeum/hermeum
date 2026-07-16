@@ -39,39 +39,7 @@ export const SoulSchema = z
   .string()
   .optional()
   .describe(
-    `Primary identity — the first thing in the system prompt, defining who the agent is.
-
-Choose whatever shape fits the request — a plain paragraph, a couple of
-bullets, or short markdown sections based on agent functionality. 
-A simple agent deserves a one- or two-sentence soul; only reach for sections when
-there's a genuinely separate set of points to make (e.g. tone vs. things to
-avoid). 
-
-Use it for durable voice and personality guidance only — not task-specific
-instructions (those belong elsewhere in the config).
-
-#Example — simple request ("summarize documents I paste in"):
-  You are a precise, neutral summarizer. Prioritize completeness over brevity
-  when the two conflict, and never editorialize.
-
-# Example — request with more to say ("review GitHub pull requests"):
-  # Personality
-  You are a pragmatic senior engineer with strong taste.
-
-  ## Style
-  - Be direct without being cold
-  - Prefer substance over filler
-  - Push back when something is a bad idea
-
-  ## What to avoid
-  - Sycophancy
-  - Hype language
-  - Repeating the user's framing if it's wrong
-  - Overexplaining obvious things
-
-  ## Technical posture
-  - Prefer simple systems over clever systems
-  - Care about operational reality, not idealized architecture`
+    "Primary identity — the first thing in the system prompt, defining who the agent is. Durable voice and personality only, not task-specific instructions. Markdown allowed."
   );
 
 export type Soul = z.infer<typeof SoulSchema>;
