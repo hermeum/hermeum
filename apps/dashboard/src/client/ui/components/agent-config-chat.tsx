@@ -6,8 +6,16 @@ import { ArrowUp, Check, LoaderCircle } from "lucide-react";
 
 import { cn } from "@hermeum/components/lib/utils";
 import { Button } from "@hermeum/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@hermeum/components/ui/dialog";
 import { Textarea } from "@hermeum/components/ui/textarea";
-import type { AgentInput } from "@/entities";
+import type { AgentInput, Template } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
 
 type AgentConfigChatMessage = UIMessage<
@@ -20,12 +28,18 @@ interface AgentConfigChatProps {
   // Called at send time so each turn carries the latest editor draft,
   // including hand edits made between messages.
   getConfig: () => AgentInput | undefined;
+  // Receives config from both AI tool calls and template picks.
   onConfigUpdate: (config: AgentInput) => void;
+  // When non-empty, the empty-chat hero offers a "start with a template"
+  // link that opens the template dialog.
+  templates?: Template[] | undefined;
 }
 
-export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatProps) {
+export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentConfigChatProps) {
   const [input, setInput] = useState("");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasTemplates = templates !== undefined && templates.length > 0;
 
   // Latest-ref so the onToolCall closure (captured once by the Chat
   // instance) never applies updates through a stale callback.
@@ -74,13 +88,48 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
 
   const isBusy = status === "submitted" || status === "streaming";
 
+  function handleSelectTemplate(template: Template) {
+    onConfigUpdate(template.agentInput);
+    setTemplatesOpen(false);
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto py-2 pr-1">
+      {hasTemplates && (
+        <TemplateDialog
+          templates={templates}
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          onSelect={handleSelectTemplate}
+        />
+      )}
+      <div
+        ref={scrollRef}
+        className={cn(
+          "min-h-0 flex-1 space-y-3 overflow-y-auto py-2 pr-1",
+          messages.length === 0 && "flex flex-col items-center justify-center"
+        )}
+      >
         {messages.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Describe the agent you need and refine it through conversation.
-          </p>
+          <div className="text-center">
+            <h2 className="text-lg font-semibold tracking-tight">What do you want to build?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Describe your agent
+              {hasTemplates ? (
+                <>
+                  {" or "}
+                  <button
+                    type="button"
+                    onClick={() => setTemplatesOpen(true)}
+                    className="cursor-pointer underline underline-offset-4 hover:text-foreground"
+                  >
+                    start with a template
+                  </button>
+                </>
+              ) : null}
+              .
+            </p>
+          </div>
         )}
         {messages.map((message) => (
           <div key={message.id} className="space-y-2">
@@ -135,7 +184,7 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
               handleSend();
             }
           }}
-          placeholder="Reviews new pull requests and leaves inline comments on risky changes."
+          placeholder={messages.length === 0 ? "Describe your agent…" : "Reply…"}
           className="min-h-16 border-transparent px-0 py-0 focus-visible:border-transparent"
         />
         <div className="flex justify-end">
@@ -150,5 +199,43 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
         </div>
       </div>
     </div>
+  );
+}
+
+function TemplateDialog({
+  templates,
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  templates: Template[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (template: Template) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Templates</DialogTitle>
+          <DialogDescription>Pick a starting point for the agent config.</DialogDescription>
+        </DialogHeader>
+        <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto p-px">
+          {templates.map((template) => (
+            <Card
+              key={template.id}
+              size="sm"
+              onClick={() => onSelect(template)}
+              className="cursor-pointer ring-1 ring-border transition-all hover:ring-2 hover:ring-primary"
+            >
+              <CardHeader>
+                <CardTitle className="text-base">{template.name}</CardTitle>
+                <CardDescription>{template.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
