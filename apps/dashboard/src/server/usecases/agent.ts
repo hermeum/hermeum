@@ -2,15 +2,14 @@ import { z } from "zod";
 
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
-import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
-import { verifyOwnership } from "./authz";
+import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),
 });
 export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
-export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
+export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUseCase)) {
   async getmutatingWebhookJsonPatch(agent: Agent): Promise<JsonPatchOp[] | null> {
     if (!agent.type) return null;
     const { agentTypes } = await this.loadHermeumConfig();
@@ -31,7 +30,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     agentInput = AgentInputSchema.parse(agentInput);
 
     await this.checkAgentInputAllowed(agentInput);
-    return this.runtime.createHermesAgent({ ...agentInput, userId: ctx.user!.id });
+    return this.runtime.createHermesAgent({ ...agentInput, userId: this.requireUser(ctx).id });
   }
 
   async updateHermesAgent(ctx: Context, id: string, patch: AgentInput): Promise<Agent> {
@@ -39,7 +38,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    verifyOwnership(ctx, agent);
+    this.verifyOwnership(ctx, agent);
 
     patch = AgentInputSchema.parse(patch);
 
@@ -65,7 +64,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    verifyOwnership(ctx, agent);
+    this.verifyOwnership(ctx, agent);
     return this.runtime.archiveHermesAgent(id);
   }
 
@@ -74,7 +73,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    verifyOwnership(ctx, agent);
+    this.verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
   }
 
@@ -83,7 +82,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     if (!agent) {
       throw new Error(`HermesAgent ${id} not found`);
     }
-    verifyOwnership(ctx, agent);
+    this.verifyOwnership(ctx, agent);
     return this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
   }
 
@@ -92,7 +91,7 @@ export class AgentUseCase extends HermeumConfigLoadable(BaseUseCase) {
     if (!agent) {
       throw new Error(`HermesAgent ${agentId} not found`);
     }
-    verifyOwnership(ctx, agent);
+    this.verifyOwnership(ctx, agent);
     return this.runtime.getGatewayToken(agentId);
   }
 

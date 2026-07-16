@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 import { Context, EnvVar, EnvVarSchema, SharedEnvSet } from "@/entities";
-import { BaseUseCase } from "./mixin";
-import { verifyOwnership } from "./authz";
+import { BaseUseCase, OwnershipGuarded } from "./mixin";
 
 export const CreateSharedEnvSetInputSchema = z.object({
   name: z.string().min(1),
@@ -21,7 +20,7 @@ export const UpdateSharedEnvSetInputSchema = z.object({
 });
 export type UpdateSharedEnvSetInput = z.infer<typeof UpdateSharedEnvSetInputSchema>;
 
-export class SharedEnvSetUseCase extends BaseUseCase {
+export class SharedEnvSetUseCase extends OwnershipGuarded(BaseUseCase) {
 
   async listSharedEnvSets(ctx: Context, input?: ListSharedEnvSetsInput): Promise<SharedEnvSet[]> {
     return this.runtime.listSharedEnvSets(input);
@@ -32,7 +31,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
   }
 
   async createSharedEnvSet(ctx: Context, input: CreateSharedEnvSetInput): Promise<SharedEnvSet> {
-    return this.runtime.createSharedEnvSet({ ...input, userId: ctx.user!.id });
+    return this.runtime.createSharedEnvSet({ ...input, userId: this.requireUser(ctx).id });
   }
 
   async updateSharedEnvSet(
@@ -44,7 +43,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${id}" not found`);
     }
-    verifyOwnership(ctx, envSet);
+    this.verifyOwnership(ctx, envSet);
     return this.runtime.patchSharedEnvSet(id, {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
@@ -56,7 +55,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${id}" not found`);
     }
-    verifyOwnership(ctx, envSet);
+    this.verifyOwnership(ctx, envSet);
     return this.runtime.archiveSharedEnvSet(id);
   }
 
@@ -66,7 +65,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    verifyOwnership(ctx, envSet);
+    this.verifyOwnership(ctx, envSet);
     if (envSet.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" already exists in shared env set "${setId}"`);
     }
@@ -79,7 +78,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    verifyOwnership(ctx, envSet);
+    this.verifyOwnership(ctx, envSet);
     if (!envSet.envVars.some((e) => e.name === envVar.name)) {
       throw new Error(`Env var "${envVar.name}" not found in shared env set "${setId}"`);
     }
@@ -91,7 +90,7 @@ export class SharedEnvSetUseCase extends BaseUseCase {
     if (!envSet) {
       throw new Error(`Shared env set "${setId}" not found`);
     }
-    verifyOwnership(ctx, envSet);
+    this.verifyOwnership(ctx, envSet);
     if (!envSet.envVars.some((e) => e.name === name)) {
       throw new Error(`Env var "${name}" not found in shared env set "${setId}"`);
     }
