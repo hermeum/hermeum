@@ -3,8 +3,7 @@ import { z } from "zod";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
-import { LocalFiles } from "../infras/local-files";
-import { FileAdaptor } from "./adaptors/file";
+import { FilesUseCase } from "./base";
 import { HermeumConfigLoadable } from "./hermeum-config";
 
 const DOCS_PATH = "./docs/agent-config";
@@ -19,12 +18,7 @@ export interface AgentConfigContext {
   tools: ToolSet;
 }
 
-export class ChatUseCase extends HermeumConfigLoadable(class {}) {
-  constructor(private readonly files: FileAdaptor = new LocalFiles()) {
-    super();
-    this.hermeumConfigFiles = files;
-  }
-
+export class ChatUseCase extends HermeumConfigLoadable(FilesUseCase) {
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
   // client-side tool the model uses to apply config changes.
