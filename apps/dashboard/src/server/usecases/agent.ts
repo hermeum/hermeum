@@ -3,8 +3,9 @@ import { z } from "zod";
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
+import { FileAdaptor } from "./adaptors/file";
 import { Runtime } from "./adaptors/runtime";
-import { HermeumConfigLoader } from "./hermeum-config";
+import { HermeumConfigLoadable } from "./hermeum-config";
 import { verifyOwnership } from "./authz";
 
 export const ListAgentsFilterSchema = z.object({
@@ -12,15 +13,20 @@ export const ListAgentsFilterSchema = z.object({
 });
 export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
-export class AgentUseCase {
+export class AgentUseCase extends HermeumConfigLoadable(class {}) {
   constructor(
     private readonly runtime: Runtime = new KubernetesClient(),
-    private readonly configLoader: HermeumConfigLoader = new HermeumConfigLoader()
-  ) {}
+    files?: FileAdaptor
+  ) {
+    super();
+    if (files !== undefined) {
+      this.hermeumConfigFiles = files;
+    }
+  }
 
   async getmutatingWebhookJsonPatch(agent: Agent): Promise<JsonPatchOp[] | null> {
     if (!agent.type) return null;
-    const { agentTypes } = await this.configLoader.load();
+    const { agentTypes } = await this.loadHermeumConfig();
     const agentType = agentTypes?.[agent.type];
     if (!agentType) return null;
     return agentType.mutatingWebhookJsonPatch;
@@ -107,7 +113,7 @@ export class AgentUseCase {
     input: Pick<AgentInput, "type" | "sharedEnvSets">
   ): Promise<void> {
     if (input.type !== undefined) {
-      const { agentTypes } = await this.configLoader.load();
+      const { agentTypes } = await this.loadHermeumConfig();
       if (!agentTypes) {
         throw new Error("Agent types are not configured");
       }

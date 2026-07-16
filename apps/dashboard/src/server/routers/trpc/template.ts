@@ -1,16 +1,14 @@
 import { z } from "zod";
 
 import { Template } from "@/entities";
-import { HermeumConfigLoader } from "@/server/usecases/hermeum-config";
 import { TemplateUseCase } from "@/server/usecases/template";
 import { protectedProcedure, t } from "./shared.js";
 
-const configLoader = new HermeumConfigLoader();
-const usecase = new TemplateUseCase(configLoader);
+const usecase = new TemplateUseCase();
 
 // Fail fast: an invalid configuration file should stop the server at boot,
 // not surface on the first request.
-configLoader.load().catch((err: Error) => {
+usecase.loadHermeumConfig().catch((err: Error) => {
   console.error(`\nServer failed to load the configuration file: ${err.message}\n`);
   process.exit(1);
 });

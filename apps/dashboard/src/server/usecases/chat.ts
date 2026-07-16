@@ -5,7 +5,7 @@ import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
 import { LocalFiles } from "../infras/local-files";
 import { FileAdaptor } from "./adaptors/file";
-import { HermeumConfigLoader } from "./hermeum-config";
+import { HermeumConfigLoadable } from "./hermeum-config";
 
 const DOCS_PATH = "./docs/agent-config";
 
@@ -19,11 +19,11 @@ export interface AgentConfigContext {
   tools: ToolSet;
 }
 
-export class ChatUseCase {
-  constructor(
-    private readonly files: FileAdaptor = new LocalFiles(),
-    private readonly configLoader: HermeumConfigLoader = new HermeumConfigLoader(files)
-  ) {}
+export class ChatUseCase extends HermeumConfigLoadable(class {}) {
+  constructor(private readonly files: FileAdaptor = new LocalFiles()) {
+    super();
+    this.hermeumConfigFiles = files;
+  }
 
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
@@ -99,7 +99,7 @@ export class ChatUseCase {
   }
 
   private async buildInstructions(): Promise<string> {
-    const { agentTypes } = await this.configLoader.load();
+    const { agentTypes } = await this.loadHermeumConfig();
     if (!agentTypes) {
       return AGENT_CONFIG_CHAT_SYSTEM_PROMPT;
     }

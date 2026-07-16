@@ -6,22 +6,26 @@ import { config } from "@/server/libs/config";
 import { LocalFiles } from "../infras/local-files";
 import { FileAdaptor } from "./adaptors/file";
 
-// Loads and validates the Hermeum config file once per loader instance
-// (routers hold singleton use cases, so effectively once per process).
-export class HermeumConfigLoader {
-  private cached?: HermeumConfig;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Constructor<T = object> = new (...args: any[]) => T;
 
-  constructor(
-    private readonly files: FileAdaptor = new LocalFiles(),
-    private readonly path: string = config.agentConfigPath
-  ) {}
+// Mixin adding Hermeum config loading to a use case class. The validated
+// config is cached once per instance (routers hold singleton use cases, so
+// effectively once per process). Compose with:
+//   class MyUseCase extends HermeumConfigLoadable(class {}) { ... }
+export function HermeumConfigLoadable<TBase extends Constructor>(Base: TBase) {
+  return class extends Base {
+    protected hermeumConfigFiles: FileAdaptor = new LocalFiles();
+    protected hermeumConfigPath: string = config.agentConfigPath;
+    #cachedHermeumConfig?: HermeumConfig;
 
-  async load(): Promise<HermeumConfig> {
-    if (!this.cached) {
-      const file = await this.files.readFile(this.path);
-      const raw = file === null ? { templates: [] } : parse(file.content);
-      this.cached = HermeumConfigSchema.parse(raw);
+    async loadHermeumConfig(): Promise<HermeumConfig> {
+      if (!this.#cachedHermeumConfig) {
+        const file = await this.hermeumConfigFiles.readFile(this.hermeumConfigPath);
+        const raw = file === null ? { templates: [] } : parse(file.content);
+        this.#cachedHermeumConfig = HermeumConfigSchema.parse(raw);
+      }
+      return this.#cachedHermeumConfig;
     }
-    return this.cached;
-  }
+  };
 }

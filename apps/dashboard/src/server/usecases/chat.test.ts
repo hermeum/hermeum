@@ -1,26 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import type { ToolExecutionOptions } from "ai";
+import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
-vi.mock("./hermeum-config", () => ({ HermeumConfigLoader: vi.fn() }));
+vi.mock("@/server/libs/config", () => ({ config: { agentConfigPath: "./agent-config.yaml" } }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { File, FileAdaptor } from "./adaptors/file";
-import type { HermeumConfigLoader } from "./hermeum-config";
 import type { HermeumConfig } from "@/entities";
-
-function makeConfigLoader(agentTypes?: HermeumConfig["agentTypes"]): HermeumConfigLoader {
-  return {
-    load: vi.fn().mockResolvedValue({
-      agentTypes,
-      templates: [],
-    } satisfies HermeumConfig),
-  } as unknown as HermeumConfigLoader;
-}
 
 type Doc = { content: string; data?: Record<string, unknown> };
 
-function makeFiles(docs: Record<string, Doc> = {}): FileAdaptor {
+function makeFiles(
+  docs: Record<string, Doc> = {},
+  agentTypes?: HermeumConfig["agentTypes"]
+): FileAdaptor {
   const toFile = (name: string): File => ({
     path: `./docs/agent-config/${name}.md`,
     name,
@@ -29,13 +23,22 @@ function makeFiles(docs: Record<string, Doc> = {}): FileAdaptor {
   });
   return {
     listFiles: vi.fn().mockImplementation(async () => Object.keys(docs).map(toFile)),
-    readFile: vi.fn().mockImplementation(
-      async (path: string) =>
+    readFile: vi.fn().mockImplementation(async (path: string) => {
+      if (path === "./agent-config.yaml") {
+        return {
+          path,
+          name: "agent-config",
+          content: stringify({ agentTypes, templates: [] } satisfies HermeumConfig),
+          data: {},
+        };
+      }
+      return (
         Object.keys(docs)
           .filter((name) => path === `./docs/agent-config/${name}.md`)
           .map(toFile)
           .at(0) ?? null
-    ),
+      );
+    }),
   };
 }
 
@@ -43,7 +46,7 @@ const callOptions = {} as ToolExecutionOptions<never>;
 
 describe("ChatUseCase.getAgentConfigContext", () => {
   it("uses the base system prompt when no agent types are configured", async () => {
-    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader(undefined));
+    const useCase = new ChatUseCase(makeFiles({}, undefined));
 
     const { instructions } = await useCase.getAgentConfigContext();
 
@@ -52,11 +55,13 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("appends the configured agent types to the instructions", async () => {
     const useCase = new ChatUseCase(
-      makeFiles(),
-      makeConfigLoader({
-        "pr-review": { description: "Reviews pull requests", mutatingWebhookJsonPatch: [] },
-        plain: { mutatingWebhookJsonPatch: [] },
-      })
+      makeFiles(
+        {},
+        {
+          "pr-review": { description: "Reviews pull requests", mutatingWebhookJsonPatch: [] },
+          plain: { mutatingWebhookJsonPatch: [] },
+        }
+      )
     );
 
     const { instructions } = await useCase.getAgentConfigContext();
@@ -67,7 +72,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("notes the missing draft when no current config is given", async () => {
-    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
+    const useCase = new ChatUseCase(makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext();
 
@@ -75,7 +80,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("embeds the current config as JSON in the prompt", async () => {
-    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
+    const useCase = new ChatUseCase(makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext({ name: "pr-reviewer" });
 
@@ -83,7 +88,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes a client-side updateAgentConfig tool", async () => {
-    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
+    const useCase = new ChatUseCase(makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -95,7 +100,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes listDocuments and readDocument as server-executed tools", async () => {
-    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
+    const useCase = new ChatUseCase(makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -108,8 +113,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       makeFiles({
         model: { content: "# Model", data: { description: "Model configuration" } },
         webhook: { content: "# Webhook" },
-      }),
-      makeConfigLoader()
+      })
     );
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -125,8 +129,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       makeFiles({
         model: { content: "# Model doc" },
         webhook: { content: "# Webhook doc" },
-      }),
-      makeConfigLoader()
+      })
     );
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -141,10 +144,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("returns a per-entry error for unknown names without failing the batch", async () => {
-    const useCase = new ChatUseCase(
-      makeFiles({ model: { content: "# Model doc" } }),
-      makeConfigLoader()
-    );
+    const useCase = new ChatUseCase(makeFiles({ model: { content: "# Model doc" } }));
 
     const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "nope"] }, callOptions);
@@ -159,9 +159,10 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("rejects path-traversal document names without touching the adaptor", async () => {
     const files = makeFiles({ model: { content: "# Model doc" } });
-    const useCase = new ChatUseCase(files, makeConfigLoader());
+    const useCase = new ChatUseCase(files);
 
     const { tools } = await useCase.getAgentConfigContext();
+    vi.mocked(files.readFile).mockClear();
     const result = await tools.readDocument!.execute!(
       { names: ["../secrets", "sub/model", ".hidden"] },
       callOptions

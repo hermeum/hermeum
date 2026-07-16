@@ -1,21 +1,28 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
-vi.mock("./hermeum-config", () => ({ HermeumConfigLoader: vi.fn() }));
+vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
+vi.mock("@/server/libs/config", () => ({ config: { agentConfigPath: "./agent-config.yaml" } }));
+
+import { stringify } from "yaml";
 
 import { AgentUseCase } from "./agent";
+import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
-import type { HermeumConfigLoader } from "./hermeum-config";
 import type { HermeumConfig, JsonPatchOp } from "@/entities";
 import type { Agent, Context, SharedEnvSet } from "@/entities";
 
-function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): HermeumConfigLoader {
+// FileAdaptor serving the Hermeum config file the use case inherits loading for.
+function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): FileAdaptor {
   return {
-    load: vi.fn().mockResolvedValue({
-      agentTypes,
-      templates: [],
-    } satisfies HermeumConfig),
-  } as unknown as HermeumConfigLoader;
+    listFiles: vi.fn(),
+    readFile: vi.fn().mockResolvedValue({
+      path: "./agent-config.yaml",
+      name: "agent-config",
+      content: stringify({ agentTypes, templates: [] } satisfies HermeumConfig),
+      data: {},
+    }),
+  };
 }
 
 function makeRuntime(): Runtime {
