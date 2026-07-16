@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
-import { KubernetesClient } from "./infras/kubernetes/client";
-import { LocalConfig } from "./infras/local-hermeum-config";
+import { KubernetesClient } from "../infras/kubernetes/client";
+import { LocalConfig } from "../infras/local-hermeum-config";
 import { Runtime } from "./adaptors/runtime";
 import { ConfigAdaptor } from "./adaptors/config";
 import { verifyOwnership } from "./authz";

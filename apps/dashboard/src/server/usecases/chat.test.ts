@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("./infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
+vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { ConfigAdaptor } from "./adaptors/config";

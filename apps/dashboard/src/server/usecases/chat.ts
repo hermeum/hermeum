@@ -2,7 +2,7 @@ import { tool, ToolSet } from "ai";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
-import { LocalConfig } from "./infras/local-hermeum-config";
+import { LocalConfig } from "../infras/local-hermeum-config";
 import { ConfigAdaptor } from "./adaptors/config";
 
 export interface AgentConfigContext {

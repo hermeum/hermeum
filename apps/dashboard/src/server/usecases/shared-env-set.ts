@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { Context, EnvVar, EnvVarSchema, SharedEnvSet } from "@/entities";
-import { KubernetesClient } from "./infras/kubernetes/client";
+import { KubernetesClient } from "../infras/kubernetes/client";
 import { Runtime } from "./adaptors/runtime";
 import { verifyOwnership } from "./authz";
 
