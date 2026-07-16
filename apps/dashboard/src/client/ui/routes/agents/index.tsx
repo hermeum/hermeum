@@ -5,7 +5,6 @@ import { MoreHorizontal, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
-import { CreateAgentDialog } from "@/client/ui/components/create-agent-dialog";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Badge } from "@hermeum/components/ui/badge";
@@ -43,7 +42,6 @@ export const Route = createFileRoute("/agents/")({
 function DashboardPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [archiveId, setArchiveId] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "active">("active");
   const navigate = useNavigate();
@@ -105,7 +103,7 @@ function DashboardPage() {
           <p className="mt-1 text-sm text-muted-foreground">Create and manage autonomous agents.</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => navigate({ to: "/agents/new" })}>
             <Plus className="size-4" />
             New agent
           </Button>
@@ -119,12 +117,6 @@ function DashboardPage() {
           </Button>
         </div>
       </div>
-
-      <CreateAgentDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: trpc.agent.list.queryKey() })}
-      />
 
       <Dialog
         open={archiveId !== null}

@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as SharedEnvSetsIndexRouteImport } from './client/ui/routes/shared-env-sets/index'
 import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index'
 import { Route as SharedEnvSetsIdRouteImport } from './client/ui/routes/shared-env-sets/$id'
+import { Route as AgentsNewRouteImport } from './client/ui/routes/agents/new'
 import { Route as AgentsIdRouteImport } from './client/ui/routes/agents/$id'
 
 const SigninRoute = SigninRouteImport.update({
@@ -41,6 +42,11 @@ const SharedEnvSetsIdRoute = SharedEnvSetsIdRouteImport.update({
   path: '/shared-env-sets/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsNewRoute = AgentsNewRouteImport.update({
+  id: '/agents/new',
+  path: '/agents/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentsIdRoute = AgentsIdRouteImport.update({
   id: '/agents/$id',
   path: '/agents/$id',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents': typeof AgentsIndexRoute
   '/shared-env-sets': typeof SharedEnvSetsIndexRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/signin'
     | '/agents/$id'
+    | '/agents/new'
     | '/shared-env-sets/$id'
     | '/agents/'
     | '/shared-env-sets/'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/signin'
     | '/agents/$id'
+    | '/agents/new'
     | '/shared-env-sets/$id'
     | '/agents'
     | '/shared-env-sets'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/signin'
     | '/agents/$id'
+    | '/agents/new'
     | '/shared-env-sets/$id'
     | '/agents/'
     | '/shared-env-sets/'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SigninRoute: typeof SigninRoute
   AgentsIdRoute: typeof AgentsIdRoute
+  AgentsNewRoute: typeof AgentsNewRoute
   SharedEnvSetsIdRoute: typeof SharedEnvSetsIdRoute
   AgentsIndexRoute: typeof AgentsIndexRoute
   SharedEnvSetsIndexRoute: typeof SharedEnvSetsIndexRoute
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedEnvSetsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents/new': {
+      id: '/agents/new'
+      path: '/agents/new'
+      fullPath: '/agents/new'
+      preLoaderRoute: typeof AgentsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agents/$id': {
       id: '/agents/$id'
       path: '/agents/$id'
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SigninRoute: SigninRoute,
   AgentsIdRoute: AgentsIdRoute,
+  AgentsNewRoute: AgentsNewRoute,
   SharedEnvSetsIdRoute: SharedEnvSetsIdRoute,
   AgentsIndexRoute: AgentsIndexRoute,
   SharedEnvSetsIndexRoute: SharedEnvSetsIndexRoute,

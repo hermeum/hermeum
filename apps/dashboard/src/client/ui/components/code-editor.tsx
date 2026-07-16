@@ -8,6 +8,7 @@ interface CodeEditorProps {
   readOnly?: boolean;
   invalid?: boolean;
   maxHeight?: string;
+  height?: string;
 }
 
 export function CodeEditor({
@@ -16,11 +17,14 @@ export function CodeEditor({
   readOnly = false,
   invalid = false,
   maxHeight,
+  height,
 }: CodeEditorProps) {
   return (
     <div
       className={cn(
         "min-w-0 overflow-hidden rounded-[0.25rem] border text-sm",
+        // With a percentage height the border must span the parent, not the content.
+        height !== undefined && "h-full",
         invalid && "border-destructive"
       )}
     >
@@ -30,6 +34,7 @@ export function CodeEditor({
         {...(onChange !== undefined && { onChange })}
         editable={!readOnly}
         {...(maxHeight !== undefined && { maxHeight })}
+        {...(height !== undefined && { height })}
         style={{ wordSpacing: "2.5px" }}
         basicSetup={{
           lineNumbers: true,

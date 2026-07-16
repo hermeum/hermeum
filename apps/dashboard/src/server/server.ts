@@ -7,6 +7,7 @@ import { toNodeHandler } from "better-auth/node";
 import { config } from "./libs/config";
 import { trpcMiddleware } from "@/server/routers/trpc/index.js";
 import { webhookRouter } from "./routers/webhook";
+import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
 import { auth } from "./routers/better-auth/auth";
 
 const PORT = typeof process.env.PORT !== "undefined" ? parseInt(process.env.PORT, 10) : 3000;
@@ -31,6 +32,7 @@ export const createServer = async (
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
   app.use("/webhook", webhookRouter);
+  app.use("/chat", aiSdkRouter);
 
   if (!isProd) {
     const vite = await import("vite");
