@@ -1,14 +1,14 @@
 import { Context, Template } from "@/entities";
-import { ConfigAdaptor } from "./adaptors/config";
+import { FilesUseCase } from "./base";
+import { HermeumConfigLoadable } from "./hermeum-config";
 
-export class TemplateUseCase {
-  constructor(private readonly config: ConfigAdaptor) {}
-
-  list(_ctx: Context): Template[] {
-    return this.config.get().templates;
+export class TemplateUseCase extends HermeumConfigLoadable(FilesUseCase) {
+  async list(_ctx: Context): Promise<Template[]> {
+    return (await this.loadHermeumConfig()).templates;
   }
 
-  get(ctx: Context, id: string): Template | null {
-    return this.config.get().templates.find((t) => t.id === id) ?? null;
+  async get(ctx: Context, id: string): Promise<Template | null> {
+    const { templates } = await this.loadHermeumConfig();
+    return templates.find((t) => t.id === id) ?? null;
   }
 }
