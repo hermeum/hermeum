@@ -29,7 +29,7 @@ const usecase = new AgentUseCase();
 
 export const webhookRouter = Router();
 
-webhookRouter.post("/mutating", (req, res) => {
+webhookRouter.post("/mutating", async (req, res) => {
   const body = req.body as AdmissionReview;
   const request = body.request;
 
@@ -53,7 +53,7 @@ webhookRouter.post("/mutating", (req, res) => {
   }
 
   const agent = mapHermesAgent(request.object);
-  const patch = usecase.getmutatingWebhookJsonPatch(agent);
+  const patch = await usecase.getmutatingWebhookJsonPatch(agent);
 
   const response: AdmissionReview = {
     apiVersion: body.apiVersion,

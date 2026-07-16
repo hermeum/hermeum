@@ -1,20 +1,27 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
-vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
+vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
+vi.mock("@/server/libs/config", () => ({ config: { agentConfigPath: "./agent-config.yaml" } }));
+
+import { stringify } from "yaml";
 
 import { AgentUseCase } from "./agent";
-import type { ConfigAdaptor } from "./adaptors/config";
+import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { HermeumConfig, JsonPatchOp } from "@/entities";
 import type { Agent, Context, SharedEnvSet } from "@/entities";
 
-function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): ConfigAdaptor {
+// FileAdaptor serving the Hermeum config file the use case inherits loading for.
+function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): FileAdaptor {
   return {
-    get: vi.fn().mockReturnValue({
-      agentTypes,
-      templates: [],
-    } satisfies HermeumConfig),
+    listFiles: vi.fn(),
+    readFile: vi.fn().mockResolvedValue({
+      path: "./agent-config.yaml",
+      name: "agent-config",
+      content: stringify({ agentTypes, templates: [] } satisfies HermeumConfig),
+      data: {},
+    }),
   };
 }
 
@@ -62,31 +69,31 @@ function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
 }
 
 describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
-  it("returns null when agent.type is undefined", () => {
+  it("returns null when agent.type is undefined", async () => {
     const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
     expect(result).toBeNull();
   });
 
-  it("returns null when config.agentTypes is undefined", () => {
+  it("returns null when config.agentTypes is undefined", async () => {
     const useCase = new AgentUseCase(makeRuntime(), makeConfig(undefined));
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "some-type" }));
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "some-type" }));
     expect(result).toBeNull();
   });
 
-  it("returns null when the agentType key is missing from config", () => {
+  it("returns null when the agentType key is missing from config", async () => {
     const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "other-type": { mutatingWebhookJsonPatch: [] } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "unknown-type" }));
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "unknown-type" }));
     expect(result).toBeNull();
   });
 
-  it("returns the patch verbatim, including Handlebars-style placeholders", () => {
+  it("returns the patch verbatim, including Handlebars-style placeholders", async () => {
     const patch: JsonPatchOp[] = [
       {
         op: "replace",
@@ -99,7 +106,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(
+    const result = await useCase.getmutatingWebhookJsonPatch(
       makeAgent({
         type: "my-type",
         id: "abc123",
@@ -114,18 +121,18 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     );
   });
 
-  it("passes through ops without a value property unchanged", () => {
+  it("passes through ops without a value property unchanged", async () => {
     const patch: JsonPatchOp[] = [{ op: "remove", path: "/metadata/labels/old" }];
     const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }));
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }));
     expect(result).toEqual(patch);
     expect(result![0]).not.toHaveProperty("value");
   });
 
-  it("passes through nested object/array values without substitution", () => {
+  it("passes through nested object/array values without substitution", async () => {
     const patch: JsonPatchOp[] = [
       {
         op: "add",
@@ -140,13 +147,13 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(
+    const result = await useCase.getmutatingWebhookJsonPatch(
       makeAgent({ type: "t", id: "a1", userId: "u2" })
     );
     expect(result).toEqual(patch);
   });
 
-  it("handles a mixed patch array with and without value in a single call", () => {
+  it("handles a mixed patch array with and without value in a single call", async () => {
     const patch: JsonPatchOp[] = [
       { op: "remove", path: "/old" },
       { op: "add", path: "/new", value: "{{agentId}}" },
@@ -155,7 +162,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
-    const result = useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t", id: "zz9" }));
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t", id: "zz9" }));
     expect(result).toHaveLength(2);
     expect(result![0]).not.toHaveProperty("value");
     expect(result![1]!.value).toBe("{{agentId}}");
@@ -321,4 +328,3 @@ describe("AgentUseCase env sensitivity validation", () => {
     ).resolves.toBeDefined();
   });
 });
-
