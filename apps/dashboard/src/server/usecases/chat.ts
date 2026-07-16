@@ -1,9 +1,12 @@
 import { tool, ToolSet } from "ai";
+import { z } from "zod";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
 import { LocalConfig } from "../infras/local-hermeum-config";
+import { LocalDocuments } from "../infras/local-documents";
 import { ConfigAdaptor } from "./adaptors/config";
+import { DocumentAdaptor } from "./adaptors/document";
 
 export interface AgentConfigContext {
   instructions: string;
@@ -12,7 +15,10 @@ export interface AgentConfigContext {
 }
 
 export class ChatUseCase {
-  constructor(private readonly config: ConfigAdaptor = new LocalConfig()) {}
+  constructor(
+    private readonly config: ConfigAdaptor = new LocalConfig(),
+    private readonly documents: DocumentAdaptor = new LocalDocuments()
+  ) {}
 
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
@@ -25,6 +31,7 @@ export class ChatUseCase {
           ? "There is no agent config draft yet."
           : "Current agent config draft as JSON:\n\n" + JSON.stringify(currentConfig, null, 2),
       tools: {
+        ...this.buildDocumentTools(),
         updateAgentConfig: tool({
           description:
             "Replace the agent config draft with a full updated definition. " +
@@ -35,6 +42,41 @@ export class ChatUseCase {
           // reports the result back.
         }),
       },
+    };
+  }
+
+  // Server-executed tools that let the model pull Hermes agent configuration
+  // documentation on demand, instead of carrying it all in the tool schema.
+  private buildDocumentTools(): ToolSet {
+    return {
+      listDocuments: tool({
+        description:
+          "List the available Hermes agent configuration documents, with a " +
+          "one-line description of each.",
+        inputSchema: z.object({}),
+        execute: async () => ({ documents: await this.documents.list() }),
+      }),
+      readDocument: tool({
+        description:
+          "Read one or more Hermes agent configuration documents by name. " +
+          "Pass every document you need in a single call to minimize round-trips.",
+        inputSchema: z.object({
+          names: z.array(z.string()).min(1).describe("Document names from listDocuments."),
+        }),
+        execute: async ({ names }) => ({
+          documents: await Promise.all(
+            names.map(async (name) => {
+              const content = await this.documents.read(name);
+              return content === null
+                ? {
+                    name,
+                    error: `Document "${name}" not found. Call listDocuments for available names.`,
+                  }
+                : { name, content };
+            })
+          ),
+        }),
+      }),
     };
   }
 
@@ -63,6 +105,12 @@ export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
 it in an editor and may change it by hand between messages.
+
+Detailed documentation about the config fields is available through tools:
+call \`listDocuments\` to see what's covered, then \`readDocument\` (batching
+every document you need into one call) to read up on any config section you
+are not fully sure about BEFORE writing it into the draft. Don't guess at
+field semantics that a document can settle.
 
 Whenever the draft should change, call the \`updateAgentConfig\` tool with the
 FULL updated definition — keep every field not affected by the change
