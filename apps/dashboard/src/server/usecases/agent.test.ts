@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("./infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
-vi.mock("./infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
+vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
+vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
 
 import { AgentUseCase } from "./agent";
 import type { ConfigAdaptor } from "./adaptors/config";

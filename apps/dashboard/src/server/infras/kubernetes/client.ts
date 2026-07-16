@@ -20,7 +20,7 @@ import {
   PatchAgentInput,
   Runtime,
   SharedEnvSetPatch,
-} from "../../adaptors/runtime";
+} from "../../usecases/adaptors/runtime";
 import { HermesAgent, HermesAgentList, HermesAgentSpec, HermesConfig } from "./types/hermes-agent";
 
 const enum HermesGroup {
