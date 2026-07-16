@@ -50,7 +50,7 @@ avoid).
 Use it for durable voice and personality guidance only — not task-specific
 instructions (those belong elsewhere in the config).
 
-#Example — simple request ("summarize documents I paste in"):
+# Example — simple request ("summarize documents I paste in"):
   You are a precise, neutral summarizer. Prioritize completeness over brevity
   when the two conflict, and never editorialize.
 

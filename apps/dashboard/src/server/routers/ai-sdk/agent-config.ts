@@ -48,7 +48,7 @@ aiSdkRouter.post("/agent-config", async (req, res) => {
     return;
   }
 
-  const { instructions, prompt, tools } = usecase.getAgentConfigContext(parsed.data.config);
+  const { instructions, prompt, tools } = await usecase.getAgentConfigContext(parsed.data.config);
   const result = streamText({
     model: model(),
     system: `${instructions}\n\n${prompt}`,

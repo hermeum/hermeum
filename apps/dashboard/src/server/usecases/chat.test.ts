@@ -1,83 +1,91 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 
-vi.mock("../infras/local-hermeum-config", () => ({ LocalConfig: vi.fn() }));
-vi.mock("../infras/local-documents", () => ({ LocalDocuments: vi.fn() }));
+vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
+vi.mock("./hermeum-config", () => ({ HermeumConfigLoader: vi.fn() }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
-import type { ConfigAdaptor } from "./adaptors/config";
-import type { DocumentAdaptor } from "./adaptors/document";
+import type { File, FileAdaptor } from "./adaptors/file";
+import type { HermeumConfigLoader } from "./hermeum-config";
 import type { HermeumConfig } from "@/entities";
 
-function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): ConfigAdaptor {
+function makeConfigLoader(agentTypes?: HermeumConfig["agentTypes"]): HermeumConfigLoader {
   return {
-    get: vi.fn().mockReturnValue({
+    load: vi.fn().mockResolvedValue({
       agentTypes,
       templates: [],
     } satisfies HermeumConfig),
-  };
+  } as unknown as HermeumConfigLoader;
 }
 
 type Doc = { content: string; data?: Record<string, unknown> };
 
-function makeDocuments(docs: Record<string, Doc> = {}): DocumentAdaptor {
+function makeFiles(docs: Record<string, Doc> = {}): FileAdaptor {
+  const toFile = (name: string): File => ({
+    path: `./docs/agent-config/${name}.md`,
+    name,
+    content: docs[name]!.content,
+    data: docs[name]!.data ?? {},
+  });
   return {
-    list: vi.fn().mockResolvedValue(Object.keys(docs)),
-    read: vi
-      .fn()
-      .mockImplementation(async (name: string) =>
-        name in docs ? { content: docs[name].content, data: docs[name].data ?? {} } : null
-      ),
+    listFiles: vi.fn().mockImplementation(async () => Object.keys(docs).map(toFile)),
+    readFile: vi.fn().mockImplementation(
+      async (path: string) =>
+        Object.keys(docs)
+          .filter((name) => path === `./docs/agent-config/${name}.md`)
+          .map(toFile)
+          .at(0) ?? null
+    ),
   };
 }
 
-const callOptions = {} as ToolCallOptions;
+const callOptions = {} as ToolExecutionOptions<never>;
 
 describe("ChatUseCase.getAgentConfigContext", () => {
-  it("uses the base system prompt when no agent types are configured", () => {
-    const useCase = new ChatUseCase(makeConfig(undefined), makeDocuments());
+  it("uses the base system prompt when no agent types are configured", async () => {
+    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader(undefined));
 
-    const { instructions } = useCase.getAgentConfigContext();
+    const { instructions } = await useCase.getAgentConfigContext();
 
     expect(instructions).toBe(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
   });
 
-  it("appends the configured agent types to the instructions", () => {
+  it("appends the configured agent types to the instructions", async () => {
     const useCase = new ChatUseCase(
-      makeConfig({
+      makeFiles(),
+      makeConfigLoader({
         "pr-review": { description: "Reviews pull requests", mutatingWebhookJsonPatch: [] },
         plain: { mutatingWebhookJsonPatch: [] },
-      }),
-      makeDocuments()
+      })
     );
 
-    const { instructions } = useCase.getAgentConfigContext();
+    const { instructions } = await useCase.getAgentConfigContext();
 
     expect(instructions).toContain(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
     expect(instructions).toContain("- pr-review: Reviews pull requests");
     expect(instructions).toContain("- plain");
   });
 
-  it("notes the missing draft when no current config is given", () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments());
+  it("notes the missing draft when no current config is given", async () => {
+    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
 
-    const { prompt } = useCase.getAgentConfigContext();
+    const { prompt } = await useCase.getAgentConfigContext();
 
     expect(prompt).toContain("no agent config draft yet");
   });
 
-  it("embeds the current config as JSON in the prompt", () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments());
+  it("embeds the current config as JSON in the prompt", async () => {
+    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
 
-    const { prompt } = useCase.getAgentConfigContext({ name: "pr-reviewer" });
+    const { prompt } = await useCase.getAgentConfigContext({ name: "pr-reviewer" });
 
     expect(prompt).toContain('"pr-reviewer"');
   });
 
-  it("exposes a client-side updateAgentConfig tool", () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments());
+  it("exposes a client-side updateAgentConfig tool", async () => {
+    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
 
-    const { tools } = useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
 
     expect(tools.updateAgentConfig).toBeDefined();
     expect(tools.updateAgentConfig!.inputSchema).toBeDefined();
@@ -86,10 +94,10 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.updateAgentConfig!.execute).toBeUndefined();
   });
 
-  it("exposes listDocuments and readDocument as server-executed tools", () => {
-    const useCase = new ChatUseCase(makeConfig(), makeDocuments());
+  it("exposes listDocuments and readDocument as server-executed tools", async () => {
+    const useCase = new ChatUseCase(makeFiles(), makeConfigLoader());
 
-    const { tools } = useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
 
     expect(tools.listDocuments?.execute).toBeDefined();
     expect(tools.readDocument?.execute).toBeDefined();
@@ -97,14 +105,14 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("lists documents with the frontmatter description when present", async () => {
     const useCase = new ChatUseCase(
-      makeConfig(),
-      makeDocuments({
+      makeFiles({
         model: { content: "# Model", data: { description: "Model configuration" } },
         webhook: { content: "# Webhook" },
-      })
+      }),
+      makeConfigLoader()
     );
 
-    const { tools } = useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.listDocuments!.execute!({}, callOptions);
 
     expect(result).toEqual({
@@ -114,14 +122,14 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("reads multiple documents in one call", async () => {
     const useCase = new ChatUseCase(
-      makeConfig(),
-      makeDocuments({
+      makeFiles({
         model: { content: "# Model doc" },
         webhook: { content: "# Webhook doc" },
-      })
+      }),
+      makeConfigLoader()
     );
 
-    const { tools } = useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "webhook"] }, callOptions);
 
     expect(result).toEqual({
@@ -134,11 +142,11 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("returns a per-entry error for unknown names without failing the batch", async () => {
     const useCase = new ChatUseCase(
-      makeConfig(),
-      makeDocuments({ model: { content: "# Model doc" } })
+      makeFiles({ model: { content: "# Model doc" } }),
+      makeConfigLoader()
     );
 
-    const { tools } = useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "nope"] }, callOptions);
 
     expect(result).toEqual({
@@ -147,5 +155,25 @@ describe("ChatUseCase.getAgentConfigContext", () => {
         { name: "nope", error: expect.stringContaining('"nope" not found') },
       ],
     });
+  });
+
+  it("rejects path-traversal document names without touching the adaptor", async () => {
+    const files = makeFiles({ model: { content: "# Model doc" } });
+    const useCase = new ChatUseCase(files, makeConfigLoader());
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.readDocument!.execute!(
+      { names: ["../secrets", "sub/model", ".hidden"] },
+      callOptions
+    );
+
+    expect(result).toEqual({
+      documents: [
+        { name: "../secrets", error: expect.stringContaining("not found") },
+        { name: "sub/model", error: expect.stringContaining("not found") },
+        { name: ".hidden", error: expect.stringContaining("not found") },
+      ],
+    });
+    expect(files.readFile).not.toHaveBeenCalled();
   });
 });

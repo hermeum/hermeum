@@ -3,10 +3,15 @@ import { z } from "zod";
 
 import { AgentInput, AgentInputObjectSchema } from "@/entities";
 
-import { LocalConfig } from "../infras/local-hermeum-config";
-import { LocalDocuments } from "../infras/local-documents";
-import { ConfigAdaptor } from "./adaptors/config";
-import { DocumentAdaptor } from "./adaptors/document";
+import { LocalFiles } from "../infras/local-files";
+import { FileAdaptor } from "./adaptors/file";
+import { HermeumConfigLoader } from "./hermeum-config";
+
+const DOCS_PATH = "./docs/agent-config";
+
+// Document names come from the LLM; only simple slugs are accepted so a
+// crafted name can't traverse outside DOCS_PATH.
+const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 export interface AgentConfigContext {
   instructions: string;
@@ -16,16 +21,16 @@ export interface AgentConfigContext {
 
 export class ChatUseCase {
   constructor(
-    private readonly config: ConfigAdaptor = new LocalConfig(),
-    private readonly documents: DocumentAdaptor = new LocalDocuments()
+    private readonly files: FileAdaptor = new LocalFiles(),
+    private readonly configLoader: HermeumConfigLoader = new HermeumConfigLoader(files)
   ) {}
 
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
   // client-side tool the model uses to apply config changes.
-  getAgentConfigContext(currentConfig?: AgentInput): AgentConfigContext {
+  async getAgentConfigContext(currentConfig?: AgentInput): Promise<AgentConfigContext> {
     return {
-      instructions: this.buildInstructions(),
+      instructions: await this.buildInstructions(),
       prompt:
         currentConfig === undefined
           ? "There is no agent config draft yet."
@@ -55,14 +60,15 @@ export class ChatUseCase {
           "one-line description of each.",
         inputSchema: z.object({}),
         execute: async () => {
-          const names = await this.documents.list();
+          const files = await this.files.listFiles(DOCS_PATH);
           return {
-            documents: await Promise.all(
-              names.map(async (name) => {
-                const description = (await this.documents.read(name))?.data.description;
-                return typeof description === "string" ? { name, description } : { name };
-              })
-            ),
+            documents: files
+              .filter((file) => file.path.endsWith(".md"))
+              .map(({ name, data }) =>
+                typeof data.description === "string"
+                  ? { name, description: data.description }
+                  : { name }
+              ),
           };
         },
       }),
@@ -76,7 +82,9 @@ export class ChatUseCase {
         execute: async ({ names }) => ({
           documents: await Promise.all(
             names.map(async (name) => {
-              const file = await this.documents.read(name);
+              const file = DOCUMENT_NAME_RE.test(name)
+                ? await this.files.readFile(`${DOCS_PATH}/${name}.md`)
+                : null;
               return file === null
                 ? {
                     name,
@@ -90,8 +98,8 @@ export class ChatUseCase {
     };
   }
 
-  private buildInstructions(): string {
-    const { agentTypes } = this.config.get();
+  private async buildInstructions(): Promise<string> {
+    const { agentTypes } = await this.configLoader.load();
     if (!agentTypes) {
       return AGENT_CONFIG_CHAT_SYSTEM_PROMPT;
     }
