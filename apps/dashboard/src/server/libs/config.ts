@@ -5,19 +5,21 @@ loadEnv();
 
 export const ConfigSchema = z.object({
   agentConfigPath: z.string().default("./agent-config.yaml"),
+  docsPath: z.string().default("./docs/agent-config"),
   databaseDialect: z.enum(["postgres", "sqlite"]).default("sqlite"),
   databaseUrl: z.url(),
   kubernetesNamespace: z.string().default("hermeum"),
   smtpUrl: z.url().optional(),
   allowedEmailDomain: z.string().optional(),
   hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
-  hermesImageTag: z.string().default("v2026.6.19"),
+  hermesImageTag: z.string().default("v2026.7.7.2"),
   openaiModel: z.string().min(1).default("gpt-5.5"),
   openaiBaseUrl: z.url().optional(),
 });
 
 export const config = ConfigSchema.parse({
   agentConfigPath: process.env.HERMEUM_CONFIG_PATH,
+  docsPath: process.env.HERMEUM_DOCS_PATH,
   databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
