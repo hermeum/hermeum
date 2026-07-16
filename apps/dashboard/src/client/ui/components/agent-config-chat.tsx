@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import type { UIDataTypes, UIMessage } from "ai";
 import { ArrowUp, Check, LoaderCircle } from "lucide-react";
 
-import { cn } from "@hermeum/components/lib/utils";
 import { Button } from "@hermeum/components/ui/button";
+import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
 import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
 import {
   Dialog,
@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@hermeum/components/ui/dialog";
+import { Marker, MarkerContent, MarkerIcon } from "@hermeum/components/ui/marker";
+import { Message, MessageContent } from "@hermeum/components/ui/message";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@hermeum/components/ui/message-scroller";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import type { AgentInput, Template } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
@@ -38,7 +48,6 @@ interface AgentConfigChatProps {
 export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentConfigChatProps) {
   const [input, setInput] = useState("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const hasTemplates = templates !== undefined && templates.length > 0;
 
   // Latest-ref so the onToolCall closure (captured once by the Chat
@@ -75,10 +84,6 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
       },
     });
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
-
   function handleSend() {
     const text = input.trim();
     if (text.length === 0 || status !== "ready") return;
@@ -103,14 +108,8 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
           onSelect={handleSelectTemplate}
         />
       )}
-      <div
-        ref={scrollRef}
-        className={cn(
-          "min-h-0 flex-1 space-y-3 overflow-y-auto py-2 pr-1",
-          messages.length === 0 && "flex flex-col items-center justify-center"
-        )}
-      >
-        {messages.length === 0 && (
+      {messages.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold tracking-tight">What do you want to build?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -130,49 +129,75 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
               .
             </p>
           </div>
-        )}
-        {messages.map((message) => (
-          <div key={message.id} className="space-y-2">
-            {message.parts.map((part, index) => {
-              if (part.type === "text") {
-                return (
-                  <div
-                    key={index}
-                    className={cn(
-                      "whitespace-pre-wrap text-sm",
-                      message.role === "user"
-                        ? "ml-8 w-fit justify-self-end rounded-lg bg-muted px-3 py-2"
-                        : "mr-8"
-                    )}
+        </div>
+      ) : (
+        <MessageScrollerProvider autoScroll>
+          <MessageScroller>
+            <MessageScrollerViewport>
+              <MessageScrollerContent className="gap-3 py-2">
+                {messages.map((message) => (
+                  <MessageScrollerItem
+                    key={message.id}
+                    messageId={message.id}
+                    scrollAnchor={message.role === "user"}
                   >
-                    {part.text}
-                  </div>
-                );
-              }
-              if (part.type === "tool-updateAgentConfig") {
-                return (
-                  <div
-                    key={index}
-                    className="flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {part.state === "output-available" ? (
-                      <Check className="size-3" />
-                    ) : (
-                      <LoaderCircle className="size-3 animate-spin" />
-                    )}
-                    {part.state === "output-error" ? "Config update failed" : "Config updated"}
-                  </div>
-                );
-              }
-              return null;
-            })}
-          </div>
-        ))}
-        {status === "submitted" && (
-          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
-        )}
-        {error && <p className="text-sm text-destructive">{error.message}</p>}
-      </div>
+                    <Message align={message.role === "user" ? "end" : "start"}>
+                      <MessageContent>
+                        {message.parts.map((part, index) => {
+                          if (part.type === "text") {
+                            const isUser = message.role === "user";
+                            return (
+                              <Bubble
+                                key={index}
+                                variant={isUser ? "muted" : "ghost"}
+                                align={isUser ? "end" : "start"}
+                              >
+                                <BubbleContent className="whitespace-pre-wrap">
+                                  {part.text}
+                                </BubbleContent>
+                              </Bubble>
+                            );
+                          }
+                          if (part.type === "tool-updateAgentConfig") {
+                            return (
+                              <Marker key={index}>
+                                <MarkerIcon>
+                                  {part.state === "output-available" ? (
+                                    <Check />
+                                  ) : (
+                                    <LoaderCircle className="animate-spin" />
+                                  )}
+                                </MarkerIcon>
+                                <MarkerContent>
+                                  {part.state === "output-error"
+                                    ? "Config update failed"
+                                    : "Config updated"}
+                                </MarkerContent>
+                              </Marker>
+                            );
+                          }
+                          return null;
+                        })}
+                      </MessageContent>
+                    </Message>
+                  </MessageScrollerItem>
+                ))}
+                {status === "submitted" && (
+                  <MessageScrollerItem messageId="thinking">
+                    <span className="shimmer text-sm">Thinking…</span>
+                  </MessageScrollerItem>
+                )}
+                {error && (
+                  <MessageScrollerItem messageId="error">
+                    <p className="text-sm text-destructive">{error.message}</p>
+                  </MessageScrollerItem>
+                )}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
+      )}
 
       <div className="shrink-0 rounded-[0.25rem] border p-3">
         <Textarea
