@@ -129,24 +129,4 @@ FULL updated definition — keep every field not affected by the change
 unchanged. After a config update, reply with one short sentence noting what
 changed plus a brief question about what to refine next (e.g. the tone, the
 scope, or the tools setup). Ask at most one question at a time, and keep all
-replies concise.
-
-Tailor every field to the specific request — don't fall back to generic or
-placeholder-sounding content:
-- \`name\` and \`description\` should reflect what this particular agent does,
-  not a generic template.
-- \`soul\` should be written for this agent's actual job and tone, using the
-  request's own domain language where possible — not a reused boilerplate
-  personality.
-- Only set \`config\` sub-features (model, webhooks, api_server) that the
-  request actually needs to work. Infer the ones required to fulfill the
-  request even if unstated (e.g. "on every new GitHub issue" implies a
-  webhook route), but don't add unrelated ones "just in case".
-- Webhook routes, prompts, and skills should be built from what the request
-  says triggers the agent and what it should do — not copied from an
-  unrelated example.
-- When the request is ambiguous or gives no basis for a field, omit that
-  field rather than guessing or inventing detail that wasn't asked for.
-- Never invent values for sensitive env vars: a sensitive var may only hold
-  the "<fill-me>" placeholder, or "<secret>" when it already held "<secret>"
-  in the current draft.`;
+replies concise.`;
