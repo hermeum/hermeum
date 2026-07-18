@@ -52,7 +52,10 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
     const { instructions } = await useCase.getAgentConfigContext();
 
-    expect(instructions).toBe(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
+    // The base prompt is always followed by the available-documents block,
+    // even when there are no docs and no agent types.
+    expect(instructions).toContain(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
+    expect(instructions).toBe(AGENT_CONFIG_CHAT_SYSTEM_PROMPT + "\n\n" + "Available documents (read with `readDocument` before writing any config section you're not fully sure about):\n");
   });
 
   it("appends the configured agent types to the instructions", async () => {
@@ -102,16 +105,16 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.updateAgentConfig!.execute).toBeUndefined();
   });
 
-  it("exposes listDocuments and readDocument as server-executed tools", async () => {
+  it("does not expose a listDocuments tool (the list is embedded in the prompt)", async () => {
     const useCase = new ChatUseCase(undefined, makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
-    expect(tools.listDocuments?.execute).toBeDefined();
+    expect(tools.listDocuments).toBeUndefined();
     expect(tools.readDocument?.execute).toBeDefined();
   });
 
-  it("lists documents with the frontmatter description when present", async () => {
+  it("embeds the available documents in the instructions with frontmatter descriptions", async () => {
     const useCase = new ChatUseCase(
       undefined,
       makeFiles({
@@ -120,12 +123,11 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       })
     );
 
-    const { tools } = await useCase.getAgentConfigContext();
-    const result = await tools.listDocuments!.execute!({}, callOptions);
+    const { instructions } = await useCase.getAgentConfigContext();
 
-    expect(result).toEqual({
-      documents: [{ name: "model", description: "Model configuration" }, { name: "webhook" }],
-    });
+    expect(instructions).toContain("- model: Model configuration");
+    expect(instructions).toContain("- webhook");
+    expect(instructions).not.toContain("- webhook:");
   });
 
   it("reads multiple documents in one call", async () => {
