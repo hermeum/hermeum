@@ -1,5 +1,5 @@
 export type File = {
-  /** Full path of the file, e.g. "docs/agent-config/model.md". */
+  /** Full path of the file, e.g. "docs/hermes-config/model.md". */
   path: string;
   /** Base file name without extension, e.g. "model". */
   name: string;

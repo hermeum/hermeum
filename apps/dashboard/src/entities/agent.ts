@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { ConfigSchema } from "./hermes-config";
 import { EnvVarSchema } from "./shared-env-set";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
@@ -75,6 +74,64 @@ instructions (those belong elsewhere in the config).
   );
 
 export type Soul = z.infer<typeof SoulSchema>;
+
+// Only the fields the dashboard reads (server/infras/kubernetes/client.ts) are
+// typed here; everything else passes through as a loose field. Full field
+// semantics live in docs/hermes-config/ and are surfaced to the LLM via the
+// readDocument tool.
+const WebConfigSchema = z
+  .looseObject({
+    search_backend: z.string().optional(),
+    backend: z.string().optional(),
+  })
+  .optional();
+
+const BrowserConfigSchema = z
+  .looseObject({
+    cloud_provider: z.string().optional(),
+  })
+  .optional();
+
+const ApiServerConfigSchema = z
+  .looseObject({
+    enabled: z.boolean().optional(),
+    port: z.number().int().optional(),
+    cors_origins: z.array(z.string()).optional(),
+  })
+  .optional();
+
+const WebhookConfigSchema = z
+  .looseObject({
+    enabled: z.boolean().optional(),
+    extra: z
+      .looseObject({
+        port: z.number().int().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
+const PlatformsConfigSchema = z
+  .looseObject({
+    webhook: WebhookConfigSchema,
+  })
+  .optional();
+
+export const ConfigSchema = z
+  .looseObject({
+    web: WebConfigSchema,
+    browser: BrowserConfigSchema,
+    api_server: ApiServerConfigSchema,
+    platforms: PlatformsConfigSchema,
+  })
+  .optional()
+  .describe(
+    "Hermes agent configuration. Only well-known fields used by the dashboard " +
+      "are typed here; any additional fields pass through unchanged. See " +
+      "docs/hermes-config/ for the documented fields."
+  );
+
+export type Config = z.infer<typeof ConfigSchema>;
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#supported-hub-sources
 const SKILL_SOURCE_PREFIXES = [

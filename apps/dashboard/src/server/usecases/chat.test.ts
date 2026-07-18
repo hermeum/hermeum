@@ -4,7 +4,7 @@ import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
-  config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/agent-config" },
+  config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
@@ -18,7 +18,7 @@ function makeFiles(
   agentTypes?: HermeumConfig["agentTypes"]
 ): FileAdaptor {
   const toFile = (name: string): File => ({
-    path: `./docs/agent-config/${name}.md`,
+    path: `./docs/hermes-config/${name}.md`,
     name,
     content: docs[name]!.content,
     data: docs[name]!.data ?? {},
@@ -36,7 +36,7 @@ function makeFiles(
       }
       return (
         Object.keys(docs)
-          .filter((name) => path === `./docs/agent-config/${name}.md`)
+          .filter((name) => path === `./docs/hermes-config/${name}.md`)
           .map(toFile)
           .at(0) ?? null
       );
