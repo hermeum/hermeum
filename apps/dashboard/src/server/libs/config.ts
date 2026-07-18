@@ -5,7 +5,7 @@ loadEnv();
 
 export const ConfigSchema = z.object({
   agentConfigPath: z.string().default("./agent-config.yaml"),
-  docsPath: z.string().default("./docs/agent-config"),
+  docsPath: z.string().default("./docs/hermes-config"),
   databaseDialect: z.enum(["postgres", "sqlite"]).default("sqlite"),
   databaseUrl: z.url(),
   kubernetesNamespace: z.string().default("hermeum"),
