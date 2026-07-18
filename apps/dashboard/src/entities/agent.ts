@@ -127,8 +127,9 @@ export const ConfigSchema = z
   .optional()
   .describe(
     "Hermes agent configuration. Only well-known fields used by the dashboard " +
-      "are typed here; any additional fields pass through unchanged. See " +
-      "docs/hermes-config/ for the documented fields."
+      "are typed here; any additional fields pass through unchanged. Use the " +
+      "`readDocument` tool to look up the semantics of any config field you " +
+      "are not fully sure about before writing it into the draft."
   );
 
 export type Config = z.infer<typeof ConfigSchema>;
