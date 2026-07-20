@@ -1,4 +1,6 @@
 ---
+name: model
+category: core
 description: LLM model configuration (`config.model`) — providers, model ids, base URLs, and required API-key env vars.
 ---
 
