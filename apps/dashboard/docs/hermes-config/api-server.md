@@ -13,8 +13,8 @@ toolset (terminal, file operations, web search, memory, skills).
 ## Configuration
 
 The API server is configured entirely through environment variables —
-`config.yaml` support is not yet available. Set them in `~/.hermes/.env` (or
-a profile's `.env` for multi-instance setups).
+`config.yaml` support is not yet available. Set the env vars below on the agent
+(in `~/.hermes/.env`, or a profile's `.env` for multi-instance setups).
 
 ## Environment variables
 
