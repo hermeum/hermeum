@@ -1,5 +1,6 @@
 ---
 name: web-search
+category: tools
 description: Web search & extract configuration (`config.web`) — backends, per-capability split, and env vars.
 ---
 

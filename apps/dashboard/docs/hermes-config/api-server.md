@@ -1,5 +1,6 @@
 ---
 name: api-server
+category: platforms
 description: API server configuration — OpenAI-compatible HTTP endpoint env vars.
 ---
 

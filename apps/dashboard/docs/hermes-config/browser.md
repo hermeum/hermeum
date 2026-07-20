@@ -1,5 +1,6 @@
 ---
 name: browser
+category: tools
 description: Browser automation configuration (`config.browser`) — providers, timeouts, Camofox, and env vars.
 ---
 

@@ -130,6 +130,46 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(instructions).not.toContain("- webhook:");
   });
 
+  it("groups documents by category alphabetically, then uncategorized last", async () => {
+    const useCase = new ChatUseCase(
+      undefined,
+      makeFiles({
+        // core
+        model: { content: "# Model", data: { category: "core", description: "Model configuration" } },
+        // tools
+        browser: { content: "# Browser", data: { category: "tools", description: "Browser automation" } },
+        "web-search": { content: "# Web", data: { category: "tools", description: "Web search" } },
+        // platforms
+        webhooks: { content: "# Webhooks", data: { category: "platforms", description: "Webhook routes" } },
+        // another category — should sort alphabetically alongside the rest
+        observability: { content: "# Obs", data: { category: "runtime", description: "Observability" } },
+        // uncategorized — trailing block
+        draft: { content: "# Draft" },
+      })
+    );
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    // Categories are surfaced in alphabetical order, uncategorized trailing.
+    const coreIdx = instructions.indexOf("core:");
+    const platformsIdx = instructions.indexOf("platforms:");
+    const runtimeIdx = instructions.indexOf("runtime:");
+    const toolsIdx = instructions.indexOf("tools:");
+    const uncategorizedIdx = instructions.indexOf("Uncategorized:");
+    expect(coreIdx).toBeGreaterThanOrEqual(0);
+    expect(platformsIdx).toBeGreaterThan(coreIdx);
+    expect(runtimeIdx).toBeGreaterThan(platformsIdx);
+    expect(toolsIdx).toBeGreaterThan(runtimeIdx);
+    expect(uncategorizedIdx).toBeGreaterThan(toolsIdx);
+
+    // Known category blocks contain their grouped docs.
+    expect(instructions).toContain("core:\n- model: Model configuration");
+    expect(instructions).toContain("tools:\n- browser: Browser automation\n- web-search: Web search");
+    expect(instructions).toContain("platforms:\n- webhooks: Webhook routes");
+    expect(instructions).toContain("runtime:\n- observability: Observability");
+    expect(instructions).toContain("Uncategorized:\n- draft");
+  });
+
   it("reads multiple documents in one call", async () => {
     const useCase = new ChatUseCase(
       undefined,

@@ -5,12 +5,17 @@ import { AgentInput, AgentInputObjectSchema } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
+import type { File } from "./adaptors/file";
 
 const DOCS_PATH = config.docsPath;
 
 // Document names come from the LLM; only simple slugs are accepted so a
 // crafted name can't traverse outside DOCS_PATH.
 const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+
+// Label used for the trailing block that groups docs with no `category`
+// frontmatter field.
+const UNCATEGORIZED_LABEL = "Uncategorized";
 
 export interface AgentConfigContext {
   instructions: string;
@@ -98,17 +103,54 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 
   // Build the "Available documents:" block listing every Hermes config doc the
   // model can request via `readDocument`. Embedded up front so the model can
-  // skip the list-tool round-trip and batch-read directly.
+  // skip the list-tool round-trip and batch-read directly. Docs are grouped
+  // under their frontmatter `category` (categories discovered dynamically from
+  // the docs themselves, surfaced alphabetically); docs with no `category`
+  // field are grouped together in a trailing `Uncategorized` block. When no
+  // docs exist, only the header is emitted.
   private async buildDocumentList(): Promise<string> {
-    const files = await this.files.listFiles(DOCS_PATH);
-    const lines = files
-      .filter((file) => file.path.endsWith(".md"))
-      .map(({ name, data }) =>
-        typeof data.description === "string" ? `- ${name}: ${data.description}` : `- ${name}`
-      );
+    const files = (await this.files.listFiles(DOCS_PATH)).filter((file) =>
+      file.path.endsWith(".md")
+    );
+    if (files.length === 0) {
+      return "Available documents (read with `readDocument` before writing any " +
+        "config section you're not fully sure about):\n";
+    }
+
+    const lineFor = ({ name, data }: File) =>
+      typeof data.description === "string" ? `- ${name}: ${data.description}` : `- ${name}`;
+
+    const categories = new Map<string, File[]>();
+    const uncategorized: File[] = [];
+    for (const file of files) {
+      const category =
+        typeof file.data.category === "string" ? file.data.category : undefined;
+      if (category === undefined) {
+        uncategorized.push(file);
+        continue;
+      } 
+
+      const bucket = categories.get(category) ?? [];
+      bucket.push(file);
+      categories.set(category, bucket);
+    }
+
+    const orderedCategories = [...categories.keys()].sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    const blocks: string[] = [];
+    for (const category of orderedCategories) {
+      const lines = categories.get(category)!.map(lineFor).join("\n");
+      blocks.push(`${category}:\n${lines}`);
+    }
+    if (uncategorized.length > 0) {
+      blocks.push(`${UNCATEGORIZED_LABEL}:\n${uncategorized.map(lineFor).join("\n")}`);
+    }
+
     return "Available documents (read with `readDocument` before writing any " +
       "config section you're not fully sure about):\n" +
-      lines.join("\n");
+      blocks.join("\n\n");
   }
 }
 

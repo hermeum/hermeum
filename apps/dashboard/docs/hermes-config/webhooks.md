@@ -1,5 +1,6 @@
 ---
 name: webhooks
+category: platforms
 description: Webhook platform configuration (`platforms.webhook`) — routes, delivery targets, prompt templates, and env vars.
 ---
 
