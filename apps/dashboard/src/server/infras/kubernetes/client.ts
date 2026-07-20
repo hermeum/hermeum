@@ -10,6 +10,8 @@ import {
   EnvVar,
   SharedEnvSet,
   SharedEnvSetEnvVar,
+  getApiServerPort,
+  isApiServerEnabled,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 import {
@@ -159,20 +161,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       agent.config.web?.search_backend === "searxng" ||
       agent.config.web?.backend === "searxng";
     camofoxEnabled = agent.config.browser?.cloud_provider === "camofox";
-    // The Hermes agent has no api_server section in config.yaml — it belongs to
-    // the CR's dedicated config.apiServer field, so keep it out of raw.
-    const { api_server: apiServer, ...rawConfig } = agent.config;
-    hermes.config = { raw: rawConfig };
-    if (apiServer !== undefined) {
-      hermes.config.apiServer = {
-        ...(apiServer.enabled !== undefined && { enabled: apiServer.enabled }),
-        ...(apiServer.port !== undefined && { port: apiServer.port }),
-        ...(apiServer.cors_origins !== undefined && { corsOrigins: apiServer.cors_origins }),
-        ...(apiServer.enabled === true && {
-          existingSecret: { name: agentEnvResourceName(agent.id), key: "API_SERVER_KEY" },
-        }),
-      };
-    }
+    hermes.config = { raw: agent.config };
     const webhook = agent.config.platforms?.webhook;
     if (webhook !== undefined) {
       hermes.config.webhook = {
@@ -183,6 +172,22 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
         }),
       };
     }
+  }
+  // Expose the API server container + service ports when the agent opts in via
+  // the API_SERVER_ENABLED env var.
+  const apiServerPort = isApiServerEnabled(agent) ? getApiServerPort(agent) : null;
+  let apiServerNetworking: HermesAgentSpec["networking"] | undefined;
+  if (apiServerPort !== null) {
+    hermes.ports = [
+      { name: "api-server", containerPort: apiServerPort, protocol: "TCP" },
+    ];
+    apiServerNetworking = {
+      service: {
+        ports: [
+          { name: "api-server", port: apiServerPort, targetPort: apiServerPort, protocol: "TCP" },
+        ],
+      },
+    };
   }
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
@@ -217,6 +222,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
     ...(searxngEnabled && { searxng: { enabled: true } }),
     ...(camofoxEnabled && { camofox: { enabled: true } }),
+    ...(apiServerNetworking !== undefined && { networking: apiServerNetworking }),
     podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
@@ -233,22 +239,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   };
 }
 
-// Rebuild the agent config from the CR: api_server lives in the dedicated
-// config.apiServer field (not raw), so fold it back in for round-tripping.
-// existingSecret is derived from the agent id at build time and is not mapped back.
+// Rebuild the agent config from the CR. API server settings are configured
+// via env vars, so all typed config fields pass through `raw` unchanged.
 export function mapHermesConfig(config: HermesConfig | undefined): Agent["config"] {
-  const apiServer = config?.apiServer;
-  if (apiServer === undefined) {
-    return config?.raw;
-  }
-  return {
-    ...config?.raw,
-    api_server: {
-      ...(apiServer.enabled !== undefined && { enabled: apiServer.enabled }),
-      ...(apiServer.port !== undefined && { port: apiServer.port }),
-      ...(apiServer.corsOrigins !== undefined && { cors_origins: apiServer.corsOrigins }),
-    },
-  };
+  return config?.raw;
 }
 
 export function mapHermesAgent(raw: HermesAgent): Agent {

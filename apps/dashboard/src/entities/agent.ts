@@ -92,14 +92,6 @@ const BrowserConfigSchema = z
   })
   .optional();
 
-const ApiServerConfigSchema = z
-  .looseObject({
-    enabled: z.boolean().optional(),
-    port: z.number().int().optional(),
-    cors_origins: z.array(z.string()).optional(),
-  })
-  .optional();
-
 const WebhookConfigSchema = z
   .looseObject({
     enabled: z.boolean().optional(),
@@ -121,7 +113,6 @@ export const ConfigSchema = z
   .looseObject({
     web: WebConfigSchema,
     browser: BrowserConfigSchema,
-    api_server: ApiServerConfigSchema,
     platforms: PlatformsConfigSchema,
   })
   .optional()
@@ -534,8 +525,8 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
   if (data.config?.platforms?.webhook?.enabled === true) {
     requireSensitiveEnv("WEBHOOK_SECRET", "config.platforms.webhook.enabled");
   }
-  if (data.config?.api_server?.enabled === true) {
-    requireSensitiveEnv("API_SERVER_KEY", "config.api_server.enabled");
+  if (isApiServerEnabled(data)) {
+    requireSensitiveEnv("API_SERVER_KEY", "env.API_SERVER_ENABLED");
   }
 
   data.env?.forEach((v, i) => {
@@ -552,6 +543,26 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
+
+// API server settings are configured exclusively via env vars (see
+// docs/hermes-config/api-server.md). These helpers read those env vars off an
+// `AgentInput`.
+const API_SERVER_DEFAULT_PORT = 8642;
+
+export function isApiServerEnabled(input: AgentInput): boolean {
+  return (
+    input.env?.some(
+      (v) => v.name === "API_SERVER_ENABLED" && v.value.toLowerCase() === "true"
+    ) ?? false
+  );
+}
+
+export function getApiServerPort(input: AgentInput): number {
+  const raw = input.env?.find((v) => v.name === "API_SERVER_PORT")?.value;
+  if (raw === undefined || raw.trim() === "") return API_SERVER_DEFAULT_PORT;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : API_SERVER_DEFAULT_PORT;
+}
 
 export const AgentPhaseSchema = z.enum([
   "Pending",

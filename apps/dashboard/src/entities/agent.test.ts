@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -46,33 +46,83 @@ describe("AgentInputSchema webhook secret validation", () => {
 describe("AgentInputSchema api server key validation", () => {
   function makeApiServerInput(overrides: Record<string, unknown> = {}) {
     return {
-      config: { api_server: { enabled: true } },
+      env: [{ name: "API_SERVER_ENABLED", value: "true" }],
       ...overrides,
     };
   }
 
   it("fails when the api server is enabled and env is missing", () => {
-    const result = AgentInputSchema.safeParse(makeApiServerInput());
+    const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] });
     expect(result.success).toBe(false);
   });
 
   it("fails when the api server is enabled and env lacks a sensitive API_SERVER_KEY", () => {
     const result = AgentInputSchema.safeParse(
-      makeApiServerInput({ env: [{ name: "API_SERVER_KEY", value: "shh" }] })
+      makeApiServerInput({ env: [
+        { name: "API_SERVER_ENABLED", value: "true" },
+        { name: "API_SERVER_KEY", value: "shh" },
+      ] })
     );
     expect(result.success).toBe(false);
   });
 
   it("succeeds when the api server is enabled and env has a sensitive API_SERVER_KEY", () => {
     const result = AgentInputSchema.safeParse(
-      makeApiServerInput({ env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }] })
+      makeApiServerInput({ env: [
+        { name: "API_SERVER_ENABLED", value: "true" },
+        { name: "API_SERVER_KEY", value: "shh", sensitive: true },
+      ] })
     );
     expect(result.success).toBe(true);
   });
 
   it("succeeds when the api server is disabled regardless of env", () => {
-    const result = AgentInputSchema.safeParse({ config: { api_server: { enabled: false } } });
+    const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "false" }] });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("isApiServerEnabled", () => {
+  it("returns true when API_SERVER_ENABLED is \"true\" (case-insensitive)", () => {
+    for (const value of ["true", "TRUE", "True"]) {
+      expect(
+        isApiServerEnabled({ env: [{ name: "API_SERVER_ENABLED", value }] })
+      ).toBe(true);
+    }
+  });
+
+  it("returns false for non-\"true\" values", () => {
+    for (const value of ["false", "1", "yes", "on", "", "true "]) {
+      expect(
+        isApiServerEnabled({ env: [{ name: "API_SERVER_ENABLED", value }] })
+      ).toBe(false);
+    }
+  });
+
+  it("returns false when env is absent or has no API_SERVER_ENABLED var", () => {
+    expect(isApiServerEnabled({})).toBe(false);
+    expect(isApiServerEnabled({ env: [] })).toBe(false);
+    expect(isApiServerEnabled({ env: [{ name: "OTHER", value: "true" }] })).toBe(false);
+  });
+});
+
+describe("getApiServerPort", () => {
+  it("returns the parsed port when API_SERVER_PORT is a positive integer", () => {
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "9000" }] })).toBe(9000);
+  });
+
+  it("falls back to 8642 when API_SERVER_PORT is missing or empty", () => {
+    expect(getApiServerPort({})).toBe(8642);
+    expect(getApiServerPort({ env: [] })).toBe(8642);
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "" }] })).toBe(8642);
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "   " }] })).toBe(8642);
+  });
+
+  it("falls back to 8642 when API_SERVER_PORT is not a positive integer", () => {
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "0" }] })).toBe(8642);
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "-1" }] })).toBe(8642);
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "abc" }] })).toBe(8642);
+    expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "1.5" }] })).toBe(8642);
   });
 });
 
