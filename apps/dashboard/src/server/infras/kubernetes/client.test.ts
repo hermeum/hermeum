@@ -250,6 +250,51 @@ describe("mapHermesConfig", () => {
   });
 });
 
+describe("agentToHermesAgent api server networking wiring", () => {
+  it("exposes the default api-server container and service ports when API_SERVER_ENABLED=true", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "api-server", containerPort: 8642, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "api-server", port: 8642, targetPort: 8642, protocol: "TCP" },
+    ]);
+  });
+
+  it("uses API_SERVER_PORT when set", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "API_SERVER_PORT", value: "9000" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "api-server", containerPort: 9000, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "api-server", port: 9000, targetPort: 9000, protocol: "TCP" },
+    ]);
+  });
+
+  it("leaves ports and networking undefined when API_SERVER_ENABLED is false", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "false" }] })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toBeUndefined();
+    expect(hermesAgent.spec.networking).toBeUndefined();
+  });
+
+  it("leaves ports and networking undefined when env is absent", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.ports).toBeUndefined();
+    expect(hermesAgent.spec.networking).toBeUndefined();
+  });
+});
+
 describe("agentToHermesAgent crons wiring", () => {
   it("maps agent.crons straight onto hermes.crons", () => {
     const crons = [

@@ -10,6 +10,8 @@ import {
   EnvVar,
   SharedEnvSet,
   SharedEnvSetEnvVar,
+  getApiServerPort,
+  isApiServerEnabled,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 import {
@@ -171,6 +173,23 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       };
     }
   }
+  // Expose the API server container + service ports when the agent opts in via
+  // the API_SERVER_ENABLED env var. The dashboard no longer surfaces an
+  // `api_server` block in config, so these ports must be wired explicitly.
+  const apiServerPort = isApiServerEnabled(agent) ? getApiServerPort(agent) : null;
+  let apiServerNetworking: HermesAgentSpec["networking"] | undefined;
+  if (apiServerPort !== null) {
+    hermes.ports = [
+      { name: "api-server", containerPort: apiServerPort, protocol: "TCP" },
+    ];
+    apiServerNetworking = {
+      service: {
+        ports: [
+          { name: "api-server", port: apiServerPort, targetPort: apiServerPort, protocol: "TCP" },
+        ],
+      },
+    };
+  }
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
   }
@@ -204,6 +223,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
     ...(searxngEnabled && { searxng: { enabled: true } }),
     ...(camofoxEnabled && { camofox: { enabled: true } }),
+    ...(apiServerNetworking !== undefined && { networking: apiServerNetworking }),
     podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
