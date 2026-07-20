@@ -545,8 +545,7 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
 export type AgentInput = z.infer<typeof AgentInputSchema>;
 
 // API server settings are configured exclusively via env vars (see
-// docs/hermes-config/api-server.md); the dashboard no longer surfaces an
-// `api_server` block in `config`. These helpers read those env vars off an
+// docs/hermes-config/api-server.md). These helpers read those env vars off an
 // `AgentInput`.
 const API_SERVER_DEFAULT_PORT = 8642;
 

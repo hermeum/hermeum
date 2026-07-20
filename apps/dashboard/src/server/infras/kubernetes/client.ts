@@ -174,8 +174,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     }
   }
   // Expose the API server container + service ports when the agent opts in via
-  // the API_SERVER_ENABLED env var. The dashboard no longer surfaces an
-  // `api_server` block in config, so these ports must be wired explicitly.
+  // the API_SERVER_ENABLED env var.
   const apiServerPort = isApiServerEnabled(agent) ? getApiServerPort(agent) : null;
   let apiServerNetworking: HermesAgentSpec["networking"] | undefined;
   if (apiServerPort !== null) {
@@ -240,9 +239,8 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   };
 }
 
-// Rebuild the agent config from the CR. The dashboard no longer surfaces an
-// `api_server` block — API server settings are configured via env vars — so
-// all typed config fields pass through `raw` unchanged.
+// Rebuild the agent config from the CR. API server settings are configured
+// via env vars, so all typed config fields pass through `raw` unchanged.
 export function mapHermesConfig(config: HermesConfig | undefined): Agent["config"] {
   return config?.raw;
 }
