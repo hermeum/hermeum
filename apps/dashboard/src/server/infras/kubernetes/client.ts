@@ -11,7 +11,9 @@ import {
   SharedEnvSet,
   SharedEnvSetEnvVar,
   getApiServerPort,
+  getWebhookPort,
   isApiServerEnabled,
+  isWebhookEnabled,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 import {
@@ -23,7 +25,13 @@ import {
   Runtime,
   SharedEnvSetPatch,
 } from "../../usecases/adaptors/runtime";
-import { HermesAgent, HermesAgentList, HermesAgentSpec, HermesConfig } from "./types/hermes-agent";
+import {
+  HermesAgent,
+  HermesAgentList,
+  HermesAgentSpec,
+  HermesConfig,
+  ServicePort,
+} from "./types/hermes-agent";
 
 const enum HermesGroup {
   Default = "agents.hermeum.app",
@@ -162,33 +170,40 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       agent.config.web?.backend === "searxng";
     camofoxEnabled = agent.config.browser?.cloud_provider === "camofox";
     hermes.config = { raw: agent.config };
-    const webhook = agent.config.platforms?.webhook;
-    if (webhook !== undefined) {
-      hermes.config.webhook = {
-        ...(webhook.enabled !== undefined && { enabled: webhook.enabled }),
-        ...(webhook.extra?.port !== undefined && { port: webhook.extra.port }),
-        ...(webhook.enabled === true && {
-          secretRef: { name: agentEnvResourceName(agent.id), key: "WEBHOOK_SECRET" },
-        }),
-      };
-    }
   }
   // Expose the API server container + service ports when the agent opts in via
   // the API_SERVER_ENABLED env var.
   const apiServerPort = isApiServerEnabled(agent) ? getApiServerPort(agent) : null;
-  let apiServerNetworking: HermesAgentSpec["networking"] | undefined;
+  // Expose the webhook container + service ports when the agent opts in via
+  // the WEBHOOK_ENABLED env var OR config.platforms.webhook.enabled.
+  const webhookPort = isWebhookEnabled(agent) ? getWebhookPort(agent) : null;
+  const servicePorts: ServicePort[] = [];
   if (apiServerPort !== null) {
     hermes.ports = [
+      ...(hermes.ports ?? []),
       { name: "api-server", containerPort: apiServerPort, protocol: "TCP" },
     ];
-    apiServerNetworking = {
-      service: {
-        ports: [
-          { name: "api-server", port: apiServerPort, targetPort: apiServerPort, protocol: "TCP" },
-        ],
-      },
-    };
+    servicePorts.push({
+      name: "api-server",
+      port: apiServerPort,
+      targetPort: apiServerPort,
+      protocol: "TCP",
+    });
   }
+  if (webhookPort !== null) {
+    hermes.ports = [
+      ...(hermes.ports ?? []),
+      { name: "webhook", containerPort: webhookPort, protocol: "TCP" },
+    ];
+    servicePorts.push({
+      name: "webhook",
+      port: webhookPort,
+      targetPort: webhookPort,
+      protocol: "TCP",
+    });
+  }
+  const networking =
+    servicePorts.length > 0 ? { service: { ports: servicePorts } } : undefined;
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
   }
@@ -222,7 +237,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     ...(Object.keys(hermes).length > 0 && { hermes: hermes as HermesAgentSpec["hermes"] }),
     ...(searxngEnabled && { searxng: { enabled: true } }),
     ...(camofoxEnabled && { camofox: { enabled: true } }),
-    ...(apiServerNetworking !== undefined && { networking: apiServerNetworking }),
+    ...(networking !== undefined && { networking }),
     podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
   };
 
