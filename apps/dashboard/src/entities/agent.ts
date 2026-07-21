@@ -522,8 +522,8 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
       });
     }
   };
-  if (data.config?.platforms?.webhook?.enabled === true) {
-    requireSensitiveEnv("WEBHOOK_SECRET", "config.platforms.webhook.enabled");
+  if (isWebhookEnabled(data)) {
+    requireSensitiveEnv("WEBHOOK_SECRET", "webhook enabled (env var or config)");
   }
   if (isApiServerEnabled(data)) {
     requireSensitiveEnv("API_SERVER_KEY", "env.API_SERVER_ENABLED");
@@ -562,6 +562,34 @@ export function getApiServerPort(input: AgentInput): number {
   if (raw === undefined || raw.trim() === "") return API_SERVER_DEFAULT_PORT;
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : API_SERVER_DEFAULT_PORT;
+}
+
+// Webhook settings can be configured via config.yaml
+// (config.platforms.webhook.enabled / extra.port) or via env vars
+// (WEBHOOK_ENABLED / WEBHOOK_PORT). config.yaml is preferred and takes
+// precedence over the env vars; the env vars act as a fallback when the
+// corresponding config field is absent.
+const WEBHOOK_DEFAULT_PORT = 8644;
+
+export function isWebhookEnabled(input: AgentInput): boolean {
+  const configEnabled = input.config?.platforms?.webhook?.enabled;
+  if (configEnabled !== undefined) return configEnabled;
+  return (
+    input.env?.some(
+      (v) => v.name === "WEBHOOK_ENABLED" && v.value.toLowerCase() === "true",
+    ) ?? false
+  );
+}
+
+export function getWebhookPort(input: AgentInput): number {
+  const configPort = input.config?.platforms?.webhook?.extra?.port;
+  if (configPort !== undefined) return configPort;
+  const envRaw = input.env?.find((v) => v.name === "WEBHOOK_PORT")?.value;
+  if (envRaw !== undefined && envRaw.trim() !== "") {
+    const n = Number(envRaw);
+    return Number.isInteger(n) && n > 0 ? n : WEBHOOK_DEFAULT_PORT;
+  }
+  return WEBHOOK_DEFAULT_PORT;
 }
 
 export const AgentPhaseSchema = z.enum([

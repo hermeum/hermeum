@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -11,22 +11,39 @@ function makeInput(overrides: Record<string, unknown> = {}) {
 }
 
 describe("AgentInputSchema webhook secret validation", () => {
-  it("fails when webhook is enabled and env is missing", () => {
+  it("fails when webhook is enabled via config and env is missing", () => {
     const result = AgentInputSchema.safeParse(makeInput());
     expect(result.success).toBe(false);
   });
 
-  it("fails when webhook is enabled and env lacks a sensitive WEBHOOK_SECRET", () => {
+  it("fails when webhook is enabled via config and env lacks a sensitive WEBHOOK_SECRET", () => {
     const result = AgentInputSchema.safeParse(
       makeInput({ env: [{ name: "WEBHOOK_SECRET", value: "shh" }] })
     );
     expect(result.success).toBe(false);
   });
 
-  it("succeeds when webhook is enabled and env has a sensitive WEBHOOK_SECRET", () => {
+  it("succeeds when webhook is enabled via config and env has a sensitive WEBHOOK_SECRET", () => {
     const result = AgentInputSchema.safeParse(
       makeInput({ env: [{ name: "WEBHOOK_SECRET", value: "shh", sensitive: true }] })
     );
+    expect(result.success).toBe(true);
+  });
+
+  it("fails when webhook is enabled via WEBHOOK_ENABLED env var and WEBHOOK_SECRET is missing", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when webhook is enabled via WEBHOOK_ENABLED env var and WEBHOOK_SECRET is sensitive", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+    });
     expect(result.success).toBe(true);
   });
 
@@ -39,6 +56,54 @@ describe("AgentInputSchema webhook secret validation", () => {
 
   it("succeeds when webhook config is omitted entirely", () => {
     const result = AgentInputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("AgentInputSchema webhook env-vs-config precedence", () => {
+  it("prefers config.platforms.webhook.enabled over WEBHOOK_ENABLED env var", () => {
+    const input = {
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+      config: { platforms: { webhook: { enabled: false } } },
+    };
+    const result = AgentInputSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    expect(isWebhookEnabled(input as never)).toBe(false);
+  });
+
+  it("prefers config.platforms.webhook.extra.port over WEBHOOK_PORT env var", () => {
+    const input = {
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_PORT", value: "9001" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+      config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
+    };
+    const result = AgentInputSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    expect(getWebhookPort(input as never)).toBe(9000);
+  });
+
+  it("succeeds when only the env var path is used", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_PORT", value: "9000" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when only the config path is used", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
+      env: [{ name: "WEBHOOK_SECRET", value: "shh", sensitive: true }],
+    });
     expect(result.success).toBe(true);
   });
 });
@@ -123,6 +188,88 @@ describe("getApiServerPort", () => {
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "-1" }] })).toBe(8642);
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "abc" }] })).toBe(8642);
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "1.5" }] })).toBe(8642);
+  });
+});
+
+describe("isWebhookEnabled", () => {
+  it("returns true when WEBHOOK_ENABLED is \"true\" (case-insensitive)", () => {
+    for (const value of ["true", "TRUE", "True"]) {
+      expect(
+        isWebhookEnabled({ env: [{ name: "WEBHOOK_ENABLED", value }] })
+      ).toBe(true);
+    }
+  });
+
+  it("returns false for non-\"true\" WEBHOOK_ENABLED values", () => {
+    for (const value of ["false", "1", "yes", "on", "", "true "]) {
+      expect(
+        isWebhookEnabled({ env: [{ name: "WEBHOOK_ENABLED", value }] })
+      ).toBe(false);
+    }
+  });
+
+  it("returns true when config.platforms.webhook.enabled is true", () => {
+    expect(
+      isWebhookEnabled({ config: { platforms: { webhook: { enabled: true } } } })
+    ).toBe(true);
+  });
+
+  it("returns false when config.platforms.webhook.enabled is false or absent", () => {
+    expect(
+      isWebhookEnabled({ config: { platforms: { webhook: { enabled: false } } } })
+    ).toBe(false);
+    expect(isWebhookEnabled({ config: { platforms: { webhook: {} } } })).toBe(false);
+    expect(isWebhookEnabled({})).toBe(false);
+  });
+
+  it("prefers config.platforms.webhook.enabled over the WEBHOOK_ENABLED env var", () => {
+    expect(
+      isWebhookEnabled({
+        env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+        config: { platforms: { webhook: { enabled: false } } },
+      })
+    ).toBe(false);
+    expect(
+      isWebhookEnabled({
+        env: [{ name: "WEBHOOK_ENABLED", value: "false" }],
+        config: { platforms: { webhook: { enabled: true } } },
+      })
+    ).toBe(true);
+  });
+});
+
+describe("getWebhookPort", () => {
+  it("returns the parsed port when WEBHOOK_PORT is a positive integer", () => {
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "9000" }] })).toBe(9000);
+  });
+
+  it("falls back to 8644 when WEBHOOK_PORT is missing or empty", () => {
+    expect(getWebhookPort({})).toBe(8644);
+    expect(getWebhookPort({ env: [] })).toBe(8644);
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "" }] })).toBe(8644);
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "   " }] })).toBe(8644);
+  });
+
+  it("falls back to 8644 when WEBHOOK_PORT is not a positive integer", () => {
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "0" }] })).toBe(8644);
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "-1" }] })).toBe(8644);
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "abc" }] })).toBe(8644);
+    expect(getWebhookPort({ env: [{ name: "WEBHOOK_PORT", value: "1.5" }] })).toBe(8644);
+  });
+
+  it("returns the config.platforms.webhook.extra.port when WEBHOOK_PORT env var is absent", () => {
+    expect(
+      getWebhookPort({ config: { platforms: { webhook: { extra: { port: 9000 } } } } })
+    ).toBe(9000);
+  });
+
+  it("prefers config.platforms.webhook.extra.port over the WEBHOOK_PORT env var", () => {
+    expect(
+      getWebhookPort({
+        env: [{ name: "WEBHOOK_PORT", value: "9001" }],
+        config: { platforms: { webhook: { extra: { port: 9000 } } } },
+      })
+    ).toBe(9000);
   });
 });
 

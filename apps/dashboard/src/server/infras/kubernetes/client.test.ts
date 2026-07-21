@@ -140,29 +140,122 @@ describe("agentToHermesAgent packages wiring", () => {
   });
 });
 
-describe("agentToHermesAgent config.webhook wiring", () => {
-  it("maps enabled and extra.port, and derives secretRef when enabled", () => {
+describe("agentToHermesAgent config.webhook no longer populated", () => {
+  it("does not write hermes.config.webhook even when config.platforms.webhook is set", () => {
     const hermesAgent = agentToHermesAgent(
       makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 8644 } } } } })
     );
-    expect(hermesAgent.spec.hermes?.config?.webhook).toEqual({
-      enabled: true,
-      port: 8644,
-      secretRef: { name: "agent-1-dot-env", key: "WEBHOOK_SECRET" },
+    expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
+    // The raw config still passes through unchanged.
+    expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
+      platforms: { webhook: { enabled: true, extra: { port: 8644 } } },
     });
-  });
-
-  it("omits secretRef when webhook is disabled", () => {
-    const hermesAgent = agentToHermesAgent(
-      makeAgent({ config: { platforms: { webhook: { enabled: false } } } })
-    );
-    expect(hermesAgent.spec.hermes?.config?.webhook).toEqual({ enabled: false });
   });
 
   it("leaves config.webhook undefined when there's no platforms.webhook", () => {
     const hermesAgent = agentToHermesAgent(makeAgent({ config: { platforms: {} } }));
     expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
     expect(hermesAgent.spec.hermes?.config?.raw).toEqual({ platforms: {} });
+  });
+});
+
+describe("agentToHermesAgent webhook networking wiring", () => {
+  it("exposes the default webhook container and service ports when WEBHOOK_ENABLED=true", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "WEBHOOK_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "webhook", containerPort: 8644, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "webhook", port: 8644, targetPort: 8644, protocol: "TCP" },
+    ]);
+  });
+
+  it("uses WEBHOOK_PORT when set", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "WEBHOOK_ENABLED", value: "true" },
+          { name: "WEBHOOK_PORT", value: "9000" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "webhook", containerPort: 9000, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "webhook", port: 9000, targetPort: 9000, protocol: "TCP" },
+    ]);
+  });
+
+  it("uses config.platforms.webhook.extra.port when WEBHOOK_PORT env var is absent", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } } })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "webhook", containerPort: 9000, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "webhook", port: 9000, targetPort: 9000, protocol: "TCP" },
+    ]);
+  });
+
+  it("falls back to the default 8644 port when neither WEBHOOK_PORT nor extra.port is set", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "webhook", containerPort: 8644, protocol: "TCP" },
+    ]);
+  });
+
+  it("prefers config.platforms.webhook.extra.port over the WEBHOOK_PORT env var", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "WEBHOOK_ENABLED", value: "true" },
+          { name: "WEBHOOK_PORT", value: "9001" },
+        ],
+        config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
+      })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "webhook", containerPort: 9000, protocol: "TCP" },
+    ]);
+  });
+
+  it("leaves ports and networking undefined when webhook is disabled", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "WEBHOOK_ENABLED", value: "false" }] })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toBeUndefined();
+    expect(hermesAgent.spec.networking).toBeUndefined();
+  });
+
+  it("leaves ports and networking undefined when webhook config is absent", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.ports).toBeUndefined();
+    expect(hermesAgent.spec.networking).toBeUndefined();
+  });
+
+  it("merges api-server and webhook entries into one networking.service.ports array when both are enabled", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "WEBHOOK_ENABLED", value: "true" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.hermes?.ports).toEqual([
+      { name: "api-server", containerPort: 8642, protocol: "TCP" },
+      { name: "webhook", containerPort: 8644, protocol: "TCP" },
+    ]);
+    expect(hermesAgent.spec.networking?.service?.ports).toEqual([
+      { name: "api-server", port: 8642, targetPort: 8642, protocol: "TCP" },
+      { name: "webhook", port: 8644, targetPort: 8644, protocol: "TCP" },
+    ]);
   });
 });
 
