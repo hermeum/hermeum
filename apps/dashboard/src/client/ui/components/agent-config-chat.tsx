@@ -31,7 +31,10 @@ import { AgentInputObjectSchema } from "@/entities";
 type AgentConfigChatMessage = UIMessage<
   unknown,
   UIDataTypes,
-  { updateAgentConfig: { input: AgentInput; output: string } }
+  {
+    updateAgentConfig: { input: AgentInput; output: string };
+    readAgentConfig: { input: undefined; output: AgentInput | undefined };
+  }
 >;
 
 interface AgentConfigChatProps {
@@ -60,7 +63,17 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
       transport: new DefaultChatTransport({ api: "/chat/agent-config" }),
       sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       async onToolCall({ toolCall }) {
-        if (toolCall.dynamic || toolCall.toolName !== "updateAgentConfig") return;
+        if (toolCall.dynamic) return;
+        if (toolCall.toolName === "readAgentConfig") {
+          const config = callbacksRef.current.getConfig();
+          addToolOutput({
+            tool: "readAgentConfig",
+            toolCallId: toolCall.toolCallId,
+            output: config,
+          });
+          return;
+        }
+        if (toolCall.toolName !== "updateAgentConfig") return;
         const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;

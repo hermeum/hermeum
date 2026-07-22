@@ -105,6 +105,26 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.updateAgentConfig!.execute).toBeUndefined();
   });
 
+  it("exposes a client-side readAgentConfig tool", async () => {
+    const useCase = new ChatUseCase(undefined, makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.readAgentConfig).toBeDefined();
+    expect(tools.readAgentConfig!.inputSchema).toBeDefined();
+    // No execute: the tool runs on the client, which returns the latest
+    // editor draft and reports it back.
+    expect(tools.readAgentConfig!.execute).toBeUndefined();
+  });
+
+  it("instructs the model to call readAgentConfig when the draft may be stale", async () => {
+    const useCase = new ChatUseCase(undefined, makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain("readAgentConfig");
+  });
+
   it("does not expose a listDocuments tool (the list is embedded in the prompt)", async () => {
     const useCase = new ChatUseCase(undefined, makeFiles());
 
