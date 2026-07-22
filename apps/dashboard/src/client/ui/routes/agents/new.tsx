@@ -5,6 +5,11 @@ import { parse } from "yaml";
 import { toast } from "sonner";
 
 import { Button } from "@hermeum/components/ui/button";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@hermeum/components/ui/resizable";
 import { useTRPC } from "@/router";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput } from "@/entities";
@@ -95,23 +100,16 @@ function NewAgentPage() {
     <div className="flex h-full min-h-0 flex-col gap-4 p-6">
       <h1 className="shrink-0 text-2xl font-semibold tracking-tight">Create agent</h1>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Chat pane */}
-        <AgentConfigChat
-          getConfig={getConfig}
-          onConfigUpdate={handleConfigUpdate}
-          templates={templates}
-        />
-
-        {/* Config pane */}
-        <div className="flex min-h-0 flex-col gap-2">
+      {/* Mobile: static stacked layout (config on top, chat at bottom) */}
+      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:hidden">
+        <div className="flex flex-col gap-2">
           <p className="shrink-0 text-sm font-medium">Agent config</p>
           <div className="min-h-0 flex-1">
             <CodeEditor
               value={editorValue}
               onChange={setEditorValue}
               invalid={!!validationError}
-              height="100%"
+              height="300px"
             />
           </div>
           {validationError && (
@@ -126,7 +124,61 @@ function NewAgentPage() {
             </Button>
           </div>
         </div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <AgentConfigChat
+            getConfig={getConfig}
+            onConfigUpdate={handleConfigUpdate}
+            templates={templates}
+          />
+        </div>
       </div>
+
+      {/* Desktop: resizable side-by-side layout */}
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="hidden min-h-0 flex-1 lg:flex"
+      >
+        {/* Chat pane */}
+        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+          <div className="flex h-full min-h-0 flex-col pr-3">
+            <AgentConfigChat
+              getConfig={getConfig}
+              onConfigUpdate={handleConfigUpdate}
+              templates={templates}
+            />
+          </div>
+        </ResizablePanel>
+        <ResizableHandle
+          withHandle
+          className="bg-transparent [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100"
+        />
+
+        {/* Config pane */}
+        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+          <div className="flex h-full min-h-0 flex-col gap-2 pl-3">
+            <p className="shrink-0 text-sm font-medium">Agent config</p>
+            <div className="min-h-0 flex-1">
+              <CodeEditor
+                value={editorValue}
+                onChange={setEditorValue}
+                invalid={!!validationError}
+                height="100%"
+              />
+            </div>
+            {validationError && (
+              <p className="shrink-0 text-sm text-destructive">{validationError}</p>
+            )}
+            <div className="flex shrink-0 justify-end gap-2">
+              <Button variant="outline" onClick={() => navigate({ to: "/agents" })}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} disabled={isCreating}>
+                {isCreating ? "Creating…" : "Create agent"}
+              </Button>
+            </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
