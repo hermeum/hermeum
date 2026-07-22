@@ -65,17 +65,17 @@ package, lazy-installed on first use).
 
 ## Example
 
-`~/.hermes/config.yaml`:
+### SearXNG search with Firecrawl extraction
 
 ```yaml
-web:
-  search_backend: "searxng"     # free, self-hosted, Hermeum default
-  extract_backend: "firecrawl" # paid, high-quality extraction
+config:
+  web:
+    search_backend: searxng
+    extract_backend: firecrawl
+env:
+  - name: FIRECRAWL_API_KEY
+    value: fc-your-key-here
+    sensitive: true
 ```
 
-`~/.hermes/.env`:
-
-```bash
-# SEARXNG_URL is set automatically by Hermeum — no need to set it here.
-FIRECRAWL_API_KEY=fc-your-key-here
-```
+`SEARXNG_URL` is set automatically by Hermeum — no need to add it to `env`.

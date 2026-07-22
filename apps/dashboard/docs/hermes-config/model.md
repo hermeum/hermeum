@@ -33,8 +33,15 @@ Setting a model requires an env var holding the provider's API key, marked
 
 ## Example
 
+### OpenAI API provider with a required key
+
 ```yaml
-model:
-  provider: openai-api
-  default: gpt-5.5
+config:
+  model:
+    provider: openai-api
+    default: gpt-5.5
+env:
+  - name: OPENAI_API_KEY
+    value: sk-...
+    sensitive: true
 ```

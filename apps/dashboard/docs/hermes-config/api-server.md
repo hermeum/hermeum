@@ -29,11 +29,13 @@ The API server is configured entirely through environment variables —
 
 ## Example
 
-`~/.hermes/.env`:
+### Enabling the API server with an auth key
 
-```bash
-API_SERVER_ENABLED=true
-API_SERVER_KEY=change-me-local-dev
-# Optional: only if a browser must call Hermes directly
-# API_SERVER_CORS_ORIGINS=http://localhost:3000
+```yaml
+env:
+  - name: API_SERVER_ENABLED
+    value: "true"
+  - name: API_SERVER_KEY
+    value: change-me-local-dev
+    sensitive: true
 ```
