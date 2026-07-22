@@ -103,19 +103,16 @@ different backend when the user explicitly requests one.
 
 ## Example
 
-`~/.hermes/config.yaml`:
+### Camofox with managed persistence and loopback rewriting
 
 ```yaml
-browser:
-  dialog_policy: must_respond
-  camofox:
-    managed_persistence: true
-    rewrite_loopback_urls: true
+config:
+  browser:
+    dialog_policy: must_respond
+    camofox:
+      managed_persistence: true
+      rewrite_loopback_urls: true
 ```
 
-`~/.hermes/.env`:
-
-```bash
-# CAMOFOX_URL and CAMOFOX_API_KEY are set automatically by Hermeum —
-# no need to set them here.
-```
+`CAMOFOX_URL` and `CAMOFOX_API_KEY` are set automatically by Hermeum —
+no need to add them to `env`.

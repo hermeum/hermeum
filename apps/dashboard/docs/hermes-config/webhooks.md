@@ -115,28 +115,35 @@ fallback for deployments that don't set `config.yaml`.
 
 ## Example
 
+### GitHub PR review webhook posting back as a comment
+
 ```yaml
-platforms:
-  webhook:
-    enabled: true
-    extra:
-      port: 8644
-      routes:
-        github-pr:
-          events: ["pull_request"]
-          prompt: |
-            Review this pull request:
-            Repository: {repository.full_name}
-            PR #{number}: {pull_request.title}
-            Author: {pull_request.user.login}
-            URL: {pull_request.html_url}
-            Diff URL: {pull_request.diff_url}
-            Action: {action}
-          skills: ["github-code-review"]
-          deliver: "github_comment"
-          deliver_extra:
-            repo: "{repository.full_name}"
-            pr_number: "{number}"
+config:
+  platforms:
+    webhook:
+      enabled: true
+      extra:
+        port: 8644
+        routes:
+          github-pr:
+            events: [pull_request]
+            prompt: |
+              Review this pull request:
+              Repository: {repository.full_name}
+              PR #{number}: {pull_request.title}
+              Author: {pull_request.user.login}
+              URL: {pull_request.html_url}
+              Diff URL: {pull_request.diff_url}
+              Action: {action}
+            skills: [github-code-review]
+            deliver: github_comment
+            deliver_extra:
+              repo: "{repository.full_name}"
+              pr_number: "{number}"
+env:
+  - name: WEBHOOK_SECRET
+    value: wh-secret-here
+    sensitive: true
 ```
 
-The HMAC secret is provided via the `WEBHOOK_SECRET` environment variable.
+The HMAC secret is provided via the `WEBHOOK_SECRET` env entry.
