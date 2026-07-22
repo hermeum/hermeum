@@ -565,18 +565,18 @@ describe("AgentInputSchema web config validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("passes search_backend through without enum validation", () => {
+  it("rejects an unknown search_backend", () => {
     const result = AgentInputSchema.safeParse({
       config: { web: { search_backend: "google" } },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
-  it("passes extract_backend through without enum validation", () => {
+  it("rejects a search-only backend used as extract_backend", () => {
     const result = AgentInputSchema.safeParse({
       config: { web: { extract_backend: "ddgs" } },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 });
 
@@ -595,10 +595,10 @@ describe("AgentInputSchema browser config validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("passes cloud_provider through without enum validation", () => {
+  it("rejects an unknown cloud_provider", () => {
     const result = AgentInputSchema.safeParse({
       config: { browser: { cloud_provider: "playwright" } },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 });

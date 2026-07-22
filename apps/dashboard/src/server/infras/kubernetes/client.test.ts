@@ -338,7 +338,7 @@ describe("mapHermesConfig", () => {
     const config = {
       model: { provider: "anthropic", default: "claude-sonnet-5" },
     };
-    const hermesAgent = agentToHermesAgent(makeAgent({ config }));
+    const hermesAgent = agentToHermesAgent(makeAgent({ config: config as Agent["config"] }));
     expect(mapHermesConfig(hermesAgent.spec.hermes?.config)).toEqual(config);
   });
 });
