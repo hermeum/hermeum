@@ -1,15 +1,26 @@
 import { z } from "zod";
 
-// Only the fields the dashboard reads (server/infras/kubernetes/client.ts) are
-// typed here; everything else passes through as a loose field. Full field
-// semantics live in docs/hermes-config/web-search.md and are surfaced to the
-// LLM via the readDocument tool.
-export const WebConfigSchema = z
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search
+// Full field semantics: docs/hermes-config/web-search.md
+export const WebSearchBackendSchema = z
+  .enum(["firecrawl", "searxng", "brave-free", "ddgs", "tavily", "exa", "parallel", "xai"])
+  .describe("Web search backend.");
+
+export type WebSearchBackend = z.infer<typeof WebSearchBackendSchema>;
+
+export const WebExtractBackendSchema = z
+  .enum(["firecrawl", "tavily", "exa", "parallel"])
+  .describe("Web extract backend. Search-only backends are not allowed here.");
+
+export type WebExtractBackend = z.infer<typeof WebExtractBackendSchema>;
+
+export const WebSchema = z
   .looseObject({
-    search_backend: z.string().optional(),
-    backend: z.string().optional(),
+    backend: WebSearchBackendSchema.optional().describe("Shared backend for search and extract."),
+    search_backend: WebSearchBackendSchema.optional().describe("Backend for the web_search tool."),
+    extract_backend: WebExtractBackendSchema.optional().describe("Backend for the web_extract tool."),
   })
   .optional()
-  .describe("Web search & extract config. See docs/hermes-config/web-search.md.");
+  .describe("Web search & extract configuration.");
 
-export type WebConfig = z.infer<typeof WebConfigSchema>;
+export type Web = z.infer<typeof WebSchema>;

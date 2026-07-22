@@ -1,14 +1,18 @@
 import { z } from "zod";
 
-// Only the fields the dashboard reads (server/infras/kubernetes/client.ts) are
-// typed here; everything else passes through as a loose field. Full field
-// semantics live in docs/hermes-config/browser.md and are surfaced to the LLM
-// via the readDocument tool.
-export const BrowserConfigSchema = z
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/browser
+// Full field semantics: docs/hermes-config/browser.md
+export const BrowserCloudProviderSchema = z
+  .enum(["browserbase", "browser-use", "firecrawl", "camofox"])
+  .describe("Browser automation provider.");
+
+export type BrowserCloudProvider = z.infer<typeof BrowserCloudProviderSchema>;
+
+export const BrowserSchema = z
   .looseObject({
-    cloud_provider: z.string().optional(),
+    cloud_provider: BrowserCloudProviderSchema.optional(),
   })
   .optional()
-  .describe("Browser automation config. See docs/hermes-config/browser.md.");
+  .describe("Browser automation configuration.");
 
-export type BrowserConfig = z.infer<typeof BrowserConfigSchema>;
+export type Browser = z.infer<typeof BrowserSchema>;
