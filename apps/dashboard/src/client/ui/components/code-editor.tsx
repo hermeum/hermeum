@@ -46,7 +46,7 @@ export function CodeEditor({
           highlightActiveLineGutter: !readOnly,
         }}
         className={cn(
-          "[&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
+          "h-full [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans! [&_.cm-scroller]:overflow-auto! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
         )}
       />
     </div>

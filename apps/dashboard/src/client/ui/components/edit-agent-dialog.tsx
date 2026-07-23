@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { parse } from "yaml";
+import { parse, stringify } from "yaml";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent, AgentInput } from "@/entities";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import { CodeEditor } from "@/client/ui/components/code-editor";
-import { stringifyAgentInput } from "@/client/ui/components/agent-yaml";
 import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
@@ -25,7 +24,10 @@ interface EditInstanceDialogProps {
 }
 
 function agentToYaml(agent: Agent): string {
-  return stringifyAgentInput(AgentInputObjectSchema.parse(agent));
+  return stringify(AgentInputObjectSchema.parse(agent), {
+    blockQuote: "literal",
+    lineWidth: 0,
+  }).trim();
 }
 
 export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanceDialogProps) {
