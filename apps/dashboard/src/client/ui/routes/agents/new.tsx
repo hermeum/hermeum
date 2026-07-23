@@ -10,23 +10,28 @@ import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
 import { CodeEditor } from "@/client/ui/components/code-editor";
-import { stringifyAgentInput } from "@/client/ui/components/agent-yaml";
+import { stringify } from "yaml";
 
-const DEFAULT_YAML = stringifyAgentInput({
-  name: "Untitled agent",
-  description: "A blank starting point with the core toolset.",
-  soul: `You are a team agent that can research, write code, run commands, and use tools to help the team end to end.`,
-  config: {
-    model: {
-      provider: "anthropic",
-      default: "claude-sonnet-5",
+const YAML_OPTIONS = { blockQuote: "literal", lineWidth: 0 } as const;
+
+const DEFAULT_YAML = stringify(
+  {
+    name: "Untitled agent",
+    description: "A blank starting point with the core toolset.",
+    soul: `You are a team agent that can research, write code, run commands, and use tools to help the team end to end.`,
+    config: {
+      model: {
+        provider: "anthropic",
+        default: "claude-sonnet-5",
+      },
     },
+    env: [],
+    skills: [],
+    plugins: [],
+    sharedEnvSets: [],
   },
-  env: [],
-  skills: [],
-  plugins: [],
-  sharedEnvSets: [],
-});
+  YAML_OPTIONS
+).trim();
 
 export const Route = createFileRoute("/agents/new")({
   component: NewAgentPage,
@@ -66,7 +71,7 @@ function NewAgentPage() {
   }
 
   function handleConfigUpdate(config: AgentInput) {
-    setEditorValue(stringifyAgentInput(config));
+    setEditorValue(stringify(config, YAML_OPTIONS).trim());
     setValidationError(null);
   }
 
