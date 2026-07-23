@@ -95,7 +95,7 @@ function NewAgentPage() {
     <div className="flex h-full min-h-0 flex-col gap-4 p-6">
       <h1 className="shrink-0 text-2xl font-semibold tracking-tight">Create agent</h1>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 gap-6 lg:grid-cols-2">
         {/* Chat pane */}
         <AgentConfigChat
           getConfig={getConfig}
