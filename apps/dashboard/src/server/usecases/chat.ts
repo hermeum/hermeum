@@ -37,6 +37,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           : "Current agent config draft as JSON:\n\n" + JSON.stringify(currentConfig, null, 2),
       tools: {
         readDocument: this.buildReadDocumentTool(),
+        readSharedEnvSet: this.buildReadSharedEnvSetTool(),
         readAgentConfig: tool({
           description:
             "Read the current agent config draft straight from the user's " +
@@ -91,13 +92,47 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     });
   }
 
+  // Server-executed tool that lets the model inspect the env var names inside
+  // one or more shared env sets (ids are listed in the system prompt). The
+  // values are never surfaced — shared env sets only carry env var names; the
+  // values live in Kubernetes Secrets the agent loads via `envFrom`. Batch
+  // every id you need into a single call to minimize round-trips.
+  private buildReadSharedEnvSetTool(): ToolSet[string] {
+    return tool({
+      description:
+        "Read the env var names inside one or more shared env sets by id " +
+        "(ids are listed in the system prompt). Use this before attaching a " +
+        "set to avoid name collisions with the agent's own `env`, or to " +
+        "confirm a needed var is present. Pass every id you need in a single " +
+        "call to minimize round-trips.",
+      inputSchema: z.object({
+        ids: z.array(z.string()).min(1).describe("Shared env set ids listed in the system prompt."),
+      }),
+      execute: async ({ ids }) => ({
+        sharedEnvSets: await Promise.all(
+          ids.map(async (id) => {
+            const set = await this.runtime.getSharedEnvSet(id);
+            if (set === null || set.archived) {
+              return {
+                id,
+                error: `Shared env set "${id}" not found. Use the ids listed in the system prompt.`,
+              };
+            }
+            return { id, envVars: set.envVars.map(({ name }) => ({ name })) };
+          })
+        ),
+      }),
+    });
+  }
+
   private async buildInstructions(): Promise<string> {
-    const [docList, { agentTypes }] = await Promise.all([
+    const [docList, sharedEnvSetList, { agentTypes }] = await Promise.all([
       this.buildDocumentList(),
+      this.buildSharedEnvSetList(),
       this.loadHermeumConfig(),
     ]);
 
-    let instructions = AGENT_CONFIG_CHAT_SYSTEM_PROMPT + "\n\n" + docList;
+    let instructions = AGENT_CONFIG_CHAT_SYSTEM_PROMPT + "\n\n" + docList + "\n\n" + sharedEnvSetList;
 
     if (agentTypes) {
       const lines = Object.entries(agentTypes).map(
@@ -162,6 +197,31 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       "config section you're not fully sure about):\n" +
       blocks.join("\n\n");
   }
+
+  // Build the "Available shared env sets:" block listing every non-archived
+  // shared env set the model can attach via the `sharedEnvSets` field. The id
+  // (not the human name) is what the draft's `sharedEnvSets` array expects, so
+  // each line leads with the id. Embedded up front so the model can attach a
+  // set without first calling a list tool; env var names inside a set are
+  // fetched on demand via `readSharedEnvSet` to keep the prompt lean. When no
+  // sets exist, only the header is emitted.
+  private async buildSharedEnvSetList(): Promise<string> {
+    const sets = (await this.runtime.listSharedEnvSets({ archived: false })).filter(
+      (set) => !set.archived
+    );
+    const header =
+      "Available shared env sets (attach via the `sharedEnvSets` field with " +
+      "these ids; read env var names with `readSharedEnvSet` before attaching " +
+      "to avoid collisions with the agent's own `env`):";
+    if (sets.length === 0) {
+      return header + "\n";
+    }
+    const lines = sets.map((set) => {
+      const tail = set.description ? ` — ${set.description}` : "";
+      return `- ${set.id}: ${set.name}${tail}`;
+    });
+    return header + "\n" + lines.join("\n");
+  }
 }
 
 // Field semantics live in the tool input schema's .describe() texts; this
@@ -177,6 +237,12 @@ Detailed documentation about the config fields is available through the
 Batch every document you need into a single call, and read up on any config
 section you are not fully sure about BEFORE writing it into the draft. Don't
 guess at field semantics that a document can settle.
+
+The available shared env sets are listed below by id. To attach one, add its
+id to the draft's \`sharedEnvSets\` array. If you need to see the env var names
+inside a set (e.g. to avoid collisions with the agent's own \`env\` or to
+confirm a needed var is present), call \`readSharedEnvSet\` with the ids
+first. Don't attach a set blindly when its contents matter.
 
 The draft shown in this conversation may be stale because the user can hand-edit
 the config in their editor between messages. Call \`readAgentConfig\` to fetch
