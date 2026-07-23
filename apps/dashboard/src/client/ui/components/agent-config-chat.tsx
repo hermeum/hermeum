@@ -31,7 +31,10 @@ import { AgentInputObjectSchema } from "@/entities";
 type AgentConfigChatMessage = UIMessage<
   unknown,
   UIDataTypes,
-  { updateAgentConfig: { input: AgentInput; output: string } }
+  {
+    updateAgentConfig: { input: AgentInput; output: string };
+    readAgentConfig: { input: undefined; output: AgentInput | undefined };
+  }
 >;
 
 interface AgentConfigChatProps {
@@ -60,7 +63,17 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
       transport: new DefaultChatTransport({ api: "/chat/agent-config" }),
       sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       async onToolCall({ toolCall }) {
-        if (toolCall.dynamic || toolCall.toolName !== "updateAgentConfig") return;
+        if (toolCall.dynamic) return;
+        if (toolCall.toolName === "readAgentConfig") {
+          const config = callbacksRef.current.getConfig();
+          addToolOutput({
+            tool: "readAgentConfig",
+            toolCallId: toolCall.toolCallId,
+            output: config,
+          });
+          return;
+        }
+        if (toolCall.toolName !== "updateAgentConfig") return;
         const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;
@@ -111,7 +124,7 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
           <div className="text-center">
-            <h2 className="text-lg font-semibold tracking-tight">What do you want to build?</h2>
+            <h2 className="text-lg font-semibold tracking-tight">What should your agent do?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Describe your agent
               {hasTemplates ? (

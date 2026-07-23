@@ -37,6 +37,16 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           : "Current agent config draft as JSON:\n\n" + JSON.stringify(currentConfig, null, 2),
       tools: {
         readDocument: this.buildReadDocumentTool(),
+        readAgentConfig: tool({
+          description:
+            "Read the current agent config draft straight from the user's " +
+            "editor. Use this whenever you need to ground a change in the " +
+            "latest draft — the snapshot in the conversation may be stale " +
+            "because the user can hand-edit the config between messages.",
+          inputSchema: z.object({}),
+          // No `execute`: the client returns the latest editor draft and
+          // reports it back.
+        }),
         updateAgentConfig: tool({
           description:
             "Replace the agent config draft with a full updated definition. " +
@@ -167,6 +177,11 @@ Detailed documentation about the config fields is available through the
 Batch every document you need into a single call, and read up on any config
 section you are not fully sure about BEFORE writing it into the draft. Don't
 guess at field semantics that a document can settle.
+
+The draft shown in this conversation may be stale because the user can hand-edit
+the config in their editor between messages. Call \`readAgentConfig\` to fetch
+the latest draft before making any change that depends on the current state of
+fields you haven't just written yourself.
 
 Whenever the draft should change, call the \`updateAgentConfig\` tool with the
 FULL updated definition — keep every field not affected by the change

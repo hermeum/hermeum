@@ -194,7 +194,7 @@ function AgentDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="agent">
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="agent">Agent</TabsTrigger>
           <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
@@ -204,7 +204,7 @@ function AgentDetailPage() {
             {/* soul */}
             {agent.soul && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Soul</p>
+                <p className="text-sm font-bold">Soul</p>
                 <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
                   {agent.soul}
                 </pre>
@@ -214,7 +214,7 @@ function AgentDetailPage() {
             {/* config */}
             {agent.config && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Configuration</p>
+                <p className="text-sm font-bold">Configuration</p>
                 <CodeEditor
                   value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
                   readOnly
@@ -226,7 +226,7 @@ function AgentDetailPage() {
             {/* skills */}
             {agent.skills && agent.skills.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Skills</p>
+                <p className="text-sm font-bold">Skills</p>
                 <ButtonList items={agent.skills} max={10} />
               </div>
             )}
@@ -234,7 +234,7 @@ function AgentDetailPage() {
             {/* plugins */}
             {agent.plugins && agent.plugins.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Plugins</p>
+                <p className="text-sm font-bold">Plugins</p>
                 <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
@@ -242,14 +242,14 @@ function AgentDetailPage() {
             {/* packages */}
             {agent.packages?.pip && agent.packages.pip.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Python Packages</p>
+                <p className="text-sm font-bold">Python Packages</p>
                 <ButtonList items={agent.packages.pip} max={10} />
               </div>
             )}
 
             {agent.packages?.npm && agent.packages.npm.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">npm Packages</p>
+                <p className="text-sm font-bold">npm Packages</p>
                 <ButtonList items={agent.packages.npm} max={10} />
               </div>
             )}
@@ -257,7 +257,7 @@ function AgentDetailPage() {
             {/* env */}
             {agent.env && agent.env.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Environment Variables</p>
+                <p className="text-sm font-bold">Environment Variables</p>
                 <div className="flex flex-wrap gap-2">
                   {agent.env.map((v) => (
                     <Button
@@ -275,7 +275,7 @@ function AgentDetailPage() {
 
             {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">
-              <p className="text-sm font-medium">Shared Env Sets</p>
+              <p className="text-sm font-bold">Shared Env Sets</p>
               {agent.sharedEnvSets && agent.sharedEnvSets.length > 0 ? (
                 <Accordion multiple className="w-full border rounded-md px-4">
                   {envSets?.map((envSet) => (
@@ -328,7 +328,7 @@ function AgentDetailPage() {
           <div className="flex flex-col divide-y">
             {gatewayToken && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-medium">Gateway Token</p>
+                <p className="text-sm font-bold">Gateway Token</p>
                 <div className="group flex items-center gap-2">
                   <span className="font-mono text-sm text-muted-foreground">
                     {tokenVisible ? gatewayToken : "•".repeat(32)}
