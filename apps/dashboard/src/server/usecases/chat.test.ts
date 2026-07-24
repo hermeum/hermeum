@@ -3,15 +3,50 @@ import type { ToolExecutionOptions } from "ai";
 import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
+vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
   config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { File, FileAdaptor } from "./adaptors/file";
-import type { HermeumConfig } from "@/entities";
+import type { Runtime } from "./adaptors/runtime";
+import type { HermeumConfig, SharedEnvSet } from "@/entities";
 
 type Doc = { content: string; data?: Record<string, unknown> };
+
+// Runtime with no shared env sets by default. Individual tests override
+// `listSharedEnvSets` / `getSharedEnvSet` to feed sets to the chat context.
+function makeRuntime(sets: SharedEnvSet[] = []): Runtime {
+  return {
+    listSharedEnvSets: vi.fn().mockResolvedValue(sets),
+    getSharedEnvSet: vi
+      .fn()
+      .mockImplementation(async (id: string) => sets.find((s) => s.id === id) ?? null),
+    listHermesAgents: vi.fn(),
+    getHermesAgent: vi.fn(),
+    createHermesAgent: vi.fn(),
+    patchHermesAgent: vi.fn(),
+    archiveHermesAgent: vi.fn(),
+    getGatewayToken: vi.fn(),
+    createSharedEnvSet: vi.fn(),
+    archiveSharedEnvSet: vi.fn(),
+    patchSharedEnvSet: vi.fn(),
+    addEnvVar: vi.fn(),
+    updateEnvVar: vi.fn(),
+    removeEnvVar: vi.fn(),
+  } as unknown as Runtime;
+}
+
+function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
+  return {
+    id: "set-1",
+    userId: "user-1",
+    name: "Set One",
+    envVars: [],
+    ...overrides,
+  } as SharedEnvSet;
+}
 
 function makeFiles(
   docs: Record<string, Doc> = {},
@@ -46,21 +81,35 @@ function makeFiles(
 
 const callOptions = {} as ToolExecutionOptions<never>;
 
+// Expected empty-list footer appended to the instructions when there are no
+// shared env sets (matches buildSharedEnvSetList's header-only emission).
+const EMPTY_SHARED_ENV_SET_BLOCK =
+  "Available shared env sets (attach via the `sharedEnvSets` field with " +
+  "these ids; read env var names with `readSharedEnvSet` before attaching " +
+  "to avoid collisions with the agent's own `env`):\n";
+
 describe("ChatUseCase.getAgentConfigContext", () => {
   it("uses the base system prompt when no agent types are configured", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles({}, undefined));
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles({}, undefined));
 
     const { instructions } = await useCase.getAgentConfigContext();
 
-    // The base prompt is always followed by the available-documents block,
-    // even when there are no docs and no agent types.
+    // The base prompt is always followed by the available-documents block and
+    // the available-shared-env-sets block, even when there are no docs, no
+    // sets, and no agent types.
     expect(instructions).toContain(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
-    expect(instructions).toBe(AGENT_CONFIG_CHAT_SYSTEM_PROMPT + "\n\n" + "Available documents (read with `readDocument` before writing any config section you're not fully sure about):\n");
+    expect(instructions).toBe(
+      AGENT_CONFIG_CHAT_SYSTEM_PROMPT +
+        "\n\n" +
+        "Available documents (read with `readDocument` before writing any config section you're not fully sure about):\n" +
+        "\n\n" +
+        EMPTY_SHARED_ENV_SET_BLOCK
+    );
   });
 
   it("appends the configured agent types to the instructions", async () => {
     const useCase = new ChatUseCase(
-      undefined,
+      makeRuntime(),
       makeFiles(
         {},
         {
@@ -78,7 +127,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("notes the missing draft when no current config is given", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext();
 
@@ -86,7 +135,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("embeds the current config as JSON in the prompt", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { prompt } = await useCase.getAgentConfigContext({ name: "pr-reviewer" });
 
@@ -94,7 +143,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes a client-side updateAgentConfig tool", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -106,7 +155,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("exposes a client-side readAgentConfig tool", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -118,7 +167,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("instructs the model to call readAgentConfig when the draft may be stale", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { instructions } = await useCase.getAgentConfigContext();
 
@@ -126,7 +175,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("does not expose a listDocuments tool (the list is embedded in the prompt)", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles());
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
@@ -136,7 +185,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("embeds the available documents in the instructions with frontmatter descriptions", async () => {
     const useCase = new ChatUseCase(
-      undefined,
+      makeRuntime(),
       makeFiles({
         model: { content: "# Model", data: { description: "Model configuration" } },
         webhook: { content: "# Webhook" },
@@ -152,7 +201,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("groups documents by category alphabetically, then uncategorized last", async () => {
     const useCase = new ChatUseCase(
-      undefined,
+      makeRuntime(),
       makeFiles({
         // core
         model: { content: "# Model", data: { category: "core", description: "Model configuration" } },
@@ -192,7 +241,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("reads multiple documents in one call", async () => {
     const useCase = new ChatUseCase(
-      undefined,
+      makeRuntime(),
       makeFiles({
         model: { content: "# Model doc" },
         webhook: { content: "# Webhook doc" },
@@ -211,7 +260,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("returns a per-entry error for unknown names without failing the batch", async () => {
-    const useCase = new ChatUseCase(undefined, makeFiles({ model: { content: "# Model doc" } }));
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles({ model: { content: "# Model doc" } }));
 
     const { tools } = await useCase.getAgentConfigContext();
     const result = await tools.readDocument!.execute!({ names: ["model", "nope"] }, callOptions);
@@ -226,7 +275,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
   it("rejects path-traversal document names without touching the adaptor", async () => {
     const files = makeFiles({ model: { content: "# Model doc" } });
-    const useCase = new ChatUseCase(undefined, files);
+    const useCase = new ChatUseCase(makeRuntime(), files);
 
     const { tools } = await useCase.getAgentConfigContext();
     vi.mocked(files.readFile).mockClear();
@@ -243,5 +292,114 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       ],
     });
     expect(files.readFile).not.toHaveBeenCalled();
+  });
+
+  it("emits only the shared-env-sets header when none exist", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain(EMPTY_SHARED_ENV_SET_BLOCK);
+    expect(instructions).not.toContain("- set-1");
+  });
+
+  it("embeds the available shared env sets in the instructions by id", async () => {
+    const runtime = makeRuntime([
+      makeSharedEnvSet({
+        id: "db-creds",
+        name: "Database Credentials",
+        description: "Postgres connection vars",
+        envVars: [{ name: "DATABASE_URL" }, { name: "DB_PASSWORD" }],
+      }),
+      makeSharedEnvSet({ id: "api-keys", name: "API Keys", envVars: [] }),
+    ]);
+    const useCase = new ChatUseCase(runtime, makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    // Lines lead with the id (the draft's `sharedEnvSets` field wants ids),
+    // carry the human name, and append the description when present.
+    expect(instructions).toContain("- db-creds: Database Credentials — Postgres connection vars");
+    expect(instructions).toContain("- api-keys: API Keys");
+    // The db-creds ordering must come before api-keys (runtime returns them
+    // in the given order, which is preserved).
+    expect(instructions.indexOf("db-creds")).toBeLessThan(instructions.indexOf("api-keys"));
+  });
+
+  it("filters out archived shared env sets before listing them", async () => {
+    const runtime = makeRuntime([
+      makeSharedEnvSet({ id: "live", name: "Live" }),
+      makeSharedEnvSet({ id: "gone", name: "Gone", archived: true }),
+    ]);
+    const useCase = new ChatUseCase(runtime, makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain("- live: Live");
+    expect(instructions).not.toContain("- gone");
+    // listSharedEnvSets is asked for non-archived sets only.
+    expect(runtime.listSharedEnvSets).toHaveBeenCalledWith({ archived: false });
+  });
+
+  it("exposes a server-side readSharedEnvSet tool that returns env var names", async () => {
+    const runtime = makeRuntime([
+      makeSharedEnvSet({
+        id: "db-creds",
+        name: "Database Credentials",
+        envVars: [{ name: "DATABASE_URL" }, { name: "DB_PASSWORD" }],
+      }),
+    ]);
+    const useCase = new ChatUseCase(runtime, makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+    expect(tools.readSharedEnvSet).toBeDefined();
+    expect(tools.readSharedEnvSet?.execute).toBeDefined();
+
+    const result = await tools.readSharedEnvSet!.execute!({ ids: ["db-creds"] }, callOptions);
+
+    // Values are never surfaced — only env var names.
+    expect(result).toEqual({
+      sharedEnvSets: [{ id: "db-creds", envVars: [{ name: "DATABASE_URL" }, { name: "DB_PASSWORD" }] }],
+    });
+  });
+
+  it("reads multiple shared env sets in one call", async () => {
+    const runtime = makeRuntime([
+      makeSharedEnvSet({ id: "db-creds", name: "DB", envVars: [{ name: "DATABASE_URL" }] }),
+      makeSharedEnvSet({ id: "api-keys", name: "API", envVars: [{ name: "OPENAI_API_KEY" }] }),
+    ]);
+    const useCase = new ChatUseCase(runtime, makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.readSharedEnvSet!.execute!({ ids: ["db-creds", "api-keys"] }, callOptions);
+
+    expect(result).toEqual({
+      sharedEnvSets: [
+        { id: "db-creds", envVars: [{ name: "DATABASE_URL" }] },
+        { id: "api-keys", envVars: [{ name: "OPENAI_API_KEY" }] },
+      ],
+    });
+  });
+
+  it("returns a per-entry error for unknown or archived shared env set ids", async () => {
+    const runtime = makeRuntime([
+      makeSharedEnvSet({ id: "db-creds", name: "DB", envVars: [{ name: "DATABASE_URL" }] }),
+      makeSharedEnvSet({ id: "archived-set", name: "Old", archived: true, envVars: [] }),
+    ]);
+    const useCase = new ChatUseCase(runtime, makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.readSharedEnvSet!.execute!(
+      { ids: ["db-creds", "nope", "archived-set"] },
+      callOptions
+    );
+
+    expect(result).toEqual({
+      sharedEnvSets: [
+        { id: "db-creds", envVars: [{ name: "DATABASE_URL" }] },
+        { id: "nope", error: expect.stringContaining('"nope" not found') },
+        { id: "archived-set", error: expect.stringContaining('"archived-set" not found') },
+      ],
+    });
   });
 });
