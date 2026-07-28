@@ -20,7 +20,7 @@ export {
   type Webhook,
   type Platforms,
 } from "./webhook";
-export { SlackSchema, type Slack } from "./slack";
+export { SlackSchema, ChannelSkillBindingSchema, type Slack, type ChannelSkillBinding } from "./slack";
 export {
   WebSearchBackendSchema,
   WebExtractBackendSchema,
