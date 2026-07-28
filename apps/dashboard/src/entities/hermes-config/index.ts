@@ -30,6 +30,7 @@ export {
   type Web,
 } from "./web";
 export { BrowserCloudProviderSchema, BrowserSchema, type BrowserCloudProvider, type Browser } from "./browser";
+export { XSearchSchema, type XSearch } from "./x-search";
 
 import { z } from "zod";
 import { ModelSchema } from "./model";
@@ -37,6 +38,7 @@ import { PlatformsSchema } from "./webhook";
 import { SlackSchema } from "./slack";
 import { WebSchema } from "./web";
 import { BrowserSchema } from "./browser";
+import { XSearchSchema } from "./x-search";
 
 export const ConfigSchema = z
   .looseObject({
@@ -45,6 +47,7 @@ export const ConfigSchema = z
     slack: SlackSchema,
     web: WebSchema,
     browser: BrowserSchema,
+    x_search: XSearchSchema,
   })
   .optional()
   .describe(
