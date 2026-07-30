@@ -563,3 +563,129 @@ export const AgentSchema = AgentInputObjectSchema.extend({
 }).readonly();
 
 export type Agent = z.infer<typeof AgentSchema>;
+
+// Tool availability — a derived, read-only view of which Hermes tools are
+// usable for an agent, computed from its config + env. Not persisted.
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/tools
+
+export enum ToolId {
+  Web = "web",
+  XSearch = "x-search",
+  Terminal = "terminal",
+  File = "file",
+  Browser = "browser",
+  Memory = "memory",
+  Cron = "cron",
+  Mcp = "mcp",
+  // Media = "media", // TBD — media toolset shape not finalized yet.
+}
+
+export type ToolStatus = "available" | "unavailable";
+
+export interface ToolAvailability {
+  status: ToolStatus;
+  /** Short explanation shown when status is not "available". */
+  reason?: string;
+}
+
+interface ToolMeta {
+  label: string;
+  description: string;
+}
+
+const TOOL_META: Record<ToolId, ToolMeta> = {
+  [ToolId.Web]: {
+    label: "Web",
+    description: "Search the web and extract page content.",
+  },
+  [ToolId.XSearch]: {
+    label: "X Search",
+    description: "Search X (Twitter) posts via xAI.",
+  },
+  [ToolId.Terminal]: {
+    label: "Terminal",
+    description: "Execute shell commands.",
+  },
+  [ToolId.File]: {
+    label: "File",
+    description: "Read, edit, and search files.",
+  },
+  [ToolId.Browser]: {
+    label: "Browser",
+    description: "Interactive browser automation.",
+  },
+  [ToolId.Memory]: {
+    label: "Memory",
+    description: "Persistent memory and recall.",
+  },
+  [ToolId.Cron]: {
+    label: "Cron",
+    description: "Scheduled tasks.",
+  },
+  [ToolId.Mcp]: {
+    label: "MCP",
+    description: "MCP server integrations.",
+  },
+};
+
+export function getToolLabel(id: ToolId): string {
+  return TOOL_META[id].label;
+}
+
+export function getToolDescription(id: ToolId): string {
+  return TOOL_META[id].description;
+}
+
+/** Ordered tool list for UI rendering. */
+export const TOOL_IDS: readonly ToolId[] = [
+  ToolId.Web,
+  ToolId.XSearch,
+  ToolId.Terminal,
+  ToolId.File,
+  ToolId.Browser,
+  ToolId.Memory,
+  ToolId.Cron,
+  ToolId.Mcp,
+];
+
+export function deriveToolAvailability(id: ToolId, agent: Agent): ToolAvailability {
+  const config = agent.config;
+  const env = agent.env ?? [];
+
+  switch (id) {
+    case ToolId.Web: {
+      const hasBackend = !!(
+        config?.web?.backend ??
+        config?.web?.search_backend ??
+        config?.web?.extract_backend
+      );
+      return hasBackend
+        ? { status: "available" }
+        : { status: "unavailable", reason: "No web backend configured." };
+    }
+    case ToolId.XSearch: {
+      // Gated on xAI credentials; off by default.
+      const hasXaiKey = env.some((v) => v.name === "XAI_API_KEY" && v.value.trim() !== "");
+      const xaiBackend = config?.web?.search_backend === "xai";
+      return hasXaiKey || xaiBackend
+        ? { status: "available" }
+        : {
+            status: "unavailable",
+            reason: "Set XAI_API_KEY to opt in.",
+          };
+    }
+    case ToolId.Browser: {
+      return config?.browser?.cloud_provider
+        ? { status: "available" }
+        : { status: "unavailable", reason: "No browser provider configured." };
+    }
+    case ToolId.Terminal:
+    case ToolId.File:
+    case ToolId.Memory:
+    case ToolId.Cron:
+    case ToolId.Mcp:
+      // Core capabilities with no config gate. MCP servers themselves are
+      // opt-in via the catalog, which the dashboard cannot introspect.
+      return { status: "available" };
+  }
+}

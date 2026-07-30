@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolId, deriveToolAvailability, type Agent } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -600,5 +600,58 @@ describe("AgentInputSchema browser config validation", () => {
       config: { browser: { cloud_provider: "playwright" } },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("deriveToolAvailability", () => {
+  function makeAgent(overrides: Partial<Agent> = {}): Agent {
+    return { id: "a1", userId: "u1", ...overrides } as Agent;
+  }
+
+  it("marks core tools available with no config", () => {
+    const agent = makeAgent();
+    for (const id of [ToolId.Terminal, ToolId.File, ToolId.Memory, ToolId.Cron, ToolId.Mcp]) {
+      expect(deriveToolAvailability(id, agent).status).toBe("available");
+    }
+  });
+
+  it("marks web unavailable without a backend and available with one", () => {
+    expect(deriveToolAvailability(ToolId.Web, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolAvailability(ToolId.Web, makeAgent({ config: { web: { backend: "searxng" } } }))
+        .status
+    ).toBe("available");
+    expect(
+      deriveToolAvailability(
+        ToolId.Web,
+        makeAgent({ config: { web: { search_backend: "tavily" } } })
+      ).status
+    ).toBe("available");
+  });
+
+  it("marks x search unavailable by default and available with XAI_API_KEY or xai backend", () => {
+    expect(deriveToolAvailability(ToolId.XSearch, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolAvailability(
+        ToolId.XSearch,
+        makeAgent({ env: [{ name: "XAI_API_KEY", value: "xai-123", sensitive: true }] })
+      ).status
+    ).toBe("available");
+    expect(
+      deriveToolAvailability(
+        ToolId.XSearch,
+        makeAgent({ config: { web: { search_backend: "xai" } } })
+      ).status
+    ).toBe("available");
+  });
+
+  it("marks browser unavailable without a provider and available with one", () => {
+    expect(deriveToolAvailability(ToolId.Browser, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolAvailability(
+        ToolId.Browser,
+        makeAgent({ config: { browser: { cloud_provider: "camofox" } } })
+      ).status
+    ).toBe("available");
   });
 });

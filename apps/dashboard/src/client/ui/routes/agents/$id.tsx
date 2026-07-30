@@ -7,8 +7,17 @@ import { toast } from "sonner";
 
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
 import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
+import {
+  TOOL_IDS,
+  deriveToolAvailability,
+  getToolDescription,
+  getToolLabel,
+  type Agent,
+  type ToolId,
+} from "@/entities";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
@@ -59,6 +68,54 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
         </Button>
       ))}
       {overflow > 0 && <span className="text-xs text-muted-foreground">+{overflow} more</span>}
+    </div>
+  );
+}
+
+function ToolBadge({ id, agent }: { id: ToolId; agent: Agent }) {
+  const { status, reason } = deriveToolAvailability(id, agent);
+  const label = getToolLabel(id);
+  const description = getToolDescription(id);
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className={`h-auto px-2 py-1 font-mono text-xs ${
+              status === "unavailable" ? "text-muted-foreground opacity-60" : ""
+            }`}
+          />
+        }
+      >
+        {label}
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="flex flex-col gap-0.5">
+          <span>{description}</span>
+          {reason && (
+            <span className="capitalize opacity-80">
+              {status} — {reason}
+            </span>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function ToolsSection({ agent }: { agent: Agent }) {
+  return (
+    <div className="py-8 flex flex-col gap-3">
+      <p className="text-sm font-bold">Tools</p>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          {TOOL_IDS.map((id) => (
+            <ToolBadge key={id} id={id} agent={agent} />
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -238,6 +295,9 @@ function AgentDetailPage() {
                 <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
+
+            {/* tools */}
+            <ToolsSection agent={agent} />
 
             {/* packages */}
             {agent.packages?.pip && agent.packages.pip.length > 0 && (
