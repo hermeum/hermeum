@@ -171,6 +171,19 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
                               </Bubble>
                             );
                           }
+                          if (part.type === "tool-readAgentConfig") {
+                            if (part.state === "input-streaming" || part.state === "input-available") {
+                              return (
+                                <Marker key={index}>
+                                  <MarkerIcon>
+                                    <LoaderCircle className="animate-spin" />
+                                  </MarkerIcon>
+                                  <MarkerContent>Reading config…</MarkerContent>
+                                </Marker>
+                              );
+                            }
+                            return null;
+                          }
                           if (part.type === "tool-updateAgentConfig") {
                             return (
                               <Marker key={index}>
