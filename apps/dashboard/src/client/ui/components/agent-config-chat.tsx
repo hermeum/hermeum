@@ -6,14 +6,6 @@ import { ArrowUp, Check, LoaderCircle } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
-import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@hermeum/components/ui/dialog";
 import { Marker, MarkerContent, MarkerIcon } from "@hermeum/components/ui/marker";
 import { Message, MessageContent } from "@hermeum/components/ui/message";
 import {
@@ -25,7 +17,7 @@ import {
   MessageScrollerViewport,
 } from "@hermeum/components/ui/message-scroller";
 import { Textarea } from "@hermeum/components/ui/textarea";
-import type { AgentInput, Template } from "@/entities";
+import type { AgentInput } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
 
 type AgentConfigChatMessage = UIMessage<
@@ -41,17 +33,12 @@ interface AgentConfigChatProps {
   // Called at send time so each turn carries the latest editor draft,
   // including hand edits made between messages.
   getConfig: () => AgentInput | undefined;
-  // Receives config from both AI tool calls and template picks.
+  // Receives config from AI tool calls.
   onConfigUpdate: (config: AgentInput) => void;
-  // When non-empty, the empty-chat hero offers a "start with a template"
-  // link that opens the template dialog.
-  templates?: Template[] | undefined;
 }
 
-export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentConfigChatProps) {
+export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatProps) {
   const [input, setInput] = useState("");
-  const [templatesOpen, setTemplatesOpen] = useState(false);
-  const hasTemplates = templates !== undefined && templates.length > 0;
 
   // Latest-ref so the onToolCall closure (captured once by the Chat
   // instance) never applies updates through a stale callback.
@@ -106,41 +93,13 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
 
   const isBusy = status === "submitted" || status === "streaming";
 
-  function handleSelectTemplate(template: Template) {
-    onConfigUpdate(template.agentInput);
-    setTemplatesOpen(false);
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {hasTemplates && (
-        <TemplateDialog
-          templates={templates}
-          open={templatesOpen}
-          onOpenChange={setTemplatesOpen}
-          onSelect={handleSelectTemplate}
-        />
-      )}
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold tracking-tight">What should your agent do?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Describe your agent
-              {hasTemplates ? (
-                <>
-                  {" or "}
-                  <button
-                    type="button"
-                    onClick={() => setTemplatesOpen(true)}
-                    className="cursor-pointer underline underline-offset-4 hover:text-foreground"
-                  >
-                    start with a template
-                  </button>
-                </>
-              ) : null}
-              .
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Describe your agent.</p>
           </div>
         </div>
       ) : (
@@ -237,43 +196,5 @@ export function AgentConfigChat({ getConfig, onConfigUpdate, templates }: AgentC
         </div>
       </div>
     </div>
-  );
-}
-
-function TemplateDialog({
-  templates,
-  open,
-  onOpenChange,
-  onSelect,
-}: {
-  templates: Template[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelect: (template: Template) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Templates</DialogTitle>
-          <DialogDescription>Pick a starting point for the agent config.</DialogDescription>
-        </DialogHeader>
-        <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto p-px">
-          {templates.map((template) => (
-            <Card
-              key={template.id}
-              size="sm"
-              onClick={() => onSelect(template)}
-              className="cursor-pointer ring-1 ring-border transition-all hover:ring-2 hover:ring-primary"
-            >
-              <CardHeader>
-                <CardTitle className="text-base">{template.name}</CardTitle>
-                <CardDescription>{template.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
