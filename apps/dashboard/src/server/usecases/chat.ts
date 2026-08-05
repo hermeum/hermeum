@@ -38,6 +38,29 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       tools: {
         readDocument: this.buildReadDocumentTool(),
         readSharedEnvSet: this.buildReadSharedEnvSetTool(),
+        searchSkills: tool({
+          description:
+            "Search the Hermes Skills Index — a catalog of installable " +
+            "agent skills aggregated from skills.sh, GitHub " +
+            "(OpenAI/Anthropics/HuggingFace/NVIDIA), ClawHub, LobeHub, " +
+            "browse.sh, and the Claude marketplace. Use this to find a " +
+            "skill for a task. Matches the query against the skill name, " +
+            "description, tags, identifier, and provider. Pass an empty " +
+            "query to list featured skills.",
+          inputSchema: z.object({
+            query: z.string().describe("Search query (skill name, capability, or keyword)."),
+            limit: z
+              .number()
+              .int()
+              .min(1)
+              .max(100)
+              .optional()
+              .describe("Max results (default 25)."),
+          }),
+          execute: async ({ query, limit }) => ({
+            results: await this.skillIndex.searchSkills(query, limit ?? 25),
+          }),
+        }),
         readAgentConfig: tool({
           description:
             "Read the current agent config draft straight from the user's " +
