@@ -4,6 +4,7 @@ import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
+vi.mock("../infras/hermes-skill-index", () => ({ HermesSkillIndex: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
   config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
 }));
@@ -11,6 +12,7 @@ vi.mock("@/server/libs/config", () => ({
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { File, FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
+import type { SkillIndexAdaptor, SkillSearchResult } from "./adaptors/skill-index";
 import type { HermeumConfig, SharedEnvSet } from "@/entities";
 
 type Doc = { content: string; data?: Record<string, unknown> };
@@ -80,6 +82,12 @@ function makeFiles(
 }
 
 const callOptions = {} as ToolExecutionOptions<never>;
+
+function makeSkillIndex(results: SkillSearchResult[] = []): SkillIndexAdaptor {
+  return {
+    searchSkills: vi.fn().mockResolvedValue(results),
+  } as unknown as SkillIndexAdaptor;
+}
 
 // Expected empty-list footer appended to the instructions when there are no
 // shared env sets (matches buildSharedEnvSetList's header-only emission).
@@ -181,6 +189,39 @@ describe("ChatUseCase.getAgentConfigContext", () => {
 
     expect(tools.listDocuments).toBeUndefined();
     expect(tools.readDocument?.execute).toBeDefined();
+  });
+
+  it("exposes a server-executed searchSkills tool", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.searchSkills).toBeDefined();
+    expect(tools.searchSkills?.execute).toBeDefined();
+  });
+
+  it("delegates searchSkills to the injected skill index adaptor", async () => {
+    const results: SkillSearchResult[] = [
+      { name: "git-pr-review", identifier: "openai/skills/skills/git-pr-review", description: "Review PRs." },
+    ];
+    const skillIndex = makeSkillIndex(results);
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles(), skillIndex);
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.searchSkills!.execute!({ query: "review", limit: 5 }, callOptions);
+
+    expect(result).toEqual({ results });
+    expect(skillIndex.searchSkills).toHaveBeenCalledWith("review", 5);
+  });
+
+  it("defaults the searchSkills limit to 25 when omitted", async () => {
+    const skillIndex = makeSkillIndex([]);
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles(), skillIndex);
+
+    const { tools } = await useCase.getAgentConfigContext();
+    await tools.searchSkills!.execute!({ query: "kubernetes" }, callOptions);
+
+    expect(skillIndex.searchSkills).toHaveBeenCalledWith("kubernetes", 25);
   });
 
   it("embeds the available documents in the instructions with frontmatter descriptions", async () => {
