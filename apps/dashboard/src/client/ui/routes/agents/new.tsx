@@ -109,7 +109,7 @@ function NewAgentPage() {
                 key={template.id}
                 size="sm"
                 onClick={() => setView({ mode: "preview", template })}
-                className="cursor-pointer ring-1 ring-border transition-all hover:ring-2 hover:ring-primary"
+                className="cursor-pointer ring-0 border border-border transition-colors hover:border-primary"
               >
                 <CardHeader>
                   <CardTitle className="text-sm font-medium tracking-normal normal-case">
