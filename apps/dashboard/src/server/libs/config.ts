@@ -15,6 +15,7 @@ export const ConfigSchema = z.object({
   hermesImageTag: z.string().default("v2026.7.7.2"),
   openaiModel: z.string().min(1).default("gpt-5.5"),
   openaiBaseUrl: z.url().optional(),
+  debugMode: z.preprocess((v) => v === "true", z.boolean()).default(false),
 });
 
 export const config = ConfigSchema.parse({
@@ -29,4 +30,5 @@ export const config = ConfigSchema.parse({
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
+  debugMode: process.env.HERMEUM_DEBUG_MODE,
 });

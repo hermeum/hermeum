@@ -59,6 +59,17 @@ aiSdkRouter.post("/agent-config", async (req, res) => {
     providerOptions: {
       openai: { strictJsonSchema: false },
     },
+    ...(config.debugMode && {
+      onStepFinish: ({ stepNumber, finishReason, toolCalls, text, usage }) => {
+        const toolsCalled = toolCalls.map((c) => c.toolName).join(",") || "-";
+        const preview = text.slice(0, 80).replace(/\n/g, " ");
+        console.info(
+          `[ai-sdk] step ${stepNumber} finish=${finishReason} ` +
+            `tools=[${toolsCalled}] tokens=${usage.totalTokens ?? "?"} ` +
+            `text="${preview}${text.length > 80 ? "…" : ""}"`
+        );
+      },
+    }),
   });
   result.pipeUIMessageStreamToResponse(res);
 });
