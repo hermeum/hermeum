@@ -4,7 +4,7 @@ import { Context, HermeumConfig, HermeumConfigSchema, User } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { KubernetesClient } from "../infras/kubernetes/client";
-import { HermesSkillIndexAdaptor } from "../infras/hermes-skill-index";
+import { HermesSkillIndex } from "../infras/hermes-skill-index";
 import { LocalFiles } from "../infras/local-files";
 import { FileAdaptor } from "./adaptors/file";
 import { Runtime } from "./adaptors/runtime";
@@ -16,7 +16,7 @@ export class BaseUseCase {
   constructor(
     readonly runtime: Runtime = new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
-    readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndexAdaptor()
+    readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex()
   ) {}
 }
 

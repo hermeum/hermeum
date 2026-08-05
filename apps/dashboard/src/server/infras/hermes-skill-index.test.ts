@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
-import { HermesSkillIndexAdaptor } from "./hermes-skill-index";
-import type { SkillIndexEntry } from "../usecases/adaptors/skill-index";
+import { HermesSkillIndex } from "./hermes-skill-index";
+import type { SkillIndexEntry } from "./hermes-skill-index";
 
 function makeEntry(overrides: Partial<SkillIndexEntry> = {}): SkillIndexEntry {
   return {
@@ -30,7 +30,7 @@ const entries: SkillIndexEntry[] = [
   makeEntry({ name: "web-search", description: "Search the web.", identifier: "skills.sh/web-search", tags: ["web"], extra: { provider: "openai" } }),
 ];
 
-describe("HermesSkillIndexAdaptor", () => {
+describe("HermesSkillIndex", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -43,7 +43,7 @@ describe("HermesSkillIndexAdaptor", () => {
   describe("searchSkills", () => {
     it("returns the first N entries in index order for an empty query", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("", 3);
 
@@ -56,7 +56,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("matches a skill by name", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("kubernetes", 5);
 
@@ -65,7 +65,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("matches case-insensitively across name, description, tags, identifier, and provider", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const byTag = await adaptor.searchSkills("MACOS", 5);
       expect(byTag.some((r) => r.name === "apple-reminders")).toBe(true);
@@ -79,7 +79,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("returns an empty array when nothing matches", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("nonexistent-skill-xyz");
 
@@ -88,7 +88,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("truncates to the limit", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("", 2);
 
@@ -97,7 +97,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("only returns name, identifier, and description", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const [first] = await adaptor.searchSkills("kubernetes", 1);
 
@@ -108,7 +108,7 @@ describe("HermesSkillIndexAdaptor", () => {
   describe("caching", () => {
     it("serves from cache within the TTL without refetching", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       await adaptor.searchSkills("kubernetes");
       await adaptor.searchSkills("git");
@@ -118,7 +118,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("returns an empty array on cold-start fetch failure", async () => {
       vi.mocked(fetch).mockRejectedValue(new Error("network down"));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("kubernetes");
 
@@ -127,7 +127,7 @@ describe("HermesSkillIndexAdaptor", () => {
 
     it("falls back to the stale cache on fetch failure after a successful fetch", async () => {
       vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(entries)).mockRejectedValueOnce(new Error("network down"));
-      const adaptor = new HermesSkillIndexAdaptor();
+      const adaptor = new HermesSkillIndex();
 
       await adaptor.searchSkills("kubernetes");
       // Force a reload by expiring the cache.

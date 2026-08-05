@@ -1,13 +1,22 @@
-import {
-  SkillIndexAdaptor,
-  SkillIndexEntry,
-  SkillSearchResult,
-} from "../usecases/adaptors/skill-index";
+import { SkillIndexAdaptor, SkillSearchResult } from "../usecases/adaptors/skill-index";
 
 const INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json";
 const CACHE_TTL_MS = 6 * 3600 * 1000;
 
-export class HermesSkillIndexAdaptor implements SkillIndexAdaptor {
+export interface SkillIndexEntry {
+  name: string;
+  description: string;
+  source: string;
+  identifier: string;
+  trust_level: string;
+  repo?: string;
+  path?: string;
+  tags: string[];
+  extra?: { provider?: string; [k: string]: unknown };
+  resolved_github_id?: string;
+}
+
+export class HermesSkillIndex implements SkillIndexAdaptor {
   #cache: { fetchedAt: number; skills: SkillIndexEntry[] } | null = null;
 
   async #loadIndex(): Promise<SkillIndexEntry[]> {
