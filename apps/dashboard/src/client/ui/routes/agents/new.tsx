@@ -1,13 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { parse, stringify } from "yaml";
 import { toast } from "sonner";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@hermeum/components/ui/card";
-import { Input } from "@hermeum/components/ui/input";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -24,8 +23,8 @@ const YAML_OPTIONS = { blockQuote: "literal", lineWidth: 0 } as const;
 // The editor pane doubles as the template picker: users browse and preview
 // templates there, and only start editing after picking one as the draft.
 type EditorView =
-  | { mode: "browse"; search: string }
-  | { mode: "preview"; template: Template; search: string }
+  | { mode: "browse" }
+  | { mode: "preview"; template: Template }
   | { mode: "edit" };
 
 export const Route = createFileRoute("/agents/new")({
@@ -36,7 +35,7 @@ function NewAgentPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [view, setView] = useState<EditorView>({ mode: "browse", search: "" });
+  const [view, setView] = useState<EditorView>({ mode: "browse" });
   const [editorValue, setEditorValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -100,53 +99,33 @@ function NewAgentPage() {
 
   const configPane: ReactNode = (() => {
     if (view.mode === "browse") {
-      const query = view.search.trim().toLowerCase();
-      const visible = (templates ?? []).filter(
-        (t) =>
-          query.length === 0 ||
-          t.name.toLowerCase().includes(query) ||
-          (t.description ?? "").toLowerCase().includes(query)
-      );
+      const visible = templates ?? [];
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <h2 className="shrink-0 text-lg font-semibold tracking-tight">Browse templates</h2>
-          <div className="relative shrink-0">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={view.search}
-              onChange={(e) => setView({ mode: "browse", search: e.target.value })}
-              placeholder="Search templates"
-              className="h-9 rounded-[0.25rem] border-border pl-9"
-            />
-          </div>
+          <h2 className="shrink-0 text-base font-medium">Start with templates</h2>
           <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto p-px sm:grid-cols-2">
             {visible.map((template) => (
               <Card
                 key={template.id}
                 size="sm"
-                onClick={() =>
-                  setView({ mode: "preview", template, search: view.search })
-                }
+                onClick={() => setView({ mode: "preview", template })}
                 className="cursor-pointer ring-1 ring-border transition-all hover:ring-2 hover:ring-primary"
               >
                 <CardHeader>
-                  <CardTitle className="text-base">{template.name}</CardTitle>
+                  <CardTitle className="text-sm font-medium tracking-normal normal-case">
+                    {template.name}
+                  </CardTitle>
                   <CardDescription>{template.description}</CardDescription>
                 </CardHeader>
               </Card>
             ))}
-            {templates !== undefined && visible.length === 0 && (
-              <p className="col-span-full text-sm text-muted-foreground">
-                No templates match your search.
-              </p>
-            )}
           </div>
         </div>
       );
     }
 
     if (view.mode === "preview") {
-      const { template, search } = view;
+      const { template } = view;
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -155,7 +134,7 @@ function NewAgentPage() {
                 variant="ghost"
                 size="icon-xs"
                 aria-label="Back to templates"
-                onClick={() => setView({ mode: "browse", search })}
+                onClick={() => setView({ mode: "browse" })}
               >
                 <ArrowLeft />
               </Button>
@@ -164,12 +143,9 @@ function NewAgentPage() {
                 <span className="text-muted-foreground"> · Template</span>
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
-              <span className="text-sm text-muted-foreground">YAML</span>
-              <Button size="sm" onClick={() => handleUseTemplate(template)}>
-                Use template
-              </Button>
-            </div>
+            <Button size="sm" onClick={() => handleUseTemplate(template)}>
+              Use template
+            </Button>
           </div>
           <div className="min-h-0 flex-1">
             <CodeEditor
