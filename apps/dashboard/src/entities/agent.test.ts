@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolId, deriveToolAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolId, deriveToolAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -653,5 +653,165 @@ describe("deriveToolAvailability", () => {
         makeAgent({ config: { browser: { cloud_provider: "camofox" } } })
       ).status
     ).toBe("available");
+  });
+});
+
+describe("derivePlatformAvailability", () => {
+  function makeAgent(overrides: Partial<Agent> = {}): Agent {
+    return { id: "a1", userId: "u1", ...overrides } as Agent;
+  }
+
+  describe("api-server", () => {
+    it("is unavailable by default", () => {
+      const result = derivePlatformAvailability(PlatformId.ApiServer, makeAgent());
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("API_SERVER_ENABLED");
+    });
+
+    it("is available with the default port when enabled", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+      );
+      expect(result).toEqual({ status: "available", port: 8642 });
+    });
+
+    it("uses API_SERVER_PORT when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          env: [
+            { name: "API_SERVER_ENABLED", value: "true" },
+            { name: "API_SERVER_PORT", value: "9000" },
+          ],
+        })
+      );
+      expect(result).toEqual({ status: "available", port: 9000 });
+    });
+  });
+
+  describe("webhook", () => {
+    it("is unavailable by default", () => {
+      const result = derivePlatformAvailability(PlatformId.Webhook, makeAgent());
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("WEBHOOK_ENABLED");
+    });
+
+    it("is available with the default port when enabled via config", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+      );
+      expect(result).toEqual({ status: "available", port: 8644 });
+    });
+
+    it("uses config.platforms.webhook.extra.port when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } } })
+      );
+      expect(result).toEqual({ status: "available", port: 9000 });
+    });
+
+    it("is available via WEBHOOK_ENABLED env var and respects WEBHOOK_PORT", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({
+          env: [
+            { name: "WEBHOOK_ENABLED", value: "true" },
+            { name: "WEBHOOK_PORT", value: "9001" },
+          ],
+        })
+      );
+      expect(result).toEqual({ status: "available", port: 9001 });
+    });
+
+    it("is unavailable via config even when the WEBHOOK_ENABLED env var is set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({
+          config: { platforms: { webhook: { enabled: false } } },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+        })
+      );
+      expect(result.status).toBe("unavailable");
+    });
+  });
+
+  describe("slack", () => {
+    const slackEnv = [
+      { name: "SLACK_BOT_TOKEN", value: "xoxb-1", sensitive: true },
+      { name: "SLACK_APP_TOKEN", value: "xapp-1", sensitive: true },
+      { name: "SLACK_ALLOWED_USERS", value: "U01" },
+    ];
+
+    const slackSecretSentinelEnv = [
+      { name: "SLACK_BOT_TOKEN", value: "<secret>", sensitive: true },
+      { name: "SLACK_APP_TOKEN", value: "<secret>", sensitive: true },
+      { name: "SLACK_ALLOWED_USERS", value: "U01" },
+    ];
+
+    it("is unavailable when all three required env vars are missing", () => {
+      const result = derivePlatformAvailability(PlatformId.Slack, makeAgent());
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("SLACK_BOT_TOKEN");
+      expect(result.reason).toContain("SLACK_APP_TOKEN");
+      expect(result.reason).toContain("SLACK_ALLOWED_USERS");
+    });
+
+    it("names only the missing env vars when some are set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({ env: [{ name: "SLACK_BOT_TOKEN", value: "xoxb-1", sensitive: true }] })
+      );
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).not.toContain("SLACK_BOT_TOKEN");
+      expect(result.reason).toContain("SLACK_APP_TOKEN");
+      expect(result.reason).toContain("SLACK_ALLOWED_USERS");
+    });
+
+    it("is available with no home when all three required env vars are set", () => {
+      const result = derivePlatformAvailability(PlatformId.Slack, makeAgent({ env: slackEnv }));
+      expect(result).toEqual({ status: "available" });
+    });
+
+    it("treats the <secret> sentinel for sensitive tokens as set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({ env: slackSecretSentinelEnv })
+      );
+      expect(result.status).toBe("available");
+    });
+
+    it("reports SLACK_HOME_CHANNEL as home when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({ env: [...slackEnv, { name: "SLACK_HOME_CHANNEL", value: "C0123" }] })
+      );
+      expect(result).toEqual({ status: "available", home: "C0123" });
+    });
+
+    it("appends SLACK_HOME_CHANNEL_NAME when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({
+          env: [
+            ...slackEnv,
+            { name: "SLACK_HOME_CHANNEL", value: "C0123" },
+            { name: "SLACK_HOME_CHANNEL_NAME", value: "ops" },
+          ],
+        })
+      );
+      expect(result).toEqual({ status: "available", home: "C0123 (ops)" });
+    });
+
+    it("is available even when config.slack is present but no env credentials", () => {
+      // config.slack holds behavior knobs only; credentials come from env.
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({ config: { slack: { allowed_channels: ["C01"] } } })
+      );
+      expect(result.status).toBe("unavailable");
+    });
   });
 });
