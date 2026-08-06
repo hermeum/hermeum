@@ -2,6 +2,7 @@ import { SkillIndexAdaptor, SkillSearchResult } from "../usecases/adaptors/skill
 
 const INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json";
 const CACHE_TTL_MS = 6 * 3600 * 1000;
+const ALLOWED_TRUST_LEVELS = new Set(["builtin", "trusted"]);
 
 export interface SkillIndexEntry {
   name: string;
@@ -45,8 +46,11 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
       return this.#cache?.skills ?? [];
     }
 
-    this.#cache = { fetchedAt: now, skills };
-    return skills;
+    this.#cache = {
+      fetchedAt: now,
+      skills: skills.filter((s) => ALLOWED_TRUST_LEVELS.has(s.trust_level)),
+    };
+    return this.#cache.skills;
   }
 
   async searchSkills(query: string, limit = 25): Promise<SkillSearchResult[]> {
