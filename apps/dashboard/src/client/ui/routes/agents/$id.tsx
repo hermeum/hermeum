@@ -256,7 +256,7 @@ function AgentDetailPage() {
           <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="agent" className="mt-4">
+        <TabsContent value="agent">
           <div className="flex flex-col divide-y">
             {/* soul */}
             {agent.soul && (
@@ -384,7 +384,7 @@ function AgentDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="connect" className="mt-4">
+        <TabsContent value="connect">
           <div className="flex flex-col divide-y">
             {gatewayToken && (
               <div className="py-8 flex flex-col gap-3">
