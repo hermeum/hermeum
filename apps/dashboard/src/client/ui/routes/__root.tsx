@@ -42,7 +42,7 @@ function RootLayout() {
   return (
     <SidebarProvider className="h-svh">
       <AppSidebar session={session} />
-      <SidebarInset className="min-h-0 overflow-hidden">
+      <SidebarInset className="min-h-0 overflow-y-auto">
         <Outlet />
       </SidebarInset>
       <Toaster />
