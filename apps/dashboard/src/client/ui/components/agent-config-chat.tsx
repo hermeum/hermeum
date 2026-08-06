@@ -99,7 +99,7 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold tracking-tight">What should your agent do?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Describe your agent.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Describe your agent or start with a template.</p>
           </div>
         </div>
       ) : (
