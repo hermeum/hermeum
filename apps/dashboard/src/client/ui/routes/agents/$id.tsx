@@ -317,7 +317,7 @@ function AgentDetailPage() {
             {/* env */}
             {agent.env && agent.env.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Environment Variables</p>
+                <p className="text-sm font-bold">Env Vars</p>
                 <div className="flex flex-wrap gap-2">
                   {agent.env.map((v) => (
                     <Button
