@@ -280,6 +280,9 @@ function AgentDetailPage() {
               </div>
             )}
 
+            {/* tools */}
+            <ToolsSection agent={agent} />
+
             {/* skills */}
             {agent.skills && agent.skills.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
@@ -295,9 +298,6 @@ function AgentDetailPage() {
                 <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
-
-            {/* tools */}
-            <ToolsSection agent={agent} />
 
             {/* packages */}
             {agent.packages?.pip && agent.packages.pip.length > 0 && (
