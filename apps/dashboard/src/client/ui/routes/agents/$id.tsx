@@ -12,11 +12,16 @@ import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import {
   TOOL_IDS,
+  PLATFORM_IDS,
   deriveToolAvailability,
+  derivePlatformAvailability,
   getToolDescription,
   getToolLabel,
+  getPlatformDescription,
+  getPlatformLabel,
   type Agent,
   type ToolId,
+  type PlatformId,
 } from "@/entities";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
@@ -113,6 +118,62 @@ function ToolsSection({ agent }: { agent: Agent }) {
         <div className="flex flex-wrap gap-2">
           {TOOL_IDS.map((id) => (
             <ToolBadge key={id} id={id} agent={agent} />
+          ))}
+        </div>
+      </TooltipProvider>
+    </div>
+  );
+}
+
+function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
+  const { status, reason, port, home } = derivePlatformAvailability(id, agent);
+  const label = getPlatformLabel(id);
+  const description = getPlatformDescription(id);
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className={`h-auto px-2 py-1 font-mono text-xs ${
+              status === "unavailable" ? "text-muted-foreground opacity-60" : ""
+            }`}
+          />
+        }
+      >
+        {label}
+        {status === "available" && port !== undefined && (
+          <span className="text-muted-foreground"> · port {port}</span>
+        )}
+        {status === "available" && home !== undefined && (
+          <span className="text-muted-foreground"> · home {home}</span>
+        )}
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="flex flex-col gap-0.5">
+          <span>{description}</span>
+          {port !== undefined && <span>Port: {port}</span>}
+          {home !== undefined && <span>Home channel: {home}</span>}
+          {reason && (
+            <span className="capitalize opacity-80">
+              {status} — {reason}
+            </span>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function PlatformsSection({ agent }: { agent: Agent }) {
+  return (
+    <div className="py-8 flex flex-col gap-3">
+      <p className="text-sm font-bold">Message Platforms</p>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          {PLATFORM_IDS.map((id) => (
+            <PlatformBadge key={id} id={id} agent={agent} />
           ))}
         </div>
       </TooltipProvider>
@@ -282,6 +343,10 @@ function AgentDetailPage() {
 
             {/* tools */}
             <ToolsSection agent={agent} />
+            
+            {/* message platforms */}
+            <PlatformsSection agent={agent} />
+
 
             {/* skills */}
             {agent.skills && agent.skills.length > 0 && (

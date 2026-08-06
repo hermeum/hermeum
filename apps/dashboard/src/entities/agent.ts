@@ -543,6 +543,103 @@ export function getWebhookPort(input: AgentInput): number {
   return WEBHOOK_DEFAULT_PORT;
 }
 
+// Message-platform availability — a derived, read-only view of which inbound
+// message platforms are wired up for an agent, computed from its config + env.
+// Not persisted.
+// https://hermes-agent.nousresearch.com/docs/user-guide/messaging
+
+export enum PlatformId {
+  ApiServer = "api-server",
+  Webhook = "webhook",
+  Slack = "slack",
+}
+
+export interface PlatformAvailability {
+  status: "available" | "unavailable";
+  /** Short explanation shown when status is not "available". */
+  reason?: string;
+  /** Listening port for HTTP platforms (api-server, webhook). */
+  port?: number;
+  /** Home channel for chat platforms (slack only), if configured. */
+  home?: string;
+}
+
+interface PlatformMeta {
+  label: string;
+  description: string;
+}
+
+const PLATFORM_META: Record<PlatformId, PlatformMeta> = {
+  [PlatformId.ApiServer]: {
+    label: "API Server",
+    description: "OpenAI-compatible HTTP endpoint for frontends like Open WebUI.",
+  },
+  [PlatformId.Webhook]: {
+    label: "Webhook",
+    description: "HTTP server that accepts signed webhooks and routes them to the agent.",
+  },
+  [PlatformId.Slack]: {
+    label: "Slack",
+    description: "Slack bot relayed through the gateway (Socket Mode).",
+  },
+};
+
+export function getPlatformLabel(id: PlatformId): string {
+  return PLATFORM_META[id].label;
+}
+
+export function getPlatformDescription(id: PlatformId): string {
+  return PLATFORM_META[id].description;
+}
+
+/** Ordered platform list for UI rendering. */
+export const PLATFORM_IDS: readonly PlatformId[] = [
+  PlatformId.ApiServer,
+  PlatformId.Webhook,
+  PlatformId.Slack,
+];
+
+const SLACK_REQUIRED_ENV_VARS = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_ALLOWED_USERS"];
+
+export function derivePlatformAvailability(id: PlatformId, agent: Agent): PlatformAvailability {
+  const env = agent.env ?? [];
+
+  switch (id) {
+    case PlatformId.ApiServer: {
+      if (!isApiServerEnabled(agent)) {
+        return { status: "unavailable", reason: "Set API_SERVER_ENABLED=true to enable." };
+      }
+      return { status: "available", port: getApiServerPort(agent) };
+    }
+    case PlatformId.Webhook: {
+      if (!isWebhookEnabled(agent)) {
+        return {
+          status: "unavailable",
+          reason: "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled).",
+        };
+      }
+      return { status: "available", port: getWebhookPort(agent) };
+    }
+    case PlatformId.Slack: {
+      const isSet = (name: string) =>
+        env.some((v) => v.name === name && v.value.trim() !== "");
+      const missing = SLACK_REQUIRED_ENV_VARS.filter((name) => !isSet(name));
+      if (missing.length > 0) {
+        return {
+          status: "unavailable",
+          reason: `Missing env var${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`,
+        };
+      }
+      const home = env.find((v) => v.name === "SLACK_HOME_CHANNEL")?.value;
+      const homeName = env.find((v) => v.name === "SLACK_HOME_CHANNEL_NAME")?.value;
+      if (home) {
+        return { status: "available", home: homeName ? `${home} (${homeName})` : home };
+      }
+      return { status: "available" };
+    }
+  }
+}
+
 export const AgentPhaseSchema = z.enum([
   "Pending",
   "Running",
