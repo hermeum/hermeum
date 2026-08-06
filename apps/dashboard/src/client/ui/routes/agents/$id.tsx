@@ -317,7 +317,7 @@ function AgentDetailPage() {
           <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="agent" className="mt-4">
+        <TabsContent value="agent">
           <div className="flex flex-col divide-y">
             {/* soul */}
             {agent.soul && (
@@ -341,6 +341,13 @@ function AgentDetailPage() {
               </div>
             )}
 
+            {/* tools */}
+            <ToolsSection agent={agent} />
+            
+            {/* message platforms */}
+            <PlatformsSection agent={agent} />
+
+
             {/* skills */}
             {agent.skills && agent.skills.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
@@ -356,12 +363,6 @@ function AgentDetailPage() {
                 <ButtonList items={agent.plugins} max={10} />
               </div>
             )}
-
-            {/* tools */}
-            <ToolsSection agent={agent} />
-
-            {/* message platforms */}
-            <PlatformsSection agent={agent} />
 
             {/* packages */}
             {agent.packages?.pip && agent.packages.pip.length > 0 && (
@@ -381,7 +382,7 @@ function AgentDetailPage() {
             {/* env */}
             {agent.env && agent.env.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Environment Variables</p>
+                <p className="text-sm font-bold">Env Vars</p>
                 <div className="flex flex-wrap gap-2">
                   {agent.env.map((v) => (
                     <Button
@@ -448,7 +449,7 @@ function AgentDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="connect" className="mt-4">
+        <TabsContent value="connect">
           <div className="flex flex-col divide-y">
             {gatewayToken && (
               <div className="py-8 flex flex-col gap-3">
