@@ -656,6 +656,7 @@ export const AgentSchema = AgentInputObjectSchema.extend({
   suspended: z.boolean().optional(),
   archived: z.boolean().optional(),
   phase: AgentPhaseSchema.optional(),
+  reason: z.string().optional(),
   createdAt: z.date().optional(),
 }).readonly();
 

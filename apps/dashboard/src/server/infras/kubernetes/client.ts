@@ -337,6 +337,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     suspended: raw.spec.suspend,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
     phase: raw.status?.phase as AgentPhase | undefined,
+    reason: raw.status?.reason,
     createdAt: raw.metadata?.creationTimestamp,
   };
 }
