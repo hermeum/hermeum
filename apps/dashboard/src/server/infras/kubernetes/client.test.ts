@@ -563,21 +563,8 @@ describe("agentToHermesAgent ingress wiring", () => {
     ]);
   });
 
-  it("emits a tls block with hosts but no secretName when scheme=https and no secret configured", async () => {
+  it("emits a tls block with secretName when a tls secret is configured (regardless of scheme)", async () => {
     vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
-    vi.stubEnv("HERMEUM_INGRESS_SCHEME", "https");
-    const { agentToHermesAgent } = await importFresh();
-    const hermesAgent = agentToHermesAgent(
-      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
-    );
-    expect(hermesAgent.spec.networking?.ingress?.tls).toEqual([
-      { hosts: ["agent-1.agents.example.com"] },
-    ]);
-  });
-
-  it("includes secretName in the tls block when scheme=https and a tls secret is configured", async () => {
-    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
-    vi.stubEnv("HERMEUM_INGRESS_SCHEME", "https");
     vi.stubEnv("HERMEUM_INGRESS_TLS_SECRET_NAME", "agent-tls");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -588,8 +575,9 @@ describe("agentToHermesAgent ingress wiring", () => {
     ]);
   });
 
-  it("omits tls entirely when scheme=http (default)", async () => {
+  it("omits tls entirely when no tls secret is configured (covers LB-terminated TLS)", async () => {
     vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_INGRESS_SCHEME", "https");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })

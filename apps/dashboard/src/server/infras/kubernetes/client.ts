@@ -226,13 +226,15 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       ...(config.ingressClassName !== undefined && { className: config.ingressClassName }),
       annotations: {},
       hosts: [{ host, paths: ingressPaths }],
-      ...(config.ingressScheme === "https" && {
+      // TLS is emitted only when a TLS secret name is configured — i.e. TLS is
+      // terminated at the ingress controller. When unset, no tls block is
+      // emitted, which covers both plain HTTP and load-balancer-terminated TLS
+      // (the LB handles the cert; the ingress receives plain HTTP).
+      ...(config.ingressTlsSecretName !== undefined && {
         tls: [
           {
             hosts: [host],
-            ...(config.ingressTlsSecretName !== undefined && {
-              secretName: config.ingressTlsSecretName,
-            }),
+            secretName: config.ingressTlsSecretName,
           },
         ],
       }),
