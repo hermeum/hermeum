@@ -20,12 +20,27 @@ import { Textarea } from "@hermeum/components/ui/textarea";
 import type { AgentInput } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
 
+// Mirrors the server-executed tools declared in ChatUseCase.getAgentConfigContext
+// so the UI can render their lifecycle as markers alongside the client tools.
+type ReadDocumentOutput = {
+  documents: Array<{ name: string; content: string } | { name: string; error: string }>;
+};
+type ReadSharedEnvSetOutput = {
+  sharedEnvSets: Array<{ id: string; envVars: { name: string }[] } | { id: string; error: string }>;
+};
+type SearchSkillsOutput = { results: { name: string; identifier: string; description: string }[] };
+
 type AgentConfigChatMessage = UIMessage<
   unknown,
   UIDataTypes,
   {
+    // Client-executed (handled in onToolCall).
     updateAgentConfig: { input: AgentInput; output: string };
     readAgentConfig: { input: undefined; output: AgentInput | undefined };
+    // Server-executed (lifecycle only — no client handler).
+    readDocument: { input: { names: string[] }; output: ReadDocumentOutput };
+    readSharedEnvSet: { input: { ids: string[] }; output: ReadSharedEnvSetOutput };
+    searchSkills: { input: { query: string; limit?: number }; output: SearchSkillsOutput };
   }
 >;
 
@@ -35,6 +50,58 @@ interface AgentConfigChatProps {
   getConfig: () => AgentInput | undefined;
   // Receives config from AI tool calls.
   onConfigUpdate: (config: AgentInput) => void;
+}
+
+// Renders the lifecycle of any tool call as a single inline status marker.
+// Running while input is streaming/available, done when output arrives,
+// error when the tool errors.
+//
+// `transient` markers only appear while the tool is running (input-streaming,
+// input-available, or any approval state). Once the tool finishes they disappear,
+// so the chat stays focused on the conversation. Only config-changing tools
+// should be persistent.
+//
+// Styling is deliberately softened: normal case, normal tracking, and a lighter
+// weight so the markers feel like quiet activity rather than loud status alerts.
+type ToolPartState =
+  | "input-streaming"
+  | "input-available"
+  | "approval-requested"
+  | "approval-responded"
+  | "output-available"
+  | "output-error"
+  | "output-denied";
+
+function ToolMarker({
+  state,
+  runningLabel,
+  doneLabel,
+  errorLabel,
+  transient = false,
+}: {
+  state: ToolPartState;
+  runningLabel: string;
+  doneLabel: string;
+  errorLabel: string;
+  transient?: boolean;
+}) {
+  const isDone = state === "output-available";
+  const isError = state === "output-error" || state === "output-denied";
+
+  if (transient && (isDone || isError)) {
+    return null;
+  }
+
+  return (
+    <Marker className="normal-case tracking-normal font-normal">
+      <MarkerIcon>
+        {isDone ? <Check /> : <LoaderCircle className="animate-spin" />}
+      </MarkerIcon>
+      <MarkerContent className="normal-case tracking-normal">
+        {isError ? errorLabel : isDone ? doneLabel : runningLabel}
+      </MarkerContent>
+    </Marker>
+  );
 }
 
 export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatProps) {
@@ -131,34 +198,82 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
                             );
                           }
                           if (part.type === "tool-readAgentConfig") {
-                            if (part.state === "input-streaming" || part.state === "input-available") {
-                              return (
-                                <Marker key={index}>
-                                  <MarkerIcon>
-                                    <LoaderCircle className="animate-spin" />
-                                  </MarkerIcon>
-                                  <MarkerContent>Reading config…</MarkerContent>
-                                </Marker>
-                              );
-                            }
-                            return null;
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel="Reading the latest config…"
+                                doneLabel="Read the latest config"
+                                errorLabel="Couldn’t read the latest config"
+                                transient
+                              />
+                            );
                           }
                           if (part.type === "tool-updateAgentConfig") {
                             return (
-                              <Marker key={index}>
-                                <MarkerIcon>
-                                  {part.state === "output-available" ? (
-                                    <Check />
-                                  ) : (
-                                    <LoaderCircle className="animate-spin" />
-                                  )}
-                                </MarkerIcon>
-                                <MarkerContent>
-                                  {part.state === "output-error"
-                                    ? "Config update failed"
-                                    : "Config updated"}
-                                </MarkerContent>
-                              </Marker>
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel="Updating the config…"
+                                doneLabel="Config updated"
+                                errorLabel="Couldn’t update the config"
+                              />
+                            );
+                          }
+                          if (part.type === "tool-readDocument") {
+                            const names =
+                              part.state === "input-available" || part.state === "output-available"
+                                ? part.input?.names?.join(", ")
+                                : undefined;
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel={names ? `Reading docs: ${names}…` : "Reading docs…"}
+                                doneLabel="Read docs"
+                                errorLabel="Couldn’t read docs"
+                                transient
+                              />
+                            );
+                          }
+                          if (part.type === "tool-readSharedEnvSet") {
+                            const ids =
+                              part.state === "input-available" || part.state === "output-available"
+                                ? part.input?.ids?.join(", ")
+                                : undefined;
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel={ids ? `Reading env sets: ${ids}…` : "Reading env sets…"}
+                                doneLabel="Read env sets"
+                                errorLabel="Couldn’t read env sets"
+                                transient
+                              />
+                            );
+                          }
+                          if (part.type === "tool-searchSkills") {
+                            const query =
+                              part.state === "input-available" || part.state === "output-available"
+                                ? part.input?.query
+                                : undefined;
+                            const count =
+                              part.state === "output-available" ? part.output?.results?.length : undefined;
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel={
+                                  query ? `Searching skills for "${query}"…` : "Searching skills…"
+                                }
+                                doneLabel={
+                                  typeof count === "number"
+                                    ? `Searched skills (${count} result${count === 1 ? "" : "s"})`
+                                    : "Searched skills"
+                                }
+                                errorLabel="Skill search failed"
+                                transient
+                              />
                             );
                           }
                           return null;
