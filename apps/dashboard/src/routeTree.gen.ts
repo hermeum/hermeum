@@ -16,6 +16,8 @@ import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index
 import { Route as SharedEnvSetsIdRouteImport } from './client/ui/routes/shared-env-sets/$id'
 import { Route as AgentsNewRouteImport } from './client/ui/routes/agents/new'
 import { Route as AgentsIdRouteImport } from './client/ui/routes/agents/$id'
+import { Route as AgentsIdIndexRouteImport } from './client/ui/routes/agents/$id/index'
+import { Route as AgentsIdEditRouteImport } from './client/ui/routes/agents/$id/edit'
 
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
@@ -52,34 +54,49 @@ const AgentsIdRoute = AgentsIdRouteImport.update({
   path: '/agents/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsIdIndexRoute = AgentsIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsIdRoute,
+} as any)
+const AgentsIdEditRoute = AgentsIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AgentsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
-  '/agents/$id': typeof AgentsIdRoute
+  '/agents/$id': typeof AgentsIdRouteWithChildren
   '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
+  '/agents/$id/edit': typeof AgentsIdEditRoute
+  '/agents/$id/': typeof AgentsIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
-  '/agents/$id': typeof AgentsIdRoute
   '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents': typeof AgentsIndexRoute
   '/shared-env-sets': typeof SharedEnvSetsIndexRoute
+  '/agents/$id/edit': typeof AgentsIdEditRoute
+  '/agents/$id': typeof AgentsIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
-  '/agents/$id': typeof AgentsIdRoute
+  '/agents/$id': typeof AgentsIdRouteWithChildren
   '/agents/new': typeof AgentsNewRoute
   '/shared-env-sets/$id': typeof SharedEnvSetsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
+  '/agents/$id/edit': typeof AgentsIdEditRoute
+  '/agents/$id/': typeof AgentsIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,15 +108,18 @@ export interface FileRouteTypes {
     | '/shared-env-sets/$id'
     | '/agents/'
     | '/shared-env-sets/'
+    | '/agents/$id/edit'
+    | '/agents/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/signin'
-    | '/agents/$id'
     | '/agents/new'
     | '/shared-env-sets/$id'
     | '/agents'
     | '/shared-env-sets'
+    | '/agents/$id/edit'
+    | '/agents/$id'
   id:
     | '__root__'
     | '/'
@@ -109,12 +129,14 @@ export interface FileRouteTypes {
     | '/shared-env-sets/$id'
     | '/agents/'
     | '/shared-env-sets/'
+    | '/agents/$id/edit'
+    | '/agents/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SigninRoute: typeof SigninRoute
-  AgentsIdRoute: typeof AgentsIdRoute
+  AgentsIdRoute: typeof AgentsIdRouteWithChildren
   AgentsNewRoute: typeof AgentsNewRoute
   SharedEnvSetsIdRoute: typeof SharedEnvSetsIdRoute
   AgentsIndexRoute: typeof AgentsIndexRoute
@@ -172,13 +194,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents/$id/': {
+      id: '/agents/$id/'
+      path: '/'
+      fullPath: '/agents/$id/'
+      preLoaderRoute: typeof AgentsIdIndexRouteImport
+      parentRoute: typeof AgentsIdRoute
+    }
+    '/agents/$id/edit': {
+      id: '/agents/$id/edit'
+      path: '/edit'
+      fullPath: '/agents/$id/edit'
+      preLoaderRoute: typeof AgentsIdEditRouteImport
+      parentRoute: typeof AgentsIdRoute
+    }
   }
 }
+
+interface AgentsIdRouteChildren {
+  AgentsIdEditRoute: typeof AgentsIdEditRoute
+  AgentsIdIndexRoute: typeof AgentsIdIndexRoute
+}
+
+const AgentsIdRouteChildren: AgentsIdRouteChildren = {
+  AgentsIdEditRoute: AgentsIdEditRoute,
+  AgentsIdIndexRoute: AgentsIdIndexRoute,
+}
+
+const AgentsIdRouteWithChildren = AgentsIdRoute._addFileChildren(
+  AgentsIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SigninRoute: SigninRoute,
-  AgentsIdRoute: AgentsIdRoute,
+  AgentsIdRoute: AgentsIdRouteWithChildren,
   AgentsNewRoute: AgentsNewRoute,
   SharedEnvSetsIdRoute: SharedEnvSetsIdRoute,
   AgentsIndexRoute: AgentsIndexRoute,
