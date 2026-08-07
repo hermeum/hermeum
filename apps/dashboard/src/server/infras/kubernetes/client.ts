@@ -30,6 +30,8 @@ import {
   HermesAgentList,
   HermesAgentSpec,
   HermesConfig,
+  Ingress,
+  IngressPath,
   ServicePort,
 } from "./types/hermes-agent";
 
@@ -202,8 +204,49 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       protocol: "TCP",
     });
   }
+  // Ingress is generated only when the operator configures a base hostname —
+  // routing inbound traffic from message platforms (api-server, webhook) to
+  // the agent's Service. Host takes the form <agent-id>.<base-hostname>.
+  let ingress: Ingress | undefined;
+  if (servicePorts.length > 0 && config.agentIngressBaseHostname !== undefined) {
+    const host = `${agent.id}.${config.agentIngressBaseHostname}`;
+    const ingressPaths: IngressPath[] = [];
+    if (webhookPort !== null) {
+      ingressPaths.push({ path: "/webhooks", pathType: "Prefix", port: webhookPort });
+    }
+    if (apiServerPort !== null) {
+      ingressPaths.push(
+        { path: "/api", pathType: "Prefix", port: apiServerPort },
+        { path: "/v1", pathType: "Prefix", port: apiServerPort },
+        { path: "/health", pathType: "Prefix", port: apiServerPort }
+      );
+    }
+    ingress = {
+      enabled: true,
+      ...(config.agentIngressClassName !== undefined && { className: config.agentIngressClassName }),
+      annotations: {},
+      hosts: [{ host, paths: ingressPaths }],
+      // TLS is emitted only when a TLS secret name is configured — i.e. TLS is
+      // terminated at the ingress controller. When unset, no tls block is
+      // emitted, which covers both plain HTTP and load-balancer-terminated TLS
+      // (the LB handles the cert; the ingress receives plain HTTP).
+      ...(config.agentIngressTlsSecretName !== undefined && {
+        tls: [
+          {
+            hosts: [host],
+            secretName: config.agentIngressTlsSecretName,
+          },
+        ],
+      }),
+    };
+  }
   const networking =
-    servicePorts.length > 0 ? { service: { ports: servicePorts } } : undefined;
+    servicePorts.length > 0
+      ? {
+          service: { ports: servicePorts },
+          ...(ingress !== undefined && { ingress }),
+        }
+      : undefined;
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
   }
