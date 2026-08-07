@@ -208,8 +208,8 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   // routing inbound traffic from message platforms (api-server, webhook) to
   // the agent's Service. Host takes the form <agent-id>.<base-hostname>.
   let ingress: Ingress | undefined;
-  if (servicePorts.length > 0 && config.ingressBaseHostname !== undefined) {
-    const host = `${agent.id}.${config.ingressBaseHostname}`;
+  if (servicePorts.length > 0 && config.agentIngressBaseHostname !== undefined) {
+    const host = `${agent.id}.${config.agentIngressBaseHostname}`;
     const ingressPaths: IngressPath[] = [];
     if (webhookPort !== null) {
       ingressPaths.push({ path: "/webhooks", pathType: "Prefix", port: webhookPort });
@@ -223,18 +223,18 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     }
     ingress = {
       enabled: true,
-      ...(config.ingressClassName !== undefined && { className: config.ingressClassName }),
+      ...(config.agentIngressClassName !== undefined && { className: config.agentIngressClassName }),
       annotations: {},
       hosts: [{ host, paths: ingressPaths }],
       // TLS is emitted only when a TLS secret name is configured — i.e. TLS is
       // terminated at the ingress controller. When unset, no tls block is
       // emitted, which covers both plain HTTP and load-balancer-terminated TLS
       // (the LB handles the cert; the ingress receives plain HTTP).
-      ...(config.ingressTlsSecretName !== undefined && {
+      ...(config.agentIngressTlsSecretName !== undefined && {
         tls: [
           {
             hosts: [host],
-            secretName: config.ingressTlsSecretName,
+            secretName: config.agentIngressTlsSecretName,
           },
         ],
       }),

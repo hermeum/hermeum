@@ -4,22 +4,83 @@ import { z } from "zod";
 loadEnv();
 
 export const ConfigSchema = z.object({
-  agentConfigPath: z.string().default("./agent-config.yaml"),
-  docsPath: z.string().default("./docs/hermes-config"),
-  databaseDialect: z.enum(["postgres", "sqlite"]).default("sqlite"),
-  databaseUrl: z.url(),
-  kubernetesNamespace: z.string().default("hermeum"),
-  smtpUrl: z.url().optional(),
-  allowedEmailDomain: z.string().optional(),
-  hermesImageRepository: z.string().default("nousresearch/hermes-agent"),
-  hermesImageTag: z.string().default("v2026.7.7.2"),
-  openaiModel: z.string().min(1).default("gpt-5.5"),
-  openaiBaseUrl: z.url().optional(),
-  debugMode: z.preprocess((v) => v === "true", z.boolean()).default(false),
-  ingressScheme: z.enum(["http", "https"]).default("http"),
-  ingressBaseHostname: z.string().optional(),
-  ingressClassName: z.string().optional(),
-  ingressTlsSecretName: z.string().optional(),
+  agentConfigPath: z
+    .string()
+    .default("./agent-config.yaml")
+    .describe("Path to the agent templates config file (HERMEUM_CONFIG_PATH)."),
+  docsPath: z
+    .string()
+    .default("./docs/hermes-config")
+    .describe("Path to the hermes-config docs directory (HERMEUM_DOCS_PATH)."),
+  databaseDialect: z
+    .enum(["postgres", "sqlite"])
+    .default("sqlite")
+    .describe("Database backend dialect (HERMEUM_DATABASE_DIALECT)."),
+  databaseUrl: z
+    .url()
+    .describe("Connection URL for the dashboard database (HERMEUM_DATABASE_URL)."),
+  kubernetesNamespace: z
+    .string()
+    .default("hermeum")
+    .describe("Kubernetes namespace where HermesAgent CRs are reconciled (HERMEUM_KUBERNETES_NAMESPACE)."),
+  smtpUrl: z
+    .url()
+    .optional()
+    .describe("SMTP server URL for outgoing email (HERMEUM_SMTP_URL)."),
+  allowedEmailDomain: z
+    .string()
+    .optional()
+    .describe("Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN)."),
+  hermesImageRepository: z
+    .string()
+    .default("nousresearch/hermes-agent")
+    .describe("Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY)."),
+  hermesImageTag: z
+    .string()
+    .default("v2026.7.7.2")
+    .describe("Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG)."),
+  openaiModel: z
+    .string()
+    .min(1)
+    .default("gpt-5.5")
+    .describe("OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL)."),
+  openaiBaseUrl: z
+    .url()
+    .optional()
+    .describe("Override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL)."),
+  debugMode: z
+    .preprocess((v) => v === "true", z.boolean())
+    .default(false)
+    .describe("Enable verbose debug logging (HERMEUM_DEBUG_MODE)."),
+  agentIngressScheme: z
+    .enum(["http", "https"])
+    .default("http")
+    .describe(
+      "Public URL scheme advertised for agent ingresses (HERMEUM_AGENT_INGRESS_SCHEME). " +
+        "Display-only — does not drive the emitted tls block; TLS is governed by agentIngressTlsSecretName."
+    ),
+  agentIngressBaseHostname: z
+    .string()
+    .optional()
+    .describe(
+      "Base hostname for per-agent ingresses (<agent-id>.<base>) (HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). " +
+        "When unset, no ingress is generated."
+    ),
+  agentIngressClassName: z
+    .string()
+    .optional()
+    .describe(
+      "Ingress controller class name to set on generated ingresses (HERMEUM_AGENT_INGRESS_CLASS_NAME). " +
+        "Omitted from the CR when unset."
+    ),
+  agentIngressTlsSecretName: z
+    .string()
+    .optional()
+    .describe(
+      "TLS secret name for controller-terminated TLS (HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME). " +
+        "When set, the ingress emits a tls block with this secret; when unset, no tls block is " +
+        "emitted (covers plain HTTP and load-balancer-terminated TLS)."
+    ),
 });
 
 export const config = ConfigSchema.parse({
@@ -35,8 +96,8 @@ export const config = ConfigSchema.parse({
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
   debugMode: process.env.HERMEUM_DEBUG_MODE,
-  ingressScheme: process.env.HERMEUM_INGRESS_SCHEME,
-  ingressBaseHostname: process.env.HERMEUM_INGRESS_BASE_HOSTNAME,
-  ingressClassName: process.env.HERMEUM_INGRESS_CLASS_NAME,
-  ingressTlsSecretName: process.env.HERMEUM_INGRESS_TLS_SECRET_NAME,
+  agentIngressScheme: process.env.HERMEUM_AGENT_INGRESS_SCHEME,
+  agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
+  agentIngressClassName: process.env.HERMEUM_AGENT_INGRESS_CLASS_NAME,
+  agentIngressTlsSecretName: process.env.HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME,
 });
