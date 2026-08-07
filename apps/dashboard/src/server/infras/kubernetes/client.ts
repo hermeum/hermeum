@@ -303,6 +303,19 @@ export function mapHermesConfig(config: HermesConfig | undefined): Agent["config
   return config?.raw;
 }
 
+// Derive the agent's public endpoint URL from the reconciled ingress host.
+// The host is written into spec.networking.ingress by agentToHermesAgent only
+// when at least one HTTP platform (api-server / webhook) is enabled AND the
+// operator has configured agentIngressBaseHostname — so a null return here
+// exactly mirrors "no public endpoint exists for this agent / deployment".
+// The scheme comes from agentIngressScheme (display-only; TLS is governed
+// separately by agentIngressTlsSecretName).
+export function buildAgentEndpoint(raw: HermesAgent): string | null {
+  const host = raw.spec.networking?.ingress?.hosts?.[0]?.host;
+  if (!host) return null;
+  return `${config.agentIngressScheme}://${host}`;
+}
+
 export function mapHermesAgent(raw: HermesAgent): Agent {
   return {
     id: raw.metadata?.name ?? "",
@@ -311,6 +324,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     type: raw.metadata?.annotations?.[HermeumAnnotation.Type],
     config: mapHermesConfig(raw.spec.hermes?.config),
+    endpoint: buildAgentEndpoint(raw),
     sharedEnvSets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
     ),

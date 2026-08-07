@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Info, MoreHorizontal, RefreshCw } from "lucide-react";
+import { Info, MoreHorizontal, RefreshCw } from "lucide-react";
 import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
 
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
-import { authClient } from "@/client/auth-client";
 import { useTRPC } from "@/router";
 import {
   TOOL_IDS,
@@ -223,12 +222,6 @@ function AgentDetailPage() {
     isFetching,
     error,
   } = useQuery(trpc.agent.get.queryOptions({ id }));
-  const { data: session } = authClient.useSession();
-  const isOwner = !!session?.user && session.user.id === agent?.userId;
-  const { data: gatewayToken } = useQuery({
-    ...trpc.agent.getGatewayToken.queryOptions({ id }),
-    enabled: isOwner,
-  });
   const envSetIds = agent?.sharedEnvSets ?? [];
   const envSetQueries = useQueries({
     queries: envSetIds.map((setId) => ({
@@ -241,7 +234,6 @@ function AgentDetailPage() {
     .filter((s): s is NonNullable<typeof s> => s != null);
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [tokenVisible, setTokenVisible] = useState(false);
 
   const invalidateDetail = () =>
     queryClient.invalidateQueries({ queryKey: trpc.agent.get.queryKey({ id }) });
@@ -283,7 +275,7 @@ function AgentDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{agent.name ?? agent.id}</h1>
             {agent.archived ? (
@@ -298,6 +290,12 @@ function AgentDetailPage() {
           </div>
           {agent.description && (
             <p className="text-sm text-muted-foreground mt-1">{agent.description}</p>
+          )}
+          {agent.endpoint && (
+            <div className="group mt-1 flex items-center gap-1">
+              <span className="text-sm text-muted-foreground font-mono">{agent.endpoint}</span>
+              <CopyButton text={agent.endpoint} className="opacity-0 group-hover:opacity-100" />
+            </div>
           )}
           {agent.type && (
             <p className="text-sm text-muted-foreground mt-1">
@@ -349,7 +347,6 @@ function AgentDetailPage() {
       <Tabs defaultValue="agent">
         <TabsList variant="line">
           <TabsTrigger value="agent">Agent</TabsTrigger>
-          <TabsTrigger value="connect">Connect</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent">
@@ -378,7 +375,7 @@ function AgentDetailPage() {
 
             {/* tools */}
             <ToolsSection agent={agent} />
-            
+
             {/* message platforms */}
             <PlatformsSection agent={agent} />
 
@@ -409,7 +406,7 @@ function AgentDetailPage() {
 
             {agent.packages?.npm && agent.packages.npm.length > 0 && (
               <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">npm Packages</p>
+                <p className="text-sm font-bold">NPM Packages</p>
                 <ButtonList items={agent.packages.npm} max={10} />
               </div>
             )}
@@ -481,31 +478,6 @@ function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">No shared env sets attached.</p>
               )}
             </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="connect">
-          <div className="flex flex-col divide-y">
-            {gatewayToken && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Gateway Token</p>
-                <div className="group flex items-center gap-2">
-                  <span className="font-mono text-sm text-muted-foreground">
-                    {tokenVisible ? gatewayToken : "•".repeat(32)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 opacity-0 group-hover:opacity-100"
-                    onClick={() => setTokenVisible((v) => !v)}
-                    aria-label={tokenVisible ? "Hide token" : "Show token"}
-                  >
-                    {tokenVisible ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-                  </Button>
-                  <CopyButton text={gatewayToken} className="opacity-0 group-hover:opacity-100" />
-                </div>
-              </div>
-            )}
           </div>
         </TabsContent>
       </Tabs>

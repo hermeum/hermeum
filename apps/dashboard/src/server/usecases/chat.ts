@@ -1,7 +1,6 @@
-import { tool, ToolSet } from "ai";
 import { z } from "zod";
 
-import { AgentInput, AgentInputObjectSchema } from "@/entities";
+import { AgentInput, AgentInputObjectSchema, tool, ToolSet } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
