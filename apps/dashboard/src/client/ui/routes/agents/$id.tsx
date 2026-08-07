@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, MoreHorizontal, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Info, MoreHorizontal, RefreshCw } from "lucide-react";
 import { stringify as stringifyYaml } from "yaml";
 import { toast } from "sonner";
 
@@ -113,7 +113,22 @@ function ToolBadge({ id, agent }: { id: ToolId; agent: Agent }) {
 function ToolsSection({ agent }: { agent: Agent }) {
   return (
     <div className="py-8 flex flex-col gap-3">
-      <p className="text-sm font-bold">Tools</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-bold">Tools</p>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Tools info" />
+            }
+          />
+          <TooltipContent>
+            <div className="max-w-xs">
+              Hermeum shows built-in Hermes tools here. Tools added by plugins
+              are not listed.
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
       <TooltipProvider>
         <div className="flex flex-wrap gap-2">
           {TOOL_IDS.map((id) => (
@@ -169,7 +184,23 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
 function PlatformsSection({ agent }: { agent: Agent }) {
   return (
     <div className="py-8 flex flex-col gap-3">
-      <p className="text-sm font-bold">Message Platforms</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-bold">Message Platforms</p>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Message platforms info" />
+            }
+          />
+          <TooltipContent>
+            <div className="max-w-xs">
+              Hermeum manages API Server, Webhook, and Slack. Other Hermes
+              platforms (e.g. Telegram, Discord, WhatsApp) can be wired via the
+              Configuration editor above.
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
       <TooltipProvider>
         <div className="flex flex-wrap gap-2">
           {PLATFORM_IDS.map((id) => (
@@ -323,7 +354,7 @@ function AgentDetailPage() {
             {agent.soul && (
               <div className="py-8 flex flex-col gap-3">
                 <p className="text-sm font-bold">Soul</p>
-                <pre className="rounded bg-muted p-3 text-xs overflow-auto max-h-64">
+                <pre className="rounded bg-muted p-3 text-xs overflow-y-auto max-h-64 whitespace-pre-wrap break-words">
                   {agent.soul}
                 </pre>
               </div>
