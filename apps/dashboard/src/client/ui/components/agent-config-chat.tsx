@@ -284,7 +284,18 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
                 ))}
                 {status === "submitted" && (
                   <MessageScrollerItem messageId="thinking">
-                    <span className="shimmer text-sm">Thinking…</span>
+                    <Message align="start">
+                      <MessageContent>
+                        <Marker className="normal-case tracking-normal font-normal">
+                          <MarkerIcon>
+                            <LoaderCircle className="animate-spin" />
+                          </MarkerIcon>
+                          <MarkerContent className="normal-case tracking-normal">
+                            Thinking…
+                          </MarkerContent>
+                        </Marker>
+                      </MessageContent>
+                    </Message>
                   </MessageScrollerItem>
                 )}
                 {error && (
