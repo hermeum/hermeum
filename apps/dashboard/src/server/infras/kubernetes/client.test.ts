@@ -606,7 +606,7 @@ describe("agentToHermesAgent ingress wiring", () => {
 
   it("builds the host from the agent id and base hostname", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
-    const { agentToHermesAgent } = await importFresh();
+    const { agentToHermesAgent, mapHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
         id: "agent-42",
@@ -615,6 +615,77 @@ describe("agentToHermesAgent ingress wiring", () => {
     );
     expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.host).toBe(
       "agent-42.agents.example.com"
+    );
+    expect(mapHermesAgent(hermesAgent).endpoint).toBe(
+      "http://agent-42.agents.example.com"
+    );
+  });
+});
+
+describe("buildAgentEndpoint", () => {
+  const ENV_VARS = [
+    "HERMEUM_AGENT_INGRESS_SCHEME",
+    "HERMEUM_AGENT_INGRESS_BASE_HOSTNAME",
+  ];
+  const ORIGINAL: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const k of ENV_VARS) ORIGINAL[k] = process.env[k];
+  });
+
+  afterEach(() => {
+    for (const k of ENV_VARS) {
+      if (ORIGINAL[k] === undefined) delete process.env[k];
+      else process.env[k] = ORIGINAL[k];
+    }
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  async function importFresh(): Promise<typeof import("./client")> {
+    vi.resetModules();
+    return (await import("./client")) as typeof import("./client");
+  }
+
+  function makeHermesAgentWithIngress(host: string | undefined): HermesAgent {
+    return {
+      spec: {
+        networking: {
+          ingress: {
+            enabled: true,
+            hosts: host
+              ? [{ host, paths: [{ path: "/api", pathType: "Prefix", port: 8642 }] }]
+              : undefined,
+          },
+        },
+      },
+    } as unknown as HermesAgent;
+  }
+
+  it("returns the scheme + host URL when an ingress host is present", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { buildAgentEndpoint } = await importFresh();
+    expect(buildAgentEndpoint(makeHermesAgentWithIngress("agent-1.agents.example.com"))).toBe(
+      "http://agent-1.agents.example.com"
+    );
+  });
+
+  it("returns null when the CR has no ingress host", async () => {
+    const { buildAgentEndpoint } = await importFresh();
+    expect(buildAgentEndpoint(makeHermesAgentWithIngress(undefined))).toBeNull();
+  });
+
+  it("returns null when the CR has no networking.ingress at all", async () => {
+    const { buildAgentEndpoint } = await importFresh();
+    expect(buildAgentEndpoint({ spec: {} } as unknown as HermesAgent)).toBeNull();
+  });
+
+  it("honours agentIngressScheme when set to https", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_SCHEME", "https");
+    const { buildAgentEndpoint } = await importFresh();
+    expect(buildAgentEndpoint(makeHermesAgentWithIngress("agent-1.agents.example.com"))).toBe(
+      "https://agent-1.agents.example.com"
     );
   });
 });
