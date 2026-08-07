@@ -1,13 +1,24 @@
 import { Router } from "express";
 import { createOpenAI } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText, UIMessage } from "ai";
+import { convertToModelMessages, streamText, UIMessage, type ToolSet as AiToolSet } from "ai";
 import { fromNodeHeaders } from "better-auth/node";
 import { z } from "zod";
 
-import { AgentInputObjectSchema } from "@/entities";
+import { AgentInputObjectSchema, type ToolSet } from "@/entities";
 import { config } from "@/server/libs/config";
 import { auth } from "@/server/routers/better-auth/auth.js";
 import { ChatUseCase } from "@/server/usecases/chat";
+
+// Adapts the framework-neutral ToolSet (entity) into ai-sdk's ToolSet at the
+// framework boundary. ai-sdk's `tool()` is an identity at runtime; the entity
+// Tool's shape (description + inputSchema + optional execute) is structurally
+// compatible with ai-sdk's FunctionTool, so a cast is sufficient and avoids the
+// `tool()` factory's INPUT-inference overloads (which can't recover a specific
+// INPUT from a ToolSet element widened to `Tool<any>`). Use cases depend only
+// on the entity port; ai-sdk stays confined to this router.
+function toAiToolSet(tools: ToolSet): AiToolSet {
+  return tools as unknown as AiToolSet;
+}
 
 const ChatRequestSchema = z.object({
   messages: z.array(z.custom<UIMessage>()),
@@ -53,7 +64,7 @@ aiSdkRouter.post("/agent-config", async (req, res) => {
     model: model(),
     system: `${instructions}\n\n${prompt}`,
     messages: await convertToModelMessages(parsed.data.messages),
-    tools,
+    tools: toAiToolSet(tools),
     // AgentInputObjectSchema uses looseObject/record/optionals, which strict
     // JSON schema mode rejects; Responses API models default it to true.
     providerOptions: {
