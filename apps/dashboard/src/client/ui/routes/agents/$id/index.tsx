@@ -194,9 +194,9 @@ function PlatformsSection({ agent }: { agent: Agent }) {
           />
           <TooltipContent>
             <div className="max-w-xs">
-              Hermeum manages API Server, Webhook, and Slack. Other Hermes
-              platforms (e.g. Telegram, Discord, WhatsApp) can be wired via the
-              Configuration editor above.
+              Only platforms managed by Hermeum are shown here. Other Hermes
+              platforms (e.g. Telegram, Discord, WhatsApp) are also available
+              and can be wired via the Configuration editor above.
             </div>
           </TooltipContent>
         </Tooltip>
