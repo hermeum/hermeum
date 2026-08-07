@@ -2,6 +2,11 @@ import { SkillIndexAdaptor, SkillSearchResult } from "../usecases/adaptors/skill
 
 const INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json";
 const CACHE_TTL_MS = 6 * 3600 * 1000;
+// Community skills are unvetted (some sources have malformed `name` fields), so
+// exposing them in the chat agent's searchSkills tool risks surfacing low-quality
+// or abusive prompts. Limiting to `builtin` + `trusted` keeps the agent's skill
+// catalog curated.
+// https://github.com/hermeum/hermeum/pull/80
 const ALLOWED_TRUST_LEVELS = new Set(["builtin", "trusted"]);
 
 export interface SkillIndexEntry {
