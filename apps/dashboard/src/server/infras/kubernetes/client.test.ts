@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import {
   agentEnvResourceName,
@@ -467,5 +467,166 @@ describe("agentToHermesAgent podAnnotations wiring", () => {
     const a = agentToHermesAgent(makeAgent({ env: [{ name: "REGION", value: "us-east-1" }] }));
     const b = agentToHermesAgent(makeAgent({ env: [{ name: "REGION", value: "us-west-2" }] }));
     expect(a.spec.podAnnotations).not.toEqual(b.spec.podAnnotations);
+  });
+});
+
+// `config` is a module-level singleton parsed at import time from process.env, so
+// the ingress tests below vary HERMEUM_INGRESS_* env vars per case by stubbing
+// env, resetting the module registry, and dynamically importing a fresh copy of
+// agentToHermesAgent that re-reads config. The static top-level import is left
+// in place for the existing describe blocks, which don't depend on the new vars
+// (ingressBaseHostname defaults to undefined → no ingress emitted).
+describe("agentToHermesAgent ingress wiring", () => {
+  const ENV_VARS = [
+    "HERMEUM_INGRESS_SCHEME",
+    "HERMEUM_INGRESS_BASE_HOSTNAME",
+    "HERMEUM_INGRESS_CLASS_NAME",
+    "HERMEUM_INGRESS_TLS_SECRET_NAME",
+  ];
+  const ORIGINAL: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const k of ENV_VARS) ORIGINAL[k] = process.env[k];
+  });
+
+  afterEach(() => {
+    for (const k of ENV_VARS) {
+      if (ORIGINAL[k] === undefined) delete process.env[k];
+      else process.env[k] = ORIGINAL[k];
+    }
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  async function importFresh(): Promise<typeof import("./client")> {
+    vi.resetModules();
+    return (await import("./client")) as typeof import("./client");
+  }
+
+  it("omits networking.ingress when no base hostname is configured", async () => {
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress).toBeUndefined();
+  });
+
+  it("emits all four routes when both api-server and webhook are enabled", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "WEBHOOK_ENABLED", value: "true" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress).toEqual({
+      enabled: true,
+      annotations: {},
+      hosts: [
+        {
+          host: "agent-1.agents.example.com",
+          paths: [
+            { path: "/webhooks", pathType: "Prefix", port: 8644 },
+            { path: "/api", pathType: "Prefix", port: 8642 },
+            { path: "/v1", pathType: "Prefix", port: 8642 },
+            { path: "/health", pathType: "Prefix", port: 8642 },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("includes only the api-server routes when only api-server is enabled", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
+      { path: "/api", pathType: "Prefix", port: 8642 },
+      { path: "/v1", pathType: "Prefix", port: 8642 },
+      { path: "/health", pathType: "Prefix", port: 8642 },
+    ]);
+  });
+
+  it("includes only the webhook route when only webhook is enabled", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "WEBHOOK_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
+      { path: "/webhooks", pathType: "Prefix", port: 8644 },
+    ]);
+  });
+
+  it("emits a tls block with hosts but no secretName when scheme=https and no secret configured", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_INGRESS_SCHEME", "https");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.tls).toEqual([
+      { hosts: ["agent-1.agents.example.com"] },
+    ]);
+  });
+
+  it("includes secretName in the tls block when scheme=https and a tls secret is configured", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_INGRESS_SCHEME", "https");
+    vi.stubEnv("HERMEUM_INGRESS_TLS_SECRET_NAME", "agent-tls");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.tls).toEqual([
+      { hosts: ["agent-1.agents.example.com"], secretName: "agent-tls" },
+    ]);
+  });
+
+  it("omits tls entirely when scheme=http (default)", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.tls).toBeUndefined();
+  });
+
+  it("reflects ingressClassName on className when configured", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_INGRESS_CLASS_NAME", "nginx");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.className).toBe("nginx");
+  });
+
+  it("leaves className undefined when ingressClassName is not configured", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.className).toBeUndefined();
+  });
+
+  it("builds the host from the agent id and base hostname", async () => {
+    vi.stubEnv("HERMEUM_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        id: "agent-42",
+        env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.host).toBe(
+      "agent-42.agents.example.com"
+    );
   });
 });

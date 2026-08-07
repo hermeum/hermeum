@@ -16,6 +16,10 @@ export const ConfigSchema = z.object({
   openaiModel: z.string().min(1).default("gpt-5.5"),
   openaiBaseUrl: z.url().optional(),
   debugMode: z.preprocess((v) => v === "true", z.boolean()).default(false),
+  ingressScheme: z.enum(["http", "https"]).default("http"),
+  ingressBaseHostname: z.string().optional(),
+  ingressClassName: z.string().optional(),
+  ingressTlsSecretName: z.string().optional(),
 });
 
 export const config = ConfigSchema.parse({
@@ -31,4 +35,8 @@ export const config = ConfigSchema.parse({
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
   debugMode: process.env.HERMEUM_DEBUG_MODE,
+  ingressScheme: process.env.HERMEUM_INGRESS_SCHEME,
+  ingressBaseHostname: process.env.HERMEUM_INGRESS_BASE_HOSTNAME,
+  ingressClassName: process.env.HERMEUM_INGRESS_CLASS_NAME,
+  ingressTlsSecretName: process.env.HERMEUM_INGRESS_TLS_SECRET_NAME,
 });

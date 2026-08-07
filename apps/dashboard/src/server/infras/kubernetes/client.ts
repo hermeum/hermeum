@@ -30,6 +30,8 @@ import {
   HermesAgentList,
   HermesAgentSpec,
   HermesConfig,
+  Ingress,
+  IngressPath,
   ServicePort,
 } from "./types/hermes-agent";
 
@@ -202,8 +204,47 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       protocol: "TCP",
     });
   }
+  // Ingress is generated only when the operator configures a base hostname —
+  // routing inbound traffic from message platforms (api-server, webhook) to
+  // the agent's Service. Host takes the form <agent-id>.<base-hostname>.
+  let ingress: Ingress | undefined;
+  if (servicePorts.length > 0 && config.ingressBaseHostname !== undefined) {
+    const host = `${agent.id}.${config.ingressBaseHostname}`;
+    const ingressPaths: IngressPath[] = [];
+    if (webhookPort !== null) {
+      ingressPaths.push({ path: "/webhooks", pathType: "Prefix", port: webhookPort });
+    }
+    if (apiServerPort !== null) {
+      ingressPaths.push(
+        { path: "/api", pathType: "Prefix", port: apiServerPort },
+        { path: "/v1", pathType: "Prefix", port: apiServerPort },
+        { path: "/health", pathType: "Prefix", port: apiServerPort }
+      );
+    }
+    ingress = {
+      enabled: true,
+      ...(config.ingressClassName !== undefined && { className: config.ingressClassName }),
+      annotations: {},
+      hosts: [{ host, paths: ingressPaths }],
+      ...(config.ingressScheme === "https" && {
+        tls: [
+          {
+            hosts: [host],
+            ...(config.ingressTlsSecretName !== undefined && {
+              secretName: config.ingressTlsSecretName,
+            }),
+          },
+        ],
+      }),
+    };
+  }
   const networking =
-    servicePorts.length > 0 ? { service: { ports: servicePorts } } : undefined;
+    servicePorts.length > 0
+      ? {
+          service: { ports: servicePorts },
+          ...(ingress !== undefined && { ingress }),
+        }
+      : undefined;
   if (agent.sharedEnvSets !== undefined) {
     hermes.envFrom = agent.sharedEnvSets.map((name) => ({ secretRef: { name } }));
   }
