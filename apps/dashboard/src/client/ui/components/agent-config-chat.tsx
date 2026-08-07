@@ -50,6 +50,11 @@ interface AgentConfigChatProps {
   getConfig: () => AgentInput | undefined;
   // Receives config from AI tool calls.
   onConfigUpdate: (config: AgentInput) => void;
+  // Shown in the empty-state hero. Defaults to new-agent copy.
+  emptyTitle?: string;
+  emptyDescription?: string;
+  // Placeholder for the composer when there are no messages yet.
+  emptyPlaceholder?: string;
 }
 
 // Renders the lifecycle of any tool call as a single inline status marker.
@@ -104,7 +109,13 @@ function ToolMarker({
   );
 }
 
-export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatProps) {
+export function AgentConfigChat({
+  getConfig,
+  onConfigUpdate,
+  emptyTitle = "What should your agent do?",
+  emptyDescription = "Describe your agent or start with a template.",
+  emptyPlaceholder = "Describe your agent…",
+}: AgentConfigChatProps) {
   const [input, setInput] = useState("");
 
   // Latest-ref so the onToolCall closure (captured once by the Chat
@@ -165,8 +176,8 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
           <div className="text-center">
-            <h2 className="text-lg font-semibold tracking-tight">What should your agent do?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Describe your agent or start with a template.</p>
+            <h2 className="text-lg font-semibold tracking-tight">{emptyTitle}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{emptyDescription}</p>
           </div>
         </div>
       ) : (
@@ -320,7 +331,7 @@ export function AgentConfigChat({ getConfig, onConfigUpdate }: AgentConfigChatPr
               handleSend();
             }
           }}
-          placeholder={messages.length === 0 ? "Describe your agent…" : "Reply…"}
+          placeholder={messages.length === 0 ? emptyPlaceholder : "Reply…"}
           className="min-h-16 border-transparent px-0 py-0 focus-visible:border-transparent"
         />
         <div className="flex justify-end">

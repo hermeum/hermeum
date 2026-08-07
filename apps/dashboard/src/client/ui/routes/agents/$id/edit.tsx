@@ -80,6 +80,14 @@ function EditAgentPage() {
     setValidationError(null);
   }
 
+  const editChatProps = {
+    getConfig,
+    onConfigUpdate: handleConfigUpdate,
+    emptyTitle: "What should change?",
+    emptyDescription: "Describe the change to make.",
+    emptyPlaceholder: "Describe the change…",
+  };
+
   function handleSave() {
     let parsed: Record<string, unknown>;
     try {
@@ -154,7 +162,7 @@ function EditAgentPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-6 lg:hidden">
         <div className="flex min-h-0 flex-1 flex-col">{configPane}</div>
         <div className="flex min-h-0 flex-1 flex-col">
-          <AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />
+          <AgentConfigChat {...editChatProps} />
         </div>
       </div>
 
@@ -166,7 +174,7 @@ function EditAgentPage() {
         {/* Chat pane */}
         <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
           <div className="flex h-full min-h-0 flex-col pr-3">
-            <AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />
+            <AgentConfigChat {...editChatProps} />
           </div>
         </ResizablePanel>
         <ResizableHandle
