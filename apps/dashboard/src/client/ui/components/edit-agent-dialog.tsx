@@ -88,7 +88,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[min(600px,calc(100dvh-4rem))]">
+      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[min(850px,calc(100dvh-4rem))]">
         <DialogHeader>
           <DialogTitle>Edit agent</DialogTitle>
           <DialogDescription>
@@ -102,7 +102,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
             value={editorValue}
             onChange={setEditorValue}
             invalid={!!validationError}
-            maxHeight="360px"
+            maxHeight="450px"
           />
           {validationError && <p className="text-sm text-destructive">{validationError}</p>}
         </div>
