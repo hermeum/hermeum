@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ToolExecutionOptions } from "ai";
+import type { ToolExecutionOptions } from "@/entities";
 import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
@@ -81,7 +81,7 @@ function makeFiles(
   };
 }
 
-const callOptions = {} as ToolExecutionOptions<never>;
+const callOptions = {} as ToolExecutionOptions;
 
 function makeSkillIndex(results: SkillSearchResult[] = []): SkillIndexAdaptor {
   return {
