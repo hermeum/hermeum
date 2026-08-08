@@ -281,7 +281,7 @@ function AgentDetailPage() {
             {agent.archived ? (
               <Badge variant="secondary">Archived</Badge>
             ) : (
-              <PhaseBadge phase={agent.phase} />
+              <PhaseBadge phase={agent.phase} reason={agent.reason} />
             )}
           </div>
           <div className="group flex items-center gap-1">

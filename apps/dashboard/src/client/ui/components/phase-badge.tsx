@@ -18,10 +18,11 @@ function phaseClass(phase: AgentPhase | undefined): string {
 
 interface PhaseBadgeProps {
   phase: AgentPhase | undefined;
+  reason?: string | undefined;
   className?: string;
 }
 
-export function PhaseBadge({ phase, className }: PhaseBadgeProps) {
+export function PhaseBadge({ phase, reason, className }: PhaseBadgeProps) {
   if (!phase) return null;
   return (
     <span
@@ -32,6 +33,7 @@ export function PhaseBadge({ phase, className }: PhaseBadgeProps) {
       )}
     >
       {phase}
+      {reason && <span className="font-normal opacity-80">&nbsp;by&nbsp;{reason}</span>}
     </span>
   );
 }

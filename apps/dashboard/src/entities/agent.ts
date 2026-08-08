@@ -656,6 +656,7 @@ export const AgentSchema = AgentInputObjectSchema.extend({
   suspended: z.boolean().optional(),
   archived: z.boolean().optional(),
   phase: AgentPhaseSchema.optional(),
+  reason: z.string().optional(),
   // Public base URL of the agent's ingress. Output-only; null when no ingress.
   endpoint: z.string().url().nullable().optional(),
   createdAt: z.date().optional(),
