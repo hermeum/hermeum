@@ -159,15 +159,15 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
       >
         {label}
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
           {endpoints !== undefined && endpoints.length > 0 && (
             <div className="mt-1 flex flex-col gap-1">
               {endpoints.map((url) => (
-                <div key={url} className="group flex items-center gap-1">
-                  <span className="font-mono">{url}</span>
-                  <CopyButton text={url} className="opacity-0 group-hover:opacity-100" />
+                <div key={url} className="group flex min-w-0 items-center gap-1">
+                  <span className="min-w-0 break-all font-mono">{url}</span>
+                  <CopyButton text={url} className="shrink-0 opacity-0 group-hover:opacity-100" />
                 </div>
               ))}
             </div>
