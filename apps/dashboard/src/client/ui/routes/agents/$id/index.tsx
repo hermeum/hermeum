@@ -25,7 +25,7 @@ import {
 } from "@/entities";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
-import { EditInstanceDialog } from "@/client/ui/components/edit-agent-dialog";
+import { EditInstanceDialog } from "./_components/edit-agent-dialog";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
