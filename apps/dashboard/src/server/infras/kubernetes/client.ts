@@ -8,6 +8,8 @@ import {
   ENV_SECRET_SENTINEL,
   Env,
   EnvVar,
+  PLATFORM_INGRESS_SUBPATHS,
+  PlatformId,
   SharedEnvSet,
   SharedEnvSetEnvVar,
   getApiServerPort,
@@ -212,14 +214,17 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     const host = `${agent.id}.${config.agentIngressBaseHostname}`;
     const ingressPaths: IngressPath[] = [];
     if (webhookPort !== null) {
-      ingressPaths.push({ path: "/webhooks", pathType: "Prefix", port: webhookPort });
+      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.Webhook] ?? []) {
+        ingressPaths.push({ path, pathType: "Prefix", port: webhookPort });
+      }
     }
     if (apiServerPort !== null) {
-      ingressPaths.push(
-        { path: "/api", pathType: "Prefix", port: apiServerPort },
-        { path: "/v1", pathType: "Prefix", port: apiServerPort },
-        { path: "/health", pathType: "Prefix", port: apiServerPort }
-      );
+      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.ApiServer] ?? []) {
+        ingressPaths.push({ path, pathType: "Prefix", port: apiServerPort });
+      }
+      // /health is an infra health probe, not a messaging endpoint — kept
+      // local to the ingress builder (not surfaced in the UI subpath map).
+      ingressPaths.push({ path: "/health", pathType: "Prefix", port: apiServerPort });
     }
     ingress = {
       enabled: true,

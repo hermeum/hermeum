@@ -688,6 +688,33 @@ describe("derivePlatformAvailability", () => {
       );
       expect(result).toEqual({ status: "available", port: 9000 });
     });
+
+    it("derives endpoints with /v1 first then /api when agent.endpoint is set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          endpoint: "https://a1.example.com",
+          env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+        })
+      );
+      expect(result.endpoints).toEqual([
+        "https://a1.example.com/v1",
+        "https://a1.example.com/api",
+      ]);
+    });
+
+    it("omits endpoints when agent.endpoint is null", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+      );
+      expect(result.endpoints).toBeUndefined();
+    });
+
+    it("omits endpoints when unavailable", () => {
+      const result = derivePlatformAvailability(PlatformId.ApiServer, makeAgent());
+      expect(result.endpoints).toBeUndefined();
+    });
   });
 
   describe("webhook", () => {
@@ -724,6 +751,25 @@ describe("derivePlatformAvailability", () => {
         })
       );
       expect(result).toEqual({ status: "available", port: 9001 });
+    });
+
+    it("derives the /webhooks endpoint when agent.endpoint is set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({
+          endpoint: "https://a1.example.com",
+          config: { platforms: { webhook: { enabled: true } } },
+        })
+      );
+      expect(result.endpoints).toEqual(["https://a1.example.com/webhooks"]);
+    });
+
+    it("omits endpoints when agent.endpoint is null even when enabled", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+      );
+      expect(result.endpoints).toBeUndefined();
     });
 
     it("is unavailable via config even when the WEBHOOK_ENABLED env var is set", () => {
@@ -773,6 +819,14 @@ describe("derivePlatformAvailability", () => {
     it("is available with no home when all three required env vars are set", () => {
       const result = derivePlatformAvailability(PlatformId.Slack, makeAgent({ env: slackEnv }));
       expect(result).toEqual({ status: "available" });
+    });
+
+    it("never exposes endpoints — Slack uses Socket Mode", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Slack,
+        makeAgent({ endpoint: "https://a1.example.com", env: slackEnv })
+      );
+      expect(result.endpoints).toBeUndefined();
     });
 
     it("treats the <secret> sentinel for sensitive tokens as set", () => {

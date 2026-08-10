@@ -530,8 +530,8 @@ describe("agentToHermesAgent ingress wiring", () => {
           host: "agent-1.agents.example.com",
           paths: [
             { path: "/webhooks", pathType: "Prefix", port: 8644 },
-            { path: "/api", pathType: "Prefix", port: 8642 },
             { path: "/v1", pathType: "Prefix", port: 8642 },
+            { path: "/api", pathType: "Prefix", port: 8642 },
             { path: "/health", pathType: "Prefix", port: 8642 },
           ],
         },
@@ -546,8 +546,8 @@ describe("agentToHermesAgent ingress wiring", () => {
       makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
     );
     expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/api", pathType: "Prefix", port: 8642 },
       { path: "/v1", pathType: "Prefix", port: 8642 },
+      { path: "/api", pathType: "Prefix", port: 8642 },
       { path: "/health", pathType: "Prefix", port: 8642 },
     ]);
   });
