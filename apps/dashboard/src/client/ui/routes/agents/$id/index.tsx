@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
 import { useTRPC } from "@/router";
 import {
   TOOL_IDS,
@@ -140,12 +141,12 @@ function ToolsSection({ agent }: { agent: Agent }) {
 }
 
 function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
-  const { status, reason, port, home } = derivePlatformAvailability(id, agent);
+  const { status, reason, home, endpoints } = derivePlatformAvailability(id, agent);
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
-    <Tooltip>
-      <TooltipTrigger
+    <Popover>
+      <PopoverTrigger
         render={
           <Button
             variant="outline"
@@ -157,17 +158,23 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
         }
       >
         {label}
-        {status === "available" && port !== undefined && (
-          <span className="text-muted-foreground"> · port {port}</span>
-        )}
-        {status === "available" && home !== undefined && (
-          <span className="text-muted-foreground"> · home {home}</span>
-        )}
-      </TooltipTrigger>
-      <TooltipContent>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
-          {port !== undefined && <span>Port: {port}</span>}
+          {endpoints !== undefined && endpoints.length > 0 && (
+            <div className="mt-1 flex flex-col gap-1">
+              {endpoints.map((url) => (
+                <div key={url} className="group flex min-w-0 items-center gap-1">
+                  <span className="min-w-0 break-all font-mono">{url}</span>
+                  <CopyButton text={url} className="shrink-0 opacity-0 group-hover:opacity-100" />
+                </div>
+              ))}
+            </div>
+          )}
+          {status === "available" && id === "slack" && endpoints === undefined && (
+            <span className="opacity-80">Socket Mode — no public endpoint.</span>
+          )}
           {home !== undefined && <span>Home channel: {home}</span>}
           {reason && (
             <span className="capitalize opacity-80">
@@ -175,8 +182,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
             </span>
           )}
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -200,13 +207,11 @@ function PlatformsSection({ agent }: { agent: Agent }) {
           </TooltipContent>
         </Tooltip>
       </div>
-      <TooltipProvider>
-        <div className="flex flex-wrap gap-2">
-          {PLATFORM_IDS.map((id) => (
-            <PlatformBadge key={id} id={id} agent={agent} />
-          ))}
-        </div>
-      </TooltipProvider>
+      <div className="flex flex-wrap gap-2">
+        {PLATFORM_IDS.map((id) => (
+          <PlatformBadge key={id} id={id} agent={agent} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -290,12 +295,6 @@ function AgentDetailPage() {
           </div>
           {agent.description && (
             <p className="text-sm text-muted-foreground mt-1">{agent.description}</p>
-          )}
-          {agent.endpoint && (
-            <div className="group mt-1 flex items-center gap-1">
-              <span className="text-sm text-muted-foreground font-mono">{agent.endpoint}</span>
-              <CopyButton text={agent.endpoint} className="opacity-0 group-hover:opacity-100" />
-            </div>
           )}
           {agent.type && (
             <p className="text-sm text-muted-foreground mt-1">

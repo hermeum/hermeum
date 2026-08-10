@@ -562,7 +562,29 @@ export interface PlatformAvailability {
   port?: number;
   /** Home channel for chat platforms (slack only), if configured. */
   home?: string;
+  /**
+   * Fully-qualified endpoint URLs for this platform (base + subpath).
+   * For ingress endpoints the base carries no port (routing is by path).
+   * For internal (`*.svc.cluster.local`) endpoints the per-platform port is
+   * inserted before the subpath. Absent when the platform has no inbound HTTP
+   * surface (e.g. Slack Socket Mode) or when `agent.endpoint` is null.
+   */
+  endpoints?: string[];
 }
+
+/**
+ * Ingress subpaths per platform, ordered by display priority.
+ * `/health` is intentionally excluded — it is an infra health probe, not a
+ * messaging endpoint users interact with. Single source of truth for both
+ * the UI (`derivePlatformAvailability`) and the ingress builder
+ * (`server/infras/kubernetes/client.ts`).
+ */
+export const PLATFORM_INGRESS_SUBPATHS: Partial<Record<PlatformId, string[]>> = {
+  // /v1 is the main OpenAI-compatible path; /api is the generic alias.
+  [PlatformId.ApiServer]: ["/v1", "/api"],
+  [PlatformId.Webhook]: ["/webhooks"],
+  // Slack uses Socket Mode — no inbound HTTP subpath.
+};
 
 interface PlatformMeta {
   label: string;
@@ -603,13 +625,19 @@ const SLACK_REQUIRED_ENV_VARS = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_AL
 
 export function derivePlatformAvailability(id: PlatformId, agent: Agent): PlatformAvailability {
   const env = agent.env ?? [];
+  const subpaths = PLATFORM_INGRESS_SUBPATHS[id];
 
   switch (id) {
     case PlatformId.ApiServer: {
       if (!isApiServerEnabled(agent)) {
         return { status: "unavailable", reason: "Set API_SERVER_ENABLED=true to enable." };
       }
-      return { status: "available", port: getApiServerPort(agent) };
+      const port = getApiServerPort(agent);
+      return {
+        status: "available",
+        port,
+        ...endpointsFor(agent.endpoint, subpaths, port),
+      };
     }
     case PlatformId.Webhook: {
       if (!isWebhookEnabled(agent)) {
@@ -618,7 +646,12 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
           reason: "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled).",
         };
       }
-      return { status: "available", port: getWebhookPort(agent) };
+      const port = getWebhookPort(agent);
+      return {
+        status: "available",
+        port,
+        ...endpointsFor(agent.endpoint, subpaths, port),
+      };
     }
     case PlatformId.Slack: {
       const isSet = (name: string) =>
@@ -638,6 +671,28 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       return { status: "available" };
     }
   }
+}
+
+/**
+ * Spread helper: returns `{ endpoints }` when both a base endpoint and at
+ * least one subpath are present, otherwise `{}` (so the field stays absent).
+ *
+ * Internal endpoints (base containing `.svc.cluster.local`) need the
+ * per-platform port inserted before the subpath, since each platform listens
+ * on its own port. Ingress endpoints route by path on a single host, so no
+ * port is inserted.
+ */
+function endpointsFor(
+  endpoint: string | null | undefined,
+  subpaths: readonly string[] | undefined,
+  port: number | undefined,
+): { endpoints?: string[] } {
+  if (!endpoint || !subpaths || subpaths.length === 0) return {};
+  if (endpoint.includes(".svc.cluster.local")) {
+    if (port === undefined) return {};
+    return { endpoints: subpaths.map((p) => `${endpoint}:${port}${p}`) };
+  }
+  return { endpoints: subpaths.map((p) => `${endpoint}${p}`) };
 }
 
 export const AgentPhaseSchema = z.enum([
