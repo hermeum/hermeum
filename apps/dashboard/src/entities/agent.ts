@@ -664,128 +664,230 @@ export const AgentSchema = AgentInputObjectSchema.extend({
 
 export type Agent = z.infer<typeof AgentSchema>;
 
-// Tool availability — a derived, read-only view of which Hermes tools are
-// usable for an agent, computed from its config + env. Not persisted.
+// Toolset enabled state — a derived, read-only view of which Hermes toolsets
+// are enabled for an agent, computed from its config + env. Not persisted.
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/tools
+//
+// The catalog mirrors Hermes' CONFIGURABLE_TOOLSETS
+// (vendor/hermes-agent/hermes_cli/tools_config.py): the 25 built-in toolsets
+// in the same order. Plugin toolsets and platform-native toolsets outside
+// CONFIGURABLE_TOOLSETS are not listed here.
 
-export enum ToolId {
+export enum ToolsetId {
   Web = "web",
-  XSearch = "x-search",
+  Browser = "browser",
   Terminal = "terminal",
   File = "file",
-  Browser = "browser",
+  CodeExecution = "codeExecution",
+  Vision = "vision",
+  Video = "video",
+  ImageGen = "imageGen",
+  VideoGen = "videoGen",
+  XSearch = "xSearch",
+  Tts = "tts",
+  Skills = "skills",
+  Todo = "todo",
   Memory = "memory",
-  Cron = "cron",
-  Mcp = "mcp",
-  // Media = "media", // TBD — media toolset shape not finalized yet.
+  ContextEngine = "contextEngine",
+  SessionSearch = "sessionSearch",
+  Clarify = "clarify",
+  Delegation = "delegation",
+  Cronjob = "cronjob",
+  HomeAssistant = "homeAssistant",
+  Spotify = "spotify",
+  Discord = "discord",
+  DiscordAdmin = "discordAdmin",
+  Yuanbao = "yuanbao",
+  ComputerUse = "computerUse",
 }
 
-export type ToolStatus = "available" | "unavailable";
+export type ToolsetStatus = "enabled" | "disabled";
 
-export interface ToolAvailability {
-  status: ToolStatus;
-  /** Short explanation shown when status is not "available". */
+export interface ToolsetAvailability {
+  status: ToolsetStatus;
+  /** Short explanation shown when status is not "enabled". */
   reason?: string;
 }
 
-interface ToolMeta {
+interface ToolsetMeta {
   label: string;
   description: string;
 }
 
-const TOOL_META: Record<ToolId, ToolMeta> = {
-  [ToolId.Web]: {
+const TOOLSET_META: Record<ToolsetId, ToolsetMeta> = {
+  [ToolsetId.Web]: {
     label: "Web",
     description: "Search the web and extract page content.",
   },
-  [ToolId.XSearch]: {
-    label: "X Search",
-    description: "Search X (Twitter) posts via xAI.",
-  },
-  [ToolId.Terminal]: {
-    label: "Terminal",
-    description: "Execute shell commands.",
-  },
-  [ToolId.File]: {
-    label: "File",
-    description: "Read, edit, and search files.",
-  },
-  [ToolId.Browser]: {
+  [ToolsetId.Browser]: {
     label: "Browser",
     description: "Interactive browser automation.",
   },
-  [ToolId.Memory]: {
+  [ToolsetId.Terminal]: {
+    label: "Terminal",
+    description: "Execute shell commands.",
+  },
+  [ToolsetId.File]: {
+    label: "File",
+    description: "Read, edit, and search files.",
+  },
+  [ToolsetId.CodeExecution]: {
+    label: "Code Execution",
+    description: "Run code in an isolated sandbox.",
+  },
+  [ToolsetId.Vision]: {
+    label: "Vision",
+    description: "Analyze images with a vision-capable model.",
+  },
+  [ToolsetId.Video]: {
+    label: "Video",
+    description: "Analyze video with a video-capable model.",
+  },
+  [ToolsetId.ImageGen]: {
+    label: "Image Generation",
+    description: "Generate images from text prompts.",
+  },
+  [ToolsetId.VideoGen]: {
+    label: "Video Generation",
+    description: "Generate video from text, image, or reference input.",
+  },
+  [ToolsetId.XSearch]: {
+    label: "X Search",
+    description: "Search X (Twitter) posts via xAI.",
+  },
+  [ToolsetId.Tts]: {
+    label: "Text-to-Speech",
+    description: "Convert text to spoken audio.",
+  },
+  [ToolsetId.Skills]: {
+    label: "Skills",
+    description: "List, view, and manage installed skills.",
+  },
+  [ToolsetId.Todo]: {
+    label: "Todo",
+    description: "Track and plan tasks within a conversation.",
+  },
+  [ToolsetId.Memory]: {
     label: "Memory",
-    description: "Persistent memory and recall.",
+    description: "Persistent memory and recall across sessions.",
   },
-  [ToolId.Cron]: {
+  [ToolsetId.ContextEngine]: {
+    label: "Context Engine",
+    description: "Runtime tools from the active context engine.",
+  },
+  [ToolsetId.SessionSearch]: {
+    label: "Session Search",
+    description: "Search past conversation sessions.",
+  },
+  [ToolsetId.Clarify]: {
+    label: "Clarify",
+    description: "Ask the user clarifying questions.",
+  },
+  [ToolsetId.Delegation]: {
+    label: "Delegation",
+    description: "Delegate tasks to subagents.",
+  },
+  [ToolsetId.Cronjob]: {
     label: "Cron",
-    description: "Scheduled tasks.",
+    description: "Schedule and manage recurring jobs.",
   },
-  [ToolId.Mcp]: {
-    label: "MCP",
-    description: "MCP server integrations.",
+  [ToolsetId.HomeAssistant]: {
+    label: "Home Assistant",
+    description: "Control smart home devices via Home Assistant.",
+  },
+  [ToolsetId.Spotify]: {
+    label: "Spotify",
+    description: "Control Spotify playback, playlists, and library.",
+  },
+  [ToolsetId.Discord]: {
+    label: "Discord",
+    description: "Read and participate in Discord channels.",
+  },
+  [ToolsetId.DiscordAdmin]: {
+    label: "Discord Admin",
+    description: "Administer Discord servers: channels, roles, pins.",
+  },
+  [ToolsetId.Yuanbao]: {
+    label: "Yuanbao",
+    description: "Query Yuanbao groups, members, and DMs.",
+  },
+  [ToolsetId.ComputerUse]: {
+    label: "Computer Use",
+    description: "Drive the desktop via cua-driver on macOS, Windows, or Linux.",
   },
 };
 
-export function getToolLabel(id: ToolId): string {
-  return TOOL_META[id].label;
+export function getToolsetLabel(id: ToolsetId): string {
+  return TOOLSET_META[id].label;
 }
 
-export function getToolDescription(id: ToolId): string {
-  return TOOL_META[id].description;
+export function getToolsetDescription(id: ToolsetId): string {
+  return TOOLSET_META[id].description;
 }
 
-/** Ordered tool list for UI rendering. */
-export const TOOL_IDS: readonly ToolId[] = [
-  ToolId.Web,
-  ToolId.XSearch,
-  ToolId.Terminal,
-  ToolId.File,
-  ToolId.Browser,
-  ToolId.Memory,
-  ToolId.Cron,
-  ToolId.Mcp,
+/** Ordered toolset list for UI rendering. Mirrors CONFIGURABLE_TOOLSETS order. */
+export const TOOLSET_IDS: readonly ToolsetId[] = [
+  ToolsetId.Web,
+  ToolsetId.Browser,
+  ToolsetId.Terminal,
+  ToolsetId.File,
+  ToolsetId.CodeExecution,
+  ToolsetId.Vision,
+  ToolsetId.Video,
+  ToolsetId.ImageGen,
+  ToolsetId.VideoGen,
+  ToolsetId.XSearch,
+  ToolsetId.Tts,
+  ToolsetId.Skills,
+  ToolsetId.Todo,
+  ToolsetId.Memory,
+  ToolsetId.ContextEngine,
+  ToolsetId.SessionSearch,
+  ToolsetId.Clarify,
+  ToolsetId.Delegation,
+  ToolsetId.Cronjob,
+  ToolsetId.HomeAssistant,
+  ToolsetId.Spotify,
+  ToolsetId.Discord,
+  ToolsetId.DiscordAdmin,
+  ToolsetId.Yuanbao,
+  ToolsetId.ComputerUse,
 ];
 
-export function deriveToolAvailability(id: ToolId, agent: Agent): ToolAvailability {
+export function deriveToolsetEnabled(id: ToolsetId, agent: Agent): ToolsetAvailability {
   const config = agent.config;
   const env = agent.env ?? [];
 
   switch (id) {
-    case ToolId.Web: {
+    case ToolsetId.Web: {
       const hasBackend = !!(
         config?.web?.backend ??
         config?.web?.search_backend ??
         config?.web?.extract_backend
       );
       return hasBackend
-        ? { status: "available" }
-        : { status: "unavailable", reason: "No web backend configured." };
+        ? { status: "enabled" }
+        : { status: "disabled", reason: "No web backend configured." };
     }
-    case ToolId.XSearch: {
+    case ToolsetId.XSearch: {
       // Gated on xAI credentials; off by default.
       const hasXaiKey = env.some((v) => v.name === "XAI_API_KEY" && v.value.trim() !== "");
       const xaiBackend = config?.web?.search_backend === "xai";
       return hasXaiKey || xaiBackend
-        ? { status: "available" }
+        ? { status: "enabled" }
         : {
-            status: "unavailable",
+            status: "disabled",
             reason: "Set XAI_API_KEY to opt in.",
           };
     }
-    case ToolId.Browser: {
+    case ToolsetId.Browser: {
       return config?.browser?.cloud_provider
-        ? { status: "available" }
-        : { status: "unavailable", reason: "No browser provider configured." };
+        ? { status: "enabled" }
+        : { status: "disabled", reason: "No browser provider configured." };
     }
-    case ToolId.Terminal:
-    case ToolId.File:
-    case ToolId.Memory:
-    case ToolId.Cron:
-    case ToolId.Mcp:
-      // Core capabilities with no config gate. MCP servers themselves are
-      // opt-in via the catalog, which the dashboard cannot introspect.
-      return { status: "available" };
+    default:
+      // Toolsets with no config gate in Hermeum. They are enabled whenever
+      // the agent exists; per-agent toggling is a follow-up.
+      return { status: "enabled" };
   }
 }
