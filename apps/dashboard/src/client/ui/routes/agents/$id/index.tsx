@@ -141,7 +141,7 @@ function ToolsSection({ agent }: { agent: Agent }) {
 }
 
 function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
-  const { status, reason, port, home, endpoints } = derivePlatformAvailability(id, agent);
+  const { status, reason, home, endpoints } = derivePlatformAvailability(id, agent);
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
@@ -158,12 +158,6 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
         }
       >
         {label}
-        {status === "available" && port !== undefined && (
-          <span className="text-muted-foreground"> · port {port}</span>
-        )}
-        {status === "available" && home !== undefined && (
-          <span className="text-muted-foreground"> · home {home}</span>
-        )}
       </PopoverTrigger>
       <PopoverContent>
         <div className="flex flex-col gap-0.5">
@@ -181,7 +175,6 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
           {status === "available" && id === "slack" && endpoints === undefined && (
             <span className="opacity-80">Socket Mode — no public endpoint.</span>
           )}
-          {port !== undefined && <span>Port: {port}</span>}
           {home !== undefined && <span>Home channel: {home}</span>}
           {reason && (
             <span className="capitalize opacity-80">

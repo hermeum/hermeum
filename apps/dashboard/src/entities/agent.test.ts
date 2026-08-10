@@ -703,6 +703,37 @@ describe("derivePlatformAvailability", () => {
       ]);
     });
 
+    it("inserts the per-platform port into internal (.svc.cluster.local) endpoints", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          endpoint: "http://a1.hermeum.svc.cluster.local",
+          env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+        })
+      );
+      expect(result.endpoints).toEqual([
+        "http://a1.hermeum.svc.cluster.local:8642/v1",
+        "http://a1.hermeum.svc.cluster.local:8642/api",
+      ]);
+    });
+
+    it("inserts a custom API_SERVER_PORT into internal endpoints", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          endpoint: "http://a1.hermeum.svc.cluster.local",
+          env: [
+            { name: "API_SERVER_ENABLED", value: "true" },
+            { name: "API_SERVER_PORT", value: "9000" },
+          ],
+        })
+      );
+      expect(result.endpoints).toEqual([
+        "http://a1.hermeum.svc.cluster.local:9000/v1",
+        "http://a1.hermeum.svc.cluster.local:9000/api",
+      ]);
+    });
+
     it("omits endpoints when agent.endpoint is null", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
@@ -762,6 +793,19 @@ describe("derivePlatformAvailability", () => {
         })
       );
       expect(result.endpoints).toEqual(["https://a1.example.com/webhooks"]);
+    });
+
+    it("inserts the webhook port into internal (.svc.cluster.local) endpoints", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Webhook,
+        makeAgent({
+          endpoint: "http://a1.hermeum.svc.cluster.local",
+          config: { platforms: { webhook: { enabled: true } } },
+        })
+      );
+      expect(result.endpoints).toEqual([
+        "http://a1.hermeum.svc.cluster.local:8644/webhooks",
+      ]);
     });
 
     it("omits endpoints when agent.endpoint is null even when enabled", () => {

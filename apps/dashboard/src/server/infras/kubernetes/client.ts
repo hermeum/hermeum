@@ -308,17 +308,33 @@ export function mapHermesConfig(config: HermesConfig | undefined): Agent["config
   return config?.raw;
 }
 
-// Derive the agent's public endpoint URL from the reconciled ingress host.
-// The host is written into spec.networking.ingress by agentToHermesAgent only
-// when at least one HTTP platform (api-server / webhook) is enabled AND the
-// operator has configured agentIngressBaseHostname — so a null return here
-// exactly mirrors "no public endpoint exists for this agent / deployment".
-// The scheme comes from agentIngressScheme (display-only; TLS is governed
-// separately by agentIngressTlsSecretName).
+// Derive the agent's base endpoint URL.
+//
+// When the operator configures agentIngressBaseHostname, the reconciled
+// ingress writes its host into spec.networking.ingress and we surface it as
+// `${agentIngressScheme}://${host}` — a single host serving all HTTP platforms
+// (routing by path), so no port appears in the URL.
+//
+// When no base hostname is configured, the per-agent ClusterIP Service is
+// still emitted (it is independent of ingress), so callers can reach the
+// agent in-cluster at `http://${agent.id}.${kubernetesNamespace}.svc.cluster.local`.
+// The per-platform port is inserted client-side (different platforms listen
+// on different ports), which is why this base carries no port.
+//
+// Returns null only when neither an ingress host nor an enabled HTTP platform
+// (api-server / webhook) is present — i.e. no endpoint exists at all.
 export function buildAgentEndpoint(raw: HermesAgent): string | null {
-  const host = raw.spec.networking?.ingress?.hosts?.[0]?.host;
-  if (!host) return null;
-  return `${config.agentIngressScheme}://${host}`;
+  const ingressHost = raw.spec.networking?.ingress?.hosts?.[0]?.host;
+  if (ingressHost) {
+    return `${config.agentIngressScheme}://${ingressHost}`;
+  }
+  const hasHttpPlatform =
+    raw.spec.networking?.service?.ports?.some((p) => p.name === "api-server" || p.name === "webhook") ?? false;
+  if (hasHttpPlatform) {
+    const id = raw.metadata?.name ?? "";
+    return `http://${id}.${config.kubernetesNamespace}.svc.cluster.local`;
+  }
+  return null;
 }
 
 export function mapHermesAgent(raw: HermesAgent): Agent {

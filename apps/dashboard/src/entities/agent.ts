@@ -563,10 +563,11 @@ export interface PlatformAvailability {
   /** Home channel for chat platforms (slack only), if configured. */
   home?: string;
   /**
-   * Fully-qualified public endpoint URLs for platforms exposed via ingress.
-   * Each entry is `${agent.endpoint}${subpath}`. Absent when the platform
-   * has no inbound HTTP surface (e.g. Slack Socket Mode) or when no ingress
-   * is configured (`agent.endpoint` is null).
+   * Fully-qualified endpoint URLs for this platform (base + subpath).
+   * For ingress endpoints the base carries no port (routing is by path).
+   * For internal (`*.svc.cluster.local`) endpoints the per-platform port is
+   * inserted before the subpath. Absent when the platform has no inbound HTTP
+   * surface (e.g. Slack Socket Mode) or when `agent.endpoint` is null.
    */
   endpoints?: string[];
 }
@@ -631,10 +632,11 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       if (!isApiServerEnabled(agent)) {
         return { status: "unavailable", reason: "Set API_SERVER_ENABLED=true to enable." };
       }
+      const port = getApiServerPort(agent);
       return {
         status: "available",
-        port: getApiServerPort(agent),
-        ...endpointsFor(agent.endpoint, subpaths),
+        port,
+        ...endpointsFor(agent.endpoint, subpaths, port),
       };
     }
     case PlatformId.Webhook: {
@@ -644,10 +646,11 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
           reason: "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled).",
         };
       }
+      const port = getWebhookPort(agent);
       return {
         status: "available",
-        port: getWebhookPort(agent),
-        ...endpointsFor(agent.endpoint, subpaths),
+        port,
+        ...endpointsFor(agent.endpoint, subpaths, port),
       };
     }
     case PlatformId.Slack: {
@@ -673,12 +676,22 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
 /**
  * Spread helper: returns `{ endpoints }` when both a base endpoint and at
  * least one subpath are present, otherwise `{}` (so the field stays absent).
+ *
+ * Internal endpoints (base containing `.svc.cluster.local`) need the
+ * per-platform port inserted before the subpath, since each platform listens
+ * on its own port. Ingress endpoints route by path on a single host, so no
+ * port is inserted.
  */
 function endpointsFor(
   endpoint: string | null | undefined,
   subpaths: readonly string[] | undefined,
+  port: number | undefined,
 ): { endpoints?: string[] } {
   if (!endpoint || !subpaths || subpaths.length === 0) return {};
+  if (endpoint.includes(".svc.cluster.local")) {
+    if (port === undefined) return {};
+    return { endpoints: subpaths.map((p) => `${endpoint}:${port}${p}`) };
+  }
   return { endpoints: subpaths.map((p) => `${endpoint}${p}`) };
 }
 
