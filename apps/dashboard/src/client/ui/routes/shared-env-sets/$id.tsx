@@ -5,8 +5,8 @@ import { MoreHorizontal, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
-import { EditSharedEnvSetDialog } from "@/client/ui/components/edit-shared-env-set-dialog";
-import { EnvVarDialog } from "@/client/ui/components/env-var-dialog";
+import { EditSharedEnvSetDialog } from "./_components/edit-shared-env-set-dialog";
+import { EnvVarDialog } from "./_components/env-var-dialog";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Button } from "@hermeum/components/ui/button";
 import {
