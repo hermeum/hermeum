@@ -12,6 +12,12 @@ publicly reachable endpoint — either a dev tunnel (local dev) or a real
 domain (production). Unlike Slack's Socket Mode, Teams is an HTTP-webhook
 platform.
 
+Using Teams also requires configuration on the Teams side (bot
+registration, messaging endpoint, app installation). Follow the official
+Hermes Agent guide at
+https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
+to complete that setup.
+
 ## Configuration
 
 Teams is enabled when the three credentials are present as environment
