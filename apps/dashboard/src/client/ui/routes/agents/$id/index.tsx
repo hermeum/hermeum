@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
 import { useTRPC } from "@/router";
 import {
   TOOLSET_IDS,
@@ -67,7 +66,7 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
           key={item}
           variant="outline"
           size="sm"
-          className="h-auto px-2 py-1 font-mono text-xs"
+          className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
         >
           {item}
         </Button>
@@ -88,7 +87,7 @@ function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
@@ -144,21 +143,21 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
-    <Popover>
-      <PopoverTrigger
+    <Tooltip>
+      <TooltipTrigger
         render={
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
         }
       >
         {label}
-      </PopoverTrigger>
-      <PopoverContent className="max-w-sm">
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
           {endpoints !== undefined && endpoints.length > 0 && (
@@ -171,9 +170,6 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
               ))}
             </div>
           )}
-          {status === "available" && id === "slack" && endpoints === undefined && (
-            <span className="opacity-80">Socket Mode — no public endpoint.</span>
-          )}
           {home !== undefined && <span>Home channel: {home}</span>}
           {reason && (
             <span className="capitalize opacity-80">
@@ -181,8 +177,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
             </span>
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -206,11 +202,13 @@ function PlatformsSection({ agent }: { agent: Agent }) {
           </TooltipContent>
         </Tooltip>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {PLATFORM_IDS.map((id) => (
-          <PlatformBadge key={id} id={id} agent={agent} />
-        ))}
-      </div>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          {PLATFORM_IDS.map((id) => (
+            <PlatformBadge key={id} id={id} agent={agent} />
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -419,7 +417,7 @@ function AgentDetailPage() {
                       key={v.name}
                       variant="outline"
                       size="sm"
-                      className="h-auto px-2 py-1 font-mono text-xs"
+                      className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                     >
                       {v.name}={v.value}
                     </Button>
@@ -457,7 +455,7 @@ function AgentDetailPage() {
                                 key={v.name}
                                 variant="outline"
                                 size="sm"
-                                className="h-auto px-2 py-1 font-mono text-xs"
+                                className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                               >
                                 {v.name}
                               </Button>
