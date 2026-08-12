@@ -495,6 +495,30 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
 
+export const AgentPhaseSchema = z.enum([
+  "Pending",
+  "Running",
+  "Succeeded",
+  "Failed",
+  "Unknown",
+  "Suspended",
+]);
+export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
+
+export const AgentSchema = AgentInputObjectSchema.extend({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  suspended: z.boolean().optional(),
+  archived: z.boolean().optional(),
+  phase: AgentPhaseSchema.optional(),
+  reason: z.string().optional(),
+  // Public base URL of the agent's ingress. Output-only; null when no ingress.
+  endpoint: z.string().url().nullable().optional(),
+  createdAt: z.date().optional(),
+}).readonly();
+
+export type Agent = z.infer<typeof AgentSchema>;
+
 // API server settings are configured exclusively via env vars (see
 // docs/hermes-config/api-server.md). These helpers read those env vars off an
 // `AgentInput`.
@@ -694,30 +718,6 @@ function endpointsFor(
   }
   return { endpoints: subpaths.map((p) => `${endpoint}${p}`) };
 }
-
-export const AgentPhaseSchema = z.enum([
-  "Pending",
-  "Running",
-  "Succeeded",
-  "Failed",
-  "Unknown",
-  "Suspended",
-]);
-export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
-
-export const AgentSchema = AgentInputObjectSchema.extend({
-  id: z.string().min(1),
-  userId: z.string().min(1),
-  suspended: z.boolean().optional(),
-  archived: z.boolean().optional(),
-  phase: AgentPhaseSchema.optional(),
-  reason: z.string().optional(),
-  // Public base URL of the agent's ingress. Output-only; null when no ingress.
-  endpoint: z.string().url().nullable().optional(),
-  createdAt: z.date().optional(),
-}).readonly();
-
-export type Agent = z.infer<typeof AgentSchema>;
 
 // Toolset availability — a derived, read-only view of which Hermes toolsets
 // are usable for an agent, computed from its config + env. Not persisted.
