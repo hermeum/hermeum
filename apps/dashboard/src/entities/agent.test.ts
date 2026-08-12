@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolId, deriveToolAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolId, deriveToolAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -270,6 +270,150 @@ describe("getWebhookPort", () => {
         config: { platforms: { webhook: { extra: { port: 9000 } } } },
       })
     ).toBe(9000);
+  });
+});
+
+describe("AgentInputSchema teams secret validation", () => {
+  const teamsCredsEnv = [
+    { name: "TEAMS_CLIENT_ID", value: "cid" },
+    { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+    { name: "TEAMS_TENANT_ID", value: "tid" },
+  ];
+
+  it("fails when teams is enabled via creds and env lacks sensitive TEAMS_CLIENT_SECRET", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "TEAMS_CLIENT_ID", value: "cid" },
+        { name: "TEAMS_CLIENT_SECRET", value: "sec" },
+        { name: "TEAMS_TENANT_ID", value: "tid" },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when teams is enabled and TEAMS_CLIENT_SECRET is sensitive", () => {
+    const result = AgentInputSchema.safeParse({ env: teamsCredsEnv });
+    expect(result.success).toBe(true);
+  });
+
+  it("fails when teams is enabled via config flag and TEAMS_CLIENT_SECRET is missing", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { platforms: { teams: { enabled: true } } },
+      env: [
+        { name: "TEAMS_CLIENT_ID", value: "cid" },
+        { name: "TEAMS_TENANT_ID", value: "tid" },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when teams is explicitly disabled regardless of env", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { platforms: { teams: { enabled: false } } },
+      env: teamsCredsEnv,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when teams config is omitted entirely", () => {
+    const result = AgentInputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("isTeamsEnabled", () => {
+  const teamsCredsEnv = [
+    { name: "TEAMS_CLIENT_ID", value: "cid" },
+    { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+    { name: "TEAMS_TENANT_ID", value: "tid" },
+  ];
+
+  it("is enabled when all three credentials are in env", () => {
+    expect(isTeamsEnabled({ env: teamsCredsEnv })).toBe(true);
+  });
+
+  it("is disabled when any credential is missing from env", () => {
+    expect(isTeamsEnabled({ env: teamsCredsEnv.slice(0, 2) })).toBe(false);
+    expect(
+      isTeamsEnabled({ env: [{ name: "TEAMS_CLIENT_ID", value: "cid" }] })
+    ).toBe(false);
+    expect(isTeamsEnabled({})).toBe(false);
+  });
+
+  it("treats the <secret> sentinel for sensitive TEAMS_CLIENT_SECRET as set", () => {
+    expect(
+      isTeamsEnabled({
+        env: [
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+          { name: "TEAMS_CLIENT_SECRET", value: "<secret>", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    ).toBe(true);
+  });
+
+  it("prefers config.platforms.teams.enabled=false over present credentials", () => {
+    expect(
+      isTeamsEnabled({
+        env: teamsCredsEnv,
+        config: { platforms: { teams: { enabled: false } } },
+      })
+    ).toBe(false);
+  });
+
+  it("prefers config.platforms.teams.enabled=true over missing credentials", () => {
+    expect(
+      isTeamsEnabled({
+        config: { platforms: { teams: { enabled: true } } },
+      })
+    ).toBe(true);
+  });
+
+  it("ignores whitespace-only credential values", () => {
+    expect(
+      isTeamsEnabled({
+        env: [
+          { name: "TEAMS_CLIENT_ID", value: "  " },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    ).toBe(false);
+  });
+});
+
+describe("getTeamsPort", () => {
+  it("returns the parsed port when TEAMS_PORT is a positive integer", () => {
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "4000" }] })).toBe(4000);
+  });
+
+  it("falls back to 3978 when TEAMS_PORT is missing or empty", () => {
+    expect(getTeamsPort({})).toBe(3978);
+    expect(getTeamsPort({ env: [] })).toBe(3978);
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "" }] })).toBe(3978);
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "   " }] })).toBe(3978);
+  });
+
+  it("falls back to 3978 when TEAMS_PORT is not a positive integer", () => {
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "0" }] })).toBe(3978);
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "-1" }] })).toBe(3978);
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "abc" }] })).toBe(3978);
+    expect(getTeamsPort({ env: [{ name: "TEAMS_PORT", value: "1.5" }] })).toBe(3978);
+  });
+
+  it("returns config.platforms.teams.extra.port when TEAMS_PORT env var is absent", () => {
+    expect(
+      getTeamsPort({ config: { platforms: { teams: { extra: { port: 4000 } } } } })
+    ).toBe(4000);
+  });
+
+  it("prefers config.platforms.teams.extra.port over the TEAMS_PORT env var", () => {
+    expect(
+      getTeamsPort({
+        env: [{ name: "TEAMS_PORT", value: "4001" }],
+        config: { platforms: { teams: { extra: { port: 4000 } } } },
+      })
+    ).toBe(4000);
   });
 });
 
@@ -910,6 +1054,97 @@ describe("derivePlatformAvailability", () => {
         makeAgent({ config: { slack: { allowed_channels: ["C01"] } } })
       );
       expect(result.status).toBe("unavailable");
+    });
+  });
+
+  describe("teams", () => {
+    const teamsCredsEnv = [
+      { name: "TEAMS_CLIENT_ID", value: "cid" },
+      { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+      { name: "TEAMS_TENANT_ID", value: "tid" },
+    ];
+
+    it("is unavailable when all credentials are missing", () => {
+      const result = derivePlatformAvailability(PlatformId.Teams, makeAgent());
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("TEAMS_CLIENT_ID");
+      expect(result.reason).toContain("TEAMS_CLIENT_SECRET");
+      expect(result.reason).toContain("TEAMS_TENANT_ID");
+    });
+
+    it("names only the missing credentials when some are set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ env: [{ name: "TEAMS_CLIENT_ID", value: "cid" }] })
+      );
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).not.toContain("TEAMS_CLIENT_ID");
+      expect(result.reason).toContain("TEAMS_CLIENT_SECRET");
+      expect(result.reason).toContain("TEAMS_TENANT_ID");
+    });
+
+    it("is unavailable when enabled:false is explicit (even with creds present)", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ env: teamsCredsEnv, config: { platforms: { teams: { enabled: false } } } })
+      );
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("Disabled");
+    });
+
+    it("is available with no home when all credentials are set via env", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ env: teamsCredsEnv })
+      );
+      expect(result.status).toBe("available");
+      expect(result.port).toBe(3978);
+      expect(result.home).toBeUndefined();
+    });
+
+    it("is available when enabled:true is set explicitly without env creds", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ config: { platforms: { teams: { enabled: true } } } })
+      );
+      expect(result.status).toBe("available");
+      expect(result.port).toBe(3978);
+    });
+
+    it("reports endpoints on an ingress base URL (no port inserted)", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ endpoint: "https://a1.example.com", env: teamsCredsEnv })
+      );
+      expect(result.status).toBe("available");
+      expect(result.endpoints).toEqual(["https://a1.example.com/api/messages"]);
+    });
+
+    it("inserts the port on internal .svc.cluster.local endpoints", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({
+          endpoint: "http://a1.agents.svc.cluster.local",
+          env: teamsCredsEnv,
+        })
+      );
+      expect(result.endpoints).toEqual([
+        "http://a1.agents.svc.cluster.local:3978/api/messages",
+      ]);
+    });
+
+    it("respects a custom TEAMS_PORT env var in the endpoint URL", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({
+          endpoint: "http://a1.agents.svc.cluster.local",
+          env: [...teamsCredsEnv, { name: "TEAMS_PORT", value: "4000" }],
+        })
+      );
+      expect(result.port).toBe(4000);
+      expect(result.endpoints).toEqual([
+        "http://a1.agents.svc.cluster.local:4000/api/messages",
+      ]);
     });
   });
 });

@@ -13,8 +13,10 @@ import {
   SharedEnvSet,
   SharedEnvSetEnvVar,
   getApiServerPort,
+  getTeamsPort,
   getWebhookPort,
   isApiServerEnabled,
+  isTeamsEnabled,
   isWebhookEnabled,
 } from "@/entities";
 import { config } from "@/server/libs/config";
@@ -181,6 +183,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   // Expose the webhook container + service ports when the agent opts in via
   // the WEBHOOK_ENABLED env var OR config.platforms.webhook.enabled.
   const webhookPort = isWebhookEnabled(agent) ? getWebhookPort(agent) : null;
+  // Expose the Teams bot container + service ports when the agent is enabled
+  // via config.platforms.teams.enabled OR the TEAMS_* credentials being
+  // present (env or config). Teams listens on /api/messages (default 3978).
+  const teamsPort = isTeamsEnabled(agent) ? getTeamsPort(agent) : null;
   const servicePorts: ServicePort[] = [];
   if (apiServerPort !== null) {
     hermes.ports = [
@@ -206,9 +212,21 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       protocol: "TCP",
     });
   }
+  if (teamsPort !== null) {
+    hermes.ports = [
+      ...(hermes.ports ?? []),
+      { name: "teams", containerPort: teamsPort, protocol: "TCP" },
+    ];
+    servicePorts.push({
+      name: "teams",
+      port: teamsPort,
+      targetPort: teamsPort,
+      protocol: "TCP",
+    });
+  }
   // Ingress is generated only when the operator configures a base hostname —
-  // routing inbound traffic from message platforms (api-server, webhook) to
-  // the agent's Service. Host takes the form <agent-id>.<base-hostname>.
+  // routing inbound traffic from message platforms (api-server, webhook,
+  // teams) to the agent's Service. Host takes the form <agent-id>.<base-hostname>.
   let ingress: Ingress | undefined;
   if (servicePorts.length > 0 && config.agentIngressBaseHostname !== undefined) {
     const host = `${agent.id}.${config.agentIngressBaseHostname}`;
@@ -216,6 +234,15 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     if (webhookPort !== null) {
       for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.Webhook] ?? []) {
         ingressPaths.push({ path, pathType: "Prefix", port: webhookPort });
+      }
+    }
+    // Teams must be emitted BEFORE api-server: the api-server route uses the
+    // broad /api prefix, which would otherwise swallow /api/messages. The
+    // ingress controller's longest-prefix match routes /api/messages to the
+    // Teams port (3978) only if it appears before /api.
+    if (teamsPort !== null) {
+      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.Teams] ?? []) {
+        ingressPaths.push({ path, pathType: "Prefix", port: teamsPort });
       }
     }
     if (apiServerPort !== null) {

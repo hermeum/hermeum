@@ -78,12 +78,3 @@ export const WebhookSchema = z
   .describe("Webhook platform configuration.");
 
 export type Webhook = z.infer<typeof WebhookSchema>;
-
-export const PlatformsSchema = z
-  .looseObject({
-    webhook: WebhookSchema,
-  })
-  .optional()
-  .describe("Messaging platform integrations.");
-
-export type Platforms = z.infer<typeof PlatformsSchema>;
