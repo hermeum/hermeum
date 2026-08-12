@@ -122,7 +122,7 @@ function ToolsetsSection({ agent }: { agent: Agent }) {
           />
           <TooltipContent>
             <div className="max-w-xs">
-              Hermes' 25 built-in toolsets. Plugin toolsets are not listed.
+              Hermes&apos; 25 built-in toolsets. Plugin toolsets are not listed.
             </div>
           </TooltipContent>
         </Tooltip>

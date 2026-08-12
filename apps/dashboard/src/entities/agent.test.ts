@@ -610,9 +610,13 @@ describe("deriveToolsetAvailability", () => {
 
   it("marks no-gate toolsets available with no config", () => {
     const agent = makeAgent();
-    // The 22 toolsets without a config gate in Hermeum (all except Web,
-    // XSearch, Browser).
-    const gated = new Set<ToolsetId>([ToolsetId.Web, ToolsetId.XSearch, ToolsetId.Browser]);
+    // Toolsets gated in Hermeum (all others fall through to available).
+    const gated = new Set<ToolsetId>([
+      ToolsetId.Web, ToolsetId.XSearch, ToolsetId.Browser,
+      ToolsetId.HomeAssistant, ToolsetId.ImageGen, ToolsetId.VideoGen,
+      ToolsetId.Spotify, ToolsetId.Discord, ToolsetId.DiscordAdmin,
+      ToolsetId.ComputerUse, ToolsetId.Yuanbao,
+    ]);
     const noGate = (Object.values(ToolsetId) as ToolsetId[]).filter((id) => !gated.has(id));
     for (const id of noGate) {
       expect(deriveToolsetAvailability(id, agent).status).toBe("available");
@@ -657,6 +661,64 @@ describe("deriveToolsetAvailability", () => {
         makeAgent({ config: { browser: { cloud_provider: "camofox" } } })
       ).status
     ).toBe("available");
+  });
+
+  it("marks home assistant unavailable without HASS_TOKEN and available with it", () => {
+    expect(deriveToolsetAvailability(ToolsetId.HomeAssistant, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolsetAvailability(
+        ToolsetId.HomeAssistant,
+        makeAgent({ env: [{ name: "HASS_TOKEN", value: "ha-token", sensitive: true }] })
+      ).status
+    ).toBe("available");
+  });
+
+  it("marks discord / discord_admin unavailable without DISCORD_BOT_TOKEN and available with it", () => {
+    expect(deriveToolsetAvailability(ToolsetId.Discord, makeAgent()).status).toBe("unavailable");
+    expect(deriveToolsetAvailability(ToolsetId.DiscordAdmin, makeAgent()).status).toBe("unavailable");
+    const agent = makeAgent({
+      env: [{ name: "DISCORD_BOT_TOKEN", value: "bot-token", sensitive: true }],
+    });
+    expect(deriveToolsetAvailability(ToolsetId.Discord, agent).status).toBe("available");
+    expect(deriveToolsetAvailability(ToolsetId.DiscordAdmin, agent).status).toBe("available");
+  });
+
+  it("marks image_gen unavailable without FAL_KEY or gateway and available with either", () => {
+    expect(deriveToolsetAvailability(ToolsetId.ImageGen, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolsetAvailability(
+        ToolsetId.ImageGen,
+        makeAgent({ env: [{ name: "FAL_KEY", value: "fal-key", sensitive: true }] })
+      ).status
+    ).toBe("available");
+    expect(
+      deriveToolsetAvailability(
+        ToolsetId.ImageGen,
+        makeAgent({ config: { image_gen: { use_gateway: true } } })
+      ).status
+    ).toBe("available");
+  });
+
+  it("marks video_gen unavailable without FAL_KEY or XAI_API_KEY and available with either", () => {
+    expect(deriveToolsetAvailability(ToolsetId.VideoGen, makeAgent()).status).toBe("unavailable");
+    expect(
+      deriveToolsetAvailability(
+        ToolsetId.VideoGen,
+        makeAgent({ env: [{ name: "FAL_KEY", value: "fal-key", sensitive: true }] })
+      ).status
+    ).toBe("available");
+    expect(
+      deriveToolsetAvailability(
+        ToolsetId.VideoGen,
+        makeAgent({ env: [{ name: "XAI_API_KEY", value: "xai-123", sensitive: true }] })
+      ).status
+    ).toBe("available");
+  });
+
+  it("marks spotify, computer_use, and yuanbao always unavailable", () => {
+    expect(deriveToolsetAvailability(ToolsetId.Spotify, makeAgent()).status).toBe("unavailable");
+    expect(deriveToolsetAvailability(ToolsetId.ComputerUse, makeAgent()).status).toBe("unavailable");
+    expect(deriveToolsetAvailability(ToolsetId.Yuanbao, makeAgent()).status).toBe("unavailable");
   });
 });
 

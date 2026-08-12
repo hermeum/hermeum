@@ -857,6 +857,7 @@ export const TOOLSET_IDS: readonly ToolsetId[] = [
 export function deriveToolsetAvailability(id: ToolsetId, agent: Agent): ToolsetAvailability {
   const config = agent.config;
   const env = agent.env ?? [];
+  const hasEnv = (name: string) => env.some((v) => v.name === name && v.value.trim() !== "");
 
   switch (id) {
     case ToolsetId.Web: {
@@ -871,20 +872,48 @@ export function deriveToolsetAvailability(id: ToolsetId, agent: Agent): ToolsetA
     }
     case ToolsetId.XSearch: {
       // Gated on xAI credentials; off by default.
-      const hasXaiKey = env.some((v) => v.name === "XAI_API_KEY" && v.value.trim() !== "");
+      const hasXaiKey = hasEnv("XAI_API_KEY");
       const xaiBackend = config?.web?.search_backend === "xai";
       return hasXaiKey || xaiBackend
         ? { status: "available" }
-        : {
-            status: "unavailable",
-            reason: "Set XAI_API_KEY to opt in.",
-          };
+        : { status: "unavailable", reason: "Set XAI_API_KEY to opt in." };
     }
     case ToolsetId.Browser: {
       return config?.browser?.cloud_provider
         ? { status: "available" }
         : { status: "unavailable", reason: "No browser provider configured." };
     }
+    case ToolsetId.HomeAssistant: {
+      return hasEnv("HASS_TOKEN")
+        ? { status: "available" }
+        : { status: "unavailable", reason: "Set HASS_TOKEN to enable Home Assistant." };
+    }
+    case ToolsetId.Discord:
+    case ToolsetId.DiscordAdmin: {
+      return hasEnv("DISCORD_BOT_TOKEN")
+        ? { status: "available" }
+        : { status: "unavailable", reason: "Set DISCORD_BOT_TOKEN to enable Discord." };
+    }
+    case ToolsetId.ImageGen: {
+      const hasFalKey = hasEnv("FAL_KEY");
+      const useGateway = config?.image_gen?.use_gateway === true;
+      return hasFalKey || useGateway
+        ? { status: "available" }
+        : { status: "unavailable", reason: "Set FAL_KEY or enable the managed gateway." };
+    }
+    case ToolsetId.VideoGen: {
+      const hasFalKey = hasEnv("FAL_KEY");
+      const hasXaiKey = hasEnv("XAI_API_KEY");
+      return hasFalKey || hasXaiKey
+        ? { status: "available" }
+        : { status: "unavailable", reason: "Set FAL_KEY or XAI_API_KEY for video generation." };
+    }
+    case ToolsetId.Spotify:
+      return { status: "unavailable", reason: "Spotify OAuth is not supported in Hermeum." };
+    case ToolsetId.ComputerUse:
+      return { status: "unavailable", reason: "Computer Use is not supported in Hermeum." };
+    case ToolsetId.Yuanbao:
+      return { status: "unavailable", reason: "Only available on the Yuanbao messaging platform." };
     default:
       // Toolsets with no config gate in Hermeum. They are available whenever
       // the agent exists; per-agent toggling is a follow-up.
