@@ -13,13 +13,12 @@ export {
   DeliverExtraSchema,
   WebhookRouteSchema,
   WebhookSchema,
-  PlatformsSchema,
   type WebhookDeliver,
   type DeliverExtra,
   type WebhookRoute,
   type Webhook,
-  type Platforms,
 } from "./webhook";
+export { TeamsSchema, type Teams } from "./teams";
 export { SlackSchema, ChannelSkillBindingSchema, type Slack, type ChannelSkillBinding } from "./slack";
 export {
   WebSearchBackendSchema,
@@ -35,12 +34,27 @@ export { ImageGenSchema, type ImageGen } from "./image-gen";
 
 import { z } from "zod";
 import { ModelSchema } from "./model";
-import { PlatformsSchema } from "./webhook";
+import { WebhookSchema } from "./webhook";
+import { TeamsSchema } from "./teams";
 import { SlackSchema } from "./slack";
 import { WebSchema } from "./web";
 import { BrowserSchema } from "./browser";
 import { XSearchSchema } from "./x-search";
 import { ImageGenSchema } from "./image-gen";
+
+// Aggregator for the per-platform sub-schemas under config.platforms.*.
+// Each platform owns its own schema file (slack.ts, webhook.ts, teams.ts,
+// ...); this loose object composes them and lets untyped platforms pass
+// through unchanged.
+export const PlatformsSchema = z
+  .looseObject({
+    webhook: WebhookSchema,
+    teams: TeamsSchema,
+  })
+  .optional()
+  .describe("Messaging platform integrations.");
+
+export type Platforms = z.infer<typeof PlatformsSchema>;
 
 export const ConfigSchema = z
   .looseObject({

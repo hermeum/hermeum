@@ -13,6 +13,12 @@ Requires `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, and `SLACK_ALLOWED_USERS`
 env vars (see [Environment variables](#environment-variables)); without
 `SLACK_ALLOWED_USERS` the gateway denies all messages by default.
 
+Using Slack also requires configuration on the Slack side (app creation,
+socket mode, scopes, event subscriptions). Follow the official Hermes
+Agent guide at
+https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack
+to complete that setup.
+
 Slack config lives in **two** `config.yaml` locations — keep them
 straight, they are not interchangeable:
 

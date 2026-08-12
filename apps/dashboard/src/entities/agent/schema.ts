@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ConfigSchema } from "../hermes-config";
 import { EnvVarSchema } from "../shared-env-set";
 
-import { isApiServerEnabled, isWebhookEnabled } from "./platform";
+import { isApiServerEnabled, isTeamsEnabled, isWebhookEnabled } from "./platform";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
@@ -480,6 +480,9 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
   }
   if (isApiServerEnabled(data)) {
     requireSensitiveEnv("API_SERVER_KEY", "env.API_SERVER_ENABLED");
+  }
+  if (isTeamsEnabled(data)) {
+    requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled (env var or config)");
   }
 
   data.env?.forEach((v, i) => {
