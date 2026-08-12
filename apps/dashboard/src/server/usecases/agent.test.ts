@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
+vi.mock("../infras/console-logger", () => ({ ConsoleLogger: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
   config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
 }));

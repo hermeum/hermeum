@@ -8,19 +8,18 @@ import { toast } from "sonner";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
 import { useTRPC } from "@/router";
 import {
-  TOOL_IDS,
+  TOOLSET_IDS,
   PLATFORM_IDS,
-  deriveToolAvailability,
+  deriveToolsetAvailability,
   derivePlatformAvailability,
-  getToolDescription,
-  getToolLabel,
+  getToolsetDescription,
+  getToolsetLabel,
   getPlatformDescription,
   getPlatformLabel,
   type Agent,
-  type ToolId,
+  type ToolsetId,
   type PlatformId,
 } from "@/entities";
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
@@ -67,7 +66,7 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
           key={item}
           variant="outline"
           size="sm"
-          className="h-auto px-2 py-1 font-mono text-xs"
+          className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
         >
           {item}
         </Button>
@@ -77,10 +76,10 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
   );
 }
 
-function ToolBadge({ id, agent }: { id: ToolId; agent: Agent }) {
-  const { status, reason } = deriveToolAvailability(id, agent);
-  const label = getToolLabel(id);
-  const description = getToolDescription(id);
+function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
+  const { status, reason } = deriveToolsetAvailability(id, agent);
+  const label = getToolsetLabel(id);
+  const description = getToolsetDescription(id);
   return (
     <Tooltip>
       <TooltipTrigger
@@ -88,7 +87,7 @@ function ToolBadge({ id, agent }: { id: ToolId; agent: Agent }) {
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
@@ -110,29 +109,28 @@ function ToolBadge({ id, agent }: { id: ToolId; agent: Agent }) {
   );
 }
 
-function ToolsSection({ agent }: { agent: Agent }) {
+function ToolsetsSection({ agent }: { agent: Agent }) {
   return (
     <div className="py-8 flex flex-col gap-3">
       <div className="flex items-center gap-1.5">
-        <p className="text-sm font-bold">Tools</p>
+        <p className="text-sm font-bold">Toolsets</p>
         <Tooltip>
           <TooltipTrigger
             render={
-              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Tools info" />
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Toolsets info" />
             }
           />
           <TooltipContent>
             <div className="max-w-xs">
-              Hermeum shows built-in Hermes tools here. Tools added by plugins
-              are not listed.
+              Hermes&apos; 25 built-in toolsets. Plugin toolsets are not listed.
             </div>
           </TooltipContent>
         </Tooltip>
       </div>
       <TooltipProvider>
         <div className="flex flex-wrap gap-2">
-          {TOOL_IDS.map((id) => (
-            <ToolBadge key={id} id={id} agent={agent} />
+          {TOOLSET_IDS.map((id) => (
+            <ToolsetBadge key={id} id={id} agent={agent} />
           ))}
         </div>
       </TooltipProvider>
@@ -145,21 +143,21 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
-    <Popover>
-      <PopoverTrigger
+    <Tooltip>
+      <TooltipTrigger
         render={
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
         }
       >
         {label}
-      </PopoverTrigger>
-      <PopoverContent className="max-w-sm">
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
           {endpoints !== undefined && endpoints.length > 0 && (
@@ -172,9 +170,6 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
               ))}
             </div>
           )}
-          {status === "available" && id === "slack" && endpoints === undefined && (
-            <span className="opacity-80">Socket Mode — no public endpoint.</span>
-          )}
           {home !== undefined && <span>Home channel: {home}</span>}
           {reason && (
             <span className="capitalize opacity-80">
@@ -182,8 +177,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
             </span>
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -207,11 +202,13 @@ function PlatformsSection({ agent }: { agent: Agent }) {
           </TooltipContent>
         </Tooltip>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {PLATFORM_IDS.map((id) => (
-          <PlatformBadge key={id} id={id} agent={agent} />
-        ))}
-      </div>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          {PLATFORM_IDS.map((id) => (
+            <PlatformBadge key={id} id={id} agent={agent} />
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -372,8 +369,8 @@ function AgentDetailPage() {
               </div>
             )}
 
-            {/* tools */}
-            <ToolsSection agent={agent} />
+            {/* toolsets */}
+            <ToolsetsSection agent={agent} />
 
             {/* message platforms */}
             <PlatformsSection agent={agent} />
@@ -420,7 +417,7 @@ function AgentDetailPage() {
                       key={v.name}
                       variant="outline"
                       size="sm"
-                      className="h-auto px-2 py-1 font-mono text-xs"
+                      className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                     >
                       {v.name}={v.value}
                     </Button>
@@ -458,7 +455,7 @@ function AgentDetailPage() {
                                 key={v.name}
                                 variant="outline"
                                 size="sm"
-                                className="h-auto px-2 py-1 font-mono text-xs"
+                                className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                               >
                                 {v.name}
                               </Button>
