@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolsetId, deriveToolsetEnabled, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -603,60 +603,60 @@ describe("AgentInputSchema browser config validation", () => {
   });
 });
 
-describe("deriveToolsetEnabled", () => {
+describe("deriveToolsetAvailability", () => {
   function makeAgent(overrides: Partial<Agent> = {}): Agent {
     return { id: "a1", userId: "u1", ...overrides } as Agent;
   }
 
-  it("marks no-gate toolsets enabled with no config", () => {
+  it("marks no-gate toolsets available with no config", () => {
     const agent = makeAgent();
     // The 22 toolsets without a config gate in Hermeum (all except Web,
     // XSearch, Browser).
     const gated = new Set<ToolsetId>([ToolsetId.Web, ToolsetId.XSearch, ToolsetId.Browser]);
     const noGate = (Object.values(ToolsetId) as ToolsetId[]).filter((id) => !gated.has(id));
     for (const id of noGate) {
-      expect(deriveToolsetEnabled(id, agent).status).toBe("enabled");
+      expect(deriveToolsetAvailability(id, agent).status).toBe("available");
     }
   });
 
-  it("marks web disabled without a backend and enabled with one", () => {
-    expect(deriveToolsetEnabled(ToolsetId.Web, makeAgent()).status).toBe("disabled");
+  it("marks web unavailable without a backend and available with one", () => {
+    expect(deriveToolsetAvailability(ToolsetId.Web, makeAgent()).status).toBe("unavailable");
     expect(
-      deriveToolsetEnabled(ToolsetId.Web, makeAgent({ config: { web: { backend: "searxng" } } }))
+      deriveToolsetAvailability(ToolsetId.Web, makeAgent({ config: { web: { backend: "searxng" } } }))
         .status
-    ).toBe("enabled");
+    ).toBe("available");
     expect(
-      deriveToolsetEnabled(
+      deriveToolsetAvailability(
         ToolsetId.Web,
         makeAgent({ config: { web: { search_backend: "tavily" } } })
       ).status
-    ).toBe("enabled");
+    ).toBe("available");
   });
 
-  it("marks x search disabled by default and enabled with XAI_API_KEY or xai backend", () => {
-    expect(deriveToolsetEnabled(ToolsetId.XSearch, makeAgent()).status).toBe("disabled");
+  it("marks x search unavailable by default and available with XAI_API_KEY or xai backend", () => {
+    expect(deriveToolsetAvailability(ToolsetId.XSearch, makeAgent()).status).toBe("unavailable");
     expect(
-      deriveToolsetEnabled(
+      deriveToolsetAvailability(
         ToolsetId.XSearch,
         makeAgent({ env: [{ name: "XAI_API_KEY", value: "xai-123", sensitive: true }] })
       ).status
-    ).toBe("enabled");
+    ).toBe("available");
     expect(
-      deriveToolsetEnabled(
+      deriveToolsetAvailability(
         ToolsetId.XSearch,
         makeAgent({ config: { web: { search_backend: "xai" } } })
       ).status
-    ).toBe("enabled");
+    ).toBe("available");
   });
 
-  it("marks browser disabled without a provider and enabled with one", () => {
-    expect(deriveToolsetEnabled(ToolsetId.Browser, makeAgent()).status).toBe("disabled");
+  it("marks browser unavailable without a provider and available with one", () => {
+    expect(deriveToolsetAvailability(ToolsetId.Browser, makeAgent()).status).toBe("unavailable");
     expect(
-      deriveToolsetEnabled(
+      deriveToolsetAvailability(
         ToolsetId.Browser,
         makeAgent({ config: { browser: { cloud_provider: "camofox" } } })
       ).status
-    ).toBe("enabled");
+    ).toBe("available");
   });
 });
 

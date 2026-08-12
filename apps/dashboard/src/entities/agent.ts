@@ -664,8 +664,8 @@ export const AgentSchema = AgentInputObjectSchema.extend({
 
 export type Agent = z.infer<typeof AgentSchema>;
 
-// Toolset enabled state — a derived, read-only view of which Hermes toolsets
-// are enabled for an agent, computed from its config + env. Not persisted.
+// Toolset availability — a derived, read-only view of which Hermes toolsets
+// are usable for an agent, computed from its config + env. Not persisted.
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/tools
 //
 // The catalog mirrors Hermes' CONFIGURABLE_TOOLSETS
@@ -701,11 +701,11 @@ export enum ToolsetId {
   ComputerUse = "computerUse",
 }
 
-export type ToolsetStatus = "enabled" | "disabled";
+export type ToolsetStatus = "available" | "unavailable";
 
 export interface ToolsetAvailability {
   status: ToolsetStatus;
-  /** Short explanation shown when status is not "enabled". */
+  /** Short explanation shown when status is not "available". */
   reason?: string;
 }
 
@@ -854,7 +854,7 @@ export const TOOLSET_IDS: readonly ToolsetId[] = [
   ToolsetId.ComputerUse,
 ];
 
-export function deriveToolsetEnabled(id: ToolsetId, agent: Agent): ToolsetAvailability {
+export function deriveToolsetAvailability(id: ToolsetId, agent: Agent): ToolsetAvailability {
   const config = agent.config;
   const env = agent.env ?? [];
 
@@ -866,28 +866,28 @@ export function deriveToolsetEnabled(id: ToolsetId, agent: Agent): ToolsetAvaila
         config?.web?.extract_backend
       );
       return hasBackend
-        ? { status: "enabled" }
-        : { status: "disabled", reason: "No web backend configured." };
+        ? { status: "available" }
+        : { status: "unavailable", reason: "No web backend configured." };
     }
     case ToolsetId.XSearch: {
       // Gated on xAI credentials; off by default.
       const hasXaiKey = env.some((v) => v.name === "XAI_API_KEY" && v.value.trim() !== "");
       const xaiBackend = config?.web?.search_backend === "xai";
       return hasXaiKey || xaiBackend
-        ? { status: "enabled" }
+        ? { status: "available" }
         : {
-            status: "disabled",
+            status: "unavailable",
             reason: "Set XAI_API_KEY to opt in.",
           };
     }
     case ToolsetId.Browser: {
       return config?.browser?.cloud_provider
-        ? { status: "enabled" }
-        : { status: "disabled", reason: "No browser provider configured." };
+        ? { status: "available" }
+        : { status: "unavailable", reason: "No browser provider configured." };
     }
     default:
-      // Toolsets with no config gate in Hermeum. They are enabled whenever
+      // Toolsets with no config gate in Hermeum. They are available whenever
       // the agent exists; per-agent toggling is a follow-up.
-      return { status: "enabled" };
+      return { status: "available" };
   }
 }

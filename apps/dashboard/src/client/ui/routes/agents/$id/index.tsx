@@ -12,7 +12,7 @@ import { useTRPC } from "@/router";
 import {
   TOOLSET_IDS,
   PLATFORM_IDS,
-  deriveToolsetEnabled,
+  deriveToolsetAvailability,
   derivePlatformAvailability,
   getToolsetDescription,
   getToolsetLabel,
@@ -77,7 +77,7 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
 }
 
 function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
-  const { status, reason } = deriveToolsetEnabled(id, agent);
+  const { status, reason } = deriveToolsetAvailability(id, agent);
   const label = getToolsetLabel(id);
   const description = getToolsetDescription(id);
   return (
@@ -88,7 +88,7 @@ function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
             variant="outline"
             size="sm"
             className={`h-auto px-2 py-1 font-mono text-xs ${
-              status === "disabled" ? "text-muted-foreground opacity-60" : ""
+              status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
         }
