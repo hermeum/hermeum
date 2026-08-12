@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
 import { useTRPC } from "@/router";
 import {
   TOOLSET_IDS,
@@ -144,8 +143,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
-    <Popover>
-      <PopoverTrigger
+    <Tooltip>
+      <TooltipTrigger
         render={
           <Button
             variant="outline"
@@ -157,8 +156,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
         }
       >
         {label}
-      </PopoverTrigger>
-      <PopoverContent className="max-w-sm">
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
           {endpoints !== undefined && endpoints.length > 0 && (
@@ -178,8 +177,8 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
             </span>
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -203,11 +202,13 @@ function PlatformsSection({ agent }: { agent: Agent }) {
           </TooltipContent>
         </Tooltip>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {PLATFORM_IDS.map((id) => (
-          <PlatformBadge key={id} id={id} agent={agent} />
-        ))}
-      </div>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          {PLATFORM_IDS.map((id) => (
+            <PlatformBadge key={id} id={id} agent={agent} />
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
