@@ -45,12 +45,6 @@ platforms:
 
 `extra.port` takes precedence over the `TEAMS_PORT` env var when both are set.
 
-## Ingress routing
-
-The Teams webhook path `/api/messages` is emitted in the generated ingress
-**before** the api-server's `/api` prefix so the controller's longest-prefix
-match routes inbound Teams traffic to port 3978, not 8642.
-
 ## Example
 
 ### Enabling the Teams bot with env vars
