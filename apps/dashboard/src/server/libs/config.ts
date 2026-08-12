@@ -48,10 +48,10 @@ export const ConfigSchema = z.object({
     .url()
     .optional()
     .describe("Override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL)."),
-  debugMode: z
-    .preprocess((v) => v === "true", z.boolean())
-    .default(false)
-    .describe("Enable verbose debug logging (HERMEUM_DEBUG_MODE)."),
+  debugLevel: z
+    .enum(["debug", "info", "warn", "error"])
+    .default("info")
+    .describe("Log verbosity level (HERMEUM_DEBUG_LEVEL)."),
   agentIngressScheme: z
     .enum(["http", "https"])
     .default("http")
@@ -95,7 +95,7 @@ export const config = ConfigSchema.parse({
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
-  debugMode: process.env.HERMEUM_DEBUG_MODE,
+  debugLevel: process.env.HERMEUM_DEBUG_LEVEL,
   agentIngressScheme: process.env.HERMEUM_AGENT_INGRESS_SCHEME,
   agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
   agentIngressClassName: process.env.HERMEUM_AGENT_INGRESS_CLASS_NAME,
