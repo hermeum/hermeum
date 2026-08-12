@@ -479,6 +479,9 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
   if (isApiServerEnabled(data)) {
     requireSensitiveEnv("API_SERVER_KEY", "env.API_SERVER_ENABLED");
   }
+  if (isTeamsEnabled(data)) {
+    requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled (env var or config)");
+  }
 
   data.env?.forEach((v, i) => {
     if (v.value === ENV_PLACEHOLDER_SENTINEL) {
@@ -567,6 +570,37 @@ export function getWebhookPort(input: AgentInput): number {
   return WEBHOOK_DEFAULT_PORT;
 }
 
+// Teams is an HTTP webhook platform (like webhook / api-server). Credentials
+// (client_id, client_secret, tenant_id) are env-only (TEAMS_*) — they must not
+// be written into config.yaml. An explicit `enabled` flag overrides the
+// credentials-presence detection (set false to disable while keeping creds);
+// when `enabled` is absent, Teams is on when all three TEAMS_* env vars are set.
+const TEAMS_DEFAULT_PORT = 3978;
+const TEAMS_REQUIRED_ENV_VARS = ["TEAMS_CLIENT_ID", "TEAMS_CLIENT_SECRET", "TEAMS_TENANT_ID"];
+
+function hasAllTeamsCredentials(input: AgentInput): boolean {
+  return TEAMS_REQUIRED_ENV_VARS.every(
+    (name) => input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false,
+  );
+}
+
+export function isTeamsEnabled(input: AgentInput): boolean {
+  const enabledFlag = input.config?.platforms?.teams?.enabled;
+  if (enabledFlag !== undefined) return enabledFlag;
+  return hasAllTeamsCredentials(input);
+}
+
+export function getTeamsPort(input: AgentInput): number {
+  const configPort = input.config?.platforms?.teams?.extra?.port;
+  if (configPort !== undefined) return configPort;
+  const envRaw = input.env?.find((v) => v.name === "TEAMS_PORT")?.value;
+  if (envRaw !== undefined && envRaw.trim() !== "") {
+    const n = Number(envRaw);
+    return Number.isInteger(n) && n > 0 ? n : TEAMS_DEFAULT_PORT;
+  }
+  return TEAMS_DEFAULT_PORT;
+}
+
 // Message-platform availability — a derived, read-only view of which inbound
 // message platforms are wired up for an agent, computed from its config + env.
 // Not persisted.
@@ -576,6 +610,7 @@ export enum PlatformId {
   ApiServer = "api-server",
   Webhook = "webhook",
   Slack = "slack",
+  Teams = "teams",
 }
 
 export interface PlatformAvailability {
@@ -607,6 +642,10 @@ export const PLATFORM_INGRESS_SUBPATHS: Partial<Record<PlatformId, string[]>> = 
   // /v1 is the main OpenAI-compatible path; /api is the generic alias.
   [PlatformId.ApiServer]: ["/v1", "/api"],
   [PlatformId.Webhook]: ["/webhooks"],
+  // Teams Bot Framework posts inbound messages to /api/messages.
+  // Must be emitted before the api-server /api prefix in the ingress so
+  // the longest-prefix match routes to the Teams port (3978), not 8642.
+  [PlatformId.Teams]: ["/api/messages"],
   // Slack uses Socket Mode — no inbound HTTP subpath.
 };
 
@@ -628,6 +667,10 @@ const PLATFORM_META: Record<PlatformId, PlatformMeta> = {
     label: "Slack",
     description: "Slack bot relayed through the gateway (Socket Mode).",
   },
+  [PlatformId.Teams]: {
+    label: "Teams",
+    description: "Microsoft Teams bot relayed through the gateway (HTTPS webhook).",
+  },
 };
 
 export function getPlatformLabel(id: PlatformId): string {
@@ -643,6 +686,7 @@ export const PLATFORM_IDS: readonly PlatformId[] = [
   PlatformId.ApiServer,
   PlatformId.Webhook,
   PlatformId.Slack,
+  PlatformId.Teams,
 ];
 
 const SLACK_REQUIRED_ENV_VARS = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_ALLOWED_USERS"];
@@ -693,6 +737,29 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
         return { status: "available", home: homeName ? `${home} (${homeName})` : home };
       }
       return { status: "available" };
+    }
+    case PlatformId.Teams: {
+      // An explicit `enabled: false` short-circuits to unavailable even when
+      // credentials are present.
+      if (!isTeamsEnabled(agent)) {
+        const enabledFlag = agent.config?.platforms?.teams?.enabled;
+        if (enabledFlag === false) {
+          return { status: "unavailable", reason: "Disabled by config.platforms.teams.enabled." };
+        }
+        const missing = TEAMS_REQUIRED_ENV_VARS.filter(
+          (name) => !env.some((v) => v.name === name && v.value.trim() !== ""),
+        );
+        return {
+          status: "unavailable",
+          reason: `Missing env var${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`,
+        };
+      }
+      const port = getTeamsPort(agent);
+      return {
+        status: "available",
+        port,
+        ...endpointsFor(agent.endpoint, subpaths, port),
+      };
     }
   }
 }

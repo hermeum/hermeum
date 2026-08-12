@@ -563,6 +563,117 @@ describe("agentToHermesAgent ingress wiring", () => {
     ]);
   });
 
+  it("includes only the teams route when only teams is enabled", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
+      { path: "/api/messages", pathType: "Prefix", port: 3978 },
+    ]);
+  });
+
+  it("emits /api/messages before /v1 and /api when teams + api-server are both enabled", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    );
+    const paths = hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths ?? [];
+    const teamsIdx = paths.findIndex((p) => p.path === "/api/messages");
+    const apiIdx = paths.findIndex((p) => p.path === "/api");
+    const v1Idx = paths.findIndex((p) => p.path === "/v1");
+    expect(teamsIdx).toBeGreaterThanOrEqual(0);
+    expect(apiIdx).toBeGreaterThan(teamsIdx);
+    expect(v1Idx).toBeGreaterThan(teamsIdx);
+    // Teams routes to its own port (3978), not the api-server port (8642).
+    expect(paths[teamsIdx]?.port).toBe(3978);
+    expect(paths[apiIdx]?.port).toBe(8642);
+  });
+
+  it("emits all routes in precedence order when webhook, teams, and api-server are enabled", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "WEBHOOK_ENABLED", value: "true" },
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
+      { path: "/webhooks", pathType: "Prefix", port: 8644 },
+      { path: "/api/messages", pathType: "Prefix", port: 3978 },
+      { path: "/v1", pathType: "Prefix", port: 8642 },
+      { path: "/api", pathType: "Prefix", port: 8642 },
+      { path: "/health", pathType: "Prefix", port: 8642 },
+    ]);
+  });
+
+  it("honors a custom teams port via config.platforms.teams.extra.port", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "sec",
+                tenant_id: "tid",
+                port: 4000,
+              },
+            },
+          },
+        },
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
+      { path: "/api/messages", pathType: "Prefix", port: 4000 },
+    ]);
+  });
+
+  it("exposes the teams service port when teams is enabled", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        env: [
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+          { name: "TEAMS_TENANT_ID", value: "tid" },
+        ],
+      })
+    );
+    const ports = hermesAgent.spec.networking?.service?.ports ?? [];
+    expect(ports).toContainEqual({
+      name: "teams",
+      port: 3978,
+      targetPort: 3978,
+      protocol: "TCP",
+    });
+  });
+
   it("emits a tls block with secretName when a tls secret is configured (regardless of scheme)", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     vi.stubEnv("HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME", "agent-tls");
