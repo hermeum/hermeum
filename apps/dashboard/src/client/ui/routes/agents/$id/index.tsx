@@ -67,7 +67,7 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
           key={item}
           variant="outline"
           size="sm"
-          className="h-auto px-2 py-1 font-mono text-xs"
+          className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
         >
           {item}
         </Button>
@@ -88,7 +88,7 @@ function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
@@ -150,7 +150,7 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
           <Button
             variant="outline"
             size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs ${
+            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
               status === "unavailable" ? "text-muted-foreground opacity-60" : ""
             }`}
           />
@@ -170,9 +170,6 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
                 </div>
               ))}
             </div>
-          )}
-          {status === "available" && id === "slack" && endpoints === undefined && (
-            <span className="opacity-80">Socket Mode — no public endpoint.</span>
           )}
           {home !== undefined && <span>Home channel: {home}</span>}
           {reason && (
@@ -419,7 +416,7 @@ function AgentDetailPage() {
                       key={v.name}
                       variant="outline"
                       size="sm"
-                      className="h-auto px-2 py-1 font-mono text-xs"
+                      className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                     >
                       {v.name}={v.value}
                     </Button>
@@ -457,7 +454,7 @@ function AgentDetailPage() {
                                 key={v.name}
                                 variant="outline"
                                 size="sm"
-                                className="h-auto px-2 py-1 font-mono text-xs"
+                                className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
                               >
                                 {v.name}
                               </Button>
