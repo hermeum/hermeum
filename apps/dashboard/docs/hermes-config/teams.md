@@ -1,7 +1,7 @@
 ---
 name: teams
 category: platforms
-description: Microsoft Teams bot — HTTPS webhook on /api/messages.
+description: Microsoft Teams bot configuration.
 ---
 
 # Microsoft Teams configuration
