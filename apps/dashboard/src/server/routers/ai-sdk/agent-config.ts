@@ -70,7 +70,7 @@ aiSdkRouter.post("/agent-config", async (req, res) => {
     providerOptions: {
       openai: { strictJsonSchema: false },
     },
-    ...(config.debugLevel === "debug" && {
+    ...(config.logLevel === "debug" && {
       onStepFinish: ({ stepNumber, finishReason, toolCalls, text, usage }) => {
         const toolsCalled = toolCalls.map((c) => c.toolName).join(",") || "-";
         const preview = text.slice(0, 80).replace(/\n/g, " ");
