@@ -7,11 +7,11 @@ export const ConfigSchema = z.object({
   agentConfigPath: z
     .string()
     .default("./agent-config.yaml")
-    .describe("Path to the agent templates config file (HERMEUM_CONFIG_PATH)."),
-  docsPath: z
+    .describe("Path to the agent templates config file (HERMEUM_AGENT_CONFIG_PATH)."),
+  hermesDocsPath: z
     .string()
     .default("./docs/hermes-config")
-    .describe("Path to the hermes-config docs directory (HERMEUM_DOCS_PATH)."),
+    .describe("Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH)."),
   databaseDialect: z
     .enum(["postgres", "sqlite"])
     .default("sqlite")
@@ -84,8 +84,8 @@ export const ConfigSchema = z.object({
 });
 
 export const config = ConfigSchema.parse({
-  agentConfigPath: process.env.HERMEUM_CONFIG_PATH,
-  docsPath: process.env.HERMEUM_DOCS_PATH,
+  agentConfigPath: process.env.HERMEUM_AGENT_CONFIG_PATH,
+  hermesDocsPath: process.env.HERMEUM_HERMES_DOCS_PATH,
   databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
