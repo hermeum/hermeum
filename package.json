@@ -1,6 +1,7 @@
 {
   "name": "hermeum",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
