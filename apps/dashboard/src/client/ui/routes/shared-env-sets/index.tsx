@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import { CopyButton } from "@/client/ui/components/copy-button";
-import { CreateSharedEnvSetDialog } from "./_components/create-shared-env-set-dialog";
+import { CreateSharedEnvSetDialog } from "./-components/create-shared-env-set-dialog";
 import { Badge } from "@hermeum/components/ui/badge";
 import { Button } from "@hermeum/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hermeum/components/ui/tabs";
