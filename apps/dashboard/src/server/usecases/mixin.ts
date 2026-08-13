@@ -20,7 +20,7 @@ export class BaseUseCase {
     readonly runtime: Runtime = new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),
-    readonly logger: LoggerAdaptor = new ConsoleLogger(config.debugLevel)
+    readonly logger: LoggerAdaptor = new ConsoleLogger(config.logLevel)
   ) {}
 }
 
