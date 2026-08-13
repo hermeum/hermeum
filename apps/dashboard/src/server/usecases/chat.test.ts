@@ -7,7 +7,7 @@ vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/hermes-skill-index", () => ({ HermesSkillIndex: vi.fn() }));
 vi.mock("../infras/console-logger", () => ({ ConsoleLogger: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
-  config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
+  config: { agentConfigPath: "./agent-config.yaml", hermesDocsPath: "./docs/hermes-config" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";

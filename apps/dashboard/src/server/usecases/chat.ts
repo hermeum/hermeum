@@ -6,7 +6,7 @@ import { config } from "@/server/libs/config";
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
 import type { File } from "./adaptors/file";
 
-const DOCS_PATH = config.docsPath;
+const DOCS_PATH = config.hermesDocsPath;
 
 // Document names come from the LLM; only simple slugs are accepted so a
 // crafted name can't traverse outside DOCS_PATH.

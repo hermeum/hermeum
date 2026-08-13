@@ -4,7 +4,7 @@ vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
 vi.mock("../infras/console-logger", () => ({ ConsoleLogger: vi.fn() }));
 vi.mock("@/server/libs/config", () => ({
-  config: { agentConfigPath: "./agent-config.yaml", docsPath: "./docs/hermes-config" },
+  config: { agentConfigPath: "./agent-config.yaml", hermesDocsPath: "./docs/hermes-config" },
 }));
 
 import { stringify } from "yaml";
