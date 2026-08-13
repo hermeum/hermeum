@@ -1,43 +1,84 @@
-FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# syntax=docker/dockerfile:1.7
+# Multi-stage Dockerfile for @hermeum/dashboard.
+# Build from repo root:
+#   docker build -f dockerfiles/Dockerfile.dashboard -t hermeum-dashboard .
 
-# ---- deps: install all workspace dependencies ----
+ARG NODE_IMAGE=node:24-alpine
+ARG PNPM_VERSION=9.15.0
+
+# --------------------------------------------------------------------------- #
+# base — common foundation: Node + pinned pnpm + native build toolchain       #
+# --------------------------------------------------------------------------- #
+FROM ${NODE_IMAGE} AS base
+ARG PNPM_VERSION
+ENV PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH \
+    CI=1
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate \
+ && apk add --no-cache build-base python3
+
+# --------------------------------------------------------------------------- #
+# deps — install workspace dependencies (cacheable, package.json-only)        #
+# --------------------------------------------------------------------------- #
 FROM base AS deps
 WORKDIR /app
-
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/dashboard/package.json ./apps/dashboard/
 COPY packages/components/package.json ./packages/components/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
-RUN pnpm install --frozen-lockfile
-
-# ---- builder: build client, server, and cmd bundles ----
+# --------------------------------------------------------------------------- #
+# builder — compile bundles and create a pruned production deployment         #
+# --------------------------------------------------------------------------- #
 FROM deps AS builder
 WORKDIR /app
-
 COPY . .
+RUN pnpm --filter @hermeum/dashboard build \
+ && pnpm deploy --filter @hermeum/dashboard --prod /deploy
 
-RUN pnpm --filter @hermeum/dashboard build
+# --------------------------------------------------------------------------- #
+# runner — lean production image                                              #
+# --------------------------------------------------------------------------- #
+FROM ${NODE_IMAGE} AS runner
 
-# ---- runner: lean production image ----
-FROM base AS runner
+LABEL org.opencontainers.image.title="hermeum" \
+      org.opencontainers.image.description="Shrine of Hermes agent" \
+      org.opencontainers.image.source="https://github.com/hermeum/hermeum" \
+      org.opencontainers.image.licenses="UNLICENSED"
 
-ENV NODE_ENV=production
+# better-sqlite3 native runtime needs libstdc++; postgres-js is pure JS.
+# wget is used by HEALTHCHECK.
+RUN apk add --no-cache libstdc++ wget
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
 
 WORKDIR /app
 
-COPY --from=builder /app .
+# Pruned node_modules + package.json from `pnpm deploy`.
+COPY --from=builder --chown=node:node /deploy ./
+# Built artifacts (client / server / cmd bundles).
+COPY --from=builder --chown=node:node /deploy/dist ./dist
+# Runtime data referenced by config.ts defaults.
+# agent-config.yaml is gitignored (instance-specific), so we ship the tracked
+# example as the runtime default. Operators override via a volume mount or
+# HERMEUM_CONFIG_PATH.
+COPY --from=builder --chown=node:node /app/apps/dashboard/agent-config.example.yaml ./agent-config.yaml
+COPY --from=builder --chown=node:node /app/apps/dashboard/docs/hermes-config ./docs/hermes-config
+# Drizzle migrations + config for both dialects (postgres & sqlite).
+COPY --from=builder --chown=node:node /app/apps/dashboard/src/server/migrations ./src/server/migrations
+COPY --from=builder --chown=node:node /app/apps/dashboard/drizzle.config.postgres.ts ./drizzle.config.postgres.ts
+COPY --from=builder --chown=node:node /app/apps/dashboard/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
 
-RUN pnpm deploy --filter @hermeum/dashboard --prod /deploy
-
-WORKDIR /deploy
-
-COPY --from=builder /app/apps/dashboard/dist ./dist
-COPY --from=builder /app/apps/dashboard/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /app/apps/dashboard/src/server/migrations ./src/server/migrations
+USER node
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:${PORT}/ >/dev/null 2>&1 || exit 1
 
 CMD ["node", "dist/server/server.js"]

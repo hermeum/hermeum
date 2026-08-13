@@ -1,0 +1,15 @@
+templates:
+  - id: minimal
+    name: Minimal
+    description: Create an agent with minimal configuration.
+    agentInput:
+      config:
+        model:
+          base_url: https://ollama.com/v1
+          default: kimi-k2.6
+          provider: ollama-cloud
+
+# allowed:
+#   openClawJsonPaths: []
+#   skills: []
+#   workspaceFiles: []
