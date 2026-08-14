@@ -81,6 +81,18 @@ export const ConfigSchema = z.object({
         "When set, the ingress emits a tls block with this secret; when unset, no tls block is " +
         "emitted (covers plain HTTP and load-balancer-terminated TLS)."
     ),
+  serverPort: z
+    .number()
+    .int()
+    .positive()
+    .default(3000)
+    .describe("Port the dashboard server listens on (HERMEUM_SERVER_PORT)."),
+  hmrPort: z
+    .number()
+    .int()
+    .positive()
+    .default(3001)
+    .describe("Port used by Vite's HMR websocket in dev (HERMEUM_HMR_PORT)."),
 });
 
 export const config = ConfigSchema.parse({
@@ -100,4 +112,8 @@ export const config = ConfigSchema.parse({
   agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
   agentIngressClassName: process.env.HERMEUM_AGENT_INGRESS_CLASS_NAME,
   agentIngressTlsSecretName: process.env.HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME,
+  serverPort: process.env.HERMEUM_SERVER_PORT
+    ? parseInt(process.env.HERMEUM_SERVER_PORT, 10)
+    : undefined,
+  hmrPort: process.env.HERMEUM_HMR_PORT ? parseInt(process.env.HERMEUM_HMR_PORT, 10) : undefined,
 });
