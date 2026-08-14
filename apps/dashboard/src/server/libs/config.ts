@@ -86,13 +86,36 @@ export const ConfigSchema = z.object({
     .int()
     .positive()
     .default(3000)
-    .describe("Port the dashboard server listens on (HERMEUM_SERVER_PORT)."),
+    .describe("Port the web server listens on (HERMEUM_SERVER_PORT)."),
   hmrPort: z
     .number()
     .int()
     .positive()
     .default(3001)
     .describe("Port used by Vite's HMR websocket in dev (HERMEUM_HMR_PORT)."),
+  tlsCertFile: z
+    .string()
+    .optional()
+    .describe("Path to the web TLS cert file (PEM) (HERMEUM_TLS_CERT_FILE). When set with HERMEUM_TLS_KEY_FILE, the web server serves HTTPS on HERMEUM_SERVER_PORT."),
+  tlsKeyFile: z
+    .string()
+    .optional()
+    .describe("Path to the web TLS key file (PEM) (HERMEUM_TLS_KEY_FILE). When set with HERMEUM_TLS_CERT_FILE, the web server serves HTTPS on HERMEUM_SERVER_PORT."),
+  webhookTlsCertFile: z
+    .string()
+    .optional()
+    .describe("Path to the mutating webhook TLS cert file (PEM) (HERMEUM_WEBHOOK_TLS_CERT_FILE). When set with HERMEUM_WEBHOOK_TLS_KEY_FILE, the webhook HTTPS listener starts on HERMEUM_WEBHOOK_PORT."),
+  webhookTlsKeyFile: z
+    .string()
+    .optional()
+    .describe("Path to the mutating webhook TLS key file (PEM) (HERMEUM_WEBHOOK_TLS_KEY_FILE). When set with HERMEUM_WEBHOOK_TLS_CERT_FILE, the webhook HTTPS listener starts on HERMEUM_WEBHOOK_PORT."),
+  webhookPort: z
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(8443)
+    .describe("HTTPS port for the mutating admission webhook (HERMEUM_WEBHOOK_PORT). Only used when HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set."),
 });
 
 export const config = ConfigSchema.parse({
@@ -116,4 +139,11 @@ export const config = ConfigSchema.parse({
     ? parseInt(process.env.HERMEUM_SERVER_PORT, 10)
     : undefined,
   hmrPort: process.env.HERMEUM_HMR_PORT ? parseInt(process.env.HERMEUM_HMR_PORT, 10) : undefined,
+  tlsCertFile: process.env.HERMEUM_TLS_CERT_FILE,
+  tlsKeyFile: process.env.HERMEUM_TLS_KEY_FILE,
+  webhookTlsCertFile: process.env.HERMEUM_WEBHOOK_TLS_CERT_FILE,
+  webhookTlsKeyFile: process.env.HERMEUM_WEBHOOK_TLS_KEY_FILE,
+  webhookPort: process.env.HERMEUM_WEBHOOK_PORT
+    ? parseInt(process.env.HERMEUM_WEBHOOK_PORT, 10)
+    : undefined,
 });

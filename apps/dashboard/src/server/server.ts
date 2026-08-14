@@ -1,6 +1,10 @@
 import path from "node:path";
 import url from "node:url";
 import * as fs from "node:fs";
+import http from "node:http";
+import https from "node:https";
+import type { Server as HttpServer } from "node:http";
+import type { Server as HttpsServer } from "node:https";
 import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
@@ -20,16 +24,34 @@ void config;
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export interface CreateServerResult {
+  app: express.Express;
+  webhookApp: express.Express;
+  webServer: HttpServer | HttpsServer;
+  webhookServer?: HttpServer | HttpsServer;
+}
+
+const loadTlsCredentials = (certFile: string, keyFile: string): { cert: Buffer; key: Buffer } => {
+  try {
+    return {
+      cert: fs.readFileSync(certFile),
+      key: fs.readFileSync(keyFile),
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to read TLS cert/key files (cert=${certFile}, key=${keyFile}): ${msg}`);
+  }
+};
+
 export const createServer = async (
   root = process.cwd(),
   isProd = process.env.NODE_ENV === "production"
-) => {
+): Promise<CreateServerResult> => {
   const app = express();
 
   app.all("/auth/*", toNodeHandler(auth));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
-  app.use("/webhook", webhookRouter);
   app.use("/chat", aiSdkRouter);
 
   if (!isProd) {
@@ -61,8 +83,6 @@ export const createServer = async (
         return next(e);
       }
     });
-
-    return { app };
   } else {
     app.use(express.static(path.resolve(__dirname, "../client")));
 
@@ -71,13 +91,64 @@ export const createServer = async (
     });
   }
 
-  return { app };
+  // Separate Express app for the mutating webhook — only mounts webhookRouter.
+  const webhookApp = express();
+  webhookApp.use(express.json());
+  webhookApp.use("/webhook", webhookRouter);
+
+  // Web server: HTTPS on serverPort when cert/key are set, otherwise HTTP.
+  const webHasTls = config.tlsCertFile !== undefined && config.tlsKeyFile !== undefined;
+  let webServer: HttpServer | HttpsServer;
+  if (webHasTls) {
+    const { cert, key } = loadTlsCredentials(config.tlsCertFile!, config.tlsKeyFile!);
+    webServer = https.createServer({ cert, key }, app);
+  } else {
+    webServer = http.createServer(app);
+  }
+
+  // Webhook server: HTTPS on webhookPort when cert/key are set, otherwise HTTP.
+  const webhookHasTls =
+    config.webhookTlsCertFile !== undefined && config.webhookTlsKeyFile !== undefined;
+  let webhookServer: HttpServer | HttpsServer | undefined;
+  if (webhookHasTls) {
+    const { cert, key } = loadTlsCredentials(config.webhookTlsCertFile!, config.webhookTlsKeyFile!);
+    webhookServer = https.createServer({ cert, key }, webhookApp);
+  } else {
+    webhookServer = http.createServer(webhookApp);
+  }
+
+  return {
+    app,
+    webhookApp,
+    webServer,
+    webhookServer,
+  };
 };
 
 if (!isTest) {
-  createServer().then(({ app }) =>
-    app.listen(serverPort, () => {
-      console.info(`Server available at: http://localhost:${serverPort}`);
+  createServer()
+    .then(({ webServer, webhookServer }) => {
+      webServer.listen(serverPort, () => {
+        const scheme = config.tlsCertFile ? "https" : "http";
+        console.info(`Server available at: ${scheme}://localhost:${serverPort}`);
+      });
+
+      if (webhookServer) {
+        webhookServer.listen(config.webhookPort, () => {
+          const scheme = config.webhookTlsCertFile ? "https" : "http";
+          console.info(`Webhook server available at: ${scheme}://localhost:${config.webhookPort}`);
+        });
+      }
     })
-  );
+    .catch((e) => {
+      console.error("Failed to start server:", e);
+      process.exit(1);
+    });
+}
+>>>>>>> f7b7c24 (feat(dashboard): add TLS termination for mutating webhook server)
+    })
+    .catch((e) => {
+      console.error("Failed to start server:", e);
+      process.exit(1);
+    });
 }
