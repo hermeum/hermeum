@@ -145,10 +145,3 @@ if (!isTest) {
       process.exit(1);
     });
 }
->>>>>>> f7b7c24 (feat(dashboard): add TLS termination for mutating webhook server)
-    })
-    .catch((e) => {
-      console.error("Failed to start server:", e);
-      process.exit(1);
-    });
-}

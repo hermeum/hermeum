@@ -27,29 +27,29 @@ vi.mock("./routers/better-auth/auth", () => ({
 
 describe("createServer TLS", () => {
   describe("TLS disabled (default)", () => {
-    it("returns HTTP servers for dashboard and webhook", async () => {
+    it("returns HTTP servers for web and webhook", async () => {
       vi.resetModules();
       const { createServer } = await import("./server");
       const result = await createServer(process.cwd(), true);
 
-      expect(result.dashboardServer).toBeDefined();
+      expect(result.webServer).toBeDefined();
       expect(result.webhookServer).toBeDefined();
-      result.dashboardServer.close();
+      result.webServer.close();
       result.webhookServer!.close();
     });
   });
 
   describe("TLS enabled", () => {
     let dir: string;
-    let dashboardCertFile: string;
-    let dashboardKeyFile: string;
+    let webCertFile: string;
+    let webKeyFile: string;
     let webhookCertFile: string;
     let webhookKeyFile: string;
 
     beforeAll(() => {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), "tls-server-"));
-      dashboardCertFile = path.join(dir, "dashboard.crt");
-      dashboardKeyFile = path.join(dir, "dashboard.key");
+      webCertFile = path.join(dir, "web.crt");
+      webKeyFile = path.join(dir, "web.key");
       webhookCertFile = path.join(dir, "webhook.crt");
       webhookKeyFile = path.join(dir, "webhook.key");
 
@@ -61,7 +61,7 @@ describe("createServer TLS", () => {
             `-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`
         );
 
-      genCert(dashboardCertFile, dashboardKeyFile);
+      genCert(webCertFile, webKeyFile);
       genCert(webhookCertFile, webhookKeyFile);
     });
 
@@ -69,10 +69,10 @@ describe("createServer TLS", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    it("serves the dashboard and webhook over HTTPS with separate cert/key pairs", async () => {
+    it("serves the web and webhook over HTTPS with separate cert/key pairs", async () => {
       vi.resetModules();
-      vi.stubEnv("HERMEUM_TLS_CERT_FILE", dashboardCertFile);
-      vi.stubEnv("HERMEUM_TLS_KEY_FILE", dashboardKeyFile);
+      vi.stubEnv("HERMEUM_TLS_CERT_FILE", webCertFile);
+      vi.stubEnv("HERMEUM_TLS_KEY_FILE", webKeyFile);
       vi.stubEnv("HERMEUM_WEBHOOK_TLS_CERT_FILE", webhookCertFile);
       vi.stubEnv("HERMEUM_WEBHOOK_TLS_KEY_FILE", webhookKeyFile);
       // Self-signed cert: skip verification for the test client.
@@ -84,19 +84,19 @@ describe("createServer TLS", () => {
       expect(result.webhookServer).toBeDefined();
 
       await new Promise<void>((resolve) => {
-        result.dashboardServer.listen(0, "127.0.0.1", () => resolve());
+        result.webServer.listen(0, "127.0.0.1", () => resolve());
       });
       await new Promise<void>((resolve) => {
         result.webhookServer!.listen(0, "127.0.0.1", () => resolve());
       });
 
-      const dashboardAddr = result.dashboardServer.address() as AddressInfo;
+      const webAddr = result.webServer.address() as AddressInfo;
       const webhookAddr = result.webhookServer!.address() as AddressInfo;
 
-      // Dashboard listener is up over HTTPS (static files aren't built in
+      // Web listener is up over HTTPS (static files aren't built in
       // tests, so we only assert the TLS handshake succeeds).
-      const dashboardRes = await fetch(`https://127.0.0.1:${dashboardAddr.port}/`);
-      expect(dashboardRes.status).toBe(404);
+      const webRes = await fetch(`https://127.0.0.1:${webAddr.port}/`);
+      expect(webRes.status).toBe(404);
 
       // Webhook listener serves /webhook/mutating over HTTPS.
       const webhookRes = await fetch(`https://127.0.0.1:${webhookAddr.port}/webhook/mutating`, {
@@ -116,7 +116,7 @@ describe("createServer TLS", () => {
       const body = (await webhookRes.json()) as { response?: { allowed: boolean } };
       expect(body.response?.allowed).toBe(true);
 
-      result.dashboardServer.close();
+      result.webServer.close();
       result.webhookServer!.close();
 
       vi.unstubAllEnvs();
