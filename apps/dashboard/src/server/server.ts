@@ -10,9 +10,7 @@ import { webhookRouter } from "./routers/webhook";
 import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
 import { auth } from "./routers/better-auth/auth";
 
-const PORT = typeof process.env.PORT !== "undefined" ? parseInt(process.env.PORT, 10) : 3000;
-const HMR_PORT =
-  typeof process.env.HMR_PORT !== "undefined" ? parseInt(process.env.HMR_PORT, 10) : 3001;
+const { serverPort, hmrPort } = config;
 
 const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
 
@@ -46,7 +44,7 @@ export const createServer = async (
           interval: 100,
         },
         hmr: {
-          port: HMR_PORT,
+          port: hmrPort,
         },
       },
       appType: "custom",
@@ -78,8 +76,8 @@ export const createServer = async (
 
 if (!isTest) {
   createServer().then(({ app }) =>
-    app.listen(PORT, () => {
-      console.info(`Server available at: http://localhost:${PORT}`);
+    app.listen(serverPort, () => {
+      console.info(`Server available at: http://localhost:${serverPort}`);
     })
   );
 }
