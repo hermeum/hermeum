@@ -1,0 +1,37 @@
+Hermeum dashboard is being deployed.
+
+Web UI:
+  {{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}
+  {{- else }}
+  kubectl port-forward svc/{{ include "hermeum.fullname" . }} 3000:3000
+  then open http://localhost:3000
+  {{- end }}
+
+Mutating webhook for HermesAgent:
+  {{- if .Values.webhook.enabled }}
+  Serving HTTPS on port {{ .Values.webhook.port }} at /webhook/mutating.
+  {{- if include "hermeum.provisionWebhookCert" . }}
+  A self-signed CA + serving cert were provisioned into Secret
+  {{ include "hermeum.webhookTlsSecretName" . }} by a pre-install Job,
+  and the caBundle was patched into MutatingWebhookConfiguration
+  {{ include "hermeum.webhookName" . }}.
+  {{- else }}
+  Using operator-supplied TLS Secret {{ include "hermeum.webhookTlsSecretName" . }}.
+  Ensure its caBundle is present in the MutatingWebhookConfiguration.
+  {{- end }}
+  {{- else }}
+  Disabled (webhook.enabled=false).
+  {{- end }}
+
+Database:
+  Dialect: {{ .Values.config.databaseDialect }}
+  {{- if and (eq .Values.config.databaseDialect "sqlite") .Values.persistence.enabled }}
+  sqlite PVC {{ include "hermeum.fullname" . }}-data mounted at {{ .Values.persistence.mountPath }}.
+  {{- end }}
+
+HermesAgent reconciliation namespace: {{ include "hermeum.namespace" . }}
+
+Next: verify the dashboard pod is ready and the webhook caBundle is set.
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl get mutatingwebhookconfiguration {{ include "hermeum.webhookName" . }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -text

@@ -1,0 +1,39 @@
+{{- $namespace := include "hermeum.namespace" . -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hermeum.fullname" . }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+rules:
+  # The dashboard reconciles HermesAgent custom resources in the namespace.
+  - apiGroups: ["agents.hermeum.app"]
+    resources: ["hermesagents"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Per-agent env is split across a ConfigMap (non-sensitive) and a Secret
+  # (sensitive); the dashboard manages both.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Secrets hold sensitive agent env + shared env sets; the dashboard reads,
+  # creates, replaces, and deletes them.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "hermeum.fullname" . }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "hermeum.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hermeum.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}

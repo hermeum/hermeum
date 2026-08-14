@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hermeum.fullname" . }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "hermeum.selectorLabels" . | nindent 4 }}
+  ports:
+    # HTTP — UI, /auth, /trpc, /chat. Terminated upstream by the ingress
+    # gateway when enabled; reachable in-cluster otherwise.
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+    {{- if .Values.webhook.enabled }}
+    # HTTPS — /webhook/mutating admission webhook. Reached directly by the
+    # kube-apiserver via the MutatingWebhookConfiguration clientConfig.service.
+    - name: https-webhook
+      port: {{ .Values.webhook.port }}
+      targetPort: https-webhook
+      protocol: TCP
+    {{- end }}

@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+        "pullSecrets": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["repository", "pullPolicy"]
+    },
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "operator": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["enabled"]
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "agentConfigPath": { "type": "string" },
+        "hermesDocsPath": { "type": "string" },
+        "databaseDialect": { "type": "string", "enum": ["sqlite", "postgres"] },
+        "kubernetesNamespace": { "type": "string" },
+        "hermesImageRepository": { "type": "string" },
+        "hermesImageTag": { "type": "string" },
+        "openaiModel": { "type": "string", "minLength": 1 },
+        "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+        "allowedEmailDomain": { "type": "string" },
+        "agentIngress": {
+          "type": "object",
+          "properties": {
+            "scheme": { "type": "string", "enum": ["http", "https"] },
+            "baseHostname": { "type": "string" },
+            "className": { "type": "string" },
+            "tlsSecretName": { "type": "string" }
+          }
+        }
+      },
+      "required": [
+        "agentConfigPath",
+        "hermesDocsPath",
+        "databaseDialect",
+        "kubernetesNamespace",
+        "hermesImageRepository",
+        "hermesImageTag",
+        "openaiModel",
+        "logLevel"
+      ]
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "databaseUrl": { "type": "string" },
+        "smtpUrl": { "type": "string" },
+        "openaiBaseUrl": { "type": "string" },
+        "openaiApiKey": { "type": "string" },
+        "existingSecret": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["databaseUrl"], "properties": { "databaseUrl": { "minLength": 1 } } },
+        { "required": ["existingSecret"], "properties": { "existingSecret": { "minLength": 1 } } }
+      ]
+    },
+    "agentConfig": { "type": "object" },
+    "webhook": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "certPath": { "type": "string" },
+            "keyPath": { "type": "string" },
+            "caPath": { "type": "string" }
+          },
+          "required": ["certPath", "keyPath", "caPath"]
+        },
+        "failurePolicy": { "type": "string", "enum": ["Ignore", "Fail"] },
+        "reapply": { "type": "boolean" },
+        "matchPolicy": { "type": "string", "enum": ["Exact", "Equivalent"] },
+        "namespaceSelector": { "type": "object" },
+        "objectSelector": { "type": "object" },
+        "rules": { "type": "array" }
+      },
+      "required": ["enabled", "port", "failurePolicy", "reapply", "matchPolicy"]
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object" },
+        "host": { "type": "string" },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secretName": { "type": "string" }
+          },
+          "required": ["enabled"]
+        }
+      },
+      "required": ["enabled"]
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "size": { "type": "string" },
+        "storageClassName": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "mountPath": { "type": "string" }
+      },
+      "required": ["enabled", "accessModes", "mountPath"]
+    },
+    "migrations": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["enabled"]
+    },
+    "resources": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" },
+    "podAnnotations": { "type": "object" },
+    "podLabels": { "type": "object" },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "annotations": { "type": "object" },
+        "name": { "type": "string" }
+      },
+      "required": ["create"]
+    }
+  },
+  "required": ["image", "replicaCount", "operator", "config", "secrets", "agentConfig", "webhook", "ingress", "persistence", "migrations", "serviceAccount"],
+  "allOf": [
+    {
+      "description": "sqlite uses a ReadWriteOnce PVC — only one replica can mount it.",
+      "if": {
+        "properties": {
+          "config": { "properties": { "databaseDialect": { "const": "sqlite" } } }
+        }
+      },
+      "then": {
+        "properties": { "replicaCount": { "const": 1 } },
+        "errorMessage": "replicaCount must be 1 when config.databaseDialect is 'sqlite' (ReadWriteOnce PVC). Use postgres to scale horizontally."
+      }
+    }
+  ]
+}

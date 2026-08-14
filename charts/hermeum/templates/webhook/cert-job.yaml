@@ -1,0 +1,93 @@
+{{- if include "hermeum.provisionWebhookCert" . -}}
+{{- $svcName := include "hermeum.fullname" . -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $dns1 := printf "%s.%s.svc" $svcName $namespace -}}
+{{- $dns2 := printf "%s.%s.svc.cluster.local" $svcName $namespace -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    # Run before the dashboard pod and the MutatingWebhookConfiguration.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "hermeum.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "hermeum.fullname" . }}-webhook-cert
+      containers:
+        - name: cert-gen
+          # A minimal image with openssl + kubectl. kubectl is needed to write
+          # the Secret back to the cluster (no other RBAC is granted to this SA
+          # for secrets outside the cert job — see rbac.yaml).
+          image: alpine/k8s:1.31.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SVC_NAME
+              value: {{ $svcName | quote }}
+            - name: SVC_NAMESPACE
+              value: {{ $namespace | quote }}
+            - name: DNS_1
+              value: {{ $dns1 | quote }}
+            - name: DNS_2
+              value: {{ $dns2 | quote }}
+            - name: SECRET_NAME
+              value: {{ include "hermeum.webhookTlsSecretName" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              set -e
+
+              # Generate a self-signed CA.
+              openssl genrsa -out ca.key 2048
+              openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+                -subj "/CN=hermeum-webhook-ca"
+
+              # Generate the serving cert and sign it with the CA. SANs cover
+              # the in-cluster Service DNS names the apiserver dials.
+              openssl genrsa -out tls.key 2048
+              cat > /tmp/openssl.cnf <<EOF
+              [req]
+              distinguished_name = req_distinguished_name
+              req_extensions = v3_req
+              prompt = no
+              [req_distinguished_name]
+              CN = ${SVC_NAME}
+              [v3_req]
+              subjectAltName = @alt_names
+              [alt_names]
+              DNS.1 = ${SVC_NAME}
+              DNS.2 = ${DNS_1}
+              DNS.3 = ${DNS_2}
+              EOF
+              openssl req -new -key tls.key -out tls.csr -config /tmp/openssl.cnf
+              openssl x509 -req -days 3650 -in tls.csr -CA ca.crt -CAkey ca.key \
+                -CAcreateserial -out tls.crt -extensions v3_req \
+                -extfile /tmp/openssl.cnf
+
+              # Write/replace the TLS Secret. Use --dry-run to render the
+              # object then kubectl apply so it is idempotent across upgrades.
+              kubectl create secret generic "${SECRET_NAME}" \
+                --namespace "${SVC_NAMESPACE}" \
+                --from-file=ca.crt=ca.crt \
+                --from-file=tls.crt=tls.crt \
+                --from-file=tls.key=tls.key \
+                --dry-run=client -o yaml | kubectl apply -f -
+
+              echo "Webhook TLS secret ${SECRET_NAME} provisioned."
+          volumeMounts:
+            - name: work
+              mountPath: /tmp
+      volumes:
+        - name: work
+          emptyDir: {}
+{{- end -}}

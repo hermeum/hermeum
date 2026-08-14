@@ -1,0 +1,36 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "hermeum.webhookName" . }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+webhooks:
+  - name: {{ include "hermeum.webhookName" . }}.hermeum.app
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: {{ .Values.webhook.failurePolicy | quote }}
+    matchPolicy: {{ .Values.webhook.matchPolicy | quote }}
+    reinvocationPolicy: {{ if .Values.webhook.reapply }}IfNeeded{{ else }}Never{{ end }}
+    {{- with .Values.webhook.namespaceSelector }}
+    namespaceSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.webhook.objectSelector }}
+    objectSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    rules:
+      {{- toYaml .Values.webhook.rules | nindent 6 }}
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace | quote }}
+        name: {{ include "hermeum.fullname" . | quote }}
+        port: {{ .Values.webhook.port }}
+        path: /webhook/mutating
+      # caBundle is patched in by the post-install ca-bundle Job when the chart
+      # provisions the cert. When the operator supplies an existingSecret with
+      # a ca.crt, they must also set the caBundle here manually (or via their
+      # own automation); we leave it empty.
+      caBundle: ""
+{{- end -}}

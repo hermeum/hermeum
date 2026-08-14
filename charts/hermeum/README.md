@@ -1,0 +1,192 @@
+# hermeum
+
+Helm chart for the [Hermeum](https://github.com/hermeum/hermeum) dashboard — the
+control plane that reconciles `HermesAgent` custom resources via the
+`hermes-agent-operator`.
+
+The dashboard is a Node/Express server that exposes:
+
+| Port  | Scheme | Path(s)                                  | Consumer                        |
+|-------|--------|------------------------------------------|---------------------------------|
+| 3000  | HTTP   | `/`, `/auth/*`, `/trpc`, `/chat`         | UI + tRPC + AI config generator |
+| 8443  | HTTPS  | `/webhook/mutating`                      | kube-apiserver (admission webhook) |
+
+The HTTP port is fronted by an optional ingress gateway; the HTTPS port is
+reached directly by the kube-apiserver via a `MutatingWebhookConfiguration`.
+TLS on 8443 is terminated **in-process** by the dashboard server (see the
+companion dashboard PR that implements in-process TLS termination).
+
+## Dependencies
+
+This chart depends on the `hermes-agent-operator` chart, distributed as an OCI
+artifact:
+
+```
+oci://ghcr.io/hermeum/charts/hermes-agent-operator
+```
+
+The operator installs the `HermesAgent` CRD (`agents.hermeum.app/v1alpha1`) and
+the reconciler. `helm dependency build` fetches it; `operator.enabled=false`
+skips it when the operator is already installed cluster-wide.
+
+```bash
+helm dependency build charts/hermeum
+```
+
+## Install
+
+```bash
+# Required: HERMEUM_DATABASE_URL (the only hard-required env var).
+helm install hermeum charts/hermeum \
+  --namespace hermeum --create-namespace \
+  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite
+```
+
+With an external Postgres:
+
+```bash
+helm install hermeum charts/hermeum \
+  --namespace hermeum --create-namespace \
+  --set config.databaseDialect=postgres \
+  --set secrets.databaseUrl=postgres://user:pass@db.example.com:5432/hermeum
+```
+
+With an agentConfig override that drives the mutating webhook:
+
+```bash
+helm install hermeum charts/hermeum \
+  --namespace hermeum --create-namespace \
+  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
+  --values values.agentconfig.yaml
+```
+
+```yaml
+# values.agentconfig.yaml
+agentConfig:
+  templates:
+    - id: minimal
+      name: Minimal
+      description: Create an agent with minimal configuration.
+      agentInput:
+        config:
+          model:
+            base_url: https://ollama.com/v1
+            default: kimi-k2.6
+            provider: ollama-cloud
+  agentTypes:
+    my-type:
+      description: Injects an annotation marking the agent type.
+      mutatingWebhookJsonPatch:
+        - op: add
+          path: /metadata/annotations/hermeum.app~1type
+          value: my-type
+```
+
+## Required values
+
+| Value                          | Source                              | Notes                                            |
+|--------------------------------|-------------------------------------|--------------------------------------------------|
+| `secrets.databaseUrl`          | `HERMEUM_DATABASE_URL`              | Required unless `secrets.existingSecret` is set. |
+
+All other env vars have defaults (see `apps/dashboard/src/server/libs/config.ts`
+for the authoritative list + semantics, and `values.yaml` for the chart-side
+documentation).
+
+## Mutating webhook for HermesAgent
+
+When `webhook.enabled` (default `true`), the chart ships:
+
+1. A `MutatingWebhookConfiguration` admitting `CREATE`/`UPDATE` on
+   `agents.hermeum.app/v1alpha1` `hermesagents`, dispatching
+   `AdmissionReview`s to the dashboard's `POST /webhook/mutating`.
+2. A pre-install Job that generates a self-signed CA + serving cert and writes
+   them to a `<release>-webhook-tls` Secret (skipped when
+   `webhook.tls.existingSecret` is set).
+3. A post-install Job that patches the CA into the `MutatingWebhookConfiguration`'s
+   `caBundle` (Helm can't template Secret contents).
+4. Dedicated hook-phase ServiceAccount + RBAC (cluster-scoped for the webhook
+   patch) so the hooks work even though they run before the main resources.
+
+The webhook returns a JSON-Patch drawn from
+`agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch` — so it is a
+no-op until the operator populates `agentConfig` with at least one
+`agentTypes` entry whose `mutatingWebhookJsonPatch` is non-empty.
+
+### Operator-supplied cert
+
+Set `webhook.tls.existingSecret` to an existing `kubernetes.io/tls`-style Secret
+containing `tls.crt`, `tls.key`, and `ca.crt`. The chart skips cert generation
+and mounts the Secret; the operator is then responsible for ensuring the
+`MutatingWebhookConfiguration`'s `caBundle` matches `ca.crt` (e.g. via
+cert-manager's `cert-manager.io/inject-ca-from` annotation).
+
+## Ingress gateway (optional)
+
+`ingress.enabled=true` emits a standard `networking.k8s.io/Ingress` for the UI
+on port 3000. Controller selection is via `ingress.className`
+(`nginx` / `istio-ingress` / `traefik` / …). This is **not** used for the
+mutating webhook, which is served on the internal 8443 Service directly by
+the kube-apiserver.
+
+## Database
+
+- **sqlite** (default): a PVC is mounted at `persistence.mountPath`
+  (`/var/lib/hermeum`); point `secrets.databaseUrl` at `file:<mountPath>/db.sqlite`.
+  `replicaCount` must stay 1 (ReadWriteOnce PVC).
+- **postgres**: set `config.databaseDialect=postgres` and `secrets.databaseUrl`
+  to the Postgres connection URL. The PVC is skipped and `replicaCount` can
+  scale up.
+
+Migrations run as an initContainer (`migrations.enabled`, default `true`)
+before the server starts, using the image's bundled `drizzle-kit` +
+per-dialect SQL. Disable only if you run migrations out-of-band.
+
+## RBAC
+
+The dashboard's ServiceAccount is granted a namespace-scoped `Role` over:
+- `agents.hermeum.app/hermesagents` — full CRUD (reconciles agent CRs)
+- `configmaps`, `secrets` — full CRUD (per-agent env + shared env sets)
+
+The webhook cert-provisioning hooks use a **separate** ServiceAccount
+(`<release>-webhook-cert`) with a cluster-scoped `ClusterRole` over
+`mutatingwebhookconfigurations` (needed only for the post-install caBundle
+patch). This keeps the dashboard's own RBAC narrowly namespace-scoped.
+
+## Values
+
+See `values.yaml` for the full, documented list. Run `helm show values` for a
+rendered view:
+
+```bash
+helm show values charts/hermeum
+```
+
+### Notable values
+
+| Key                                 | Default                          | Description                                   |
+|-------------------------------------|----------------------------------|-----------------------------------------------|
+| `image.repository`                   | `ghcr.io/hermeum/dashboard`      | Dashboard image. No published image yet — set this. |
+| `operator.enabled`                   | `true`                           | Install `hermes-agent-operator` as a dependency. |
+| `config.databaseDialect`             | `sqlite`                         | `sqlite` or `postgres`.                       |
+| `secrets.databaseUrl`                | `""`                             | **Required.** `HERMEUM_DATABASE_URL`.         |
+| `secrets.existingSecret`             | `""`                             | Use an existing Secret instead of templating one. |
+| `agentConfig`                        | `{}`                             | Full `agent-config.yaml` content (mounted as a ConfigMap). |
+| `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
+| `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
+| `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |
+| `persistence.enabled`                | `true`                           | PVC for sqlite (ignored for postgres).       |
+
+## TLS env var contract
+
+This chart sets the following env vars, which the dashboard's in-process TLS
+termination implementation **must** consume:
+
+| Env var                       | Meaning                                            |
+|-------------------------------|----------------------------------------------------|
+| `HERMEUM_WEBHOOK_TLS_ENABLED` | `true` enables the HTTPS listener.                 |
+| `HERMEUM_WEBHOOK_TLS_CERT_PATH` | Path to the serving cert (`tls.crt`).            |
+| `HERMEUM_WEBHOOK_TLS_KEY_PATH`  | Path to the serving key (`tls.key`).             |
+| `HERMEUM_WEBHOOK_PORT`        | The HTTPS port to listen on (matches `webhook.port`). |
+
+If the dashboard PR lands different names, update `templates/deployment.yaml`
+accordingly.
