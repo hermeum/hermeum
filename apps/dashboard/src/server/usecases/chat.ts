@@ -28,7 +28,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // appended), a context block describing the current draft, and the
   // client-side tool the model uses to apply config changes.
   async getAgentConfigContext(currentConfig?: AgentInput): Promise<AgentConfigContext> {
-    return {
+    const ctx: AgentConfigContext = {
       instructions: await this.buildInstructions(),
       prompt:
         currentConfig === undefined
@@ -77,6 +77,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
         }),
       },
     };
+    this.logger.info("built agent config context", { hasDraft: currentConfig !== undefined });
+    return ctx;
   }
 
   // Server-executed tool that lets the model pull a Hermes agent configuration
@@ -92,8 +94,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       inputSchema: z.object({
         names: z.array(z.string()).min(1).describe("Document names listed in the system prompt."),
       }),
-      execute: async ({ names }) => ({
-        documents: await Promise.all(
+      execute: async ({ names }) => {
+        const documents = await Promise.all(
           names.map(async (name) => {
             const file = DOCUMENT_NAME_RE.test(name)
               ? await this.files.readFile(`${DOCS_PATH}/${name}.md`)
@@ -105,8 +107,10 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
                 }
               : { name, content: file.content };
           })
-        ),
-      }),
+        );
+        this.logger.debug("read documents", { names });
+        return { documents };
+      },
     });
   }
 
@@ -126,8 +130,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       inputSchema: z.object({
         ids: z.array(z.string()).min(1).describe("Shared env set ids listed in the system prompt."),
       }),
-      execute: async ({ ids }) => ({
-        sharedEnvSets: await Promise.all(
+      execute: async ({ ids }) => {
+        const sharedEnvSets = await Promise.all(
           ids.map(async (id) => {
             const set = await this.runtime.getSharedEnvSet(id);
             if (set === null || set.archived) {
@@ -138,8 +142,10 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
             }
             return { id, envVars: set.envVars.map(({ name }) => ({ name })) };
           })
-        ),
-      }),
+        );
+        this.logger.debug("read shared env sets", { ids });
+        return { sharedEnvSets };
+      },
     });
   }
 

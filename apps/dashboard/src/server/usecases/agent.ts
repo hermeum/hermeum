@@ -19,23 +19,31 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
   }
 
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
-    return this.runtime.listHermesAgents(input);
+    const agents = await this.runtime.listHermesAgents(input);
+    this.logger.info("listed hermes agents", { count: agents.length, filter: input });
+    return agents;
   }
 
   async getHermesAgent(ctx: Context, id: string): Promise<Agent | null> {
-    return this.runtime.getHermesAgent(id);
+    const agent = await this.runtime.getHermesAgent(id);
+    this.logger.info("got hermes agent", { id, found: agent !== null });
+    return agent;
   }
 
   async createHermesAgent(ctx: Context, agentInput: AgentInput): Promise<Agent> {
     agentInput = AgentInputSchema.parse(agentInput);
 
     await this.checkAgentInputAllowed(agentInput);
-    return this.runtime.createHermesAgent({ ...agentInput, userId: this.requireUser(ctx).id });
+    const userId = this.requireUser(ctx).id;
+    const agent = await this.runtime.createHermesAgent({ ...agentInput, userId });
+    this.logger.info("created hermes agent", { id: agent.id, userId });
+    return agent;
   }
 
   async updateHermesAgent(ctx: Context, id: string, patch: AgentInput): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
+      this.logger.warn("can't update — agent not found", { id });
       throw new Error(`HermesAgent ${id} not found`);
     }
     this.verifyOwnership(ctx, agent);
@@ -46,7 +54,9 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
     }
-    return this.runtime.patchHermesAgent({ id, patch });
+    const updated = await this.runtime.patchHermesAgent({ id, patch });
+    this.logger.info("updated hermes agent", { id, userId: this.requireUser(ctx).id });
+    return updated;
   }
 
   private checkEnvSensitivityNotDowngraded(existingEnv: Env, patchEnv: Env): void {
@@ -62,37 +72,49 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
   async archiveHermesAgent(ctx: Context, id: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
+      this.logger.warn("can't archive — agent not found", { id });
       throw new Error(`HermesAgent ${id} not found`);
     }
     this.verifyOwnership(ctx, agent);
-    return this.runtime.archiveHermesAgent(id);
+    const archived = await this.runtime.archiveHermesAgent(id);
+    this.logger.info("archived hermes agent", { id, userId: this.requireUser(ctx).id });
+    return archived;
   }
 
   async suspendHermesAgent(ctx: Context, id: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
+      this.logger.warn("can't suspend — agent not found", { id });
       throw new Error(`HermesAgent ${id} not found`);
     }
     this.verifyOwnership(ctx, agent);
-    return this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
+    const suspended = await this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
+    this.logger.info("suspended hermes agent", { id, userId: this.requireUser(ctx).id });
+    return suspended;
   }
 
   async resumeHermesAgent(ctx: Context, id: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(id);
     if (!agent) {
+      this.logger.warn("can't resume — agent not found", { id });
       throw new Error(`HermesAgent ${id} not found`);
     }
     this.verifyOwnership(ctx, agent);
-    return this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
+    const resumed = await this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
+    this.logger.info("resumed hermes agent", { id, userId: this.requireUser(ctx).id });
+    return resumed;
   }
 
   async getGatewayToken(ctx: Context, agentId: string): Promise<string | null> {
     const agent = await this.runtime.getHermesAgent(agentId);
     if (!agent) {
+      this.logger.warn("can't get gateway token — agent not found", { agentId });
       throw new Error(`HermesAgent ${agentId} not found`);
     }
     this.verifyOwnership(ctx, agent);
-    return this.runtime.getGatewayToken(agentId);
+    const token = await this.runtime.getGatewayToken(agentId);
+    this.logger.info("got gateway token", { agentId, userId: this.requireUser(ctx).id });
+    return token;
   }
 
   private async checkAgentInputAllowed(

@@ -1,4 +1,5 @@
 .claude
+.opencode
 node_modules
 dist
 .output
