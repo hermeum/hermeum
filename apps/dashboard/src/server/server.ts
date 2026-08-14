@@ -14,7 +14,7 @@ import { webhookRouter } from "./routers/webhook";
 import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
 import { auth } from "./routers/better-auth/auth";
 
-const { serverPort, hmrPort } = config;
+const { port, hmrPort } = config;
 
 const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
 
@@ -25,8 +25,6 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface CreateServerResult {
-  app: express.Express;
-  webhookApp: express.Express;
   webServer: HttpServer | HttpsServer;
   webhookServer?: HttpServer | HttpsServer;
 }
@@ -96,7 +94,7 @@ export const createServer = async (
   webhookApp.use(express.json());
   webhookApp.use("/webhook", webhookRouter);
 
-  // Web server: HTTPS on serverPort when cert/key are set, otherwise HTTP.
+  // Web server: HTTPS on port when cert/key are set, otherwise HTTP.
   const webHasTls = config.tlsCertFile !== undefined && config.tlsKeyFile !== undefined;
   let webServer: HttpServer | HttpsServer;
   if (webHasTls) {
@@ -118,8 +116,6 @@ export const createServer = async (
   }
 
   return {
-    app,
-    webhookApp,
     webServer,
     webhookServer,
   };
@@ -128,9 +124,9 @@ export const createServer = async (
 if (!isTest) {
   createServer()
     .then(({ webServer, webhookServer }) => {
-      webServer.listen(serverPort, () => {
+      webServer.listen(port, () => {
         const scheme = config.tlsCertFile ? "https" : "http";
-        console.info(`Server available at: ${scheme}://localhost:${serverPort}`);
+        console.info(`Server available at: ${scheme}://localhost:${port}`);
       });
 
       if (webhookServer) {
