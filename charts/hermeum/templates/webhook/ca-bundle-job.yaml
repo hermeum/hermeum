@@ -41,8 +41,12 @@ spec:
                 exit 1
               fi
               # Patch the MutatingWebhookConfiguration's caBundle.
+              # Use --field-manager=helm so Helm's server-side apply doesn't
+              # conflict on upgrades (the field is declared in the Helm template
+              # as caBundle: "", but the actual value is patched in here).
               kubectl patch mutatingwebhookconfiguration "${WEBHOOK_NAME}" \
                 --type=json \
+                --field-manager=helm \
                 -p="[{\"op\":\"replace\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_B64}\"}]"
               echo "caBundle patched into ${WEBHOOK_NAME}."
 {{- end -}}

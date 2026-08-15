@@ -67,6 +67,8 @@
       "type": "object",
       "properties": {
         "databaseUrl": { "type": "string" },
+        "betterAuthSecret": { "type": "string" },
+        "betterAuthUrl": { "type": "string" },
         "smtpUrl": { "type": "string" },
         "openaiBaseUrl": { "type": "string" },
         "openaiApiKey": { "type": "string" },

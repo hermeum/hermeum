@@ -64,14 +64,16 @@ config:
   # When both certFile and keyFile are set, the dashboard serves the UI/trpc/
   # auth/chat endpoints over HTTPS on config.port instead of HTTP. This is an
   # alternative to the ingress gateway for TLS-terminating the web server
-  # in-process. Leave unset to keep the web server on plain HTTP and terminate
-  # TLS upstream (see `ingress`).
+  # in-process. Leave both empty (default) to keep the web server on plain HTTP
+  # and terminate TLS upstream via the ingress gateway.
   webTls:
-    # Existing TLS Secret (kubernetes.io/tls type with tls.crt + tls.key) mounted
-    # at the cert/key paths below. Defaults to "<release>-web-tls".
+    # Existing TLS Secret (kubernetes.io/tls type with tls.crt + tls.key).
+    # Defaults to "<release>-web-tls". Only used when certFile + keyFile are set.
     secretName: ""
-    certFile: /etc/hermeum/web-tls/tls.crt
-    keyFile: /etc/hermeum/web-tls/tls.key
+    # When both non-empty, the chart mounts the Secret and sets the env vars
+    # that switch the dashboard to HTTPS.
+    certFile: ""
+    keyFile: ""
 
   # ── Per-agent ingress (HERMEUM_AGENT_INGRESS_*) ─────────────────────────────
   # These configure how the *operator* emits per-agent ingresses; they are
@@ -92,11 +94,18 @@ config:
     # tls block with this secret; when unset, no tls block is emitted.
     tlsSecretName: ""
 
-# ── Sensitive env (HERMEUM_* + OPENAI_API_KEY → Secret) ───────────────────────
+# ── Sensitive env (HERMEUM_* + BETTER_AUTH_* + OPENAI_API_KEY → Secret) ──────
 secrets:
   # REQUIRED when no existingSecret is set. Connection URL for the dashboard
   # database (HERMEUM_DATABASE_URL). For sqlite use "file:/var/lib/hermeum/db.sqlite".
   databaseUrl: ""
+  # REQUIRED — session signing secret for Better Auth (BETTER_AUTH_SECRET).
+  # Generate with: openssl rand -base64 32
+  betterAuthSecret: ""
+  # Optional — public base URL for Better Auth callbacks/redirects
+  # (BETTER_AUTH_URL). Set to the dashboard's external URL when ingress is
+  # enabled, e.g. "https://dash.example.com".
+  betterAuthUrl: ""
   # Optional — SMTP server URL for outgoing email (HERMEUM_SMTP_URL).
   smtpUrl: ""
   # Optional — override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL).
@@ -104,8 +113,9 @@ secrets:
   # Optional — API key for the AI config generator (mapped to OPENAI_API_KEY).
   openaiApiKey: ""
   # Use an existing Secret instead of templating one. When set, the chart
-  # reads databaseUrl / smtpUrl / openaiBaseUrl / openaiApiKey from the
-  # following keys: database-url, smtp-url, openai-base-url, openai-api-key.
+  # reads databaseUrl / betterAuthSecret / betterAuthUrl / smtpUrl /
+  # openaiBaseUrl / openaiApiKey from the following keys: database-url,
+  # better-auth-secret, better-auth-url, smtp-url, openai-base-url, openai-api-key.
   existingSecret: ""
 
 # ── agentConfig override (ConfigMap mounted at config.agentConfigPath) ───────

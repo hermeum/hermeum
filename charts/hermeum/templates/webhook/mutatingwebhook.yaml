@@ -28,9 +28,11 @@ webhooks:
         name: {{ include "hermeum.fullname" . | quote }}
         port: {{ .Values.webhook.port }}
         path: /webhook/mutating
-      # caBundle is patched in by the post-install ca-bundle Job when the chart
-      # provisions the cert. When the operator supplies an existingSecret with
-      # a ca.crt, they must also set the caBundle here manually (or via their
-      # own automation); we leave it empty.
-      caBundle: ""
+      # caBundle is NOT declared here — Helm must not own this field via
+      # server-side apply, or the post-install ca-bundle Job's kubectl patch
+      # conflicts with Helm's field ownership. The ca-bundle Job is the sole
+      # writer of caBundle (via kubectl patch --field-manager=helm).
+      # When the operator supplies an existingSecret (no cert Job), they
+      # must set caBundle themselves (e.g. via cert-manager's inject-ca-from
+      # annotation, or manually after install).
 {{- end -}}
