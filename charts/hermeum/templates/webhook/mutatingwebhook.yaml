@@ -1,0 +1,38 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "hermeum.webhookName" . }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+webhooks:
+  - name: {{ include "hermeum.webhookName" . }}.hermeum.app
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: {{ .Values.webhook.failurePolicy | quote }}
+    matchPolicy: {{ .Values.webhook.matchPolicy | quote }}
+    reinvocationPolicy: {{ if .Values.webhook.reapply }}IfNeeded{{ else }}Never{{ end }}
+    {{- with .Values.webhook.namespaceSelector }}
+    namespaceSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.webhook.objectSelector }}
+    objectSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    rules:
+      {{- toYaml .Values.webhook.rules | nindent 6 }}
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace | quote }}
+        name: {{ include "hermeum.fullname" . | quote }}
+        port: {{ .Values.webhook.port }}
+        path: /webhook/mutating
+      # caBundle is NOT declared here — Helm must not own this field via
+      # server-side apply, or the post-install ca-bundle Job's kubectl patch
+      # conflicts with Helm's field ownership. The ca-bundle Job is the sole
+      # writer of caBundle (via kubectl patch --field-manager=helm).
+      # When the operator supplies an existingSecret (no cert Job), they
+      # must set caBundle themselves (e.g. via cert-manager's inject-ca-from
+      # annotation, or manually after install).
+{{- end -}}

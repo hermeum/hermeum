@@ -1,0 +1,24 @@
+apiVersion: v2
+name: hermeum
+description: Hermeum dashboard — control plane for HermesAgent custom resources.
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+home: https://github.com/hermeum/hermeum
+sources:
+  - https://github.com/hermeum/hermeum
+maintainers:
+  - name: Hermeum
+    url: https://github.com/hermeum/hermeum
+keywords:
+  - hermeum
+  - hermes
+  - hermes-agent
+  - dashboard
+  - kubernetes
+  - operator
+dependencies:
+  - name: hermes-agent-operator
+    version: ">= 0.5.1"
+    repository: oci://ghcr.io/hermeum/charts
+    condition: operator.enabled

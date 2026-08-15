@@ -1,0 +1,52 @@
+{{- if include "hermeum.provisionWebhookCert" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-ca-bundle
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    # Run after the cert Job (pre-install) and the MutatingWebhookConfiguration
+    # (post-install) so the caBundle can be patched into the webhook.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "hermeum.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "hermeum.fullname" . }}-webhook-cert
+      containers:
+        - name: patch-cabundle
+          image: alpine/k8s:1.31.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SECRET_NAME
+              value: {{ include "hermeum.webhookTlsSecretName" . | quote }}
+            - name: WEBHOOK_NAME
+              value: {{ include "hermeum.webhookName" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              set -e
+              # Extract the CA cert from the TLS Secret the cert Job wrote.
+              CA_B64=$(kubectl get secret "${SECRET_NAME}" -o jsonpath='{.data.ca\.crt}')
+              if [ -z "${CA_B64}" ]; then
+                echo "ca.crt not found in secret ${SECRET_NAME}"
+                exit 1
+              fi
+              # Patch the MutatingWebhookConfiguration's caBundle.
+              # Use --field-manager=helm so Helm's server-side apply doesn't
+              # conflict on upgrades (the field is declared in the Helm template
+              # as caBundle: "", but the actual value is patched in here).
+              kubectl patch mutatingwebhookconfiguration "${WEBHOOK_NAME}" \
+                --type=json \
+                --field-manager=helm \
+                -p="[{\"op\":\"replace\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_B64}\"}]"
+              echo "caBundle patched into ${WEBHOOK_NAME}."
+{{- end -}}

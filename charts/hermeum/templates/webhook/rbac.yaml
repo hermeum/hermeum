@@ -1,0 +1,92 @@
+{{- if include "hermeum.provisionWebhookCert" . -}}
+{{/*
+RBAC + ServiceAccount for the webhook cert-provisioning hooks (cert Job
+pre-install and ca-bundle patch Job post-install). These must run as hooks so
+they execute *before* the dashboard's main RBAC is installed, so they get
+their own SA + narrow ClusterRole (the ca-bundle Job patches a cluster-scoped
+MutatingWebhookConfiguration).
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    # Created during the pre-install hook phase so it exists before the cert Job.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+# Write the webhook TLS Secret in the release namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hermeum.fullname" . }}-webhook-cert
+    namespace: {{ .Release.Namespace }}
+---
+# Patch the MutatingWebhookConfiguration (cluster-scoped) with the CA bundle.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+  labels:
+    {{- include "hermeum.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "hermeum.fullname" . }}-webhook-cert
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hermeum.fullname" . }}-webhook-cert
+    namespace: {{ .Release.Namespace }}
+{{- end -}}
