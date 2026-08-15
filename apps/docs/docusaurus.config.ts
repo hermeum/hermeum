@@ -9,6 +9,12 @@ const config: Config = {
   baseUrl: "/docs/",
   trailingSlash: true,
 
+  // v4 enables useCssCascadeLayers, which should make unlayered custom.css
+  // override Infima's defaults. However, with @docusaurus/faster (Rspack), the
+  // PostCSS pipeline that wraps Infima in @layer is not applied, so layers are
+  // absent from the output and the override doesn't work.
+  // Workaround: custom.css uses :root:not(#\#):not(#\#) to match Infima's
+  // specificity. See https://github.com/facebook/docusaurus/issues/10504
   future: {
     v4: true,
   },
@@ -45,7 +51,7 @@ const config: Config = {
       ],
     },
     footer: {
-      copyright: `Copyright © ${new Date().getFullYear()} Hermeum. Built with Docusaurus.`,
+      copyright: `Built by Hermeum · ${new Date().getFullYear()}`,
     },
   },
 };

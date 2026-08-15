@@ -6,13 +6,10 @@
 
 /* You can override the default Infima variables here. */
 /*
-  Infima's built-in defaults are declared on a higher-specificity selector
-  (:root:not(#\#):not(#\#)) than a plain :root. To make our custom primary
-  palette actually apply in production builds (where the CSS minifier flattens
-  cascade layers), we repeat :root to match that specificity.
+  TODO: Once CSS Cascade Layers work with Rspack (@docusaurus/faster),
   See: https://github.com/facebook/docusaurus/issues/10504
 */
-:root:root {
+:root:not(#\#):not(#\#) {
   --ifm-color-primary: #0a0a0a;
   --ifm-color-primary-dark: #090909;
   --ifm-color-primary-darker: #090909;
@@ -26,11 +23,9 @@
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 /*
-  Same specificity-boost as the light-mode block above. We repeat the
-  [data-theme='dark'] attribute selector so our dark-mode primary palette
-  overrides Infima's high-specificity defaults.
+  TODO: Update back to [data-theme='dark'] once CSS Cascade Layers work with
 */
-[data-theme='dark'][data-theme='dark'] {
+[data-theme='dark']:not(#\#):not(#\#) {
   --ifm-color-primary: #fafafa;
   --ifm-color-primary-dark: #e1e1e1;
   --ifm-color-primary-darker: #d4d4d4;
