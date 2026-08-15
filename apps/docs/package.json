@@ -1,0 +1,27 @@
+{
+  "name": "@hermeum/docs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "docusaurus start --port 3001",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist build .docusaurus .tsbuildinfo"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/faster": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@mdx-js/react": "^3.1.1",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@docusaurus/types": "^3.10.2",
+    "@hermeum/typescript-config": "workspace:*",
+    "typescript": "^5.8.2"
+  }
+}

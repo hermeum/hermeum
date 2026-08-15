@@ -1,0 +1,11 @@
+{
+  "extends": "@hermeum/typescript-config/react-library.json",
+  "compilerOptions": {
+    "types": ["@docusaurus/types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "*.ts"]
+}
