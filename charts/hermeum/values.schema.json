@@ -27,11 +27,20 @@
         "hermesDocsPath": { "type": "string" },
         "databaseDialect": { "type": "string", "enum": ["sqlite", "postgres"] },
         "kubernetesNamespace": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "hermesImageRepository": { "type": "string" },
         "hermesImageTag": { "type": "string" },
         "openaiModel": { "type": "string", "minLength": 1 },
         "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "allowedEmailDomain": { "type": "string" },
+        "webTls": {
+          "type": "object",
+          "properties": {
+            "secretName": { "type": "string" },
+            "certFile": { "type": "string" },
+            "keyFile": { "type": "string" }
+          }
+        },
         "agentIngress": {
           "type": "object",
           "properties": {
@@ -47,6 +56,7 @@
         "hermesDocsPath",
         "databaseDialect",
         "kubernetesNamespace",
+        "port",
         "hermesImageRepository",
         "hermesImageTag",
         "openaiModel",
@@ -77,11 +87,10 @@
           "type": "object",
           "properties": {
             "existingSecret": { "type": "string" },
-            "certPath": { "type": "string" },
-            "keyPath": { "type": "string" },
-            "caPath": { "type": "string" }
+            "certFile": { "type": "string" },
+            "keyFile": { "type": "string" }
           },
-          "required": ["certPath", "keyPath", "caPath"]
+          "required": ["certFile", "keyFile"]
         },
         "failurePolicy": { "type": "string", "enum": ["Ignore", "Fail"] },
         "reapply": { "type": "boolean" },

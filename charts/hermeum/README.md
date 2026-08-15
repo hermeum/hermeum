@@ -176,17 +176,32 @@ helm show values charts/hermeum
 | `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |
 | `persistence.enabled`                | `true`                           | PVC for sqlite (ignored for postgres).       |
 
-## TLS env var contract
+## TLS
 
-This chart sets the following env vars, which the dashboard's in-process TLS
-termination implementation **must** consume:
+The dashboard (PR #108) terminates TLS in-process via Node's `https` module.
+This chart wires the env vars that drive it.
 
-| Env var                       | Meaning                                            |
-|-------------------------------|----------------------------------------------------|
-| `HERMEUM_WEBHOOK_TLS_ENABLED` | `true` enables the HTTPS listener.                 |
-| `HERMEUM_WEBHOOK_TLS_CERT_PATH` | Path to the serving cert (`tls.crt`).            |
-| `HERMEUM_WEBHOOK_TLS_KEY_PATH`  | Path to the serving key (`tls.key`).             |
-| `HERMEUM_WEBHOOK_PORT`        | The HTTPS port to listen on (matches `webhook.port`). |
+### Mutating webhook TLS
 
-If the dashboard PR lands different names, update `templates/deployment.yaml`
-accordingly.
+The webhook HTTPS listener starts when both cert + key files are present. The
+chart auto-provisions a self-signed CA + serving cert (or mounts an
+operator-supplied Secret via `webhook.tls.existingSecret`).
+
+| Env var                            | Source                          | Meaning                                  |
+|------------------------------------|---------------------------------|------------------------------------------|
+| `HERMEUM_WEBHOOK_TLS_CERT_FILE`    | `webhook.tls.certFile`          | Path to the serving cert (`tls.crt`).    |
+| `HERMEUM_WEBHOOK_TLS_KEY_FILE`     | `webhook.tls.keyFile`           | Path to the serving key (`tls.key`).    |
+| `HERMEUM_WEBHOOK_PORT`             | `webhook.port`                  | The HTTPS port to listen on.            |
+
+### Web server TLS (optional)
+
+The UI/trpc/auth/chat listener serves HTTPS when both cert + key files are
+present (`config.webTls.certFile` / `keyFile` + `secretName`). This is an
+alternative to the ingress gateway for terminating TLS in-process. Probes
+switch to `httpsGet` automatically when web TLS is enabled.
+
+| Env var                    | Source                       | Meaning                                  |
+|----------------------------|------------------------------|------------------------------------------|
+| `HERMEUM_TLS_CERT_FILE`    | `config.webTls.certFile`     | Path to the web serving cert.            |
+| `HERMEUM_TLS_KEY_FILE`     | `config.webTls.keyFile`      | Path to the web serving key.             |
+| `HERMEUM_PORT`             | `config.port`                | The web server port (HTTP or HTTPS).     |

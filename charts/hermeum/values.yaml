@@ -46,6 +46,9 @@ config:
   # Kubernetes namespace where HermesAgent CRs are reconciled
   # (HERMEUM_KUBERNETES_NAMESPACE). Defaults to the release namespace.
   kubernetesNamespace: ""
+  # Port the web server listens on (HERMEUM_PORT). The dashboard image
+  # defaults to 3000; override only if you also change the Service port.
+  port: 3000
   # Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY).
   hermesImageRepository: nousresearch/hermes-agent
   # Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG).
@@ -56,6 +59,19 @@ config:
   logLevel: info
   # Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN).
   allowedEmailDomain: ""
+
+  # ── Web server TLS (optional, HERMEUM_TLS_CERT_FILE / HERMEUM_TLS_KEY_FILE) ─
+  # When both certFile and keyFile are set, the dashboard serves the UI/trpc/
+  # auth/chat endpoints over HTTPS on config.port instead of HTTP. This is an
+  # alternative to the ingress gateway for TLS-terminating the web server
+  # in-process. Leave unset to keep the web server on plain HTTP and terminate
+  # TLS upstream (see `ingress`).
+  webTls:
+    # Existing TLS Secret (kubernetes.io/tls type with tls.crt + tls.key) mounted
+    # at the cert/key paths below. Defaults to "<release>-web-tls".
+    secretName: ""
+    certFile: /etc/hermeum/web-tls/tls.crt
+    keyFile: /etc/hermeum/web-tls/tls.key
 
   # ── Per-agent ingress (HERMEUM_AGENT_INGRESS_*) ─────────────────────────────
   # These configure how the *operator* emits per-agent ingresses; they are
@@ -126,21 +142,23 @@ agentConfig: {}
 # MutatingWebhookConfiguration admits CREATE/UPDATE on hermesagents and
 # dispatches AdmissionReviews here; the dashboard returns the JSON-Patch from
 # agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch.
+#
+# The dashboard starts its webhook HTTPS listener only when both
+# HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set; the
+# chart wires those from the TLS Secret below.
 webhook:
   enabled: true
-  # Container HTTPS port (in-process TLS termination).
+  # Container HTTPS port (HERMEUM_WEBHOOK_PORT). In-process TLS termination.
   port: 8443
-  # Env var names consumed by the dashboard's TLS path. These must match the
-  # dashboard's in-process TLS termination implementation (see the TLS PR).
   tls:
     # Use an operator-supplied TLS Secret instead of auto-provisioning.
-    # When set, the Secret must contain tls.crt + tls.key (kubernetes.io/tls
-    # type) and a ca.crt key; the chart skips the cert-generation Job.
+    # When set, the Secret must contain tls.crt + tls.key + ca.crt; the chart
+    # skips the cert-generation Job and mounts this Secret.
     existingSecret: ""
-    # Filesystem paths the dashboard reads the cert/key from.
-    certPath: /etc/hermeum/webhook-tls/tls.crt
-    keyPath: /etc/hermeum/webhook-tls/tls.key
-    caPath: /etc/hermeum/webhook-tls/ca.crt
+    # Filesystem paths the dashboard reads the cert/key from. These are passed
+    # as HERMEUM_WEBHOOK_TLS_CERT_FILE / HERMEUM_WEBHOOK_TLS_KEY_FILE.
+    certFile: /etc/hermeum/webhook-tls/tls.crt
+    keyFile: /etc/hermeum/webhook-tls/tls.key
   # Admission review behaviour.
   failurePolicy: Ignore
   reapply: false

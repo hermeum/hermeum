@@ -9,10 +9,11 @@ spec:
   selector:
     {{- include "hermeum.selectorLabels" . | nindent 4 }}
   ports:
-    # HTTP — UI, /auth, /trpc, /chat. Terminated upstream by the ingress
+    # Web server — UI, /auth, /trpc, /chat. HTTP by default; HTTPS when
+    # config.webTls is set (in-process TLS). Terminated upstream by the ingress
     # gateway when enabled; reachable in-cluster otherwise.
     - name: http
-      port: 3000
+      port: {{ .Values.config.port }}
       targetPort: http
       protocol: TCP
     {{- if .Values.webhook.enabled }}

@@ -75,7 +75,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: {{ .Values.config.port }}
               protocol: TCP
             {{- if .Values.webhook.enabled }}
             - name: https-webhook
@@ -92,6 +92,8 @@ spec:
               value: {{ .Values.config.databaseDialect | quote }}
             - name: HERMEUM_KUBERNETES_NAMESPACE
               value: {{ $namespace | quote }}
+            - name: HERMEUM_PORT
+              value: {{ .Values.config.port | quote }}
             - name: HERMEUM_HERMES_IMAGE_REPOSITORY
               value: {{ .Values.config.hermesImageRepository | quote }}
             - name: HERMEUM_HERMES_IMAGE_TAG
@@ -147,20 +149,31 @@ spec:
                   name: {{ include "hermeum.secretName" . }}
                   key: openai-api-key
             {{- end }}
-            # ── In-process TLS termination (admission webhook) ──
+            # ── Web server TLS (optional, in-process HTTPS for the UI) ──
+            {{- if and .Values.config.webTls.certFile .Values.config.webTls.keyFile }}
+            - name: HERMEUM_TLS_CERT_FILE
+              value: {{ .Values.config.webTls.certFile | quote }}
+            - name: HERMEUM_TLS_KEY_FILE
+              value: {{ .Values.config.webTls.keyFile | quote }}
+            {{- end }}
+            # ── Mutating webhook TLS (in-process HTTPS) ──
             {{- if .Values.webhook.enabled }}
-            - name: HERMEUM_WEBHOOK_TLS_ENABLED
-              value: "true"
-            - name: HERMEUM_WEBHOOK_TLS_CERT_PATH
-              value: {{ .Values.webhook.tls.certPath | quote }}
-            - name: HERMEUM_WEBHOOK_TLS_KEY_PATH
-              value: {{ .Values.webhook.tls.keyPath | quote }}
+            - name: HERMEUM_WEBHOOK_TLS_CERT_FILE
+              value: {{ .Values.webhook.tls.certFile | quote }}
+            - name: HERMEUM_WEBHOOK_TLS_KEY_FILE
+              value: {{ .Values.webhook.tls.keyFile | quote }}
             - name: HERMEUM_WEBHOOK_PORT
               value: {{ .Values.webhook.port | quote }}
             {{- end }}
-          # Express serves / on HTTP :3000 — matches the image's HEALTHCHECK.
+          # The dashboard image's HEALTHCHECK probes / over HTTP; when web TLS
+          # is enabled the listener is HTTPS, so switch the probe scheme.
+          {{- $webTls := and .Values.config.webTls.certFile .Values.config.webTls.keyFile }}
           livenessProbe:
+            {{- if $webTls }}
+            httpsGet:
+              {{- else }}
             httpGet:
+              {{- end }}
               path: /
               port: http
             initialDelaySeconds: 15
@@ -168,7 +181,11 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
+            {{- if $webTls }}
+            httpsGet:
+              {{- else }}
             httpGet:
+              {{- end }}
               path: /
               port: http
             initialDelaySeconds: 5
@@ -194,7 +211,13 @@ spec:
             # Webhook TLS cert/key.
             {{- if .Values.webhook.enabled }}
             - name: webhook-tls
-              mountPath: {{ dir .Values.webhook.tls.certPath | quote }}
+              mountPath: {{ dir .Values.webhook.tls.certFile | quote }}
+              readOnly: true
+            {{- end }}
+            # Web server TLS cert/key (optional, in-process HTTPS for the UI).
+            {{- if and .Values.config.webTls.certFile .Values.config.webTls.keyFile }}
+            - name: web-tls
+              mountPath: {{ dir .Values.config.webTls.certFile | quote }}
               readOnly: true
             {{- end }}
             # sqlite data dir (postgres ignores this — the mount is harmless
@@ -221,8 +244,16 @@ spec:
                 path: tls.crt
               - key: tls.key
                 path: tls.key
-              - key: ca.crt
-                path: ca.crt
+        {{- end }}
+        {{- if and .Values.config.webTls.certFile .Values.config.webTls.keyFile }}
+        - name: web-tls
+          secret:
+            secretName: {{ .Values.config.webTls.secretName | default (printf "%s-web-tls" (include "hermeum.fullname" .)) | quote }}
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
         {{- end }}
         {{- if and (eq .Values.config.databaseDialect "sqlite") .Values.persistence.enabled }}
         - name: data

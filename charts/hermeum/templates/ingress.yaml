@@ -23,7 +23,7 @@ spec:
               service:
                 name: {{ include "hermeum.fullname" . }}
                 port:
-                  number: 3000
+                  number: {{ .Values.config.port }}
   {{- if .Values.ingress.tls.enabled }}
   tls:
     - hosts:
