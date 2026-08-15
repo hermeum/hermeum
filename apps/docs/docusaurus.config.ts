@@ -6,7 +6,8 @@ const config: Config = {
   favicon: "img/favicon.ico",
 
   url: "https://hermeum.app",
-  baseUrl: "/",
+  baseUrl: "/docs/",
+  trailingSlash: true,
 
   future: {
     v4: true,
@@ -18,6 +19,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
+          routeBasePath: "/",
         },
         blog: false,
         theme: {
@@ -36,7 +38,7 @@ const config: Config = {
       },
       items: [
         {
-          to: "/docs/intro",
+          to: "/",
           label: "Docs",
           position: "left",
         },

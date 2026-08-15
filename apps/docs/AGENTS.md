@@ -14,7 +14,7 @@ Run from the repo root via pnpm filter, or from this directory directly.
 
 ## Conventions
 
-- Docs live at the site root (`baseUrl: '/'`); no subpath. Docs content is served at `/docs/` (default `routeBasePath`).
+- Docs live at the `/docs/` subpath (`baseUrl: '/docs/'`); the docs plugin uses `routeBasePath: '/'` so content is at `/docs/intro` (not `/docs/docs/intro`).
 - **Do not add `"type": "module"` to `package.json`** — it breaks Docusaurus v3.10's SSG (`require.resolveWeak` error).
 - Config is typed: `docusaurus.config.ts` uses `satisfies Config`, `sidebars.ts` uses `SidebarsConfig`.
 - Pages live under `src/pages/`; documentation under `docs/`. New docs are added as `*.md`/`*.mdx` and surfaced via `sidebars.ts`.
