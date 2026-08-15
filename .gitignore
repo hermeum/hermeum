@@ -10,6 +10,10 @@ dist
 .env.local
 .tanstack
 
+# Docusaurus
+build
+.docusaurus
+
 agent-config.yaml
 .worktrees/
 .wtp.yml
