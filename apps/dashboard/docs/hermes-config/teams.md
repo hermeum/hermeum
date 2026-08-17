@@ -12,11 +12,13 @@ publicly reachable endpoint — either a dev tunnel (local dev) or a real
 domain (production). Unlike Slack's Socket Mode, Teams is an HTTP-webhook
 platform.
 
-Using Teams also requires configuration on the Teams side (bot
-registration, messaging endpoint, app installation). Follow the official
-Hermes Agent guide at
-https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
-to complete that setup.
+**You must configure Microsoft Teams on the Azure/Teams side before this
+bot will work** — bot registration, messaging endpoint, and app
+installation. This is not optional. Complete that setup by following
+the official Hermes Agent guide at
+https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams.
+The env vars and `config.yaml` knobs below assume the Teams-side setup
+is already done; without it, the webhook will receive no messages.
 
 ## Configuration
 
