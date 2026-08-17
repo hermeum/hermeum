@@ -94,9 +94,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       description:
         "Read one or more Hermes agent configuration documents by name. " +
         "Pass every document you need in a single call to minimize " +
-        "round-trips, and read up on any config section you are not fully " +
-        "sure about BEFORE writing it into the draft. Don't guess at field " +
-        "semantics that a document can settle.\n\n" + docList,
+        "round-trips.\n\n" + docList,
       inputSchema: z.object({
         names: z.array(z.string()).min(1).describe("Document names from the list above."),
       }),
@@ -251,8 +249,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 
 // Behavioral rules for the agent-config chat. Tool-specific guidance (when to
 // call `readDocument`, `readSharedEnvSet`, `readAgentConfig`,
-// `updateAgentConfig`, and the available doc/shared-env-set lists) lives in the
-// tool `description` fields, not here, so the model sees each tool's usage
+// `updateAgentConfig`, and the available doc/shared-env-set lists) lives in
+// the tool `description` fields, not here, so the model sees each tool's usage
 // rules alongside its definition.
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
@@ -262,4 +260,10 @@ it in an editor and may change it by hand between messages.
 After a config update, reply with one short sentence noting what changed
 plus a brief question about what to refine next (e.g. the tone, the scope,
 or the tools setup). Ask at most one question at a time, and keep all replies
-concise.`;
+concise.
+
+Note 
+- Never guess at field semantics. When you're not fully sure about a config
+section, settle it with the documentation before writing it into the draft.
+
+`;
