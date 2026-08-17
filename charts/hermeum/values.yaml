@@ -35,9 +35,9 @@ operator:
 
 # ── Dashboard env (HERMEUM_*, non-sensitive → ConfigMap) ─────────────────────
 config:
-  # Path to the agent templates config file (HERMEUM_AGENT_CONFIG_PATH).
+  # Path to the hermeum config file (HERMEUM_CONFIG_PATH).
   # The chart mounts the agentConfig ConfigMap at this path when non-empty.
-  agentConfigPath: /app/agent-config.yaml
+  configPath: /app/agent-config.yaml
   # Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH).
   # Shipped inside the image; override only if you mount custom docs.
   hermesDocsPath: /app/docs/hermes-config
@@ -118,7 +118,7 @@ secrets:
   # better-auth-secret, better-auth-url, smtp-url, openai-base-url, openai-api-key.
   existingSecret: ""
 
-# ── agentConfig override (ConfigMap mounted at config.agentConfigPath) ───────
+# ── agentConfig override (ConfigMap mounted at config.configPath) ───────
 # Full contents of agent-config.yaml. When empty, the image's bundled
 # agent-config.example.yaml is used as-is.
 #

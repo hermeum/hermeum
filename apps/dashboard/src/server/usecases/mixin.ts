@@ -40,7 +40,7 @@ export function HermeumConfigLoadable<TBase extends Constructor<{ files: FileAda
 
     async loadHermeumConfig(): Promise<HermeumConfig> {
       if (!this.#cachedHermeumConfig) {
-        const file = await this.files.readFile(config.agentConfigPath);
+        const file = await this.files.readFile(config.configPath);
         const raw = file === null ? { templates: [] } : parse(file.content);
         this.#cachedHermeumConfig = HermeumConfigSchema.parse(raw);
       }
