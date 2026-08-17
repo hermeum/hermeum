@@ -4,10 +4,10 @@ import { z } from "zod";
 loadEnv();
 
 export const ConfigSchema = z.object({
-  agentConfigPath: z
+  configPath: z
     .string()
     .default("./agent-config.yaml")
-    .describe("Path to the agent templates config file (HERMEUM_AGENT_CONFIG_PATH)."),
+    .describe("Path to the hermeum config file (HERMEUM_CONFIG_PATH)."),
   hermesDocsPath: z
     .string()
     .default("./docs/hermes-config")
@@ -119,7 +119,7 @@ export const ConfigSchema = z.object({
 });
 
 export const config = ConfigSchema.parse({
-  agentConfigPath: process.env.HERMEUM_AGENT_CONFIG_PATH,
+  configPath: process.env.HERMEUM_CONFIG_PATH,
   hermesDocsPath: process.env.HERMEUM_HERMES_DOCS_PATH,
   databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,

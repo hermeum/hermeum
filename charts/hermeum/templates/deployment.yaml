@@ -84,8 +84,8 @@ spec:
             {{- end }}
           env:
             # ── Non-sensitive (ConfigMap) ──
-            - name: HERMEUM_AGENT_CONFIG_PATH
-              value: {{ .Values.config.agentConfigPath | quote }}
+            - name: HERMEUM_CONFIG_PATH
+              value: {{ .Values.config.configPath | quote }}
             - name: HERMEUM_HERMES_DOCS_PATH
               value: {{ .Values.config.hermesDocsPath | quote }}
             - name: HERMEUM_DATABASE_DIALECT
@@ -213,10 +213,10 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
-            # agentConfig override mounted at HERMEUM_AGENT_CONFIG_PATH.
+            # agentConfig override mounted at HERMEUM_CONFIG_PATH.
             {{- if include "hermeum.hasAgentConfig" . }}
             - name: agent-config
-              mountPath: {{ .Values.config.agentConfigPath | quote }}
+              mountPath: {{ .Values.config.configPath | quote }}
               subPath: agent-config.yaml
               readOnly: true
             {{- end }}

@@ -23,7 +23,7 @@
     "config": {
       "type": "object",
       "properties": {
-        "agentConfigPath": { "type": "string" },
+        "configPath": { "type": "string" },
         "hermesDocsPath": { "type": "string" },
         "databaseDialect": { "type": "string", "enum": ["sqlite", "postgres"] },
         "kubernetesNamespace": { "type": "string" },
@@ -52,7 +52,7 @@
         }
       },
       "required": [
-        "agentConfigPath",
+        "configPath",
         "hermesDocsPath",
         "databaseDialect",
         "kubernetesNamespace",
