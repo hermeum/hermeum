@@ -97,33 +97,24 @@ function makeSkillIndex(results: SkillSearchResult[] = []): SkillIndexAdaptor {
   } as unknown as SkillIndexAdaptor;
 }
 
-// Expected empty-list footer appended to the instructions when there are no
-// shared env sets (matches buildSharedEnvSetList's header-only emission).
-const EMPTY_SHARED_ENV_SET_BLOCK =
-  "Available shared env sets (attach via the `sharedEnvSets` field with " +
-  "these ids; read env var names with `readSharedEnvSet` before attaching " +
-  "to avoid collisions with the agent's own `env`):\n";
+// Expected body appended to the readSharedEnvSet tool description when no
+// shared env sets exist (matches buildSharedEnvSetList's none-sentinel
+// emission).
+const EMPTY_SHARED_ENV_SET_BLOCK = "Available shared env sets: none";
 
 describe("ChatUseCase.getAgentConfigContext", () => {
-  it("uses the base system prompt when no agent types are configured", async () => {
+  it("uses the bare system prompt (no appended lists) when nothing is configured", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles({}, undefined));
 
     const { instructions } = await useCase.getAgentConfigContext();
 
-    // The base prompt is always followed by the available-documents block and
-    // the available-shared-env-sets block, even when there are no docs, no
-    // sets, and no agent types.
-    expect(instructions).toContain(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
-    expect(instructions).toBe(
-      AGENT_CONFIG_CHAT_SYSTEM_PROMPT +
-        "\n\n" +
-        "Available documents (read with `readDocument` before writing any config section you're not fully sure about):\n" +
-        "\n\n" +
-        EMPTY_SHARED_ENV_SET_BLOCK
-    );
+    // The doc/shared-env-set lists now live in their tool descriptions, and
+    // agent types are returned by the listAgentTypes tool, so the prompt is
+    // just the base system prompt with nothing appended.
+    expect(instructions).toBe(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
   });
 
-  it("appends the configured agent types to the instructions", async () => {
+  it("returns the configured agent types via the listAgentTypes tool, not the instructions", async () => {
     const useCase = new ChatUseCase(
       makeRuntime(),
       makeFiles(
@@ -135,11 +126,30 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       )
     );
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { instructions, tools } = await useCase.getAgentConfigContext();
 
-    expect(instructions).toContain(AGENT_CONFIG_CHAT_SYSTEM_PROMPT);
-    expect(instructions).toContain("- pr-review: Reviews pull requests");
-    expect(instructions).toContain("- plain");
+    // Agent types are no longer appended to the prompt.
+    expect(instructions).not.toContain("pr-review");
+    expect(instructions).not.toContain("Reviews pull requests");
+
+    expect(tools.listAgentTypes).toBeDefined();
+    expect(tools.listAgentTypes?.execute).toBeDefined();
+    const result = await tools.listAgentTypes!.execute!({}, callOptions);
+    expect(result).toEqual({
+      agentTypes: [
+        { key: "pr-review", description: "Reviews pull requests" },
+        { key: "plain" },
+      ],
+    });
+  });
+
+  it("returns an empty agentTypes array when none are configured", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles({}, undefined));
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const result = await tools.listAgentTypes!.execute!({}, callOptions);
+    expect(result).toEqual({ agentTypes: [] });
   });
 
   it("notes the missing draft when no current config is given", async () => {
@@ -170,7 +180,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.updateAgentConfig!.execute).toBeUndefined();
   });
 
-  it("exposes a client-side readAgentConfig tool", async () => {
+  it("exposes a client-side readAgentConfig tool and instructs the model to use it when stale", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -180,17 +190,12 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     // No execute: the tool runs on the client, which returns the latest
     // editor draft and reports it back.
     expect(tools.readAgentConfig!.execute).toBeUndefined();
+    // The stale-draft guidance lives in the tool description now, not the
+    // system prompt.
+    expect(tools.readAgentConfig!.description).toContain("stale");
   });
 
-  it("instructs the model to call readAgentConfig when the draft may be stale", async () => {
-    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
-
-    const { instructions } = await useCase.getAgentConfigContext();
-
-    expect(instructions).toContain("readAgentConfig");
-  });
-
-  it("does not expose a listDocuments tool (the list is embedded in the prompt)", async () => {
+  it("does not expose a listDocuments tool (the list is embedded in the readDocument description)", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -232,7 +237,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(skillIndex.searchSkills).toHaveBeenCalledWith("kubernetes", 25);
   });
 
-  it("embeds the available documents in the instructions with frontmatter descriptions", async () => {
+  it("embeds the available documents in the readDocument description with frontmatter descriptions", async () => {
     const useCase = new ChatUseCase(
       makeRuntime(),
       makeFiles({
@@ -241,14 +246,15 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       })
     );
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
 
-    expect(instructions).toContain("- model: Model configuration");
-    expect(instructions).toContain("- webhook");
-    expect(instructions).not.toContain("- webhook:");
+    const description = tools.readDocument!.description ?? "";
+    expect(description).toContain("- model: Model configuration");
+    expect(description).toContain("- webhook");
+    expect(description).not.toContain("- webhook:");
   });
 
-  it("groups documents by category alphabetically, then uncategorized last", async () => {
+  it("groups documents by category alphabetically, then uncategorized last, in the readDocument description", async () => {
     const useCase = new ChatUseCase(
       makeRuntime(),
       makeFiles({
@@ -266,14 +272,15 @@ describe("ChatUseCase.getAgentConfigContext", () => {
       })
     );
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
+    const description = tools.readDocument!.description ?? "";
 
     // Categories are surfaced in alphabetical order, uncategorized trailing.
-    const coreIdx = instructions.indexOf("core:");
-    const platformsIdx = instructions.indexOf("platforms:");
-    const runtimeIdx = instructions.indexOf("runtime:");
-    const toolsIdx = instructions.indexOf("tools:");
-    const uncategorizedIdx = instructions.indexOf("Uncategorized:");
+    const coreIdx = description.indexOf("core:");
+    const platformsIdx = description.indexOf("platforms:");
+    const runtimeIdx = description.indexOf("runtime:");
+    const toolsIdx = description.indexOf("tools:");
+    const uncategorizedIdx = description.indexOf("Uncategorized:");
     expect(coreIdx).toBeGreaterThanOrEqual(0);
     expect(platformsIdx).toBeGreaterThan(coreIdx);
     expect(runtimeIdx).toBeGreaterThan(platformsIdx);
@@ -281,11 +288,20 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(uncategorizedIdx).toBeGreaterThan(toolsIdx);
 
     // Known category blocks contain their grouped docs.
-    expect(instructions).toContain("core:\n- model: Model configuration");
-    expect(instructions).toContain("tools:\n- browser: Browser automation\n- web-search: Web search");
-    expect(instructions).toContain("platforms:\n- webhooks: Webhook routes");
-    expect(instructions).toContain("runtime:\n- observability: Observability");
-    expect(instructions).toContain("Uncategorized:\n- draft");
+    expect(description).toContain("core:\n- model: Model configuration");
+    expect(description).toContain("tools:\n- browser: Browser automation\n- web-search: Web search");
+    expect(description).toContain("platforms:\n- webhooks: Webhook routes");
+    expect(description).toContain("runtime:\n- observability: Observability");
+    expect(description).toContain("Uncategorized:\n- draft");
+  });
+
+  it("emits the none sentinel in the readDocument description when no docs exist", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const description = tools.readDocument!.description ?? "";
+    expect(description).toContain("Available documents: none");
   });
 
   it("reads multiple documents in one call", async () => {
@@ -343,16 +359,17 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(files.readFile).not.toHaveBeenCalled();
   });
 
-  it("emits only the shared-env-sets header when none exist", async () => {
+  it("emits the none sentinel in the readSharedEnvSet description when no sets exist", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
 
-    expect(instructions).toContain(EMPTY_SHARED_ENV_SET_BLOCK);
-    expect(instructions).not.toContain("- set-1");
+    const description = tools.readSharedEnvSet!.description ?? "";
+    expect(description).toContain(EMPTY_SHARED_ENV_SET_BLOCK);
+    expect(description).not.toContain("- set-1");
   });
 
-  it("embeds the available shared env sets in the instructions by id", async () => {
+  it("embeds the available shared env sets in the readSharedEnvSet description by id", async () => {
     const runtime = makeRuntime([
       makeSharedEnvSet({
         id: "db-creds",
@@ -364,15 +381,16 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     ]);
     const useCase = new ChatUseCase(runtime, makeFiles());
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
+    const description = tools.readSharedEnvSet!.description ?? "";
 
     // Lines lead with the id (the draft's `sharedEnvSets` field wants ids),
     // carry the human name, and append the description when present.
-    expect(instructions).toContain("- db-creds: Database Credentials — Postgres connection vars");
-    expect(instructions).toContain("- api-keys: API Keys");
+    expect(description).toContain("- db-creds: Database Credentials — Postgres connection vars");
+    expect(description).toContain("- api-keys: API Keys");
     // The db-creds ordering must come before api-keys (runtime returns them
     // in the given order, which is preserved).
-    expect(instructions.indexOf("db-creds")).toBeLessThan(instructions.indexOf("api-keys"));
+    expect(description.indexOf("db-creds")).toBeLessThan(description.indexOf("api-keys"));
   });
 
   it("filters out archived shared env sets before listing them", async () => {
@@ -382,10 +400,11 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     ]);
     const useCase = new ChatUseCase(runtime, makeFiles());
 
-    const { instructions } = await useCase.getAgentConfigContext();
+    const { tools } = await useCase.getAgentConfigContext();
+    const description = tools.readSharedEnvSet!.description ?? "";
 
-    expect(instructions).toContain("- live: Live");
-    expect(instructions).not.toContain("- gone");
+    expect(description).toContain("- live: Live");
+    expect(description).not.toContain("- gone");
     // listSharedEnvSets is asked for non-archived sets only.
     expect(runtime.listSharedEnvSets).toHaveBeenCalledWith({ archived: false });
   });
