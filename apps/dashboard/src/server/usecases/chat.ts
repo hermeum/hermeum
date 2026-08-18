@@ -24,19 +24,22 @@ export interface AgentConfigContext {
 
 export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // Everything the chat route needs for an agent-config conversation turn:
-  // the system prompt (with the available doc list and configured agent types
-  // appended), a context block describing the current draft, and the
-  // client-side tool the model uses to apply config changes.
+  // the system prompt, a context block describing the current draft, and the
+  // tool set the model uses to read docs/shared env sets, list agent types,
+  // search skills, and apply config changes. The available documents and
+  // shared env sets are embedded in their respective tool descriptions (not
+  // the system prompt) so the model sees them right at the tool definition.
   async getAgentConfigContext(currentConfig?: AgentInput): Promise<AgentConfigContext> {
     const ctx: AgentConfigContext = {
-      instructions: await this.buildInstructions(),
+      instructions: AGENT_CONFIG_CHAT_SYSTEM_PROMPT,
       prompt:
         currentConfig === undefined
           ? "There is no agent config draft yet."
           : "Current agent config draft as JSON:\n\n" + JSON.stringify(currentConfig, null, 2),
       tools: {
-        readDocument: this.buildReadDocumentTool(),
-        readSharedEnvSet: this.buildReadSharedEnvSetTool(),
+        readDocument: await this.buildReadDocumentTool(),
+        readSharedEnvSet: await this.buildReadSharedEnvSetTool(),
+        listAgentTypes: await this.buildListAgentTypesTool(),
         searchSkills: tool({
           description:
             "Search the Hermes Skills Index for an installable agent skill " +
@@ -81,18 +84,19 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     return ctx;
   }
 
-  // Server-executed tool that lets the model pull a Hermes agent configuration
-  // document on demand. The list of available documents is embedded in the
-  // system prompt up front, so the model can plan a single batched call
-  // without first calling a list tool.
-  private buildReadDocumentTool(): ToolSet[string] {
+  // Server-executed tool that lets the model pull Hermes agent configuration
+  // documents on demand. The list of available documents is built here and
+  // embedded in the description up front, so the model can plan a single
+  // batched call without first calling a list tool.
+  private async buildReadDocumentTool(): Promise<ToolSet[string]> {
+    const docList = await this.buildDocumentList();
     return tool({
       description:
-        "Read one or more Hermes agent configuration documents by name " +
-        "(names are listed in the system prompt). Pass every document you " +
-        "need in a single call to minimize round-trips.",
+        "Read one or more Hermes agent configuration documents by name. " +
+        "Pass every document you need in a single call to minimize " +
+        "round-trips.\n\n" + docList,
       inputSchema: z.object({
-        names: z.array(z.string()).min(1).describe("Document names listed in the system prompt."),
+        names: z.array(z.string()).min(1).describe("Document names from the list above."),
       }),
       execute: async ({ names }) => {
         const documents = await Promise.all(
@@ -103,7 +107,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
             return file === null
               ? {
                   name,
-                  error: `Document "${name}" not found. Use the names listed in the system prompt.`,
+                  error: `Document "${name}" not found. Use the names listed in the tool description.`,
                 }
               : { name, content: file.content };
           })
@@ -115,20 +119,21 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   }
 
   // Server-executed tool that lets the model inspect the env var names inside
-  // one or more shared env sets (ids are listed in the system prompt). The
-  // values are never surfaced — shared env sets only carry env var names; the
-  // values live in Kubernetes Secrets the agent loads via `envFrom`. Batch
-  // every id you need into a single call to minimize round-trips.
-  private buildReadSharedEnvSetTool(): ToolSet[string] {
+  // one or more shared env sets (ids are listed in the description). The values
+  // are never surfaced — shared env sets only carry env var names; the values
+  // live in Kubernetes Secrets the agent loads via `envFrom`. Batch every id
+  // you need into a single call to minimize round-trips.
+  private async buildReadSharedEnvSetTool(): Promise<ToolSet[string]> {
+    const sharedEnvSetList = await this.buildSharedEnvSetList();
     return tool({
       description:
-        "Read the env var names inside one or more shared env sets by id " +
-        "(ids are listed in the system prompt). Use this before attaching a " +
-        "set to avoid name collisions with the agent's own `env`, or to " +
-        "confirm a needed var is present. Pass every id you need in a single " +
-        "call to minimize round-trips.",
+        "Read the env var names inside one or more shared env sets by id. " +
+        "Use this before attaching a set to avoid name collisions with the " +
+        "agent's own `env`, or to confirm a needed var is present. Pass every " +
+        "id you need in a single call to minimize round-trips. To attach a " +
+        "set, add its id to the draft's `sharedEnvSets` array.\n\n" + sharedEnvSetList,
       inputSchema: z.object({
-        ids: z.array(z.string()).min(1).describe("Shared env set ids listed in the system prompt."),
+        ids: z.array(z.string()).min(1).describe("Shared env set ids from the list above."),
       }),
       execute: async ({ ids }) => {
         const sharedEnvSets = await Promise.all(
@@ -137,7 +142,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
             if (set === null || set.archived) {
               return {
                 id,
-                error: `Shared env set "${id}" not found. Use the ids listed in the system prompt.`,
+                error: `Shared env set "${id}" not found. Use the ids listed in the tool description.`,
               };
             }
             return { id, envVars: set.envVars.map(({ name }) => ({ name })) };
@@ -149,41 +154,44 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     });
   }
 
-  private async buildInstructions(): Promise<string> {
-    const [docList, sharedEnvSetList, { agentTypes }] = await Promise.all([
-      this.buildDocumentList(),
-      this.buildSharedEnvSetList(),
-      this.loadHermeumConfig(),
-    ]);
-
-    let instructions = AGENT_CONFIG_CHAT_SYSTEM_PROMPT + "\n\n" + docList + "\n\n" + sharedEnvSetList;
-
-    if (agentTypes) {
-      const lines = Object.entries(agentTypes).map(
-        ([key, t]) => `- ${key}${t.description ? `: ${t.description}` : ""}`
-      );
-      instructions +=
-        "\n\nAgent types (optional — set `type` only if the request clearly " +
-        "matches one; otherwise omit):\n" +
-        lines.join("\n");
-    }
-    return instructions;
+  // Server-executed tool that returns the configured agent types the draft's
+  // `type` field can be set to. The types are loaded here once per turn at
+  // context-build time, so execute is a cheap synchronous lookup. Returns an
+  // empty array when no agent types are configured.
+  private async buildListAgentTypesTool(): Promise<ToolSet[string]> {
+    const { agentTypes } = await this.loadHermeumConfig();
+    const entries = agentTypes
+      ? Object.entries(agentTypes).map(([key, t]) => ({
+          key,
+          ...(t.description !== undefined ? { description: t.description } : {}),
+        }))
+      : [];
+    return tool({
+      description:
+        "List the configured agent types the draft's `type` field can be set " +
+        "to. Set `type` only when the request clearly matches one of these; " +
+        "otherwise omit it.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        this.logger.debug("listed agent types", { count: entries.length });
+        return { agentTypes: entries };
+      },
+    });
   }
 
   // Build the "Available documents:" block listing every Hermes config doc the
-  // model can request via `readDocument`. Embedded up front so the model can
-  // skip the list-tool round-trip and batch-read directly. Docs are grouped
-  // under their frontmatter `category` (categories discovered dynamically from
-  // the docs themselves, surfaced alphabetically); docs with no `category`
-  // field are grouped together in a trailing `Uncategorized` block. When no
-  // docs exist, only the header is emitted.
+  // model can request via `readDocument`. Embedded in the tool description so
+  // the model can skip a list-tool round-trip and batch-read directly. Docs are
+  // grouped under their frontmatter `category` (categories discovered
+  // dynamically from the docs themselves, surfaced alphabetically); docs with
+  // no `category` field are grouped together in a trailing `Uncategorized`
+  // block. When no docs exist, a `none` sentinel is emitted.
   private async buildDocumentList(): Promise<string> {
     const files = (await this.files.listFiles(DOCS_PATH)).filter((file) =>
       file.path.endsWith(".md")
     );
     if (files.length === 0) {
-      return "Available documents (read with `readDocument` before writing any " +
-        "config section you're not fully sure about):\n";
+      return "Available documents: none";
     }
 
     const lineFor = ({ name, data }: File) =>
@@ -197,16 +205,13 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       if (category === undefined) {
         uncategorized.push(file);
         continue;
-      } 
-
+      }
       const bucket = categories.get(category) ?? [];
       bucket.push(file);
       categories.set(category, bucket);
     }
 
-    const orderedCategories = [...categories.keys()].sort((a, b) =>
-      a.localeCompare(b)
-    );
+    const orderedCategories = [...categories.keys()].sort((a, b) => a.localeCompare(b));
 
     const blocks: string[] = [];
     for (const category of orderedCategories) {
@@ -217,65 +222,48 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
       blocks.push(`${UNCATEGORIZED_LABEL}:\n${uncategorized.map(lineFor).join("\n")}`);
     }
 
-    return "Available documents (read with `readDocument` before writing any " +
-      "config section you're not fully sure about):\n" +
-      blocks.join("\n\n");
+    return "Available documents:\n" + blocks.join("\n\n");
   }
 
   // Build the "Available shared env sets:" block listing every non-archived
   // shared env set the model can attach via the `sharedEnvSets` field. The id
   // (not the human name) is what the draft's `sharedEnvSets` array expects, so
-  // each line leads with the id. Embedded up front so the model can attach a
-  // set without first calling a list tool; env var names inside a set are
-  // fetched on demand via `readSharedEnvSet` to keep the prompt lean. When no
-  // sets exist, only the header is emitted.
+  // each line leads with the id. Embedded in the tool description up front so
+  // the model can attach a set without first calling a list tool; env var names
+  // inside a set are fetched on demand via `readSharedEnvSet` to keep the
+  // description lean. When no sets exist, a `none` sentinel is emitted.
   private async buildSharedEnvSetList(): Promise<string> {
     const sets = (await this.runtime.listSharedEnvSets({ archived: false })).filter(
       (set) => !set.archived
     );
-    const header =
-      "Available shared env sets (attach via the `sharedEnvSets` field with " +
-      "these ids; read env var names with `readSharedEnvSet` before attaching " +
-      "to avoid collisions with the agent's own `env`):";
     if (sets.length === 0) {
-      return header + "\n";
+      return "Available shared env sets: none";
     }
     const lines = sets.map((set) => {
       const tail = set.description ? ` — ${set.description}` : "";
       return `- ${set.id}: ${set.name}${tail}`;
     });
-    return header + "\n" + lines.join("\n");
+    return "Available shared env sets:\n" + lines.join("\n");
   }
 }
 
-// Field semantics live in the tool input schema's .describe() texts; this
-// prompt carries the conversational behavior and cross-field rules instead.
-// The available documents and configured agent types are appended at runtime.
+// Behavioral rules for the agent-config chat. Tool-specific guidance (when to
+// call `readDocument`, `readSharedEnvSet`, `readAgentConfig`,
+// `updateAgentConfig`, and the available doc/shared-env-set lists) lives in
+// the tool `description` fields, not here, so the model sees each tool's usage
+// rules alongside its definition.
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
 it in an editor and may change it by hand between messages.
 
-Detailed documentation about the config fields is available through the
-\`readDocument\` tool — the names of the available documents are listed below.
-Batch every document you need into a single call, and read up on any config
-section you are not fully sure about BEFORE writing it into the draft. Don't
-guess at field semantics that a document can settle.
+After a config update, reply with one short sentence noting what changed
+plus a brief question about what to refine next (e.g. the tone, the scope,
+or the tools setup). Ask at most one question at a time, and keep all replies
+concise.
 
-The available shared env sets are listed below by id. To attach one, add its
-id to the draft's \`sharedEnvSets\` array. If you need to see the env var names
-inside a set (e.g. to avoid collisions with the agent's own \`env\` or to
-confirm a needed var is present), call \`readSharedEnvSet\` with the ids
-first. Don't attach a set blindly when its contents matter.
+Note 
+- Never guess at field semantics. When you're not fully sure about a config
+section, settle it with the documentation before writing it into the draft.
 
-The draft shown in this conversation may be stale because the user can hand-edit
-the config in their editor between messages. Call \`readAgentConfig\` to fetch
-the latest draft before making any change that depends on the current state of
-fields you haven't just written yourself.
-
-Whenever the draft should change, call the \`updateAgentConfig\` tool with the
-FULL updated definition — keep every field not affected by the change
-unchanged. After a config update, reply with one short sentence noting what
-changed plus a brief question about what to refine next (e.g. the tone, the
-scope, or the tools setup). Ask at most one question at a time, and keep all
-replies concise.`;
+`;
