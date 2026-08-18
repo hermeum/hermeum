@@ -26,11 +26,10 @@ export const SlackSchema = z
       .array(z.string())
       .optional()
       .describe("Slack channel IDs the bot may respond in."),
-    unauthorized_dm_behavior: z
-      .literal("ignore")
-      .default("ignore")
+    allow_bots: z
+      .boolean()
       .optional()
-      .describe("Behavior for unauthorized DMs."),
+      .describe("Allow other bots to trigger this bot (default false)."),
     channel_prompts: z
       .record(z.string(), z.string())
       .optional()
@@ -39,6 +38,27 @@ export const SlackSchema = z
       .array(ChannelSkillBindingSchema)
       .optional()
       .describe("Skills to auto-load at session start per channel/DM."),
+    free_response_channels: z
+      .array(z.string())
+      .optional()
+      .describe("Channel IDs where the bot responds without @mention."),
+    reactions: z
+      .boolean()
+      .optional()
+      .describe("Emit reactions on receipt/completion (default true)."),
+    require_mention: z
+      .boolean()
+      .optional()
+      .describe("Require @mention in channels (default true). DMs always respond."),
+    strict_mention: z
+      .boolean()
+      .optional()
+      .describe("Only reply to explicit @mentions; disable auto-engage (default false)."),
+    unauthorized_dm_behavior: z
+      .literal("ignore")
+      .default("ignore")
+      .optional()
+      .describe("Behavior for unauthorized DMs."),
   })
   .optional()
   .describe("Slack platform configuration. Requires SLACK_* env vars.");
