@@ -170,7 +170,7 @@ helm show values charts/hermeum
 | `config.databaseDialect`             | `sqlite`                         | `sqlite` or `postgres`.                       |
 | `secrets.databaseUrl`                | `""`                             | **Required.** `HERMEUM_DATABASE_URL`.         |
 | `secrets.existingSecret`             | `""`                             | Use an existing Secret instead of templating one. |
-| `agentConfig`                        | `{}`                             | Full `agent-config.yaml` content (mounted as a ConfigMap). |
+| `agentConfig`                        | `{}`                             | Full `config.yaml` content (mounted as a ConfigMap). |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
 | `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |

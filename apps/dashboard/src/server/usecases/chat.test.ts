@@ -14,7 +14,7 @@ vi.mock("../infras/console-logger", () => ({
   })),
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./agent-config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
@@ -71,10 +71,10 @@ function makeFiles(
   return {
     listFiles: vi.fn().mockImplementation(async () => Object.keys(docs).map(toFile)),
     readFile: vi.fn().mockImplementation(async (path: string) => {
-      if (path === "./agent-config.yaml") {
+      if (path === "./config.yaml") {
         return {
           path,
-          name: "agent-config",
+          name: "config",
           content: stringify({ agentTypes, templates: [] } satisfies HermeumConfig),
           data: {},
         };

@@ -37,7 +37,7 @@ operator:
 config:
   # Path to the hermeum config file (HERMEUM_CONFIG_PATH).
   # The chart mounts the agentConfig ConfigMap at this path when non-empty.
-  configPath: /app/agent-config.yaml
+  configPath: /app/config.yaml
   # Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH).
   # Shipped inside the image; override only if you mount custom docs.
   hermesDocsPath: /app/docs/hermes-config
@@ -119,8 +119,8 @@ secrets:
   existingSecret: ""
 
 # ── agentConfig override (ConfigMap mounted at config.configPath) ───────
-# Full contents of agent-config.yaml. When empty, the image's bundled
-# agent-config.example.yaml is used as-is.
+# Full contents of config.yaml. When empty, the image's bundled
+# config.example.yaml is used as-is.
 #
 # The mutating webhook for HermesAgent is driven by
 # `agentTypes.<type>.mutatingWebhookJsonPatch` — populate this to apply

@@ -64,10 +64,10 @@ COPY --from=builder --chown=node:node /deploy ./
 # Built artifacts (client / server / cmd bundles).
 COPY --from=builder --chown=node:node /deploy/dist ./dist
 # Runtime data referenced by config.ts defaults.
-# agent-config.yaml is gitignored (instance-specific), so we ship the tracked
+# config.yaml is gitignored (instance-specific), so we ship the tracked
 # example as the runtime default. Operators override via a volume mount or
 # HERMEUM_CONFIG_PATH.
-COPY --from=builder --chown=node:node /app/apps/dashboard/agent-config.example.yaml ./agent-config.yaml
+COPY --from=builder --chown=node:node /app/apps/dashboard/config.example.yaml ./config.yaml
 COPY --from=builder --chown=node:node /app/apps/dashboard/docs/hermes-config ./docs/hermes-config
 # Drizzle migrations + config for both dialects (postgres & sqlite).
 COPY --from=builder --chown=node:node /app/apps/dashboard/src/server/migrations ./src/server/migrations

@@ -11,7 +11,7 @@ vi.mock("../infras/console-logger", () => ({
   })),
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./agent-config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
 }));
 
 import { stringify } from "yaml";
@@ -27,8 +27,8 @@ function makeConfig(agentTypes?: HermeumConfig["agentTypes"]): FileAdaptor {
   return {
     listFiles: vi.fn(),
     readFile: vi.fn().mockResolvedValue({
-      path: "./agent-config.yaml",
-      name: "agent-config",
+      path: "./config.yaml",
+      name: "config",
       content: stringify({ agentTypes, templates: [] } satisfies HermeumConfig),
       data: {},
     }),
