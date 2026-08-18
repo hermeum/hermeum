@@ -102,7 +102,7 @@ function SharedEnvSetsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Shared Env Sets</h1>
           <p className="mt-1 text-sm text-muted-foreground">
