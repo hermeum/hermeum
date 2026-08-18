@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@hermeum/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -34,12 +35,13 @@ const resourceNavItems = [
 
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { setOpenMobile } = useSidebar();
   const email = session?.user?.email ?? "";
   const name = session?.user?.name ?? email;
   const initial = email.charAt(0).toUpperCase();
 
   return (
-    <Sidebar collapsible="none">
+    <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2.5 px-2 py-1">
           <span className="font-semibold text-sm">Hermeum</span>
@@ -52,7 +54,11 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
           <SidebarMenu>
             {agentNavItems.map(({ to, label, icon: Icon }) => (
               <SidebarMenuItem key={to}>
-                <SidebarMenuButton render={<Link to={to} />} isActive={pathname.startsWith(to)}>
+                <SidebarMenuButton
+                  render={<Link to={to} />}
+                  isActive={pathname.startsWith(to)}
+                  onClick={() => setOpenMobile(false)}
+                >
                   <Icon />
                   {label}
                 </SidebarMenuButton>
@@ -68,6 +74,7 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
                 <SidebarMenuButton
                   render={<a href={to} target="_blank" rel="noopener noreferrer" />}
                   isActive={pathname.startsWith(to)}
+                  onClick={() => setOpenMobile(false)}
                 >
                   <Icon />
                   {label}
