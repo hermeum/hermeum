@@ -20,6 +20,7 @@ export {
 } from "./webhook";
 export { TeamsSchema, type Teams } from "./teams";
 export { SlackSchema, ChannelSkillBindingSchema, type Slack, type ChannelSkillBinding } from "./slack";
+export { DiscordSchema, type Discord } from "./discord";
 export {
   WebSearchBackendSchema,
   WebExtractBackendSchema,
@@ -38,6 +39,7 @@ import { ModelSchema } from "./model";
 import { WebhookSchema } from "./webhook";
 import { TeamsSchema } from "./teams";
 import { SlackSchema } from "./slack";
+import { DiscordSchema } from "./discord";
 import { WebSchema } from "./web";
 import { BrowserSchema } from "./browser";
 import { XSearchSchema } from "./x-search";
@@ -63,6 +65,7 @@ export const ConfigSchema = z
     model: ModelSchema,
     platforms: PlatformsSchema,
     slack: SlackSchema,
+    discord: DiscordSchema,
     web: WebSchema,
     browser: BrowserSchema,
     x_search: XSearchSchema,

@@ -1123,6 +1123,62 @@ describe("derivePlatformAvailability", () => {
     });
   });
 
+  describe("discord", () => {
+    const discordEnv = [
+      { name: "DISCORD_BOT_TOKEN", value: "bot-token", sensitive: true },
+    ];
+
+    it("is unavailable when DISCORD_BOT_TOKEN is missing", () => {
+      const result = derivePlatformAvailability(PlatformId.Discord, makeAgent());
+      expect(result.status).toBe("unavailable");
+      expect(result.reason).toContain("DISCORD_BOT_TOKEN");
+    });
+
+    it("is available with no home when DISCORD_BOT_TOKEN is set", () => {
+      const result = derivePlatformAvailability(PlatformId.Discord, makeAgent({ env: discordEnv }));
+      expect(result).toEqual({ status: "available" });
+    });
+
+    it("never exposes endpoints — Discord uses the Gateway WebSocket", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Discord,
+        makeAgent({ endpoint: "https://a1.example.com", env: discordEnv })
+      );
+      expect(result.endpoints).toBeUndefined();
+    });
+
+    it("reports DISCORD_HOME_CHANNEL as home when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Discord,
+        makeAgent({ env: [...discordEnv, { name: "DISCORD_HOME_CHANNEL", value: "1234567890" }] })
+      );
+      expect(result).toEqual({ status: "available", home: "1234567890" });
+    });
+
+    it("appends DISCORD_HOME_CHANNEL_NAME when set", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Discord,
+        makeAgent({
+          env: [
+            ...discordEnv,
+            { name: "DISCORD_HOME_CHANNEL", value: "1234567890" },
+            { name: "DISCORD_HOME_CHANNEL_NAME", value: "bot-updates" },
+          ],
+        })
+      );
+      expect(result).toEqual({ status: "available", home: "1234567890 (bot-updates)" });
+    });
+
+    it("is unavailable when config.discord is present but no env credentials", () => {
+      // config.discord holds behavior knobs only; credentials come from env.
+      const result = derivePlatformAvailability(
+        PlatformId.Discord,
+        makeAgent({ config: { discord: { require_mention: true } } })
+      );
+      expect(result.status).toBe("unavailable");
+    });
+  });
+
   describe("teams", () => {
     const teamsCredsEnv = [
       { name: "TEAMS_CLIENT_ID", value: "cid" },

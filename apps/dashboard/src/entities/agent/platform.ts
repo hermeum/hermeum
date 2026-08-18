@@ -88,6 +88,7 @@ export enum PlatformId {
   ApiServer = "api-server",
   Webhook = "webhook",
   Slack = "slack",
+  Discord = "discord",
   Teams = "teams",
 }
 
@@ -145,6 +146,10 @@ const PLATFORM_META: Record<PlatformId, PlatformMeta> = {
     label: "Slack",
     description: "Slack bot relayed through the gateway (Socket Mode).",
   },
+  [PlatformId.Discord]: {
+    label: "Discord",
+    description: "Discord bot relayed through the gateway (WebSocket).",
+  },
   [PlatformId.Teams]: {
     label: "Teams",
     description: "Microsoft Teams bot relayed through the gateway (HTTPS webhook).",
@@ -164,6 +169,7 @@ export const PLATFORM_IDS: readonly PlatformId[] = [
   PlatformId.ApiServer,
   PlatformId.Webhook,
   PlatformId.Slack,
+  PlatformId.Discord,
   PlatformId.Teams,
 ];
 
@@ -211,6 +217,20 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       }
       const home = env.find((v) => v.name === "SLACK_HOME_CHANNEL")?.value;
       const homeName = env.find((v) => v.name === "SLACK_HOME_CHANNEL_NAME")?.value;
+      if (home) {
+        return { status: "available", home: homeName ? `${home} (${homeName})` : home };
+      }
+      return { status: "available" };
+    }
+    case PlatformId.Discord: {
+      const hasToken = env.some(
+        (v) => v.name === "DISCORD_BOT_TOKEN" && v.value.trim() !== "",
+      );
+      if (!hasToken) {
+        return { status: "unavailable", reason: "Missing env var: DISCORD_BOT_TOKEN." };
+      }
+      const home = env.find((v) => v.name === "DISCORD_HOME_CHANNEL")?.value;
+      const homeName = env.find((v) => v.name === "DISCORD_HOME_CHANNEL_NAME")?.value;
       if (home) {
         return { status: "available", home: homeName ? `${home} (${homeName})` : home };
       }
