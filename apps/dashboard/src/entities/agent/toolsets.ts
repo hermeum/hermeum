@@ -182,12 +182,18 @@ export const TOOLSET_IDS: readonly ToolsetId[] = [
   ToolsetId.Clarify,
   ToolsetId.Delegation,
   ToolsetId.Cronjob,
-  ToolsetId.HomeAssistant,
-  ToolsetId.Spotify,
+  // Home Assistant, Spotify, Yuanbao, and Computer Use are fundamentally
+  // unavailable in Hermeum (container runtime cannot reach a LAN smart-home
+  // hub, host OAuth callbacks, or drive a local desktop). Commented out of
+  // TOOLSET_IDS to keep them invisible in the UI; the enum/metadata/
+  // availability logic remain so existing config or API payloads referencing
+  // these IDs still resolve cleanly.
+  // ToolsetId.HomeAssistant,
+  // ToolsetId.Spotify,
   ToolsetId.Discord,
   ToolsetId.DiscordAdmin,
-  ToolsetId.Yuanbao,
-  ToolsetId.ComputerUse,
+  // ToolsetId.Yuanbao,
+  // ToolsetId.ComputerUse,
 ];
 
 export function deriveToolsetAvailability(id: ToolsetId, agent: Agent): ToolsetAvailability {
