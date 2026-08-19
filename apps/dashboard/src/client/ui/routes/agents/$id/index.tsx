@@ -276,7 +276,7 @@ function AgentDetailPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{agent.name ?? agent.id}</h1>

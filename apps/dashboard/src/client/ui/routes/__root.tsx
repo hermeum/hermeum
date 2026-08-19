@@ -11,6 +11,7 @@ import { AppSidebar } from "@/client/ui/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
+  SidebarTrigger,
 } from "@hermeum/components/ui/sidebar";
 
 interface RouterContext {
@@ -43,6 +44,9 @@ function RootLayout() {
     <SidebarProvider className="h-svh">
       <AppSidebar session={session} />
       <SidebarInset className="min-h-0 overflow-y-auto">
+        <header className="flex h-14 items-center px-4 md:hidden">
+          <SidebarTrigger />
+        </header>
         <Outlet />
       </SidebarInset>
       <Toaster />
