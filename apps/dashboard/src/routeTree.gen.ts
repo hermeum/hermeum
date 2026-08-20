@@ -9,39 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './client/ui/routes/__root'
-import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as SigninRouteImport } from './client/ui/routes/signin'
-import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index'
-import { Route as AgentsIdRouteImport } from './client/ui/routes/agents/$id'
-import { Route as AgentsNewRouteImport } from './client/ui/routes/agents/new'
+import { Route as IndexRouteImport } from './client/ui/routes/index'
 import { Route as SharedEnvSetsIndexRouteImport } from './client/ui/routes/shared-env-sets/index'
+import { Route as AgentsIndexRouteImport } from './client/ui/routes/agents/index'
 import { Route as SharedEnvSetsIdRouteImport } from './client/ui/routes/shared-env-sets/$id'
+import { Route as AgentsNewRouteImport } from './client/ui/routes/agents/new'
+import { Route as AgentsIdRouteImport } from './client/ui/routes/agents/$id'
 import { Route as AgentsIdIndexRouteImport } from './client/ui/routes/agents/$id/index'
 import { Route as AgentsIdEditRouteImport } from './client/ui/routes/agents/$id/edit'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgentsIndexRoute = AgentsIndexRouteImport.update({
-  id: '/agents/',
-  path: '/agents/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentsIdRoute = AgentsIdRouteImport.update({
-  id: '/agents/$id',
-  path: '/agents/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentsNewRoute = AgentsNewRouteImport.update({
-  id: '/agents/new',
-  path: '/agents/new',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SharedEnvSetsIndexRoute = SharedEnvSetsIndexRouteImport.update({
@@ -49,9 +34,24 @@ const SharedEnvSetsIndexRoute = SharedEnvSetsIndexRouteImport.update({
   path: '/shared-env-sets/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SharedEnvSetsIdRoute = SharedEnvSetsIdRouteImport.update({
   id: '/shared-env-sets/$id',
   path: '/shared-env-sets/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsNewRoute = AgentsNewRouteImport.update({
+  id: '/agents/new',
+  path: '/agents/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsIdRoute = AgentsIdRouteImport.update({
+  id: '/agents/$id',
+  path: '/agents/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsIdIndexRoute = AgentsIdIndexRouteImport.update({
@@ -145,13 +145,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/signin': {
       id: '/signin'
       path: '/signin'
@@ -159,25 +152,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agents/': {
-      id: '/agents/'
-      path: '/agents'
-      fullPath: '/agents/'
-      preLoaderRoute: typeof AgentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agents/$id': {
-      id: '/agents/$id'
-      path: '/agents/$id'
-      fullPath: '/agents/$id'
-      preLoaderRoute: typeof AgentsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agents/new': {
-      id: '/agents/new'
-      path: '/agents/new'
-      fullPath: '/agents/new'
-      preLoaderRoute: typeof AgentsNewRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shared-env-sets/': {
@@ -187,11 +166,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedEnvSetsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents/': {
+      id: '/agents/'
+      path: '/agents'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shared-env-sets/$id': {
       id: '/shared-env-sets/$id'
       path: '/shared-env-sets/$id'
       fullPath: '/shared-env-sets/$id'
       preLoaderRoute: typeof SharedEnvSetsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents/new': {
+      id: '/agents/new'
+      path: '/agents/new'
+      fullPath: '/agents/new'
+      preLoaderRoute: typeof AgentsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents/$id': {
+      id: '/agents/$id'
+      path: '/agents/$id'
+      fullPath: '/agents/$id'
+      preLoaderRoute: typeof AgentsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents/$id/': {
