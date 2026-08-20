@@ -25,8 +25,9 @@ export function AgentEditorMobileTabs({ chat, config }: AgentEditorMobileTabsPro
         <TabsTrigger value="config">Config</TabsTrigger>
         <TabsTrigger value="chat">Chat</TabsTrigger>
       </TabsList>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {tab === "chat" ? chat : config}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className={tab === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>{chat}</div>
+        <div className={tab === "config" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>{config}</div>
       </div>
     </Tabs>
   );
