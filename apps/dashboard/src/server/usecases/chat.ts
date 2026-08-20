@@ -263,6 +263,8 @@ or the tools setup). Ask at most one question at a time, and keep all replies
 concise.
 
 Note 
+- Only write fields the user has asked for or that are strictly required. Skip
+every optional field unless the user requests it.
 - Never guess at field semantics. When you're not fully sure about a config
 section, settle it with the documentation before writing it into the draft.
 

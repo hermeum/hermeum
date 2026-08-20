@@ -27,9 +27,9 @@ export const SlackSchema = z
       .optional()
       .describe("Slack channel IDs the bot may respond in."),
     allow_bots: z
-      .boolean()
+      .enum(["none", "mentions", "all"])
       .optional()
-      .describe("Allow other bots to trigger this bot (default false)."),
+      .describe("Allow other bots to trigger this bot: 'none' (default), 'mentions', or 'all'."),
     channel_prompts: z
       .record(z.string(), z.string())
       .optional()
