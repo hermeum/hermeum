@@ -94,7 +94,7 @@ config:
     # tls block with this secret; when unset, no tls block is emitted.
     tlsSecretName: ""
 
-# ── Sensitive env (HERMEUM_* + BETTER_AUTH_* + OPENAI_API_KEY → Secret) ──────
+# ── Sensitive env (HERMEUM_* + BETTER_AUTH_* → Secret) ─────────────────────
 secrets:
   # REQUIRED when no existingSecret is set. Connection URL for the dashboard
   # database (HERMEUM_DATABASE_URL). For sqlite use "file:/var/lib/hermeum/db.sqlite".
@@ -110,12 +110,14 @@ secrets:
   smtpUrl: ""
   # Optional — override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL).
   openaiBaseUrl: ""
-  # Optional — API key for the AI config generator (mapped to OPENAI_API_KEY).
+  # Optional — API key for the OpenAI-compatible API used by the AI config
+  # generator (mapped to HERMEUM_OPENAI_API_KEY).
   openaiApiKey: ""
   # Use an existing Secret instead of templating one. When set, the chart
   # reads databaseUrl / betterAuthSecret / betterAuthUrl / smtpUrl /
   # openaiBaseUrl / openaiApiKey from the following keys: database-url,
-  # better-auth-secret, better-auth-url, smtp-url, openai-base-url, openai-api-key.
+  # better-auth-secret, better-auth-url, smtp-url, openai-base-url,
+  # openai-api-key.
   existingSecret: ""
 
 # ── agentConfig override (ConfigMap mounted at config.configPath) ───────

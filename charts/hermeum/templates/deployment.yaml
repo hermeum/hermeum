@@ -155,7 +155,7 @@ spec:
                   key: openai-base-url
             {{- end }}
             {{- if .Values.secrets.openaiApiKey }}
-            - name: OPENAI_API_KEY
+            - name: HERMEUM_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "hermeum.secretName" . }}
