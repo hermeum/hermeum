@@ -28,6 +28,9 @@ const ChatRequestSchema = z.object({
 
 // Lazy: built on first use so the dashboard boots without any AI config
 // and fails with a clear error only when the feature is called.
+// Hermeum uses OpenAI for the AI config generator for consistent output
+// quality across runs; HERMEUM_OPENAI_BASE_URL lets it point at an
+// OpenAI-compatible endpoint.
 let openai: ReturnType<typeof createOpenAI> | undefined;
 
 function model() {
