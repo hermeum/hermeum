@@ -16,6 +16,7 @@ import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
 import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentEditorMobileTabs } from "../-components/agent-editor-mobile-tabs";
 
 const YAML_OPTIONS = { blockQuote: "literal", lineWidth: 0 } as const;
 
@@ -158,35 +159,32 @@ function EditAgentPage() {
         </h1>
       </div>
 
-      {/* Mobile: static stacked layout (config on top, chat at bottom) */}
-      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:hidden">
-        <div className="flex min-h-0 flex-1 flex-col">{configPane}</div>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <AgentConfigChat {...editChatProps} />
-        </div>
-      </div>
+      {/* Mobile: tabbed full-height layout */}
+      <AgentEditorMobileTabs
+        chat={<AgentConfigChat {...editChatProps} />}
+        config={configPane}
+      />
 
       {/* Desktop: resizable side-by-side layout */}
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className="hidden min-h-0 flex-1 lg:flex"
-      >
-        {/* Chat pane */}
-        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
-          <div className="flex h-full min-h-0 flex-col pr-3">
-            <AgentConfigChat {...editChatProps} />
-          </div>
-        </ResizablePanel>
-        <ResizableHandle
-          withHandle
-          className="bg-transparent [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100"
-        />
+      <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+        <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0 flex-1">
+          {/* Chat pane */}
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+            <div className="flex h-full min-h-0 flex-col pr-3">
+              <AgentConfigChat {...editChatProps} />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle
+            withHandle
+            className="bg-transparent [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100"
+          />
 
-        {/* Config pane */}
-        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
-          <div className="flex h-full min-h-0 flex-col pl-3">{configPane}</div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          {/* Config pane */}
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+            <div className="flex h-full min-h-0 flex-col pl-3">{configPane}</div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
     </div>
   );
 }

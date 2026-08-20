@@ -17,6 +17,7 @@ import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput, Template } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
 import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentEditorMobileTabs } from "./-components/agent-editor-mobile-tabs";
 
 const YAML_OPTIONS = { blockQuote: "literal", lineWidth: 0 } as const;
 
@@ -102,7 +103,12 @@ function NewAgentPage() {
       const visible = templates ?? [];
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <h2 className="shrink-0 text-base font-medium">Start with templates</h2>
+          <div className="flex shrink-0 items-center justify-between gap-2">
+            <h2 className="text-base font-medium">Start with templates</h2>
+            <Button size="sm" variant="outline" onClick={() => setView({ mode: "edit" })}>
+              Create manually
+            </Button>
+          </div>
           <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto p-px sm:grid-cols-2">
             {visible.map((template) => (
               <Card
@@ -188,35 +194,32 @@ function NewAgentPage() {
     <div className="flex h-full min-h-0 flex-col gap-4 p-6">
       <h1 className="shrink-0 text-2xl font-semibold tracking-tight">Create agent</h1>
 
-      {/* Mobile: static stacked layout (config on top, chat at bottom) */}
-      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:hidden">
-        <div className="flex min-h-0 flex-1 flex-col">{configPane}</div>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />
-        </div>
-      </div>
+      {/* Mobile: tabbed full-height layout */}
+      <AgentEditorMobileTabs
+        chat={<AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />}
+        config={configPane}
+      />
 
       {/* Desktop: resizable side-by-side layout */}
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className="hidden min-h-0 flex-1 lg:flex"
-      >
-        {/* Chat pane */}
-        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
-          <div className="flex h-full min-h-0 flex-col pr-3">
-            <AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />
-          </div>
-        </ResizablePanel>
-        <ResizableHandle
-          withHandle
-          className="bg-transparent [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100"
-        />
+      <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+        <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0 flex-1">
+          {/* Chat pane */}
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+            <div className="flex h-full min-h-0 flex-col pr-3">
+              <AgentConfigChat getConfig={getConfig} onConfigUpdate={handleConfigUpdate} />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle
+            withHandle
+            className="bg-transparent [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100"
+          />
 
-        {/* Config pane */}
-        <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
-          <div className="flex h-full min-h-0 flex-col pl-3">{configPane}</div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          {/* Config pane */}
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0">
+            <div className="flex h-full min-h-0 flex-col pl-3">{configPane}</div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
     </div>
   );
 }
