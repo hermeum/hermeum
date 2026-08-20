@@ -298,18 +298,14 @@ export function AgentConfigChat({
                   <MessageScrollerItem messageId="thinking">
                     <Message align="start">
                       <MessageContent>
-                        <Bubble variant="ghost" align="start">
-                          <BubbleContent>
-                            <Marker className="normal-case tracking-normal font-normal">
-                              <MarkerIcon>
-                                <LoaderCircle className="animate-spin" />
-                              </MarkerIcon>
-                              <MarkerContent className="normal-case tracking-normal">
-                                Thinking…
-                              </MarkerContent>
-                            </Marker>
-                          </BubbleContent>
-                        </Bubble>
+                        <Marker className="normal-case tracking-normal font-normal">
+                          <MarkerIcon>
+                            <LoaderCircle className="animate-spin" />
+                          </MarkerIcon>
+                          <MarkerContent className="normal-case tracking-normal">
+                            Thinking…
+                          </MarkerContent>
+                        </Marker>
                       </MessageContent>
                     </Message>
                   </MessageScrollerItem>
