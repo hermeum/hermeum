@@ -6,7 +6,7 @@ loadEnv();
 export const ConfigSchema = z.object({
   configPath: z
     .string()
-    .default("./agent-config.yaml")
+    .default("./config.yaml")
     .describe("Path to the hermeum config file (HERMEUM_CONFIG_PATH)."),
   hermesDocsPath: z
     .string()

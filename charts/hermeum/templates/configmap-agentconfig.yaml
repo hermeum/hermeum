@@ -6,6 +6,6 @@ metadata:
   labels:
     {{- include "hermeum.labels" . | nindent 4 }}
 data:
-  agent-config.yaml: |
+  config.yaml: |
     {{- .Values.agentConfig | toYaml | nindent 4 }}
 {{- end -}}

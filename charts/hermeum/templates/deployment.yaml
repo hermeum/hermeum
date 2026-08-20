@@ -217,7 +217,7 @@ spec:
             {{- if include "hermeum.hasAgentConfig" . }}
             - name: agent-config
               mountPath: {{ .Values.config.configPath | quote }}
-              subPath: agent-config.yaml
+              subPath: config.yaml
               readOnly: true
             {{- end }}
             # Webhook TLS cert/key.
@@ -244,8 +244,8 @@ spec:
           configMap:
             name: {{ include "hermeum.fullname" . }}-agentconfig
             items:
-              - key: agent-config.yaml
-                path: agent-config.yaml
+              - key: config.yaml
+                path: config.yaml
         {{- end }}
         {{- if .Values.webhook.enabled }}
         - name: webhook-tls
