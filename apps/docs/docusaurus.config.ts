@@ -44,7 +44,8 @@ const config: Config = {
       },
       items: [
         {
-          to: "/",
+          type: "doc",
+          docId: "intro",
           label: "Docs",
           position: "left",
         },
