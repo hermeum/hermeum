@@ -38,7 +38,8 @@ function model() {
     );
   }
   const baseURL = config.openaiBaseUrl ? { baseURL: config.openaiBaseUrl } : {};
-  openai ??= createOpenAI(baseURL);
+  const apiKey = config.openaiApiKey ? { apiKey: config.openaiApiKey } : {};
+  openai ??= createOpenAI({ ...baseURL, ...apiKey });
   return openai(config.openaiModel);
 }
 

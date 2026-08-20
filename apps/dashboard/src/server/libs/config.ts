@@ -48,6 +48,10 @@ export const ConfigSchema = z.object({
     .url()
     .optional()
     .describe("Override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL)."),
+  openaiApiKey: z
+    .string()
+    .optional()
+    .describe("API key for the OpenAI-compatible API used by the AI config generator (HERMEUM_OPENAI_API_KEY)."),
   logLevel: z
     .enum(["debug", "info", "warn", "error"])
     .default("info")
@@ -130,6 +134,7 @@ export const config = ConfigSchema.parse({
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
+  openaiApiKey: process.env.HERMEUM_OPENAI_API_KEY,
   logLevel: process.env.HERMEUM_LOG_LEVEL,
   agentIngressScheme: process.env.HERMEUM_AGENT_INGRESS_SCHEME,
   agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
