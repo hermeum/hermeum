@@ -19,6 +19,8 @@ import {
 } from "@hermeum/components/ui/message-scroller";
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { Streamdown } from "streamdown";
+
+import { MarkdownCode, MarkdownInlineCode } from "./markdown-code";
 import type { AgentInput } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
 
@@ -207,6 +209,10 @@ export function AgentConfigChat({
                                 <BubbleContent>
                                   <Streamdown
                                     isAnimating={!isUser && status === "streaming"}
+                                    components={{
+                                      code: MarkdownCode,
+                                      inlineCode: MarkdownInlineCode,
+                                    }}
                                     {...(isUser ? { mode: "static" as const } : {})}
                                   >
                                     {part.text}
