@@ -18,6 +18,7 @@ import {
   MessageScrollerViewport,
 } from "@hermeum/components/ui/message-scroller";
 import { Textarea } from "@hermeum/components/ui/textarea";
+import { Streamdown } from "streamdown";
 import type { AgentInput } from "@/entities";
 import { AgentInputObjectSchema } from "@/entities";
 
@@ -203,8 +204,13 @@ export function AgentConfigChat({
                                 variant={isUser ? "muted" : "ghost"}
                                 align={isUser ? "end" : "start"}
                               >
-                                <BubbleContent className="whitespace-pre-wrap">
-                                  {part.text}
+                                <BubbleContent>
+                                  <Streamdown
+                                    isAnimating={!isUser && status === "streaming"}
+                                    {...(isUser ? { mode: "static" as const } : {})}
+                                  >
+                                    {part.text}
+                                  </Streamdown>
                                 </BubbleContent>
                               </Bubble>
                             );
