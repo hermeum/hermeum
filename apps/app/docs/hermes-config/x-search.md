@@ -18,7 +18,7 @@ pages, keep `web_search` / `web_extract`.
 
 **Credential path:** only the `XAI_API_KEY` path is supported here.
 SuperGrok / X Premium+ OAuth (`hermes auth add xai-oauth`) is **not**
-wired up in this dashboard yet — set `XAI_API_KEY` instead.
+wired up in this app yet — set `XAI_API_KEY` instead.
 
 The tool auto-enables when `XAI_API_KEY` is present and the `x_search`
 toolset is on. Disable explicitly via `hermes tools` → Search →
@@ -41,7 +41,7 @@ toolset is on. Disable explicitly via `hermes tools` → Search →
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `XAI_API_KEY` | Paid xAI API key — the only supported credential path in this dashboard (set in `~/.hermes/.env`). OAuth (SuperGrok / X Premium+) is not wired up here. Without it the `x_search` tool does not register. | _(required)_ |
+| `XAI_API_KEY` | Paid xAI API key — the only supported credential path in this app (set in `~/.hermes/.env`). OAuth (SuperGrok / X Premium+) is not wired up here. Without it the `x_search` tool does not register. | _(required)_ |
 
 ## Example
 

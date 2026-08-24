@@ -1,17 +1,17 @@
 # AGENTS.md
 
-Notes for agents working in the `@hermeum/dashboard` package.
+Notes for agents working in the `@hermeum/app` package.
 
 ## Commands
 
 Run from the repo root via pnpm filter, or from this directory directly.
 
-- **Typecheck:** `pnpm --filter @hermeum/dashboard typecheck` (runs `tsc --noEmit`)
-- **Lint:** `pnpm --filter @hermeum/dashboard lint` (runs `eslint .`)
-- **Tests (all):** `pnpm --filter @hermeum/dashboard test` (runs `vitest run`)
-- **Tests (single file):** `pnpm --filter @hermeum/dashboard test -- <path>` (e.g. `... test -- src/server/usecases/chat.test.ts`)
-- **Tests (watch):** `pnpm --filter @hermeum/dashboard test:watch`
-- **Dev server:** `pnpm --filter @hermeum/dashboard dev`
+- **Typecheck:** `pnpm --filter @hermeum/app typecheck` (runs `tsc --noEmit`)
+- **Lint:** `pnpm --filter @hermeum/app lint` (runs `eslint .`)
+- **Tests (all):** `pnpm --filter @hermeum/app test` (runs `vitest run`)
+- **Tests (single file):** `pnpm --filter @hermeum/app test -- <path>` (e.g. `... test -- src/server/usecases/chat.test.ts`)
+- **Tests (watch):** `pnpm --filter @hermeum/app test:watch`
+- **Dev server:** `pnpm --filter @hermeum/app dev`
 
 ## Conventions
 

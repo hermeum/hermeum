@@ -387,7 +387,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
         npm: raw.spec.hermes.packages.npm.install,
       }),
     },
-    // prompt is required by AgentCronSchema; dashboard-authored crons always set it.
+    // prompt is required by AgentCronSchema; app-authored crons always set it.
     crons: raw.spec.hermes?.crons?.map((c) => ({
       name: c.name,
       schedule: c.schedule,

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage Dockerfile for @hermeum/dashboard.
+# Multi-stage Dockerfile for @hermeum/app.
 # Build from repo root:
-#   docker build -f dockerfiles/Dockerfile.dashboard -t hermeum-dashboard .
+#   docker build -f dockerfiles/Dockerfile.app -t hermeum-app .
 
 ARG NODE_IMAGE=node:24-alpine
 ARG PNPM_VERSION=9.15.0
@@ -23,7 +23,7 @@ RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate \
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/dashboard/package.json ./apps/dashboard/
+COPY apps/app/package.json ./apps/app/
 COPY packages/components/package.json ./packages/components/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
@@ -36,8 +36,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM deps AS builder
 WORKDIR /app
 COPY . .
-RUN pnpm --filter @hermeum/dashboard build \
- && pnpm deploy --filter @hermeum/dashboard --prod /deploy
+RUN pnpm --filter @hermeum/app build \
+ && pnpm deploy --filter @hermeum/app --prod /deploy
 
 # --------------------------------------------------------------------------- #
 # runner — lean production image                                              #
@@ -67,12 +67,12 @@ COPY --from=builder --chown=node:node /deploy/dist ./dist
 # config.yaml is gitignored (instance-specific), so we ship the tracked
 # example as the runtime default. Operators override via a volume mount or
 # HERMEUM_CONFIG_PATH.
-COPY --from=builder --chown=node:node /app/apps/dashboard/config.example.yaml ./config.yaml
-COPY --from=builder --chown=node:node /app/apps/dashboard/docs/hermes-config ./docs/hermes-config
+COPY --from=builder --chown=node:node /app/apps/app/config.example.yaml ./config.yaml
+COPY --from=builder --chown=node:node /app/apps/app/docs/hermes-config ./docs/hermes-config
 # Drizzle migrations + config for both dialects (postgres & sqlite).
-COPY --from=builder --chown=node:node /app/apps/dashboard/src/server/migrations ./src/server/migrations
-COPY --from=builder --chown=node:node /app/apps/dashboard/drizzle.config.postgres.ts ./drizzle.config.postgres.ts
-COPY --from=builder --chown=node:node /app/apps/dashboard/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
+COPY --from=builder --chown=node:node /app/apps/app/src/server/migrations ./src/server/migrations
+COPY --from=builder --chown=node:node /app/apps/app/drizzle.config.postgres.ts ./drizzle.config.postgres.ts
+COPY --from=builder --chown=node:node /app/apps/app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
 
 USER node
 

@@ -11,7 +11,7 @@ from a text prompt (text-to-video) or from a prompt plus a source image
 (image-to-video). Every backend is a provider plugin; the active provider
 is picked by `video_gen.provider` in `config.yaml`.
 
-This dashboard documents the **xAI** and **FAL** providers. DeepInfra
+This app documents the **xAI** and **FAL** providers. DeepInfra
 and user-installed plugins are also supported and pass through unchanged;
 only xAI and FAL are covered here.
 

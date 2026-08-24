@@ -10,7 +10,7 @@ metadata:
   labels:
     {{- include "hermeum.labels" . | nindent 4 }}
   annotations:
-    # Run before the dashboard pod and the MutatingWebhookConfiguration.
+    # Run before the hermeum pod and the MutatingWebhookConfiguration.
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": before-hook-creation

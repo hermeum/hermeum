@@ -7,16 +7,16 @@ metadata:
   labels:
     {{- include "hermeum.labels" . | nindent 4 }}
 rules:
-  # The dashboard reconciles HermesAgent custom resources in the namespace.
+  # The hermeum app reconciles HermesAgent custom resources in the namespace.
   - apiGroups: ["agents.hermeum.app"]
     resources: ["hermesagents"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   # Per-agent env is split across a ConfigMap (non-sensitive) and a Secret
-  # (sensitive); the dashboard manages both.
+  # (sensitive); the hermeum app manages both.
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # Secrets hold sensitive agent env + shared env sets; the dashboard reads,
+  # Secrets hold sensitive agent env + shared env sets; the hermeum app reads,
   # creates, replaces, and deletes them.
   - apiGroups: [""]
     resources: ["secrets"]

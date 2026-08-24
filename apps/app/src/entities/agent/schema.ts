@@ -461,7 +461,7 @@ export const AgentInputObjectSchema = z.object({
   sharedEnvSets: z
     .array(z.string())
     .optional()
-    .describe("Ids of dashboard-managed shared env sets."),
+    .describe("Ids of app-managed shared env sets."),
 });
 
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {

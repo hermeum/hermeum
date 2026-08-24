@@ -26,7 +26,7 @@ const ChatRequestSchema = z.object({
   config: AgentInputObjectSchema.optional(),
 });
 
-// Lazy: built on first use so the dashboard boots without any AI config
+// Lazy: built on first use so the app boots without any AI config
 // and fails with a clear error only when the feature is called.
 // Hermeum uses OpenAI for the AI config generator for consistent output
 // quality across runs; HERMEUM_OPENAI_BASE_URL lets it point at an

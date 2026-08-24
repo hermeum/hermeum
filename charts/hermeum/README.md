@@ -1,10 +1,10 @@
 # hermeum
 
-Helm chart for the [Hermeum](https://github.com/hermeum/hermeum) dashboard — the
-control plane that reconciles `HermesAgent` custom resources via the
+Helm chart for the [Hermeum](https://github.com/hermeum/hermeum) control plane — the
+component that reconciles `HermesAgent` custom resources via the
 `hermes-agent-operator`.
 
-The dashboard is a Node/Express server that exposes:
+The hermeum app is a Node/Express server that exposes:
 
 | Port  | Scheme | Path(s)                                  | Consumer                        |
 |-------|--------|------------------------------------------|---------------------------------|
@@ -13,8 +13,8 @@ The dashboard is a Node/Express server that exposes:
 
 The HTTP port is fronted by an optional ingress gateway; the HTTPS port is
 reached directly by the kube-apiserver via a `MutatingWebhookConfiguration`.
-TLS on 8443 is terminated **in-process** by the dashboard server (see the
-companion dashboard PR that implements in-process TLS termination).
+TLS on 8443 is terminated **in-process** by the hermeum server (see the
+companion PR that implements in-process TLS termination).
 
 ## Dependencies
 
@@ -88,7 +88,7 @@ agentConfig:
 |--------------------------------|-------------------------------------|--------------------------------------------------|
 | `secrets.databaseUrl`          | `HERMEUM_DATABASE_URL`              | Required unless `secrets.existingSecret` is set. |
 
-All other env vars have defaults (see `apps/dashboard/src/server/libs/config.ts`
+All other env vars have defaults (see `apps/app/src/server/libs/config.ts`
 for the authoritative list + semantics, and `values.yaml` for the chart-side
 documentation).
 
@@ -98,7 +98,7 @@ When `webhook.enabled` (default `true`), the chart ships:
 
 1. A `MutatingWebhookConfiguration` admitting `CREATE`/`UPDATE` on
    `agents.hermeum.app/v1alpha1` `hermesagents`, dispatching
-   `AdmissionReview`s to the dashboard's `POST /webhook/mutating`.
+   `AdmissionReview`s to the hermeum app's `POST /webhook/mutating`.
 2. A pre-install Job that generates a self-signed CA + serving cert and writes
    them to a `<release>-webhook-tls` Secret (skipped when
    `webhook.tls.existingSecret` is set).
@@ -143,14 +143,14 @@ per-dialect SQL. Disable only if you run migrations out-of-band.
 
 ## RBAC
 
-The dashboard's ServiceAccount is granted a namespace-scoped `Role` over:
+The hermeum app's ServiceAccount is granted a namespace-scoped `Role` over:
 - `agents.hermeum.app/hermesagents` — full CRUD (reconciles agent CRs)
 - `configmaps`, `secrets` — full CRUD (per-agent env + shared env sets)
 
 The webhook cert-provisioning hooks use a **separate** ServiceAccount
 (`<release>-webhook-cert`) with a cluster-scoped `ClusterRole` over
 `mutatingwebhookconfigurations` (needed only for the post-install caBundle
-patch). This keeps the dashboard's own RBAC narrowly namespace-scoped.
+patch). This keeps the hermeum app's own RBAC narrowly namespace-scoped.
 
 ## Values
 
@@ -165,7 +165,7 @@ helm show values charts/hermeum
 
 | Key                                 | Default                          | Description                                   |
 |-------------------------------------|----------------------------------|-----------------------------------------------|
-| `image.repository`                   | `ghcr.io/hermeum/dashboard`      | Dashboard image. No published image yet — set this. |
+| `image.repository`                   | `ghcr.io/hermeum/hermeum`       | Hermeum image. No published image yet — set this. |
 | `operator.enabled`                   | `true`                           | Install `hermes-agent-operator` as a dependency. |
 | `config.databaseDialect`             | `sqlite`                         | `sqlite` or `postgres`.                       |
 | `secrets.databaseUrl`                | `""`                             | **Required.** `HERMEUM_DATABASE_URL`.         |
@@ -178,7 +178,7 @@ helm show values charts/hermeum
 
 ## TLS
 
-The dashboard (PR #108) terminates TLS in-process via Node's `https` module.
+The hermeum app (PR #108) terminates TLS in-process via Node's `https` module.
 This chart wires the env vars that drive it.
 
 ### Mutating webhook TLS

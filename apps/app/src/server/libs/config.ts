@@ -18,7 +18,7 @@ export const ConfigSchema = z.object({
     .describe("Database backend dialect (HERMEUM_DATABASE_DIALECT)."),
   databaseUrl: z
     .url()
-    .describe("Connection URL for the dashboard database (HERMEUM_DATABASE_URL)."),
+    .describe("Connection URL for the app database (HERMEUM_DATABASE_URL)."),
   kubernetesNamespace: z
     .string()
     .default("hermeum")
