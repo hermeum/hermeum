@@ -16,40 +16,8 @@ the architecture, see [Overview](../overview).
 
 - A Kubernetes cluster.
 - Helm 3.x.
-- The [`hermes-agent-operator`](https://github.com/hermeum/hermes-agent-operator).
 - An ingress controller — nginx / traefik / istio-ingress.
 - (Optional) [cert-manager](https://cert-manager.io/)
-
-### hermes-agent-operator
-
-Hermeum depends on the [`hermes-agent-operator`](https://github.com/hermeum/hermes-agent-operator),
-which installs the `HermesAgent` CRD and reconciles each CR into a running Hermes
-agent. It ships as an OCI Helm chart at
-`oci://ghcr.io/hermeum/charts/hermes-agent-operator` and is installed by default
-as a dependency of this chart. To install it separately — e.g. for a single
-cluster-wide reconciler shared by multiple Hermeum instances — see
-[Installing the operator separately](#installing-the-operator-separately).
-
-```bash
-helm upgrade hermes-agent-operator \
-  oci://ghcr.io/hermeum/charts/hermes-agent-operator \
-  --install --namespace hermes-agent --create-namespace
-```
-
-### Ingress controller
-
-Hermeum is exposed via an Ingress, so you need a controller installed in the
-cluster. nginx-ingress, traefik, and istio-ingress all work. If you don't have
-one yet, install one before proceeding — e.g. for nginx:
-
-```bash
-helm install nginx-ingress ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
-```
-
-For TLS termination with Let's Encrypt, also install
-[cert-manager](https://cert-manager.io/) and a `ClusterIssuer`. See
-[Ingress & TLS](../ingress-tls).
 
 ## Helm install
 
@@ -104,49 +72,6 @@ The PVC is automatically disabled when `config.databaseDialect=postgres`, and
 `replicaCount` can scale up. Use `secrets.existingSecret` to reference a Secret
 you manage yourself (e.g. via External Secrets) instead of templating one. See
 [Database](../database) for more.
-
-## Installing the operator separately
-
-By default this chart installs the `hermes-agent-operator` as a bundled Helm
-dependency — one operator per Hermeum release, reconciling `HermesAgent` CRs in
-the same namespace. Install the operator chart on its own when you want a
-single cluster-wide reconciler shared by multiple Hermeum instances, or when
-you prefer to manage the operator lifecycle (and CRD upgrades) independently.
-
-```bash
-helm upgrade hermes-agent-operator \
-  oci://ghcr.io/hermeum/charts/hermes-agent-operator \
-  --install --namespace hermes-agent --create-namespace
-```
-
-This installs the `HermesAgent` CRD and a Deployment that reconciles CRs across
-the cluster. Then disable the bundled dependency so Hermeum's chart only manages
-the dashboard:
-
-```bash
-helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
-  --namespace hermeum --create-namespace \
-  --set operator.enabled=false \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
-  --set secrets.betterAuthSecret=$(openssl rand -base64 32) \
-  --set secrets.smtpUrl=smtps://user:pass@mail.example.com:465 \
-  --set secrets.openaiApiKey=sk-...
-```
-
-:::note
-Only one operator should reconcile a given namespace at a time. If you've
-previously installed Hermeum with the bundled operator, uninstall it first (or
-ensure the cluster-wide operator is the only reconciler watching that
-namespace) before flipping `operator.enabled=false`, to avoid two controllers
-racing on the same `HermesAgent` CRs.
-:::
-
-Values under the chart's `operator.*` key are passed through to the
-operator chart when the dependency is enabled. When installing the operator
-separately, configure it via its own `values.yaml` — see
-[hermes-agent-operator on GitHub](https://github.com/hermeum/hermes-agent-operator)
-for the full values reference. For CRD upgrades when the operator is installed
-separately, see [Upgrading](#upgrading).
 
 ## agentConfig overrides
 
