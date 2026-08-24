@@ -104,7 +104,13 @@ env:
 
 Skills add capabilities to an agent — for example, `github-code-review` to read diffs
 and review pull requests. You can install skills from community hubs, GitHub paths, or
-direct URLs. See the [Skills Hub guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#skills-hub)
+direct URLs.
+
+If you're not sure which skill you need, just ask the AI config generator — it searches
+the Skills Index on your behalf, so you can describe what you want and it will find a
+matching skill for you.
+
+See the [Skills Hub guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#skills-hub)
 for the details.
 
 ```yaml title="Example"
