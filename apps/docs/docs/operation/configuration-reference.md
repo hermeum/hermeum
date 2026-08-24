@@ -26,7 +26,7 @@ others fall back to the defaults listed here.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_DATABASE_URL` | — **(required)** | Connection URL for the dashboard database. For sqlite use `file:/path/to/db.sqlite`; for postgres use a `postgres://` URL. See [Database](../database). |
+| `HERMEUM_DATABASE_URL` | — | Connection URL for the dashboard database. For sqlite use `file:/path/to/db.sqlite`; for postgres use a `postgres://` URL. See [Database](../database). |
 | `HERMEUM_DATABASE_DIALECT` | `sqlite` | Database backend dialect. One of `sqlite`, `postgres`. Must match the scheme of `HERMEUM_DATABASE_URL`. |
 | `HERMEUM_KUBERNETES_NAMESPACE` | `hermeum` | Kubernetes namespace where `HermesAgent` custom resources are reconciled. The dashboard must have RBAC to read/write this namespace. |
 | `HERMEUM_CONFIG_PATH` | `./config.yaml` | Path to the Hermeum instance config file. See [Instance config](../instance-config) for the schema. |
