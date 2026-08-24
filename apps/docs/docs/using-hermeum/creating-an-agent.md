@@ -64,7 +64,9 @@ The config is the agent's settings file. It's where you pick the model, turn on
 OpenAI-compatible API server), and enable integrations like image and video generation.
 
 You don't have to write it by hand — the AI config generator fills it out from your
-description, and you can edit it later whenever you need to fine-tune something.
+description, and you can edit it later whenever you need to fine-tune something. For the
+full list of config options, see the
+[configuration overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/overview).
 
 ```yaml title="Example"
 config:
