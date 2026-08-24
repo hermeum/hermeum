@@ -34,7 +34,9 @@ production you'll also want:
 
 Everything else has working defaults. The
 chart maps each env var to a value key (e.g. `HERMEUM_DATABASE_URL` ←
-`secrets.databaseUrl`); see the chart's `values.yaml` for the full mapping.
+`secrets.databaseUrl`); see the chart's
+[`values.yaml`](https://github.com/hermeum/hermeum/blob/main/charts/hermeum/values.yaml)
+for the full mapping.
 
 ### SQLite (default)
 
