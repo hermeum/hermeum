@@ -8,8 +8,3 @@ templates:
           base_url: https://ollama.com/v1
           default: kimi-k2.6
           provider: ollama-cloud
-
-# allowed:
-#   openClawJsonPaths: []
-#   skills: []
-#   workspaceFiles: []
