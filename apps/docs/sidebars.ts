@@ -15,7 +15,6 @@ const sidebars: SidebarsConfig = {
         "using-hermeum/creating-an-agent",
         "using-hermeum/toolsets",
         "using-hermeum/messaging-platforms",
-        "using-hermeum/skills",
         "using-hermeum/shared-env-sets",
         "using-hermeum/accessing-your-agent",
       ],
