@@ -37,9 +37,31 @@ HERMEUM_DATABASE_URL=postgres://user:pass@db.example.com:5432/hermeum
 
 ## Migrations
 
-Database migrations run automatically as an initContainer before the hermeum starts
-(`migrations.enabled`, default `true`). They use the bundled `drizzle-kit` with
-per-dialect SQL — no manual steps required.
+Hermeum ships per-dialect migration SQL under
+`apps/dashboard/src/server/migrations/{sqlite,postgres}` and applies them with
+the bundled `drizzle-kit`. To run them yourself — for example from CI, a
+one-off Job, or before pointing an existing database at a new Hermeum release —
+set `HERMEUM_DATABASE_DIALECT` (so drizzle-kit picks the right config file) and
+`HERMEUM_DATABASE_URL` (the connection it migrates against), then invoke the
+dashboard package's `drizzle:migrate` script:
 
-If you prefer to run migrations out-of-band (for example, in a separate Job or CI
-pipeline), disable them with `migrations.enabled=false`.
+```bash
+HERMEUM_DATABASE_DIALECT=postgres \
+HERMEUM_DATABASE_URL=postgres://user:pass@db.example.com:5432/hermeum \
+pnpm --filter @hermeum/dashboard drizzle:migrate
+```
+
+The script resolves to
+`drizzle-kit migrate --config drizzle.config.${HERMEUM_DATABASE_DIALECT:-sqlite}.ts`,
+so `HERMEUM_DATABASE_DIALECT` selects `sqlite` or `postgres` and
+`HERMEUM_DATABASE_URL` supplies the target. Migrations are idempotent, so
+re-running against an already-current database is safe.
+
+:::note
+By default the Helm chart runs this same `drizzle-kit migrate` command as an
+initContainer before the dashboard starts (`migrations.enabled`, default
+`true`), so a standard `helm install`/`helm upgrade` needs no manual step. If
+you run migrations out-of-band via the command above — or through a separate
+Job or CI pipeline — disable the initContainer with
+`migrations.enabled=false` so the two don't race.
+:::
