@@ -91,7 +91,7 @@ and rules), see the upstream Kubernetes guide:
 When you install via the Helm chart, the `MutatingWebhookConfiguration`
 and its TLS certificate are created for you automatically — a pre-install
 Job generates a self-signed CA + serving cert into a Secret, the cert/key
-are mounted into the app pod (setting
+are mounted into the Hermeum pod (setting
 `HERMEUM_WEBHOOK_TLS_CERT_FILE` / `HERMEUM_WEBHOOK_TLS_KEY_FILE`), and a
 post-install Job patches the CA into the webhook config's `caBundle`. To
 bring your own cert instead, set `webhook.tls.existingSecret` and manage

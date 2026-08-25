@@ -43,7 +43,7 @@ the bundled `drizzle-kit`. To run them yourself — for example from CI, a
 one-off Job, or before pointing an existing database at a new Hermeum release —
 set `HERMEUM_DATABASE_DIALECT` (so drizzle-kit picks the right config file) and
 `HERMEUM_DATABASE_URL` (the connection it migrates against), then invoke the
-app package's `drizzle:migrate` script:
+Hermeum's `drizzle:migrate` script:
 
 ```bash
 HERMEUM_DATABASE_DIALECT=postgres \
@@ -59,7 +59,7 @@ re-running against an already-current database is safe.
 
 :::note
 By default the Helm chart runs this same `drizzle-kit migrate` command as an
-initContainer before the app starts (`migrations.enabled`, default
+initContainer before Hermeum starts (`migrations.enabled`, default
 `true`), so a standard `helm install`/`helm upgrade` needs no manual step. If
 you run migrations out-of-band via the command above — or through a separate
 Job or CI pipeline — disable the initContainer with
