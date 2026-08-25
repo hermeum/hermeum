@@ -122,7 +122,7 @@ secrets:
 
 # ── agentConfig override (ConfigMap mounted at config.configPath) ───────
 # Full contents of config.yaml. When empty, the image's bundled
-# config.example.yaml is used as-is.
+# config.default.yaml is used as-is.
 #
 # The mutating webhook for HermesAgent is driven by
 # `agentTypes.<type>.mutatingWebhookJsonPatch` — populate this to apply

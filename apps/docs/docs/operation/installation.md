@@ -78,7 +78,7 @@ you manage yourself (e.g. via External Secrets) instead of templating one. See
 ## agentConfig overrides
 
 `agentConfig` holds the full contents of `config.yaml`, mounted as a ConfigMap
-at `HERMEUM_CONFIG_PATH`. When empty, the image's bundled `config.example.yaml`
+at `HERMEUM_CONFIG_PATH`. When empty, the image's bundled `config.default.yaml`
 is used as-is. This is where `templates` and
 `agentTypes.<type>.mutatingWebhookJsonPatch` live — see
 [Instance config](../instance-config) for the schema.

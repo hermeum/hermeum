@@ -12,7 +12,7 @@ displayed_sidebar: docsSidebar
 (from `HERMEUM_CONFIG_PATH`). It defines the agent **templates** users can
 start from and the **agent types** that drive the mutating admission webhook.
 When the file is empty, Hermeum falls back to the image's bundled
-`config.example.yaml`.
+`config.default.yaml`.
 
 See [Installation](../installation) for how to mount a custom `config.yaml`
 via the chart's `agentConfig` value.
