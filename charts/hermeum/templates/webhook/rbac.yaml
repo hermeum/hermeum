@@ -2,7 +2,7 @@
 {{/*
 RBAC + ServiceAccount for the webhook cert-provisioning hooks (cert Job
 pre-install and ca-bundle patch Job post-install). These must run as hooks so
-they execute *before* the dashboard's main RBAC is installed, so they get
+they execute *before* the hermeum app's main RBAC is installed, so they get
 their own SA + narrow ClusterRole (the ca-bundle Job patches a cluster-scoped
 MutatingWebhookConfiguration).
 */}}

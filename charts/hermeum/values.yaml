@@ -1,18 +1,18 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # hermeum Helm chart values
 #
-# The dashboard is a Node/Express server that reconciles HermesAgent custom
+# The hermeum app is a Node/Express server that reconciles HermesAgent custom
 # resources via the hermes-agent-operator. It exposes:
 #   - :3000  HTTP   — UI, /auth, /trpc, /chat  (terminated by the ingress gateway)
 #   - :8443  HTTPS — /webhook/mutating admission webhook (TLS terminated in-process)
 #
-# Required env vars are sourced from apps/dashboard/src/server/libs/config.ts.
+# Required env vars are sourced from apps/app/src/server/libs/config.ts.
 # See that file for the authoritative list + semantics.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# ── Dashboard container image ─────────────────────────────────────────────────
+# ── Hermeum container image ─────────────────────────────────────────────────
 image:
-  repository: ghcr.io/hermeum/dashboard
+  repository: ghcr.io/hermeum/hermeum
   # Tag defaults to the chart appVersion when empty.
   tag: ""
   pullPolicy: IfNotPresent
@@ -27,13 +27,13 @@ replicaCount: 1
 # ── Operator dependency ───────────────────────────────────────────────────────
 # The chart depends on hermes-agent-operator (OCI chart) which installs the
 # HermesAgent CRD and the reconciler. Disable when the operator is already
-# installed cluster-wide and this chart should only manage the dashboard.
+# installed cluster-wide and this chart should only manage the hermeum app.
 operator:
   enabled: true
   # Values under this key are passed through to the hermes-agent-operator chart.
   # See its values.yaml for the available knobs.
 
-# ── Dashboard env (HERMEUM_*, non-sensitive → ConfigMap) ─────────────────────
+# ── Hermeum env (HERMEUM_*, non-sensitive → ConfigMap) ─────────────────────
 config:
   # Path to the hermeum config file (HERMEUM_CONFIG_PATH).
   # The chart mounts the agentConfig ConfigMap at this path when non-empty.
@@ -46,7 +46,7 @@ config:
   # Kubernetes namespace where HermesAgent CRs are reconciled
   # (HERMEUM_KUBERNETES_NAMESPACE). Defaults to the release namespace.
   kubernetesNamespace: ""
-  # Port the web server listens on (HERMEUM_PORT). The dashboard image
+  # Port the web server listens on (HERMEUM_PORT). The hermeum image
   # defaults to 3000; override only if you also change the Service port.
   port: 3000
   # Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY).
@@ -61,7 +61,7 @@ config:
   allowedEmailDomain: ""
 
   # ── Web server TLS (optional, HERMEUM_TLS_CERT_FILE / HERMEUM_TLS_KEY_FILE) ─
-  # When both certFile and keyFile are set, the dashboard serves the UI/trpc/
+  # When both certFile and keyFile are set, the hermeum app serves the UI/trpc/
   # auth/chat endpoints over HTTPS on config.port instead of HTTP. This is an
   # alternative to the ingress gateway for TLS-terminating the web server
   # in-process. Leave both empty (default) to keep the web server on plain HTTP
@@ -71,14 +71,14 @@ config:
     # Defaults to "<release>-web-tls". Only used when certFile + keyFile are set.
     secretName: ""
     # When both non-empty, the chart mounts the Secret and sets the env vars
-    # that switch the dashboard to HTTPS.
+    # that switch the hermeum app to HTTPS.
     certFile: ""
     keyFile: ""
 
   # ── Per-agent ingress (HERMEUM_AGENT_INGRESS_*) ─────────────────────────────
   # These configure how the *operator* emits per-agent ingresses; they are
-  # passed to the dashboard as env vars and surface in the UI. They do NOT
-  # drive the dashboard's own ingress (see `ingress` below).
+  # passed to the hermeum app as env vars and surface in the UI. They do NOT
+  # drive the hermeum app's own ingress (see `ingress` below).
   agentIngress:
     # Public URL scheme advertised for agent ingresses (HERMEUM_AGENT_INGRESS_SCHEME).
     scheme: http
@@ -96,14 +96,14 @@ config:
 
 # ── Sensitive env (HERMEUM_* + BETTER_AUTH_* → Secret) ─────────────────────
 secrets:
-  # REQUIRED when no existingSecret is set. Connection URL for the dashboard
+  # REQUIRED when no existingSecret is set. Connection URL for the hermeum
   # database (HERMEUM_DATABASE_URL). For sqlite use "file:/var/lib/hermeum/db.sqlite".
   databaseUrl: ""
   # REQUIRED — session signing secret for Better Auth (BETTER_AUTH_SECRET).
   # Generate with: openssl rand -base64 32
   betterAuthSecret: ""
   # Optional — public base URL for Better Auth callbacks/redirects
-  # (BETTER_AUTH_URL). Set to the dashboard's external URL when ingress is
+  # (BETTER_AUTH_URL). Set to the hermeum app's external URL when ingress is
   # enabled, e.g. "https://dash.example.com".
   betterAuthUrl: ""
   # Optional — SMTP server URL for outgoing email (HERMEUM_SMTP_URL).
@@ -150,12 +150,12 @@ secrets:
 agentConfig: {}
 
 # ── Mutating webhook for HermesAgent ──────────────────────────────────────────
-# The dashboard serves POST /webhook/mutating on the HTTPS port below. The
+# The hermeum app serves POST /webhook/mutating on the HTTPS port below. The
 # MutatingWebhookConfiguration admits CREATE/UPDATE on hermesagents and
-# dispatches AdmissionReviews here; the dashboard returns the JSON-Patch from
+# dispatches AdmissionReviews here; the hermeum app returns the JSON-Patch from
 # agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch.
 #
-# The dashboard starts its webhook HTTPS listener only when both
+# The hermeum app starts its webhook HTTPS listener only when both
 # HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set; the
 # chart wires those from the TLS Secret below.
 webhook:
@@ -167,7 +167,7 @@ webhook:
     # When set, the Secret must contain tls.crt + tls.key + ca.crt; the chart
     # skips the cert-generation Job and mounts this Secret.
     existingSecret: ""
-    # Filesystem paths the dashboard reads the cert/key from. These are passed
+    # Filesystem paths the hermeum app reads the cert/key from. These are passed
     # as HERMEUM_WEBHOOK_TLS_CERT_FILE / HERMEUM_WEBHOOK_TLS_KEY_FILE.
     certFile: /etc/hermeum/webhook-tls/tls.crt
     keyFile: /etc/hermeum/webhook-tls/tls.key
@@ -185,8 +185,8 @@ webhook:
       apiVersions: ["v1alpha1"]
       resources: ["hermesagents"]
 
-# ── Ingress gateway (optional, dashboard UI only) ────────────────────────────
-# Standard networking.k8s.io/Ingress for the dashboard UI (:3000). Controller
+# ── Ingress gateway (optional, hermeum UI only) ────────────────────────────
+# Standard networking.k8s.io/Ingress for the hermeum UI (:3000). Controller
 # selection is via ingress.className (nginx / istio-ingress / traefik / …).
 # This is NOT used for the mutating webhook, which is served on the internal
 # 8443 Service directly by the apiserver.
@@ -211,7 +211,7 @@ persistence:
   mountPath: /var/lib/hermeum
 
 # ── Migrations ────────────────────────────────────────────────────────────────
-# The dashboard image ships drizzle-kit + per-dialect migration SQL. This
+# The hermeum image ships drizzle-kit + per-dialect migration SQL. This
 # chart runs `drizzle-kit migrate` as an initContainer before the server
 # starts, so the schema is always current on boot. Disable if you run
 # migrations out-of-band.

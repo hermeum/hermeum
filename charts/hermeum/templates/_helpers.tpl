@@ -38,7 +38,7 @@ helm.sh/chart: {{ include "hermeum.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: dashboard
+app.kubernetes.io/component: app
 {{- end -}}
 
 {{/*
@@ -50,7 +50,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/*
-Resolve the dashboard image reference. Tag defaults to Chart.appVersion.
+Resolve the hermeum image reference. Tag defaults to Chart.appVersion.
 */}}
 {{- define "hermeum.image" -}}
 {{- $tag := .Values.image.tag -}}

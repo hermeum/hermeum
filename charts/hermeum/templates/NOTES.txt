@@ -1,4 +1,4 @@
-Hermeum dashboard is being deployed.
+Hermeum is being deployed.
 
 Web UI:
   {{- if .Values.ingress.enabled }}
@@ -32,6 +32,6 @@ Database:
 
 HermesAgent reconciliation namespace: {{ include "hermeum.namespace" . }}
 
-Next: verify the dashboard pod is ready and the webhook caBundle is set.
+Next: verify the hermeum pod is ready and the webhook caBundle is set.
   kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
   kubectl get mutatingwebhookconfiguration {{ include "hermeum.webhookName" . }} -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -text

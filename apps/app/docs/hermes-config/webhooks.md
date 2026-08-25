@@ -99,7 +99,7 @@ The same dot-notation templates work in `deliver_extra` values.
 | `WEBHOOK_PORT` | HTTP server port for receiving webhooks. | `8644` |
 | `WEBHOOK_SECRET` | Global HMAC secret used for signature validation on all routes. Set via environment variable, not `config.yaml`, to avoid exposing credentials in plain text. | _(none)_ |
 
-The dashboard reads `WEBHOOK_ENABLED` / `WEBHOOK_PORT` to drive the agent's
+The app reads `WEBHOOK_ENABLED` / `WEBHOOK_PORT` to drive the agent's
 Kubernetes container and Service port mappings, mirroring the
 `API_SERVER_*` env vars (see [api-server.md](./api-server.md)). The secret
 flows to the agent through its env Secret/ConfigMap alongside other

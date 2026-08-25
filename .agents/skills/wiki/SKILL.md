@@ -38,7 +38,7 @@ Cover topics like:
 
 - Write in clear, direct prose. No filler phrases.
 - Use headings, code blocks, and tables where they aid comprehension.
-- Keep contributing docs grounded in the actual codebase — explore `apps/dashboard/src/` to understand the architecture and code structure.
+- Keep contributing docs grounded in the actual codebase — explore `apps/app/src/` to understand the architecture and code structure.
 - One topic per file. Name files with kebab-case (e.g., `adding-a-use-case.md`).
 - Do not duplicate information across files — link between them instead.
 

@@ -70,7 +70,7 @@ spec:
           {{- end }}
       {{- end }}
       containers:
-        - name: dashboard
+        - name: app
           image: {{ include "hermeum.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -177,7 +177,7 @@ spec:
             - name: HERMEUM_WEBHOOK_PORT
               value: {{ .Values.webhook.port | quote }}
             {{- end }}
-          # The dashboard image's HEALTHCHECK probes / over HTTP; when web TLS
+          # The hermeum image's HEALTHCHECK probes / over HTTP; when web TLS
           # is enabled the listener is HTTPS, so switch the probe scheme.
           {{- $webTls := and .Values.config.webTls.certFile .Values.config.webTls.keyFile }}
           livenessProbe:
