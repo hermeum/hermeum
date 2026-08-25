@@ -12,7 +12,7 @@ Hermeum exposes three distinct TLS surfaces, each configured independently:
 
 - **Per-agent ingress** — a `Ingress` per agent, routing
   external traffic to that agent's enabled HTTP platforms.
-- **Web server TLS** — TLS for the dashboard's own HTTP listener (the UI,
+- **Web server TLS** — TLS for the app's own HTTP listener (the UI,
   tRPC, auth, AI config generator).
 - **Mutating webhook TLS** — TLS for the admission webhook's HTTPS listener.
   Covered in [Mutating webhook](../mutating-webhook); this page focuses on
@@ -20,7 +20,7 @@ Hermeum exposes three distinct TLS surfaces, each configured independently:
 
 ## Per-agent ingress
 
-When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, the dashboard emits an
+When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, the app emits an
 `Ingress` per agent at `<agent-id>.<base hostname>`.
 
 When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is unset, **no per-agent ingress
@@ -56,7 +56,7 @@ block to be emitted — that is controlled solely by
 
 ## Web server TLS
 
-The dashboard's own listener (UI, tRPC, auth, AI config generator) serves
+The app's own listener (UI, tRPC, auth, AI config generator) serves
 HTTPS when both `HERMEUM_TLS_CERT_FILE` and `HERMEUM_TLS_KEY_FILE` are set;
 otherwise it serves plain HTTP on `HERMEUM_PORT`.
 
@@ -73,7 +73,7 @@ switch to `httpsGet` automatically when web TLS is enabled.
 For most deployments, leave web TLS unset and terminate TLS at your ingress
 controller instead — see [Installation](../installation) for the ingress
 prerequisites. Use in-process web TLS when you don't run an ingress gateway
-in front of the dashboard (e.g. a service-mesh sidecar or a load balancer
+in front of the app (e.g. a service-mesh sidecar or a load balancer
 that forwards raw TLS).
 
 ## Webhook TLS

@@ -132,7 +132,7 @@ certificate options.
      --namespace hermeum \
      --reuse-values
    ```
-3. To move to a new dashboard image, bump the chart version or set
+3. To move to a new Hermeum image, bump the chart version or set
    `image.tag` explicitly.
 4. The pod rolls automatically when `agentConfig` changes — the Deployment
    carries a `checksum/agent-config` annotation.

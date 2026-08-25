@@ -9,8 +9,8 @@ displayed_sidebar: docsSidebar
 # Configuration reference
 
 Hermeum is configured entirely through `HERMEUM_*` environment variables. The
-dashboard reads them once at startup via a Zod schema
-(`apps/dashboard/src/server/libs/config.ts`); invalid or missing required
+app reads them once at startup via a Zod schema
+(`apps/app/src/server/libs/config.ts`); invalid or missing required
 values fail fast with a parse error before the server binds a port.
 
 The Helm chart maps these to `secrets.*` (sensitive) and `config.*`
@@ -19,16 +19,16 @@ below is optional unless marked **required**.
 
 ## Environment variables
 
-Required variables must be set or the dashboard pod refuses to start. All
+Required variables must be set or the app pod refuses to start. All
 others fall back to the defaults listed here.
 
 ### Core
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_DATABASE_URL` | — | Connection URL for the dashboard database. For sqlite use `file:/path/to/db.sqlite`; for postgres use a `postgres://` URL. See [Database](../database). |
+| `HERMEUM_DATABASE_URL` | — | Connection URL for the app database. For sqlite use `file:/path/to/db.sqlite`; for postgres use a `postgres://` URL. See [Database](../database). |
 | `HERMEUM_DATABASE_DIALECT` | `sqlite` | Database backend dialect. One of `sqlite`, `postgres`. Must match the scheme of `HERMEUM_DATABASE_URL`. |
-| `HERMEUM_KUBERNETES_NAMESPACE` | `hermeum` | Kubernetes namespace where `HermesAgent` custom resources are reconciled. The dashboard must have RBAC to read/write this namespace. |
+| `HERMEUM_KUBERNETES_NAMESPACE` | `hermeum` | Kubernetes namespace where `HermesAgent` custom resources are reconciled. The app must have RBAC to read/write this namespace. |
 | `HERMEUM_CONFIG_PATH` | `./config.yaml` | Path to the Hermeum instance config file. See [Instance config](../instance-config) for the schema. |
 | `HERMEUM_HERMES_DOCS_PATH` | `./docs/hermes-config` | Path to the hermes-config docs directory used by the docs file adaptor. |
 | `HERMEUM_LOG_LEVEL` | `info` | Log verbosity. One of `debug`, `info`, `warn`, `error`. |
@@ -66,7 +66,7 @@ draft agent `config.yaml` blocks from natural-language prompts.
 
 ### Per-agent ingress
 
-When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, the dashboard emits an
+When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, the app emits an
 `Ingress` per agent at `<agent-id>.<base hostname>`, routing to the agent's
 enabled HTTP platforms (api-server `/v1`, `/api`; webhook `/webhooks`; teams
 `/api/messages`). When it is unset, **no ingress is generated**.
@@ -82,7 +82,7 @@ See [Per-agent ingress and TLS](../ingress-tls) for end-to-end TLS topologies.
 
 ### Web server
 
-The dashboard's own HTTP(S) listener.
+The app's own HTTP(S) listener.
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -108,12 +108,12 @@ the cluster and how its `caBundle` gets populated.
 
 ## RBAC notes
 
-The dashboard runs as a Kubernetes controller for `HermesAgent` CRs inside
+The app runs as a Kubernetes controller for `HermesAgent` CRs inside
 `HERMEUM_KUBERNETES_NAMESPACE`. The chart's ServiceAccount grants the
 following scoped permissions:
 
 - **`hermesagents`** (custom resource): full CRUD within the configured
-  namespace — the dashboard creates, patches, and finalizes agent CRs.
+  namespace — the app creates, patches, and finalizes agent CRs.
 - **`secrets`**: read/write within the namespace, used to materialize
   per-agent image-pull secrets and TLS material referenced by ingresses.
 - **`ingresses`** (`networking.k8s.io`): create/update/delete within the
