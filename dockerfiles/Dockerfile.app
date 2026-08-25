@@ -67,7 +67,7 @@ COPY --from=builder --chown=node:node /deploy/dist ./dist
 # config.yaml is gitignored (instance-specific), so we ship the tracked
 # example as the runtime default. Operators override via a volume mount or
 # HERMEUM_CONFIG_PATH.
-COPY --from=builder --chown=node:node /app/apps/app/config.example.yaml ./config.yaml
+COPY --from=builder --chown=node:node /app/apps/app/config.default.yaml ./config.yaml
 COPY --from=builder --chown=node:node /app/apps/app/docs/hermes-config ./docs/hermes-config
 # Drizzle migrations + config for both dialects (postgres & sqlite).
 COPY --from=builder --chown=node:node /app/apps/app/src/server/migrations ./src/server/migrations
