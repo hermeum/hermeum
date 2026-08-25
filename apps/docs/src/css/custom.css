@@ -35,3 +35,8 @@
   --ifm-color-primary-lightest: #ffffff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Ensure markdown content links are underlined for clear affordance. */
+.markdown a {
+  text-decoration: underline !important;
+}
