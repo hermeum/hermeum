@@ -11,9 +11,25 @@ export const JsonPatchOpSchema = z.object({
 
 export type JsonPatchOp = z.infer<typeof JsonPatchOpSchema>;
 
+/**
+ * A JSON Patch is an array of ops. The `test` op acts as a precondition: when
+ * a patch begins with `test` ops, the webhook selects it only if all tests
+ * pass against the incoming object (first-match-wins), otherwise falls through
+ * to the next candidate (no-match = no mutation). A single flat array is the
+ * legacy shape (one unconditional candidate); an array of arrays declares
+ * multiple candidates evaluated in order.
+ */
+const JsonPatchArraySchema = z.array(JsonPatchOpSchema);
+
+export const MutatingWebhookJsonPatchSchema = z
+  .union([JsonPatchArraySchema, z.array(JsonPatchArraySchema)])
+  .transform((v) => (Array.isArray(v[0]) ? (v as JsonPatchOp[][]) : [v as JsonPatchOp[]]));
+
+export type MutatingWebhookJsonPatch = z.infer<typeof MutatingWebhookJsonPatchSchema>;
+
 export const AgentTypeSchema = z.object({
   description: z.string().optional(),
-  mutatingWebhookJsonPatch: z.array(JsonPatchOpSchema),
+  mutatingWebhookJsonPatch: MutatingWebhookJsonPatchSchema,
 });
 
 export type AgentType = z.infer<typeof AgentTypeSchema>;

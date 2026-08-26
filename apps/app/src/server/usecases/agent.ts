@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyPatch } from "fast-json-patch";
 
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
@@ -10,12 +11,21 @@ export const ListAgentsFilterSchema = z.object({
 export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
 export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUseCase)) {
-  async getmutatingWebhookJsonPatch(agent: Agent): Promise<JsonPatchOp[] | null> {
+  async getmutatingWebhookJsonPatch(
+    agent: Agent,
+    incomingObject?: unknown,
+  ): Promise<JsonPatchOp[] | null> {
     if (!agent.type) return null;
     const { agentTypes } = await this.loadHermeumConfig();
     const agentType = agentTypes?.[agent.type];
     if (!agentType) return null;
-    return agentType.mutatingWebhookJsonPatch;
+    // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
+    // transform. When an incoming object is provided, select the first
+    // candidate whose `test` ops pass (first-match-wins); without one, return
+    // the first (only) candidate as-is for backwards compatibility.
+    const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
+    if (incomingObject === undefined) return candidates[0] ?? null;
+    return this.selectPatch(candidates, incomingObject);
   }
 
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
@@ -138,5 +148,34 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
         throw new Error(`Shared env set "${id}" is archived`);
       }
     }
+  }
+
+  /**
+   * Evaluate the `test` ops in a candidate patch against a document.
+   * A candidate with no `test` ops always matches (unconditional).
+   *
+   * Uses `fast-json-patch`'s `applyPatch` with only the `test` ops. `test`
+   * ops do not mutate the document, so applying them to the original is safe.
+   * If any `test` fails, `applyPatch` throws `TEST_OPERATION_FAILED`, which we
+   * catch and treat as a non-match.
+   */
+  private candidateMatches(candidate: JsonPatchOp[], doc: unknown): boolean {
+    const testOps = candidate.filter((op) => op.op === "test");
+    if (testOps.length === 0) return true;
+    try {
+      applyPatch(doc, testOps, true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Select the first candidate whose `test` ops all pass against the document
+   * (first-match-wins). Returns the matched candidate, or an empty array when
+   * no candidate matches (no-op / admit unchanged).
+   */
+  private selectPatch(candidates: JsonPatchOp[][], doc: unknown): JsonPatchOp[] {
+    return candidates.find((c) => this.candidateMatches(c, doc)) ?? [];
   }
 }
