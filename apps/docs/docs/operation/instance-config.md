@@ -71,13 +71,17 @@ agent's `type` field references. Each type has:
 | Field                     | Required | Description                                                                  |
 |---------------------------|----------|------------------------------------------------------------------------------|
 | `description`             | no       | Human-readable description; surfaced to the AI config generator so it can pick the right type. |
-| `mutatingWebhookJsonPatch`| yes      | A JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902)) applied to the `HermesAgent` CR on `CREATE`/`UPDATE`. |
+| `mutatingWebhookJsonPatch`| yes      | A JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902)) applied to the `HermesAgent` CR on `CREATE`/`UPDATE`. Accepts a flat `op` array (one candidate) or an array of arrays (multiple candidates; first match wins). |
 
 When Hermeum receives an admission review, it looks up
 `agentTypes[agent.type].mutatingWebhookJsonPatch` and returns it as the
-patch. The webhook is a no-op until at least one type has a non-empty patch.
-See [Mutating webhook](../mutating-webhook) for the certificate options and
-the end-to-end flow.
+patch. If multiple candidates are provided, Hermeum evaluates each
+candidate's [`test`](https://datatracker.ietf.org/doc/html/rfc6902#section-4.6)
+ops against the incoming object and returns the first one whose tests pass
+(first-match-wins); no match means no patch (no-op). The webhook is a no-op
+until at least one type has a non-empty patch. See
+[Mutating webhook](../mutating-webhook) for the certificate options, the
+end-to-end flow, and precondition examples.
 
 :::note
 Setting an agent's `type` requires `agentTypes` to be configured — Hermeum
