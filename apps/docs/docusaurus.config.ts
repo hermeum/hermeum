@@ -5,8 +5,8 @@ const config: Config = {
   tagline: "Documentation for the Hermeum project",
   favicon: "img/favicon.ico",
 
-  url: "https://hermeum.app",
-  baseUrl: "/docs/",
+  url: "https://docs.hermeum.app",
+  baseUrl: "/",
   trailingSlash: true,
 
   // v4 enables useCssCascadeLayers, which should make unlayered custom.css
