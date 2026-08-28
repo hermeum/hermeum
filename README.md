@@ -17,8 +17,12 @@ agent you can chat with, deploy, and iterate on.
   team uses most.
 - **Shared env sets** — share credentials (such as API keys) across agents
   without re-entering them each time.
+- **Powered by Kubernetes** — agents run as `HermesAgent` custom resources, with
+  a mutating admission webhook that shapes each agent at creation time.
 
 ## Quick installation
+
+**Prerequisites:** a Kubernetes cluster and Helm 3.x.
 
 Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. The only
 hard-required value is `secrets.databaseUrl` (`HERMEUM_DATABASE_URL`).
