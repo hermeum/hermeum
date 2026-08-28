@@ -30,7 +30,7 @@ const agentNavItems = [
 ];
 
 const resourceNavItems = [
-  { to: "https://github.com/hermeum/hermeum" as const, label: "Documentation", icon: BookOpen },
+  { to: "https://docs.hermeum.app" as const, label: "Docs", icon: BookOpen },
 ];
 
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
