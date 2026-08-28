@@ -12,7 +12,7 @@ templates:
         Escalate when the knowledge base does not contain enough information, the user reports a bug or outage, the issue involves billing/account/security/privacy, or the user needs a human decision. When escalating, summarize the user's question, relevant context, what you checked, and the next action needed.
       env:
         - name: NOTION_API_KEY
-          value: <fill-me>
+          value: ""
           sensitive: true
       skills:
         - skills/productivity/notion
@@ -21,69 +21,188 @@ agentTypes:
   medium:
     description: >-
       Medium resource profile — hermes container requests 2 CPU / 1Gi,
-      limits 4 CPU / 2Gi. Applies proportional resources to the searxng
-      and camofox sidecars (admitted whether the sidecars are enabled or
-      not).
+      limits 4 CPU / 2Gi. Applies proportional resources to the searxng and
+      camofox sidecars when they are enabled (test-gated, first-match-wins).
     mutatingWebhookJsonPatch:
-      - op: add
-        path: /spec/hermes/resources
-        value:
-          requests:
-            cpu: "2"
-            memory: 1Gi
-          limits:
-            cpu: "4"
-            memory: 2Gi
-      - op: add
-        path: /spec/searxng/resources
-        value:
-          requests:
-            cpu: 500m
-            memory: 512Mi
-          limits:
-            cpu: "1"
-            memory: 1Gi
-      - op: add
-        path: /spec/camofox/resources
-        value:
-          requests:
-            cpu: "1"
-            memory: 1Gi
-          limits:
-            cpu: "2"
-            memory: 2Gi
+      # Both sidecars enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Searxng only.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Neither sidecar enabled (unconditional fallback).
+      - - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
   large:
     description: >-
       Large resource profile — hermes container requests 4 CPU / 2Gi,
-      limits 8 CPU / 4Gi. Applies proportional resources to the searxng
-      and camofox sidecars (admitted whether the sidecars are enabled or
-      not).
+      limits 8 CPU / 4Gi. Applies proportional resources to the searxng and
+      camofox sidecars when they are enabled (test-gated, first-match-wins).
     mutatingWebhookJsonPatch:
-      - op: add
-        path: /spec/hermes/resources
-        value:
-          requests:
-            cpu: "4"
-            memory: 2Gi
-          limits:
-            cpu: "8"
-            memory: 4Gi
-      - op: add
-        path: /spec/searxng/resources
-        value:
-          requests:
-            cpu: "1"
-            memory: 1Gi
-          limits:
-            cpu: "2"
-            memory: 2Gi
-      - op: add
-        path: /spec/camofox/resources
-        value:
-          requests:
-            cpu: "2"
-            memory: 2Gi
-          limits:
-            cpu: "4"
-            memory: 4Gi
-
+      # Both sidecars enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+      # Searxng only.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+      # Neither sidecar enabled (unconditional fallback).
+      - - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi

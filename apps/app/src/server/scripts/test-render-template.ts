@@ -35,6 +35,8 @@ import { Runtime } from "@/server/usecases/adaptors/runtime";
 import { AgentUseCase } from "@/server/usecases/agent";
 import { TemplateUseCase } from "@/server/usecases/template";
 
+const { applyPatch } = fastJsonPatch.default ?? fastJsonPatch;
+
 const templateId = process.argv[2];
 if (!templateId) {
   console.error("Usage: tsx src/server/scripts/render-template.ts <template-id>");
@@ -78,7 +80,7 @@ if (patch !== null && patch.length > 0) {
   const cloned = structuredClone(cr);
   // `JsonPatchOp` is a plain object schema; fast-json-patch expects its
   // discriminated `Operation` union. Cast through unknown to bridge them.
-  fastJsonPatch.applyPatch(cloned, patch as unknown as fastJsonPatch.Operation[]);
+  applyPatch(cloned, patch as unknown as fastJsonPatch.Operation[]);
   postWebhookCr = cloned as typeof cr;
 }
 
