@@ -1,0 +1,54 @@
+name: Helm Publish
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish-chart:
+    permissions:
+      contents: read
+      packages: write
+    name: Publish Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Log in to GHCR OCI registry
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | helm registry login ghcr.io \
+            --username ${{ github.actor }} \
+            --password-stdin
+
+      - name: Read chart version
+        id: chart
+        working-directory: charts/hermeum
+        run: |
+          VERSION=$(helm show chart . | awk '/^version:/{print $2}')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check version not already published
+        env:
+          VERSION: ${{ steps.chart.outputs.version }}
+        run: |
+          set +e
+          helm pull "oci://ghcr.io/hermeum/charts/hermeum" --version "${VERSION}" --destination /tmp/probe 2>/tmp/probe-err
+          RC=$?
+          if [ ${RC} -eq 0 ]; then
+            echo "::error::Chart version ${VERSION} is already published to ghcr.io/hermeum/charts/hermeum. Bump Chart.yaml version before re-running."
+            exit 1
+          fi
+          echo "Version ${VERSION} is not yet published — proceeding."
+
+      - name: Package and publish Helm chart
+        run: |
+          helm dependency build charts/hermeum
+          helm package charts/hermeum --destination dist/
+          helm push dist/hermeum-*.tgz oci://ghcr.io/hermeum/charts
