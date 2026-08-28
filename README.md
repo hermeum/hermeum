@@ -7,10 +7,16 @@ powerful built-in capabilities, while Hermeum gives you a simple way to shape,
 run, and manage it.
 
 Describe what you want your agent to do, and Hermeum turns that into a working
-agent you can chat with, deploy, and iterate on. An agent can answer questions,
-research topics, browse the web, chat through Slack, Discord, Microsoft Teams,
-or a custom webhook, run tasks on a schedule, and expose an OpenAI-compatible
-API for other apps to use.
+agent you can chat with, deploy, and iterate on.
+
+## Features
+
+- **Tailor an agent by chat** — describe what your agent should do in natural
+  language and Hermeum generates the configuration for you.
+- **Templates** — create reusable agent templates for the agent shapes your
+  team uses most.
+- **Shared env sets** — share credentials (such as API keys) across agents
+  without re-entering them each time.
 
 ## Quick installation
 
@@ -33,23 +39,25 @@ Postgres `secrets.databaseUrl`. See the
 
 ## Documentation
 
-Full documentation is published at <https://docs.hermeum.app>.
+Full documentation is published at [here](https://docs.hermeum.app).
 
-| Document | Description |
-| --- | --- |
-| [What is Hermeum](https://docs.hermeum.app/) | Overview of the platform and what an agent can do. |
-| [Getting started](https://docs.hermeum.app/using-hermeum/getting-started/) | Create, manage, and chat with your agents. |
-| [Creating an agent](https://docs.hermeum.app/using-hermeum/creating-an-agent/) | How to shape an agent's soul, models, and skills. |
-| [Messaging platforms](https://docs.hermeum.app/using-hermeum/messaging-platforms/) | Connect agents to Slack, Discord, Teams, and webhooks. |
-| [Shared env sets](https://docs.hermeum.app/using-hermeum/shared-env-sets/) | Reuse environment sets across agents. |
-| [Overview](https://docs.hermeum.app/operation/overview/) | Architecture and components for self-hosting. |
-| [Installation](https://docs.hermeum.app/operation/installation/) | Prerequisites, Helm install, database choice, upgrades. |
-| [Configuration reference](https://docs.hermeum.app/operation/configuration-reference/) | Full `HERMEUM_*` environment variable reference. |
-| [Instance config](https://docs.hermeum.app/operation/instance-config/) | `config.yaml` schema for templates and agent types. |
-| [Database](https://docs.hermeum.app/operation/database/) | SQLite vs Postgres, migrations, scaling. |
-| [Auth](https://docs.hermeum.app/operation/auth/) | Better Auth setup, secrets, email verification. |
-| [Mutating admission webhook](https://docs.hermeum.app/operation/mutating-webhook/) | Admission webhook behavior and TLS options. |
-| [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/) | Ingress gateway and per-agent TLS. |
+
+| Document                                                                               | Description                                             |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [What is Hermeum](https://docs.hermeum.app/)                                           | Overview of the platform and what an agent can do.      |
+| [Getting started](https://docs.hermeum.app/using-hermeum/getting-started/)             | Create, manage, and chat with your agents.              |
+| [Creating an agent](https://docs.hermeum.app/using-hermeum/creating-an-agent/)         | How to shape an agent's soul, models, and skills.       |
+| [Messaging platforms](https://docs.hermeum.app/using-hermeum/messaging-platforms/)     | Connect agents to Slack, Discord, Teams, and webhooks.  |
+| [Shared env sets](https://docs.hermeum.app/using-hermeum/shared-env-sets/)             | Reuse environment sets across agents.                   |
+| [Overview](https://docs.hermeum.app/operation/overview/)                               | Architecture and components for self-hosting.           |
+| [Installation](https://docs.hermeum.app/operation/installation/)                       | Prerequisites, Helm install, database choice, upgrades. |
+| [Configuration reference](https://docs.hermeum.app/operation/configuration-reference/) | Full `HERMEUM_*` environment variable reference.        |
+| [Instance config](https://docs.hermeum.app/operation/instance-config/)                 | `config.yaml` schema for templates and agent types.     |
+| [Database](https://docs.hermeum.app/operation/database/)                               | SQLite vs Postgres, migrations, scaling.                |
+| [Auth](https://docs.hermeum.app/operation/auth/)                                       | Better Auth setup, secrets, email verification.         |
+| [Mutating admission webhook](https://docs.hermeum.app/operation/mutating-webhook/)     | Admission webhook behavior and TLS options.             |
+| [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/)           | Ingress gateway and per-agent TLS.                      |
+
 
 ## Contribution
 
