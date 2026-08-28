@@ -53,7 +53,7 @@ webhookRouter.post("/mutating", async (req, res) => {
   }
 
   const agent = mapHermesAgent(request.object);
-  const patch = await usecase.getmutatingWebhookJsonPatch(agent);
+  const patch = await usecase.getmutatingWebhookJsonPatch(agent, request.object);
 
   const response: AdmissionReview = {
     apiVersion: body.apiVersion,
@@ -61,7 +61,7 @@ webhookRouter.post("/mutating", async (req, res) => {
     response: {
       uid: request.uid,
       allowed: true,
-      ...(patch !== null && {
+      ...(patch !== null && patch.length > 0 && {
         patchType: "JSONPatch",
         patch: Buffer.from(JSON.stringify(patch)).toString("base64"),
       }),

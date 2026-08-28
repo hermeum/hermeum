@@ -1,6 +1,6 @@
 ---
 title: Mutating admission webhook
-description: What the webhook does, mutatingWebhookJsonPatch, and certificate options.
+description: What the webhook does, mutatingWebhookJsonPatch, test-op preconditions, and certificate options.
 sidebar_label: Mutating webhook
 sidebar_position: 7
 displayed_sidebar: docsSidebar
@@ -14,7 +14,7 @@ infrastructure level** — so users can create an agent by describing what it
 should do, without having to understand the `HermesAgent` spec or hand-edit
 the fields an operator cares about. 
 
-Mechanically, the webhook applies that JSON-Patch to every `HermesAgent` on
+Mechanically, the webhook applies a JSON-Patch to every `HermesAgent` on
 `CREATE`/`UPDATE`. It is served by the Hermeum pod on a separate HTTPS port
 (`HERMEUM_WEBHOOK_PORT`, default `8443`) at `POST /webhook/mutating`, reached
 directly by the kube-apiserver — not through any ingress. 
@@ -28,10 +28,14 @@ and the `MutatingWebhookConfiguration` (if present) will fail closed.
 When the kube-apiserver sends an `AdmissionReview` for a `HermesAgent`, the
 webhook:
 
-1. Reads the incoming object's `spec.type`.
+1. Reads the incoming object's `type` (from the `hermeum.app/type`
+   annotation).
 2. Looks up `agentTypes[<type>].mutatingWebhookJsonPatch` in the loaded
-   instance config.
-3. Returns that JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902))
+   instance config — a list of candidate patches.
+3. If candidates begin with `test` ops, evaluates each candidate's `test`
+   ops against the incoming object and returns the **first** one whose tests
+   all pass (first-match-wins). If none match, no patch is returned.
+4. Returns that JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902))
    as the admission response's `patch`.
 
 If the type is unknown or has no `mutatingWebhookJsonPatch`, the webhook
@@ -45,7 +49,9 @@ Patches live in the instance config under
 [Instance config](../instance-config) for the schema and how to mount a
 custom `config.yaml` via `HERMEUM_CONFIG_PATH`).
 
-A common use is stamping an annotation that records the agent's type:
+The field accepts either a flat array (one candidate, the simplest form) or
+an array of arrays (multiple candidates evaluated in order). A single flat
+array is the most common case:
 
 ```yaml
 agentTypes:
@@ -57,11 +63,61 @@ agentTypes:
         value: my-type
 ```
 
+### Preconditions with `test` ops
+
+A candidate patch can begin with [`test`](https://datatracker.ietf.org/doc/html/rfc6902#section-4.6)
+ops to act as a precondition. Hermeum evaluates each candidate's `test` ops
+against the incoming `HermesAgent` object and selects the **first** candidate
+whose tests all pass. `test` ops that fail cause Hermeum to skip to the next
+candidate — they do **not** reject the admission (unlike a flat array of
+`test` ops, where a failing `test` would reject the whole request).
+
+To express conditional mutation, provide multiple candidates as an array of
+arrays:
+
+```yaml
+agentTypes:
+  replica-setter:
+    description: Sets replicas based on the agent's model.
+    mutatingWebhookJsonPatch:
+      # Candidate 1: only when spec.hermes.config.model.default is gpt-4
+      - - op: test
+          path: /spec/hermes/config/model/default
+          value: gpt-4
+        - op: add
+          path: /spec/replicas
+          value: 2
+      # Candidate 2: only when spec.hermes.config.model.default is claude
+      - - op: test
+          path: /spec/hermes/config/model/default
+          value: claude
+        - op: add
+          path: /spec/replicas
+          value: 3
+      # Candidate 3: unconditional fallback (no test ops)
+      - - op: add
+          path: /spec/replicas
+          value: 1
+```
+
+In this example, Hermeum returns the first candidate whose `test` op matches
+the incoming object. The last candidate has no `test` ops, so it always
+matches — acting as a default/fallback. If no candidate matches (and there
+is no unconditional fallback), the webhook returns no patch (no-op).
+
+The selected candidate — **including its `test` ops** — is returned to
+Kubernetes, which re-applies the full patch atomically. This gives defense in
+depth: the `test` ops are re-asserted by the kube-apiserver at apply time.
+
 Notes:
 
 - `path` uses JSON-Pointer; `/` is escaped as `~1` (so
   `/metadata/annotations/hermeum.app~1type` targets the
   `hermeum.app/type` annotation).
+- `test` ops compare the value at `path` against `value` using structural
+  deep-equality (objects and arrays are compared recursively).
+- A candidate with no `test` ops always matches — use this for an
+  unconditional fallback.
 - The patch is applied to the `HermesAgent` CR itself, not to the rendered
   StatefulSet. To mutate the agent pod, target fields the operator reads from
   the CR (e.g. `spec.env`, `spec.config`).
