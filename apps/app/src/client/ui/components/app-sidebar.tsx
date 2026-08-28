@@ -44,6 +44,7 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2.5 px-2 py-1">
+          <img src="/logo.png" alt="Hermeum logo" className="h-6 w-auto" />
           <span className="font-semibold text-sm">Hermeum</span>
         </div>
       </SidebarHeader>

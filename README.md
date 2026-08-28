@@ -1,5 +1,7 @@
 # Hermeum
 
+<img src="logo.png" alt="Hermeum logo" width="600" />
+
 Hermeum is a platform for creating **tailored AI agents** for your team. Every
 agent is built on top of the open-source
 [Hermes agent](https://hermes-agent.nousresearch.com/docs), so it inherits
