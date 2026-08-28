@@ -3,7 +3,7 @@ import type { Config } from "@docusaurus/types";
 const config: Config = {
   title: "Hermeum",
   tagline: "Documentation for the Hermeum project",
-  favicon: "img/favicon.ico",
+  favicon: "img/favicon.png",
 
   url: "https://docs.hermeum.app",
   baseUrl: "/",
@@ -40,7 +40,7 @@ const config: Config = {
       title: "Hermeum",
       logo: {
         alt: "Hermeum logo",
-        src: "img/logo.svg",
+        src: "img/logo.png",
       },
       items: [
         {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { applyPatch } from "fast-json-patch";
+import * as fastJsonPatch from "fast-json-patch";
 
 import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
 
@@ -163,7 +163,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     const testOps = candidate.filter((op) => op.op === "test");
     if (testOps.length === 0) return true;
     try {
-      applyPatch(doc, testOps, true);
+      fastJsonPatch.applyPatch(doc, testOps, true);
       return true;
     } catch {
       return false;
