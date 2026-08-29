@@ -49,6 +49,14 @@ const config: Config = {
           label: "Docs",
           position: "left",
         },
+        {
+          href: "https://github.com/hermeum/hermeum",
+          position: "right",
+          className: "header-github-link",
+          "aria-label": "GitHub repository",
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
       ],
     },
     footer: {
