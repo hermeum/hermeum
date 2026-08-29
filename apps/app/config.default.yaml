@@ -3,9 +3,9 @@ templates:
     name: Support Agent
     description: Answers support questions using the docs and Notion knowledge base.
     agentInput:
-      type: medium
       name: Support Agent
       description: Answers support questions using the docs and Notion knowledge base, and escalates to a human when the answer is missing, uncertain, or requires account-specific handling.
+      type: medium
       soul: |-
         You are a helpful support agent grounded in the company's documentation and Notion knowledge base. Answer clearly and practically, cite or reference the source material when possible, and do not invent policies or product behavior.
 
@@ -18,10 +18,11 @@ templates:
         - skills/productivity/notion
   - id: incident-commander
     name: Incident Commander
-    descriptoin: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+    description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
     agentInput:
       name: Incident Commander
       description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+      type: medium
       soul: "You are an incident commander: calm, decisive, evidence-driven, and focused on restoring service safely. Be explicit about uncertainty, separate facts from hypotheses, and recommend practical next steps with an appropriate P1-P4 escalation level."
       config:
         platforms:
@@ -70,6 +71,7 @@ templates:
     agentInput:
       name: GitHub PR Code Reviewer
       description: Reviews GitHub pull requests received via webhook and posts review feedback back to the PR.
+      type: medium
       soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
       config:
         platforms:
