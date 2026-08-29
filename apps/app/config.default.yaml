@@ -1,10 +1,300 @@
 templates:
-  - id: minimal
-    name: Minimal
-    description: Create an agent with minimal configuration.
+  - id: support-agent
+    name: Support Agent
+    description: Answers support questions using the docs and Notion knowledge base.
     agentInput:
+      name: Support Agent
+      description: Answers support questions using the docs and Notion knowledge base, and escalates to a human when the answer is missing, uncertain, or requires account-specific handling.
+      type: medium
+      soul: |-
+        You are a helpful support agent grounded in the company's documentation and Notion knowledge base. Answer clearly and practically, cite or reference the source material when possible, and do not invent policies or product behavior.
+
+        Escalate when the knowledge base does not contain enough information, the user reports a bug or outage, the issue involves billing/account/security/privacy, or the user needs a human decision. When escalating, summarize the user's question, relevant context, what you checked, and the next action needed.
+      env:
+        - name: NOTION_API_KEY
+          value: <fill-me>
+          sensitive: true
+      skills:
+        - skills/productivity/notion
+  - id: incident-commander
+    name: Incident Commander
+    description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+    agentInput:
+      name: Incident Commander
+      description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+      type: medium
+      soul: "You are an incident commander: calm, decisive, evidence-driven, and focused on restoring service safely. Be explicit about uncertainty, separate facts from hypotheses, and recommend practical next steps with an appropriate P1-P4 escalation level."
       config:
-        model:
-          base_url: https://ollama.com/v1
-          default: kimi-k2.6
-          provider: ollama-cloud
+        platforms:
+          webhook:
+            enabled: true
+            extra:
+              routes:
+                alert:
+                  prompt: |-
+                    Monitoring alert received:
+                    {__raw__}
+
+                    Investigate:
+                    1. Search the web for known issues with this error pattern
+                    2. Check if this correlates with any recent deployments or config changes
+                    3. Draft a triage summary with:
+                      - Likely root cause
+                      - Suggested first response steps
+                      - Escalation recommendation (P1-P4)
+                    
+                    Be concise. This goes to the on-call channel.
+                  skills:
+                    - sentry
+                  deliver: slack
+        web:
+          search_backend: searxng
+      skills:
+        - openai/skills/skills/.curated/sentry
+      env:
+        - name: WEBHOOK_SECRET
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
+  - id: code-reviewer
+    name: Code Reviewer
+    description: Reviews GitHub pull requests and post a feedback back to the PR.
+    agentInput:
+      name: GitHub PR Code Reviewer
+      description: Reviews GitHub pull requests received via webhook and posts review feedback back to the PR.
+      type: medium
+      soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
+      config:
+        platforms:
+          webhook:
+            enabled: true
+            extra:
+              port: 8644
+              routes:
+                github-pr-review:
+                  events:
+                    - pull_request
+                  prompt: |-
+                    Review this GitHub pull request using the loaded GitHub code review skill.
+
+                    Repository: {repository.full_name}
+                    PR #{number}: {pull_request.title}
+                    Author: {pull_request.user.login}
+                    URL: {pull_request.html_url}
+                    Diff URL: {pull_request.diff_url}
+                    Action: {action}
+
+                    Provide concise, actionable review feedback. Prioritize high-impact issues and include file/line references where possible.
+                  skills:
+                    - github-code-review
+                  deliver: github_comment
+                  deliver_extra:
+                    repo: "{repository.full_name}"
+                    pr_number: "{number}"
+      env:
+        - name: WEBHOOK_SECRET
+          value: <fill-me>
+          sensitive: true
+        - name: GITHUB_TOKEN
+          value: <fill-me>
+          sensitive: true
+skills:
+  - skills/github/github-code-review
+agentTypes:
+  medium:
+    description: >-
+      Medium resource profile — hermes container requests 2 CPU / 1Gi,
+      limits 4 CPU / 2Gi. Applies proportional resources to the searxng and
+      camofox sidecars when they are enabled (test-gated, first-match-wins).
+    mutatingWebhookJsonPatch:
+      # Both sidecars enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Searxng only.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Neither sidecar enabled (unconditional fallback).
+      - - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+  large:
+    description: >-
+      Large resource profile — hermes container requests 4 CPU / 2Gi,
+      limits 8 CPU / 4Gi. Applies proportional resources to the searxng and
+      camofox sidecars when they are enabled (test-gated, first-match-wins).
+    mutatingWebhookJsonPatch:
+      # Both sidecars enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+      # Searxng only.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+      # Neither sidecar enabled (unconditional fallback).
+      - - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "4"
+              memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 4Gi

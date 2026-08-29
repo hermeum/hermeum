@@ -1,4 +1,4 @@
-import { HermesSkillIndex } from "../src/server/infras/hermes-skill-index";
+import { HermesSkillIndex } from "../infras/hermes-skill-index";
 
 const query = process.argv[2] ?? "";
 const limit = Number(process.argv[3] ?? 25);

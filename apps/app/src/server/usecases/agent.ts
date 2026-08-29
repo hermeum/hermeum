@@ -5,6 +5,10 @@ import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "
 
 import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 
+// fast-json-patch's ESM export places applyPatch on `default`, not the
+// namespace. Fall back to the namespace for CJS consumers (e.g. vitest).
+const { applyPatch } = fastJsonPatch.default ?? fastJsonPatch;
+
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),
 });
@@ -163,7 +167,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     const testOps = candidate.filter((op) => op.op === "test");
     if (testOps.length === 0) return true;
     try {
-      fastJsonPatch.applyPatch(doc, testOps, true);
+      applyPatch(doc, testOps, true);
       return true;
     } catch {
       return false;

@@ -55,13 +55,18 @@ array is the most common case:
 
 ```yaml
 agentTypes:
-  my-type:
-    description: Injects an annotation marking the agent type.
+  medium:
+    description: Medium resource profile — 2 CPU / 1Gi, limits 4 CPU / 2Gi.
     mutatingWebhookJsonPatch:
       - op: add
-        path: /metadata/annotations/hermeum.app~1type
-        value: my-type
+        path: /spec/hermes/resources
+        value:
+          requests: { cpu: "2", memory: 1Gi }
+          limits:   { cpu: "4", memory: 2Gi }
 ```
+
+When an agent with `type: medium` is created or updated, the webhook injects
+the resource requests and limits into `spec.hermes.resources`.
 
 ### Preconditions with `test` ops
 
@@ -77,52 +82,84 @@ arrays:
 
 ```yaml
 agentTypes:
-  replica-setter:
-    description: Sets replicas based on the agent's model.
+  medium:
+    description: >-
+      Medium resource profile — 2 CPU / 1Gi, limits 4 CPU / 2Gi.
+      Applies proportional resources to the searxng and camofox sidecars
+      when they are enabled.
     mutatingWebhookJsonPatch:
-      # Candidate 1: only when spec.hermes.config.model.default is gpt-4
+      # Both sidecars enabled — patch all three.
       - - op: test
-          path: /spec/hermes/config/model/default
-          value: gpt-4
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
         - op: add
-          path: /spec/replicas
-          value: 2
-      # Candidate 2: only when spec.hermes.config.model.default is claude
+          path: /spec/hermes/resources
+          value:
+            requests: { cpu: "2", memory: 1Gi }
+            limits:   { cpu: "4", memory: 2Gi }
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits:   { cpu: "1", memory: 1Gi }
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests: { cpu: "1", memory: 1Gi }
+            limits:   { cpu: "2", memory: 2Gi }
+      # Searxng only.
       - - op: test
-          path: /spec/hermes/config/model/default
-          value: claude
+          path: /spec/searxng/enabled
+          value: true
         - op: add
-          path: /spec/replicas
-          value: 3
-      # Candidate 3: unconditional fallback (no test ops)
+          path: /spec/hermes/resources
+          value:
+            requests: { cpu: "2", memory: 1Gi }
+            limits:   { cpu: "4", memory: 2Gi }
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits:   { cpu: "1", memory: 1Gi }
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests: { cpu: "2", memory: 1Gi }
+            limits:   { cpu: "4", memory: 2Gi }
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests: { cpu: "1", memory: 1Gi }
+            limits:   { cpu: "2", memory: 2Gi }
+      # Neither sidecar enabled (unconditional fallback).
       - - op: add
-          path: /spec/replicas
-          value: 1
+          path: /spec/hermes/resources
+          value:
+            requests: { cpu: "2", memory: 1Gi }
+            limits:   { cpu: "4", memory: 2Gi }
 ```
 
-In this example, Hermeum returns the first candidate whose `test` op matches
+In this example, Hermeum returns the first candidate whose `test` ops match
 the incoming object. The last candidate has no `test` ops, so it always
-matches — acting as a default/fallback. If no candidate matches (and there
-is no unconditional fallback), the webhook returns no patch (no-op).
+matches — acting as a default/fallback that applies the hermes container
+resources even when neither sidecar is enabled. JSON-Patch `add` requires the
+parent path to exist, so the searxng/camofox resource patches are gated on
+`/spec/searxng/enabled` and `/spec/camofox/enabled` (the operator only
+emits those objects when the agent opts into the sidecar). If no candidate
+matches (and there is no unconditional fallback), the webhook returns no
+patch (no-op).
 
 The selected candidate — **including its `test` ops** — is returned to
 Kubernetes, which re-applies the full patch atomically. This gives defense in
 depth: the `test` ops are re-asserted by the kube-apiserver at apply time.
 
-Notes:
-
-- `path` uses JSON-Pointer; `/` is escaped as `~1` (so
-  `/metadata/annotations/hermeum.app~1type` targets the
-  `hermeum.app/type` annotation).
-- `test` ops compare the value at `path` against `value` using structural
-  deep-equality (objects and arrays are compared recursively).
-- A candidate with no `test` ops always matches — use this for an
-  unconditional fallback.
-- The patch is applied to the `HermesAgent` CR itself, not to the rendered
-  StatefulSet. To mutate the agent pod, target fields the operator reads from
-  the CR (e.g. `spec.env`, `spec.config`).
-- Setting an agent's `type` to a key that is not in `agentTypes` is rejected
-  by Hermeum on create/update, so the webhook only ever sees known types.
 
 ## Certificates
 

@@ -91,7 +91,7 @@ const SKILL_SOURCE_PREFIXES = [
 const SKILL_NAMESPACE_PREFIXES = ["npm:", "pack:"] as const;
 
 const SIMPLE_SLUG_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
-const PATH_SEGMENT_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+const PATH_SEGMENT_RE = /^[a-zA-Z0-9.][a-zA-Z0-9._-]*$/;
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -189,7 +189,7 @@ function validateSkillIdentifier(s: string, ctx: z.RefinementCtx): void {
         code: z.ZodIssueCode.custom,
         message:
           `Skill "${s}" has an invalid path segment "${bad}" after "${srcPrefix}". ` +
-          'Segments must start with an alphanumeric character and may contain alphanumerics, ".", "-", and "_".',
+          'Segments must start with an alphanumeric character (or "." for hidden dirs) and may contain alphanumerics, ".", "-", and "_".',
         path: [],
       });
     }
@@ -213,7 +213,7 @@ function validateSkillIdentifier(s: string, ctx: z.RefinementCtx): void {
         code: z.ZodIssueCode.custom,
         message:
           `Skill "${s}" has an invalid path segment "${bad}". ` +
-          'Segments must start with an alphanumeric character and may contain alphanumerics, ".", "-", and "_".',
+          'Segments must start with an alphanumeric character (or "." for hidden dirs) and may contain alphanumerics, ".", "-", and "_".',
         path: [],
       });
       return;
