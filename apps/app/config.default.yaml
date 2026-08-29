@@ -52,18 +52,18 @@ templates:
         - openai/skills/skills/.curated/sentry
       env:
         - name: WEBHOOK_SECRET
-          value: ""
+          value: <fill-me>
           sensitive: true
         - name: SLACK_BOT_TOKEN
-          value: ""
+          value: <fill-me>
           sensitive: true
         - name: SLACK_APP_TOKEN
-          value: ""
+          value: <fill-me>
           sensitive: true
         - name: SLACK_ALLOWED_USERS
-          value: ""
+          value: <fill-me>
         - name: SLACK_HOME_CHANNEL
-          value: ""
+          value: <fill-me>
   - id: code-reviewer
     name: Code Reviewer
     description: Reviews GitHub pull requests and post a feedback back to the PR.
@@ -100,10 +100,10 @@ templates:
                     pr_number: "{number}"
       env:
         - name: WEBHOOK_SECRET
-          value: ""
+          value: <fill-me>
           sensitive: true
         - name: GITHUB_TOKEN
-          value: ""
+          value: <fill-me>
           sensitive: true
 skills:
   - skills/github/github-code-review
