@@ -26,6 +26,18 @@ Run tasks from the repo root via Turbo, or from a package directory via pnpm fil
 
 TypeScript is strict (`strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`); target ES2022 with `moduleResolution: Bundler`.
 
+## Version upgrades
+
+When upgrading the Hermeum app version, update every place that mirrors it, in lockstep:
+
+- `apps/app/package.json` — `version`
+- `apps/docs/package.json` — `version`
+- `packages/components/package.json` — `version`
+- `packages/typescript-config/package.json` — `version`
+- `charts/hermeum/Chart.yaml` — `appVersion` (the app release version). The chart `version` is the packaging version and is independent of `appVersion`; bump its patch version whenever the chart is republished for the upgrade.
+
+The chart `image.tag` (`charts/hermeum/values.yaml`) defaults to `appVersion` when empty — leave it empty unless pinning to a non-`appVersion` tag.
+
 ## `@hermeum/app` (`apps/app`)
 
 ### Commands
