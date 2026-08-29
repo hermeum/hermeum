@@ -25,7 +25,7 @@ import { randomUUID } from "node:crypto";
 import * as fastJsonPatch from "fast-json-patch";
 import { stringify } from "yaml";
 
-import { AgentInputSchema, Context, Template } from "@/entities";
+import { AgentInputObjectSchema, Context, Template } from "@/entities";
 import { ConsoleLogger } from "@/server/infras/console-logger";
 import { HermesSkillIndex } from "@/server/infras/hermes-skill-index";
 import { LocalFiles } from "@/server/infras/local-files";
@@ -65,7 +65,7 @@ if (!template) {
   process.exit(1);
 }
 
-const agentInput = AgentInputSchema.parse(template.agentInput);
+const agentInput = AgentInputObjectSchema.parse(template.agentInput);
 const agent = { ...agentInput, id: randomUUID(), userId: randomUUID() };
 
 // Pre-webhook CR exactly as the reconciler would receive it.

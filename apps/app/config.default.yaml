@@ -12,11 +12,101 @@ templates:
         Escalate when the knowledge base does not contain enough information, the user reports a bug or outage, the issue involves billing/account/security/privacy, or the user needs a human decision. When escalating, summarize the user's question, relevant context, what you checked, and the next action needed.
       env:
         - name: NOTION_API_KEY
-          value: ""
+          value: <fill-me>
           sensitive: true
       skills:
         - skills/productivity/notion
+  - id: incident-commander
+    name: Incident Commander
+    descriptoin: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+    agentInput:
+      name: Incident Commander
+      description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
+      soul: "You are an incident commander: calm, decisive, evidence-driven, and focused on restoring service safely. Be explicit about uncertainty, separate facts from hypotheses, and recommend practical next steps with an appropriate P1-P4 escalation level."
+      config:
+        platforms:
+          webhook:
+            enabled: true
+            extra:
+              routes:
+                alert:
+                  prompt: |-
+                    Monitoring alert received:
+                    {__raw__}
 
+                    Investigate:
+                    1. Search the web for known issues with this error pattern
+                    2. Check if this correlates with any recent deployments or config changes
+                    3. Draft a triage summary with:
+                      - Likely root cause
+                      - Suggested first response steps
+                      - Escalation recommendation (P1-P4)
+                    
+                    Be concise. This goes to the on-call channel.
+                  skills:
+                    - sentry
+                  deliver: slack
+        web:
+          search_backend: searxng
+      skills:
+        - openai/skills/skills/.curated/sentry
+      env:
+        - name: WEBHOOK_SECRET
+          value: ""
+          sensitive: true
+        - name: SLACK_BOT_TOKEN
+          value: ""
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: ""
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: ""
+        - name: SLACK_HOME_CHANNEL
+          value: ""
+  - id: code-reviewer
+    name: Code Reviewer
+    description: Reviews GitHub pull requests and post a feedback back to the PR.
+    agentInput:
+      name: GitHub PR Code Reviewer
+      description: Reviews GitHub pull requests received via webhook and posts review feedback back to the PR.
+      soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
+      config:
+        platforms:
+          webhook:
+            enabled: true
+            extra:
+              port: 8644
+              routes:
+                github-pr-review:
+                  events:
+                    - pull_request
+                  prompt: |-
+                    Review this GitHub pull request using the loaded GitHub code review skill.
+
+                    Repository: {repository.full_name}
+                    PR #{number}: {pull_request.title}
+                    Author: {pull_request.user.login}
+                    URL: {pull_request.html_url}
+                    Diff URL: {pull_request.diff_url}
+                    Action: {action}
+
+                    Provide concise, actionable review feedback. Prioritize high-impact issues and include file/line references where possible.
+                  skills:
+                    - github-code-review
+                  deliver: github_comment
+                  deliver_extra:
+                    repo: "{repository.full_name}"
+                    pr_number: "{number}"
+      env:
+        - name: WEBHOOK_SECRET
+          value: ""
+          sensitive: true
+        - name: GITHUB_TOKEN
+          value: ""
+          sensitive: true
+skills:
+  - skills/github/github-code-review
 agentTypes:
   medium:
     description: >-
