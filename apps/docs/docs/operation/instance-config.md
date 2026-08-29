@@ -23,24 +23,34 @@ The file has two top-level keys: `templates` (required) and `agentTypes`
 (optional).
 
 ```yaml
-templates:        # required — list of templates users can start from
-  - id: minimal
-    name: Minimal
-    description: Create an agent with minimal configuration.
+templates:
+  - id: support-agent
+    name: Support Agent
+    description: Answers support questions using the docs and Notion knowledge base.
     agentInput:
-      config:
-        model:
-          base_url: https://ollama.com/v1
-          default: kimi-k2.6
-          provider: ollama-cloud
+      type: medium            # references an agentTypes key
+      name: Support Agent
+      soul: |-
+        You are a helpful support agent grounded in the company's
+        documentation and knowledge base. Answer clearly and practically,
+        cite the source material when possible, and escalate when the
+        answer is missing or uncertain.
+      env:
+        - name: NOTION_API_KEY
+          value: <fill-me>     # users replace this when creating the agent
+          sensitive: true
+      skills:
+        - skills/productivity/notion
 
-agentTypes:        # optional — map of type key → { description?, mutatingWebhookJsonPatch }
-  my-type:
-    description: Injects an annotation marking the agent type.
+agentTypes:
+  medium:
+    description: Medium resource profile — 2 CPU / 1Gi, limits 4 CPU / 2Gi.
     mutatingWebhookJsonPatch:
       - op: add
-        path: /metadata/annotations/hermeum.app~1type
-        value: my-type
+        path: /spec/hermes/resources
+        value:
+          requests: { cpu: "2", memory: 1Gi }
+          limits:   { cpu: "4", memory: 2Gi }
 ```
 
 A template's `agentInput.type` (when set) **must** reference a key in
@@ -62,6 +72,10 @@ A template is a starting point for a new agent. Each one has:
 `packages`, `crons`, and `sharedEnvSets`. Anything you set here becomes the
 default for agents created from the template; the user can override it in the
 UI or via the AI config generator.
+
+Env vars may use `<fill-me>` as a placeholder value — the config loads
+successfully, and the user replaces it with a real value when creating the
+agent (the strict check is enforced at agent creation, not at config load).
 
 ## Agent types
 
