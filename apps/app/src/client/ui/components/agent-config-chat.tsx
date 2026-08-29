@@ -32,6 +32,10 @@ type ReadSharedEnvSetOutput = {
 };
 type SearchSkillsOutput = { results: { name: string; identifier: string; description: string }[] };
 
+// Max consecutive failed `updateAgentConfig` tool calls the model may make in
+// a row before it is told to stop retrying and explain the problem instead.
+const MAX_CONFIG_UPDATE_ATTEMPTS = 1;
+
 type AgentConfigChatMessage = UIMessage<
   unknown,
   UIDataTypes,
@@ -125,6 +129,10 @@ export function AgentConfigChat({
   const callbacksRef = useRef({ getConfig, onConfigUpdate });
   callbacksRef.current = { getConfig, onConfigUpdate };
 
+  // Consecutive failed `updateAgentConfig` calls in the current auto-resubmit
+  // loop. Reset when the user sends a new message.
+  const configUpdateFailuresRef = useRef(0);
+
   const { messages, sendMessage, status, error, addToolOutput } =
     useChat<AgentConfigChatMessage>({
       transport: new DefaultChatTransport({ api: "/chat/agent-config" }),
@@ -144,14 +152,23 @@ export function AgentConfigChat({
         const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;
+          const path = `/${issue.path.join("/")}`;
+          const exhausted = configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_ATTEMPTS;
+          configUpdateFailuresRef.current += 1;
           addToolOutput({
             tool: "updateAgentConfig",
             toolCallId: toolCall.toolCallId,
             state: "output-error",
-            errorText: `Invalid agent config: ${issue.message} (path: /${issue.path.join("/")})`,
+            errorText: exhausted
+              ? `Invalid agent config: ${issue.message} (path: ${path}). ` +
+                `Failed to update the agent config after ${MAX_CONFIG_UPDATE_ATTEMPTS + 1} ` +
+                "attempts. Do not call updateAgentConfig again — explain the problem " +
+                "to the user in plain text instead."
+              : `Invalid agent config: ${issue.message} (path: ${path})`,
           });
           return;
         }
+        configUpdateFailuresRef.current = 0;
         callbacksRef.current.onConfigUpdate(parsed.data);
         addToolOutput({
           tool: "updateAgentConfig",
@@ -167,6 +184,7 @@ export function AgentConfigChat({
   function handleSend() {
     const text = input.trim();
     if (text.length === 0 || status !== "ready") return;
+    configUpdateFailuresRef.current = 0;
     sendMessage({ text }, { body: { config: callbacksRef.current.getConfig() } });
     setInput("");
   }
