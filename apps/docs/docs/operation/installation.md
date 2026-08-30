@@ -21,11 +21,7 @@ the architecture, see [Overview](../overview).
 
 ## Helm install
 
-`HERMEUM_DATABASE_URL` is required by the app; the chart supplies it via
-`secrets.databaseUrl`, which defaults to the bundled sqlite path
-(`file:/var/lib/hermeum/db.sqlite`). See
-[Configuration reference](../configuration-reference) for the full list. For
-production you'll also want:
+Everything installs with working defaults. For production you'll want:
 
 - `BETTER_AUTH_SECRET` — session signing secret for Better Auth (generate with
   `openssl rand -base64 32`).
@@ -34,9 +30,10 @@ production you'll also want:
 - `HERMEUM_OPENAI_API_KEY` — API key for the OpenAI-compatible API used by the
   AI config generator.
 
-Everything else has working defaults. The
-chart maps each env var to a value key (e.g. `HERMEUM_DATABASE_URL` ←
-`secrets.databaseUrl`); see the chart's
+See
+[Configuration reference](../configuration-reference) for the full list. The
+chart maps each env var to a value key (e.g. `BETTER_AUTH_SECRET` ←
+`secrets.betterAuthSecret`); see the chart's
 [`values.yaml`](https://github.com/hermeum/hermeum/blob/main/charts/hermeum/values.yaml)
 for the full mapping.
 

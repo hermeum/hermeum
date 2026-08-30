@@ -33,8 +33,7 @@ agent you can chat with, deploy, and iterate on.
 **Prerequisites:** a Kubernetes cluster and Helm 3.x.
 
 Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. It installs
-with sensible defaults — `HERMEUM_DATABASE_URL` defaults to the bundled sqlite
-path (`file:/var/lib/hermeum/db.sqlite`). For production you'll also want to set
+with sensible defaults; for production you'll want to set
 `secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
 
 ```bash
