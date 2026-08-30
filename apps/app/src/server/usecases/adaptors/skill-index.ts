@@ -1,9 +1,5 @@
-export interface SkillSearchResult {
-  name: string;
-  identifier: string;
-  description: string;
-}
+import { SkillSummary } from "@/entities";
 
 export interface SkillIndexAdaptor {
-  searchSkills(query: string, limit?: number): Promise<SkillSearchResult[]>;
+  searchSkills(query: string, limit?: number): Promise<SkillSummary[]>;
 }

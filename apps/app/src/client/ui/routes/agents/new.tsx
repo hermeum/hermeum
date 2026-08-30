@@ -18,6 +18,7 @@ import type { AgentInput, Template } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
 import { CodeEditor } from "@/client/ui/components/code-editor";
 import { AgentEditorMobileTabs } from "./-components/agent-editor-mobile-tabs";
+import { AgentPickerBar } from "./-components/agent-picker-bar";
 
 const YAML_OPTIONS = { blockQuote: "literal", lineWidth: 0 } as const;
 
@@ -75,6 +76,15 @@ function NewAgentPage() {
 
   function handleUseTemplate(template: Template) {
     handleConfigUpdate(template.agentInput);
+  }
+
+  // Merge a user-managed-field patch (agent type / skills) into the current
+  // draft. No-op when editing hasn't started — pickers appear once a draft
+  // exists.
+  function handlePickerChange(patch: { type?: string | undefined; skills?: string[] | undefined }) {
+    const current = getConfig();
+    if (current === undefined) return;
+    handleConfigUpdate({ ...current, ...patch });
   }
 
   function handleCreate() {
@@ -167,6 +177,7 @@ function NewAgentPage() {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-2">
         <p className="shrink-0 text-sm font-medium">Agent config</p>
+        <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
         <div className="min-h-0 flex-1">
           <CodeEditor
             value={editorValue}

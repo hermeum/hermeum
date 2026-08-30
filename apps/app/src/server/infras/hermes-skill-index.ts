@@ -1,4 +1,6 @@
-import { SkillIndexAdaptor, SkillSearchResult } from "../usecases/adaptors/skill-index";
+import { SkillSummary } from "@/entities";
+
+import { SkillIndexAdaptor } from "../usecases/adaptors/skill-index";
 
 const INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json";
 const CACHE_TTL_MS = 6 * 3600 * 1000;
@@ -58,13 +60,13 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
     return this.#cache.skills;
   }
 
-  async searchSkills(query: string, limit = 25): Promise<SkillSearchResult[]> {
+  async searchSkills(query: string, limit = 25): Promise<SkillSummary[]> {
     const skills = await this.#loadIndex();
     if (skills.length === 0) {
       return [];
     }
 
-    const toResult = (entry: SkillIndexEntry): SkillSearchResult => ({
+    const toResult = (entry: SkillIndexEntry): SkillSummary => ({
       name: entry.name,
       identifier: entry.identifier,
       description: entry.description,
@@ -75,7 +77,7 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
       return skills.slice(0, limit).map(toResult);
     }
 
-    const results: SkillSearchResult[] = [];
+    const results: SkillSummary[] = [];
     for (const s of skills) {
       const haystack = [
         s.name,
