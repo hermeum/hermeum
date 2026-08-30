@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 
-import { Badge } from "@hermeum/components/ui/badge";
 import { Button } from "@hermeum/components/ui/button";
 import { Input } from "@hermeum/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
@@ -106,13 +105,8 @@ function SkillsPicker({
     }
   }
 
-  function remove(identifier: string) {
-    const next = selected.filter((s) => s !== identifier);
-    onChange(next.length > 0 ? next : undefined);
-  }
-
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
         Skills
       </span>
@@ -127,7 +121,7 @@ function SkillsPicker({
           }
         >
           <Plus />
-          Add skill
+          {selected.length > 0 ? `Skills (${selected.length})` : "Add skill"}
         </PopoverTrigger>
         <PopoverContent align="start" className="flex w-80 flex-col gap-1 p-1">
           <Input
@@ -169,23 +163,6 @@ function SkillsPicker({
           </ScrollArea>
         </PopoverContent>
       </Popover>
-      {selected.map((identifier) => (
-        <Badge
-          key={identifier}
-          render={
-            <button
-              type="button"
-              aria-label={`Remove skill ${identifier}`}
-              onClick={() => remove(identifier)}
-              className="cursor-pointer font-mono"
-            />
-          }
-          className="max-w-48 gap-0.5 truncate font-mono text-[0.6875rem] normal-case tracking-normal"
-        >
-          <span className="truncate">{identifier}</span>
-          <X />
-        </Badge>
-      ))}
     </div>
   );
 }
