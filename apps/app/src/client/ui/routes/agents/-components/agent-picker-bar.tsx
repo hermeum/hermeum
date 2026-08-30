@@ -10,6 +10,9 @@ import type { AgentInput } from "@/entities";
 
 const MAX_SKILLS = 20;
 
+// Max height of the scrollable item list inside a picker popover.
+const LIST_MAX_H = "max-h-64 overflow-y-auto";
+
 // Debounce window for the skills search input, so typing a keyword doesn't
 // fire a request per keystroke.
 const SEARCH_DEBOUNCE_MS = 300;
