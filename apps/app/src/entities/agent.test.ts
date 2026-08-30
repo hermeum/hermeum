@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, SkillSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { SkillIdentifierSchema } from "./skill";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -598,7 +599,7 @@ describe("AgentInputSchema crons validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts loose skill strings that would fail the strict top-level SkillSchema", () => {
+  it("accepts loose skill strings that would fail the strict top-level SkillIdentifierSchema", () => {
     const result = AgentInputSchema.safeParse({
       crons: [makeCron({ skills: ["bad skill!"] })],
     });
@@ -632,7 +633,7 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
   });
 });
 
-describe("SkillSchema identifier formats", () => {
+describe("SkillIdentifierSchema identifier formats", () => {
   // https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#supported-hub-sources
 
   const valid: string[] = [
@@ -657,7 +658,7 @@ describe("SkillSchema identifier formats", () => {
   ];
 
   it.each(valid)("accepts %s", (identifier) => {
-    expect(SkillSchema.safeParse(identifier).success).toBe(true);
+    expect(SkillIdentifierSchema.safeParse(identifier).success).toBe(true);
   });
 
   const invalid: string[] = [
@@ -681,17 +682,17 @@ describe("SkillSchema identifier formats", () => {
   ];
 
   it.each(invalid)("rejects %s", (identifier) => {
-    const result = SkillSchema.safeParse(identifier);
+    const result = SkillIdentifierSchema.safeParse(identifier);
     expect(result.success).toBe(false);
   });
 
   it("rejects a skill exceeding 128 characters", () => {
-    const result = SkillSchema.safeParse("a".repeat(129));
+    const result = SkillIdentifierSchema.safeParse("a".repeat(129));
     expect(result.success).toBe(false);
   });
 
   it("accepts a 128-character skill", () => {
-    const result = SkillSchema.safeParse("a".repeat(128));
+    const result = SkillIdentifierSchema.safeParse("a".repeat(128));
     expect(result.success).toBe(true);
   });
 });

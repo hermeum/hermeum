@@ -20,7 +20,8 @@ vi.mock("@/server/libs/config", () => ({
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
 import type { File, FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
-import type { SkillIndexAdaptor, SkillSearchResult } from "./adaptors/skill-index";
+import type { SkillIndexAdaptor } from "./adaptors/skill-index";
+import type { SkillSummary } from "@/entities";
 import type { HermeumConfig, SharedEnvSet } from "@/entities";
 
 type Doc = { content: string; data?: Record<string, unknown> };
@@ -91,7 +92,7 @@ function makeFiles(
 
 const callOptions = {} as ToolExecutionOptions;
 
-function makeSkillIndex(results: SkillSearchResult[] = []): SkillIndexAdaptor {
+function makeSkillIndex(results: SkillSummary[] = []): SkillIndexAdaptor {
   return {
     searchSkills: vi.fn().mockResolvedValue(results),
   } as unknown as SkillIndexAdaptor;
@@ -214,7 +215,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
   });
 
   it("delegates searchSkills to the injected skill index adaptor", async () => {
-    const results: SkillSearchResult[] = [
+    const results: SkillSummary[] = [
       { name: "git-pr-review", identifier: "openai/skills/skills/git-pr-review", description: "Review PRs." },
     ];
     const skillIndex = makeSkillIndex(results);

@@ -1,5 +1,7 @@
 export * from "./auth";
 export * from "./agent";
+export * from "./agent-type";
+export * from "./skill";
 export * from "./template";
 export * from "./hermeum-config";
 export * from "./shared-env-set";

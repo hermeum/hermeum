@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { TemplateSchema } from "./template";
+import { AgentTypeKeySchema } from "./agent-type";
 
 export const JsonPatchOpSchema = z.object({
   op: z.enum(["add", "remove", "replace", "move", "copy", "test"]),
@@ -27,16 +28,16 @@ export const MutatingWebhookJsonPatchSchema = z
 
 export type MutatingWebhookJsonPatch = z.infer<typeof MutatingWebhookJsonPatchSchema>;
 
-export const AgentTypeSchema = z.object({
+export const AgentTypeConfigSchema = z.object({
   description: z.string().optional(),
   mutatingWebhookJsonPatch: MutatingWebhookJsonPatchSchema,
 });
 
-export type AgentType = z.infer<typeof AgentTypeSchema>;
+export type AgentTypeConfig = z.infer<typeof AgentTypeConfigSchema>;
 
 export const HermeumConfigSchema = z
   .object({
-    agentTypes: z.record(z.string(), AgentTypeSchema).optional(),
+    agentTypes: z.record(AgentTypeKeySchema, AgentTypeConfigSchema).optional(),
     templates: z.array(TemplateSchema),
   })
   .superRefine((data, ctx) => {
