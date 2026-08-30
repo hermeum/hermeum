@@ -15,6 +15,10 @@ agent you can chat with, deploy, and iterate on.
 
 ## Features
 
+<p align="center">
+  <img src="assets/dashboard.png" alt="Hermeum dashboard — creating an agent" width="720" />
+</p>
+
 - **Tailor an agent by chat** — describe what your agent should do in natural
   language and Hermeum generates the configuration for you.
 - **Templates** — create reusable agent templates for the agent shapes your

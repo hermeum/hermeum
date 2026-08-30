@@ -6,6 +6,10 @@ displayed_sidebar: docsSidebar
 
 # What is Hermeum
 
+<p align="center">
+  <img src="/img/dashboard.png" alt="Hermeum dashboard — creating an agent" width={720} />
+</p>
+
 Hermeum is a platform for creating **tailored AI agents** for your team.
 Every agent is built on top of the open-source [Hermes agent](https://hermes-agent.nousresearch.com/docs), so it inherits
 powerful built-in capabilities, while Hermeum gives you a simple way to shape,
