@@ -96,9 +96,11 @@ config:
 
 # ── Sensitive env (HERMEUM_* + BETTER_AUTH_* → Secret) ─────────────────────
 secrets:
-  # REQUIRED when no existingSecret is set. Connection URL for the hermeum
-  # database (HERMEUM_DATABASE_URL). For sqlite use "file:/var/lib/hermeum/db.sqlite".
-  databaseUrl: ""
+  # Connection URL for the hermeum database (HERMEUM_DATABASE_URL).
+  # Defaults to the bundled sqlite path; override (together with
+  # config.databaseDialect=postgres) for a postgres backend. Ignored when
+  # existingSecret is set.
+  databaseUrl: "file:/var/lib/hermeum/db.sqlite"
   # REQUIRED — session signing secret for Better Auth (BETTER_AUTH_SECRET).
   # Generate with: openssl rand -base64 32
   betterAuthSecret: ""

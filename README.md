@@ -32,13 +32,13 @@ agent you can chat with, deploy, and iterate on.
 
 **Prerequisites:** a Kubernetes cluster and Helm 3.x.
 
-Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. The only
-hard-required value is `secrets.databaseUrl` (`HERMEUM_DATABASE_URL`).
+Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. It installs
+with sensible defaults; for production you'll want to set
+`secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
 
 ```bash
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --namespace hermeum --create-namespace \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
   --set secrets.betterAuthSecret=$(openssl rand -base64 32) \
   --set secrets.smtpUrl=smtps://user:pass@mail.example.com:465 \
   --set secrets.openaiApiKey=sk-...
