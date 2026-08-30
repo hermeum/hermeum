@@ -19,3 +19,6 @@ build
 config.yaml
 .worktrees/
 .wtp.yml
+
+# Helm chart dependency artifacts (regenerated via helm dependency build)
+charts/hermeum/charts/
