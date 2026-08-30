@@ -36,10 +36,10 @@ helm dependency build charts/hermeum
 ## Install
 
 ```bash
-# Required: HERMEUM_DATABASE_URL (the only hard-required env var).
+# HERMEUM_DATABASE_URL defaults to file:/var/lib/hermeum/db.sqlite (bundled
+# sqlite + PVC); override it with secrets.databaseUrl for other setups.
 helm install hermeum charts/hermeum \
-  --namespace hermeum --create-namespace \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite
+  --namespace hermeum --create-namespace
 ```
 
 With an external Postgres:
@@ -56,7 +56,6 @@ With an agentConfig override that drives the mutating webhook:
 ```bash
 helm install hermeum charts/hermeum \
   --namespace hermeum --create-namespace \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
   --values values.agentconfig.yaml
 ```
 
@@ -84,9 +83,10 @@ agentConfig:
 
 ## Required values
 
-| Value                          | Source                              | Notes                                            |
-|--------------------------------|-------------------------------------|--------------------------------------------------|
-| `secrets.databaseUrl`          | `HERMEUM_DATABASE_URL`              | Required unless `secrets.existingSecret` is set. |
+None — every value has a working default. `secrets.databaseUrl` defaults to
+`file:/var/lib/hermeum/db.sqlite` (the bundled sqlite path); set
+`secrets.betterAuthSecret` for auth to actually issue sessions, e.g. via
+`--set secrets.betterAuthSecret=$(openssl rand -base64 32)`.
 
 All other env vars have defaults (see `apps/app/src/server/libs/config.ts`
 for the authoritative list + semantics, and `values.yaml` for the chart-side
@@ -131,8 +131,8 @@ the kube-apiserver.
 ## Database
 
 - **sqlite** (default): a PVC is mounted at `persistence.mountPath`
-  (`/var/lib/hermeum`); point `secrets.databaseUrl` at `file:<mountPath>/db.sqlite`.
-  `replicaCount` must stay 1 (ReadWriteOnce PVC).
+  (`/var/lib/hermeum`); `secrets.databaseUrl` defaults to
+  `file:<mountPath>/db.sqlite`. `replicaCount` must stay 1 (ReadWriteOnce PVC).
 - **postgres**: set `config.databaseDialect=postgres` and `secrets.databaseUrl`
   to the Postgres connection URL. The PVC is skipped and `replicaCount` can
   scale up.
@@ -168,7 +168,7 @@ helm show values charts/hermeum
 | `image.repository`                   | `ghcr.io/hermeum/hermeum`       | Hermeum image. No published image yet — set this. |
 | `operator.enabled`                   | `true`                           | Install `hermes-agent-operator` as a dependency. |
 | `config.databaseDialect`             | `sqlite`                         | `sqlite` or `postgres`.                       |
-| `secrets.databaseUrl`                | `""`                             | **Required.** `HERMEUM_DATABASE_URL`.         |
+| `secrets.databaseUrl`                | `"file:/var/lib/hermeum/db.sqlite"` | `HERMEUM_DATABASE_URL`. Override for postgres. |
 | `secrets.existingSecret`             | `""`                             | Use an existing Secret instead of templating one. |
 | `agentConfig`                        | `{}`                             | Full `config.yaml` content (mounted as a ConfigMap). |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |

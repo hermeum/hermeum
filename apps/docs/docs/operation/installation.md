@@ -21,7 +21,9 @@ the architecture, see [Overview](../overview).
 
 ## Helm install
 
-The only hard-required env var is `HERMEUM_DATABASE_URL`; see
+`HERMEUM_DATABASE_URL` is required by the app; the chart supplies it via
+`secrets.databaseUrl`, which defaults to the bundled sqlite path
+(`file:/var/lib/hermeum/db.sqlite`). See
 [Configuration reference](../configuration-reference) for the full list. For
 production you'll also want:
 
@@ -40,12 +42,13 @@ for the full mapping.
 
 ### SQLite (default)
 
-Recommended for a first install or a single-replica deployment.
+Recommended for a first install or a single-replica deployment. No database
+configuration is needed — the chart defaults `secrets.databaseUrl` to
+`file:/var/lib/hermeum/db.sqlite`.
 
 ```bash
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --namespace hermeum --create-namespace \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
   --set secrets.betterAuthSecret=$(openssl rand -base64 32) \
   --set secrets.smtpUrl=smtps://user:pass@mail.example.com:465 \
   --set secrets.openaiApiKey=sk-...
@@ -71,7 +74,9 @@ helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
 ```
 
 The PVC is automatically disabled when `config.databaseDialect=postgres`, and
-`replicaCount` can scale up. Use `secrets.existingSecret` to reference a Secret
+`replicaCount` can scale up. Note that `secrets.databaseUrl` must be
+overridden here — the default points at the bundled sqlite path. Use
+`secrets.existingSecret` to reference a Secret
 you manage yourself (e.g. via External Secrets) instead of templating one. See
 [Database](../database) for more.
 
@@ -108,7 +113,6 @@ agentConfig:
 ```bash
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --namespace hermeum --create-namespace \
-  --set secrets.databaseUrl=file:/var/lib/hermeum/db.sqlite \
   --set secrets.betterAuthSecret=$(openssl rand -base64 32) \
   --set secrets.smtpUrl=smtps://user:pass@mail.example.com:465 \
   --set secrets.openaiApiKey=sk-... \
