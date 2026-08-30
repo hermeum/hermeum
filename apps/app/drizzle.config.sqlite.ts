@@ -4,7 +4,7 @@ export default defineConfig({
   dialect: "sqlite",
   schema: ["./src/server/routers/better-auth/schema.sqlite.ts"],
   dbCredentials: {
-    url: process.env.HERMEUM_DATABASE_URL!.replace(/^file:(\/\/)?/, ""),
+    url: process.env.HERMEUM_DATABASE_URL!,
   },
   out: "./src/server/migrations/sqlite",
 });
