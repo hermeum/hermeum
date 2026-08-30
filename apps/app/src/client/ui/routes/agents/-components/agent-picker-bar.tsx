@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Check, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Check, LoaderCircle, Plus } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Input } from "@hermeum/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@hermeum/components/ui/popover";
-import { ScrollArea } from "@hermeum/components/ui/scroll-area";
 import { useTRPC } from "@/router";
 import type { AgentInput } from "@/entities";
 
 const MAX_SKILLS = 20;
+
+// Debounce window for the skills search input, so typing a keyword doesn't
+// fire a request per keystroke.
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Popover listing the configured agent types (key + description).
 // Single-select: picking a type replaces the current one; picking the
@@ -44,11 +47,12 @@ function AgentTypePicker({
         >
           {selected ? selected.key : <span className="text-muted-foreground">None</span>}
         </PopoverTrigger>
-        <PopoverContent align="start" className="flex flex-col gap-0.5 p-1">
+        <PopoverContent align="start" className="w-fit min-w-48 p-1">
           {agentTypes.length === 0 ? (
             <p className="px-2 py-1.5 text-xs opacity-80">No agent types configured.</p>
           ) : (
-            agentTypes.map((t) => (
+            <div className={`flex flex-col gap-0.5 ${LIST_MAX_H}`}>
+            {agentTypes.map((t) => (
               <button
                 key={t.key}
                 type="button"
@@ -65,7 +69,8 @@ function AgentTypePicker({
                   )}
                 </span>
               </button>
-            ))
+            ))}
+            </div>
           )}
         </PopoverContent>
       </Popover>
@@ -73,8 +78,10 @@ function AgentTypePicker({
   );
 }
 
-// Searchable multi-select popover over the curated Hermes skills index.
-// Selected skills are also rendered as dismissible badges next to the trigger.
+// Keyword-search multi-select popover over the curated Hermes skills index.
+// Searches server-side on typed keywords (debounced) rather than listing the
+// whole index at open; an empty query shows the featured list. Selections
+// made from earlier searches stay selected via checkmarks.
 function SkillsPicker({
   value,
   onChange,
@@ -84,17 +91,20 @@ function SkillsPicker({
 }) {
   const trpc = useTRPC();
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const { data: skills = [] } = useQuery(trpc.skill.list.queryOptions());
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+
+  // Debounce the raw input into the actual search keyword.
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(input.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [input]);
+
+  const { data: skills = [], isFetching } = useQuery(
+    trpc.skill.search.queryOptions({ query }, { placeholderData: keepPreviousData })
+  );
 
   const selected = value ?? [];
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (q === "") return skills;
-    return skills.filter((s) =>
-      [s.name, s.identifier, s.description].some((field) => field.toLowerCase().includes(q))
-    );
-  }, [skills, search]);
 
   function toggle(identifier: string) {
     if (selected.includes(identifier)) {
@@ -105,12 +115,20 @@ function SkillsPicker({
     }
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setInput("");
+      setQuery("");
+    }
+  }
+
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
         Skills
       </span>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           render={
             <Button
@@ -123,21 +141,21 @@ function SkillsPicker({
           <Plus />
           {selected.length > 0 ? `Skills (${selected.length})` : "Add skill"}
         </PopoverTrigger>
-        <PopoverContent align="start" className="flex w-80 flex-col gap-1 p-1">
+        <PopoverContent align="start" className="flex w-80 flex-col p-1">
           <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search skills…"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Search skills by keyword…"
             className="h-7 border-b-foreground/30 text-xs placeholder:opacity-70"
           />
-          <ScrollArea className="max-h-64">
+          <div className="relative mt-1 max-h-64 overflow-y-auto">
             <div className="flex flex-col gap-0.5">
-              {filtered.length === 0 ? (
+              {!isFetching && skills.length === 0 ? (
                 <p className="px-2 py-1.5 text-xs opacity-80">
-                  {skills.length === 0 ? "Skill index unavailable." : "No matching skills."}
+                  {query === "" ? "Skill index unavailable." : "No matching skills."}
                 </p>
               ) : (
-                filtered.map((s) => (
+                skills.map((s) => (
                   <button
                     key={s.identifier}
                     type="button"
@@ -160,7 +178,12 @@ function SkillsPicker({
                 ))
               )}
             </div>
-          </ScrollArea>
+            {isFetching && (
+              <div className="flex justify-center py-2">
+                <LoaderCircle className="size-3 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
     </div>
