@@ -103,8 +103,14 @@ function SkillsPicker({
     return () => clearTimeout(t);
   }, [input]);
 
+  // Search only while the picker is open — no requests at initialization, and
+  // reopening refetches against the live index. keepPreviousData keeps the
+  // last result set rendered (checkmarks stable) while a new query streams in.
   const { data: skills = [], isFetching } = useQuery(
-    trpc.skill.search.queryOptions({ query }, { placeholderData: keepPreviousData })
+    trpc.skill.search.queryOptions(
+      { query },
+      { enabled: open, placeholderData: keepPreviousData }
+    )
   );
 
   const selected = value ?? [];
