@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import type { UIDataTypes, UIMessage } from "ai";
-import { ArrowUp, Check, LoaderCircle } from "lucide-react";
+import { ArrowUp, Check, LoaderCircle, Square } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
@@ -133,7 +133,7 @@ export function AgentConfigChat({
   // loop. Reset when the user sends a new message.
   const configUpdateFailuresRef = useRef(0);
 
-  const { messages, sendMessage, status, error, addToolOutput } =
+  const { messages, sendMessage, stop, status, error, addToolOutput } =
     useChat<AgentConfigChatMessage>({
       transport: new DefaultChatTransport({ api: "/chat/agent-config" }),
       sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -360,14 +360,25 @@ export function AgentConfigChat({
           className="min-h-16 border-transparent px-0 py-0 focus-visible:border-transparent"
         />
         <div className="flex justify-end">
-          <Button
-            size="icon-sm"
-            aria-label="Send message"
-            onClick={handleSend}
-            disabled={input.trim().length === 0 || isBusy}
-          >
-            {isBusy ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
-          </Button>
+          {isBusy ? (
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label="Stop generating"
+              onClick={() => void stop()}
+            >
+              <Square className="size-3 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              size="icon-sm"
+              aria-label="Send message"
+              onClick={handleSend}
+              disabled={input.trim().length === 0}
+            >
+              <ArrowUp />
+            </Button>
+          )}
         </div>
       </div>
     </div>

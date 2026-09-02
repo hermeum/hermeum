@@ -64,11 +64,19 @@ aiSdkRouter.post("/agent-config", async (req, res) => {
   }
 
   const { instructions, prompt, tools } = await usecase.getAgentConfigContext(parsed.data.config);
+  // Abort generation when the client goes away (user cancelled the chat or
+  // closed the page), so the model call and in-flight tool executions stop
+  // instead of running to completion against a closed response.
+  const abortController = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) abortController.abort();
+  });
   const result = streamText({
     model: model(),
     system: `${instructions}\n\n${prompt}`,
     messages: await convertToModelMessages(parsed.data.messages),
     tools: toAiToolSet(tools),
+    abortSignal: abortController.signal,
     // AgentInputObjectSchema uses looseObject/record/optionals, which strict
     // JSON schema mode rejects; Responses API models default it to true.
     providerOptions: {
