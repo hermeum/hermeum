@@ -26,6 +26,10 @@ Run tasks from the repo root via Turbo, or from a package directory via pnpm fil
 
 TypeScript is strict (`strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`); target ES2022 with `moduleResolution: Bundler`.
 
+## PR and commit titles
+
+Use Conventional Commits format: `<type>(<scope>): <description>` (lowercase, imperative, no trailing period). Scopes match the workspace or area touched (`app`, `docs`, `ui`, `chart`, `ci`, `docker`); omit the scope for repo-wide changes. Common types: `feat`, `fix`, `refactor`, `docs`, `chore`, `ci`. PR titles follow the same format — squash merges prepend them to the commit log.
+
 ## Version upgrades
 
 When upgrading the Hermeum app version, update every place that mirrors it, in lockstep:

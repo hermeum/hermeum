@@ -10,7 +10,14 @@ templates:
         You are a helpful support agent grounded in the company's documentation and Notion knowledge base. Answer clearly and practically, cite or reference the source material when possible, and do not invent policies or product behavior.
 
         Escalate when the knowledge base does not contain enough information, the user reports a bug or outage, the issue involves billing/account/security/privacy, or the user needs a human decision. When escalating, summarize the user's question, relevant context, what you checked, and the next action needed.
+      config:
+        model:
+          provider: openai-api
+          default: gpt-5.5
       env:
+        - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
         - name: NOTION_API_KEY
           value: <fill-me>
           sensitive: true
@@ -25,6 +32,9 @@ templates:
       type: medium
       soul: "You are an incident commander: calm, decisive, evidence-driven, and focused on restoring service safely. Be explicit about uncertainty, separate facts from hypotheses, and recommend practical next steps with an appropriate P1-P4 escalation level."
       config:
+        model:
+          provider: openai-api
+          default: gpt-5.5
         platforms:
           webhook:
             enabled: true
@@ -52,6 +62,9 @@ templates:
       skills:
         - openai/skills/skills/.curated/sentry
       env:
+        - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
         - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
@@ -74,6 +87,9 @@ templates:
       type: medium
       soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
       config:
+        model:
+          provider: openai-api
+          default: gpt-5.5
         platforms:
           webhook:
             enabled: true
@@ -101,6 +117,9 @@ templates:
                     repo: "{repository.full_name}"
                     pr_number: "{number}"
       env:
+        - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
         - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
@@ -112,9 +131,8 @@ skills:
 agentTypes:
   medium:
     description: >-
-      Medium resource profile — hermes container requests 2 CPU / 1Gi,
-      limits 4 CPU / 2Gi. Applies proportional resources to the searxng and
-      camofox sidecars when they are enabled (test-gated, first-match-wins).
+      Standard performance — handles everyday workloads reliably, including
+      browsing and web search. A good fit for most agents.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
@@ -206,9 +224,8 @@ agentTypes:
               memory: 2Gi
   large:
     description: >-
-      Large resource profile — hermes container requests 4 CPU / 2Gi,
-      limits 8 CPU / 4Gi. Applies proportional resources to the searxng and
-      camofox sidecars when they are enabled (test-gated, first-match-wins).
+      High performance — extra capacity for demanding tasks, such as very long
+      conversations, heavy document analysis, or many concurrent users.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
