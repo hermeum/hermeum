@@ -402,20 +402,24 @@ function AgentDetailPage() {
 
             {/* packages */}
             <div className="py-8 flex flex-col gap-3">
-              <p className="text-sm font-bold">Python Packages</p>
-              {agent.packages?.pip && agent.packages.pip.length > 0 ? (
-                <ButtonList items={agent.packages.pip} max={10} />
+              <p className="text-sm font-bold">Packages</p>
+              {((agent.packages?.pip?.length ?? 0) > 0 || (agent.packages?.npm?.length ?? 0) > 0) ? (
+                <div className="flex flex-col gap-3">
+                  {agent.packages?.pip && agent.packages.pip.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Python</p>
+                      <ButtonList items={agent.packages.pip} max={10} />
+                    </div>
+                  )}
+                  {agent.packages?.npm && agent.packages.npm.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">NPM</p>
+                      <ButtonList items={agent.packages.npm} max={10} />
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No Python packages configured.</p>
-              )}
-            </div>
-
-            <div className="py-8 flex flex-col gap-3">
-              <p className="text-sm font-bold">NPM Packages</p>
-              {agent.packages?.npm && agent.packages.npm.length > 0 ? (
-                <ButtonList items={agent.packages.npm} max={10} />
-              ) : (
-                <p className="text-sm text-muted-foreground">No NPM packages configured.</p>
+                <p className="text-sm text-muted-foreground">No packages configured.</p>
               )}
             </div>
 
