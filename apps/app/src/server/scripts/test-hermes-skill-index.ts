@@ -9,5 +9,7 @@ const results = await index.searchSkills(query, limit);
 
 console.log(`query=${JSON.stringify(query)} limit=${limit} count=${results.length}`);
 for (const r of results) {
-  console.log(`\n- ${r.name}  [${r.identifier}]\n  ${r.description}`);
+  console.log(
+    `\n- ${r.name}  [${r.identifier}]\n  ${r.description}\n  source: ${r.sourceUrl ?? "(none)"}`
+  );
 }

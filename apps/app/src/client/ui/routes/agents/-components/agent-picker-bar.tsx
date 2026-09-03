@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Check, LoaderCircle, Plus } from "lucide-react";
+import { Check, ExternalLink, LoaderCircle, Plus } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Input } from "@hermeum/components/ui/input";
@@ -155,7 +155,7 @@ function SkillsPicker({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Search skills by keyword…"
-            className="h-7 border-b-foreground/30 text-xs placeholder:opacity-70"
+            className="h-7 px-2 border-b-foreground/30 text-xs placeholder:opacity-70"
           />
           <div className="relative mt-1 max-h-64 overflow-y-auto">
             <div className="flex flex-col gap-0.5">
@@ -168,7 +168,7 @@ function SkillsPicker({
                   <button
                     key={s.identifier}
                     type="button"
-                    className="flex w-full items-start gap-2 rounded-none px-2 py-1.5 text-left text-xs hover:bg-background/20"
+                    className="flex w-full items-start gap-2 rounded-none py-1.5 text-left text-xs hover:bg-background/20"
                     title={s.identifier}
                     onClick={() => toggle(s.identifier)}
                   >
@@ -178,7 +178,25 @@ function SkillsPicker({
                       }`}
                     />
                     <span className="min-w-0">
-                      <span className="font-mono">{s.name}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono">{s.name}</span>
+                        {s.sourceUrl && (
+                          <a
+                            href={s.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="View source"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              window.open(s.sourceUrl, "_blank", "noopener,noreferrer");
+                            }}
+                          >
+                            <ExternalLink className="size-3" />
+                          </a>
+                        )}
+                      </span>
                       {s.description && (
                         <span className="block opacity-80">{s.description}</span>
                       )}

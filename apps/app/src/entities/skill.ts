@@ -185,6 +185,10 @@ export const SkillSummarySchema = z.object({
   name: z.string(),
   identifier: z.string(),
   description: z.string(),
+  // Where the skill's source lives (skills.sh detail page, GitHub tree, …).
+  // Optional — entries without a locatable source simply omit it and the UI
+  // hides the link.
+  sourceUrl: z.string().optional(),
 });
 
 export type SkillSummary = z.infer<typeof SkillSummarySchema>;
