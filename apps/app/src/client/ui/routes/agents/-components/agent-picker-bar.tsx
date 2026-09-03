@@ -155,7 +155,7 @@ function SkillsPicker({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Search skills by keyword…"
-            className="h-7 border-b-foreground/30 text-xs placeholder:opacity-70"
+            className="h-7 px-2 border-b-foreground/30 text-xs placeholder:opacity-70"
           />
           <div className="relative mt-1 max-h-64 overflow-y-auto">
             <div className="flex flex-col gap-0.5">
@@ -168,7 +168,7 @@ function SkillsPicker({
                   <button
                     key={s.identifier}
                     type="button"
-                    className="flex w-full items-start gap-2 rounded-none px-2 py-1.5 text-left text-xs hover:bg-background/20"
+                    className="flex w-full items-start gap-2 rounded-none py-1.5 text-left text-xs hover:bg-background/20"
                     title={s.identifier}
                     onClick={() => toggle(s.identifier)}
                   >
