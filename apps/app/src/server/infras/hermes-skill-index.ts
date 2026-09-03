@@ -5,11 +5,11 @@ import { SkillIndexAdaptor } from "../usecases/adaptors/skill-index";
 const INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json";
 const CACHE_TTL_MS = 6 * 3600 * 1000;
 // Community skills are unvetted (some sources have malformed `name` fields), so
-// exposing them in the chat agent's searchSkills tool risks surfacing low-quality
-// or abusive prompts. Limiting to `builtin` + `trusted` keeps the agent's skill
-// catalog curated.
-// https://github.com/hermeum/hermeum/pull/80
-const ALLOWED_TRUST_LEVELS = new Set(["builtin", "trusted"]);
+// entries are sanitized before entering the cache, and lower-trust skills always
+// rank behind higher-trust ones in search results (builtin → trusted →
+// community). https://github.com/hermeum/hermeum/pull/80
+const TRUST_RANK: Record<string, number> = { builtin: 0, trusted: 1, community: 2 };
+const ALLOWED_TRUST_LEVELS = new Set(Object.keys(TRUST_RANK));
 
 export interface SkillIndexEntry {
   name: string;
@@ -55,9 +55,35 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
 
     this.#cache = {
       fetchedAt: now,
-      skills: skills.filter((s) => ALLOWED_TRUST_LEVELS.has(s.trust_level)),
+      skills: HermesSkillIndex.#sanitize(skills),
     };
     return this.#cache.skills;
+  }
+
+  // Community entries are unvetted and some upstream sources have malformed
+  // fields; drop anything that doesn't carry the strings the search relies on.
+  // Results are grouped builtin → trusted → community, preserving index order
+  // within each group.
+  static #sanitize(skills: SkillIndexEntry[]): SkillIndexEntry[] {
+    const ranked: SkillIndexEntry[][] = [[], [], []];
+    for (const s of skills) {
+      if (!ALLOWED_TRUST_LEVELS.has(s.trust_level)) continue;
+      if (
+        typeof s.name !== "string" ||
+        typeof s.identifier !== "string" ||
+        typeof s.description !== "string" ||
+        s.name === "" ||
+        s.identifier === "" ||
+        s.description === "" ||
+        !Array.isArray(s.tags)
+      ) {
+        continue;
+      }
+      const rank = TRUST_RANK[s.trust_level] ?? -1;
+      if (rank === -1) continue;
+      ranked[rank]!.push(s);
+    }
+    return ranked.flat();
   }
 
   async searchSkills(query: string, limit = 25): Promise<SkillSummary[]> {
@@ -89,9 +115,9 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
 
       if (haystack.includes(queryLower)) {
         results.push(toResult(s));
-      }
-      if (results.length >= limit) {
-        break;
+        if (results.length >= limit) {
+          break;
+        }
       }
     }
     return results;
