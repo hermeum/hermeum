@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Check, LoaderCircle, Plus } from "lucide-react";
+import { Check, ExternalLink, LoaderCircle, Plus } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Input } from "@hermeum/components/ui/input";
@@ -178,7 +178,25 @@ function SkillsPicker({
                       }`}
                     />
                     <span className="min-w-0">
-                      <span className="font-mono">{s.name}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono">{s.name}</span>
+                        {s.sourceUrl && (
+                          <a
+                            href={s.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="View source"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              window.open(s.sourceUrl, "_blank", "noopener,noreferrer");
+                            }}
+                          >
+                            <ExternalLink className="size-3" />
+                          </a>
+                        )}
+                      </span>
                       {s.description && (
                         <span className="block opacity-80">{s.description}</span>
                       )}

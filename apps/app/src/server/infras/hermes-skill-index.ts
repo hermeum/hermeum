@@ -24,6 +24,24 @@ export interface SkillIndexEntry {
   resolved_github_id?: string;
 }
 
+// Human-browsable source URL for a skill entry. Prefer the index's own detail
+// page (skills.sh entries carry `extra.detail_url`); fall back to the GitHub
+// tree for `repo`-backed entries (`tree/HEAD` resolves the default branch).
+// Returns undefined when no source can be located.
+function toSourceUrl(entry: SkillIndexEntry): string | undefined {
+  const detailUrl = entry.extra?.detail_url;
+  if (typeof detailUrl === "string" && detailUrl.length > 0) {
+    return detailUrl;
+  }
+  if (entry.repo !== undefined && entry.repo.length > 0) {
+    const base = `https://github.com/${entry.repo}`;
+    return entry.path !== undefined && entry.path.length > 0
+      ? `${base}/tree/HEAD/${entry.path}`
+      : base;
+  }
+  return undefined;
+}
+
 export class HermesSkillIndex implements SkillIndexAdaptor {
   #cache: { fetchedAt: number; skills: SkillIndexEntry[] } | null = null;
 
@@ -70,6 +88,7 @@ export class HermesSkillIndex implements SkillIndexAdaptor {
       name: entry.name,
       identifier: entry.identifier,
       description: entry.description,
+      sourceUrl: toSourceUrl(entry),
     });
 
     const queryLower = query.trim().toLowerCase();

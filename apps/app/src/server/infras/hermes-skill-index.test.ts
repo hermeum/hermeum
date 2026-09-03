@@ -48,9 +48,24 @@ describe("HermesSkillIndex", () => {
       const results = await adaptor.searchSkills("", 3);
 
       expect(results).toEqual([
-        { name: "kubernetes", identifier: "official/k8s/kubernetes", description: "Manage K8s clusters." },
-        { name: "kube-deploy", identifier: "github/openai/kube-deploy", description: "Deploy to kubernetes." },
-        { name: "git-pr-review", identifier: "github/openai/git-pr-review", description: "Review pull requests." },
+        {
+          name: "kubernetes",
+          identifier: "official/k8s/kubernetes",
+          description: "Manage K8s clusters.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
+        {
+          name: "kube-deploy",
+          identifier: "github/openai/kube-deploy",
+          description: "Deploy to kubernetes.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
+        {
+          name: "git-pr-review",
+          identifier: "github/openai/git-pr-review",
+          description: "Review pull requests.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
       ]);
     });
 
@@ -95,13 +110,74 @@ describe("HermesSkillIndex", () => {
       expect(results).toHaveLength(2);
     });
 
-    it("only returns name, identifier, and description", async () => {
+    it("only returns name, identifier, description, and sourceUrl", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
       const adaptor = new HermesSkillIndex();
 
       const [first] = await adaptor.searchSkills("kubernetes", 1);
 
-      expect(Object.keys(first ?? {}).sort()).toEqual(["description", "identifier", "name"]);
+      expect(Object.keys(first ?? {}).sort()).toEqual([
+        "description",
+        "identifier",
+        "name",
+        "sourceUrl",
+      ]);
+    });
+  });
+
+  describe("sourceUrl derivation", () => {
+    it("prefers extra.detail_url when present", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([
+        makeEntry({
+          source: "skills.sh",
+          identifier: "skills-sh/anthropics/skills/algorithmic-art",
+          repo: "anthropics/skills",
+          path: "algorithmic-art",
+          extra: {
+            detail_url: "https://skills.sh/anthropics/skills/algorithmic-art",
+            repo_url: "https://github.com/anthropics/skills",
+          },
+        }),
+      ]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("algorithmic", 5);
+
+      expect(result?.sourceUrl).toBe("https://skills.sh/anthropics/skills/algorithmic-art");
+    });
+
+    it("builds a GitHub tree URL from repo + path", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([makeEntry()]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBe(
+        "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review"
+      );
+    });
+
+    it("falls back to the bare repo URL when path is empty", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([
+        makeEntry({ source: "claude-marketplace", identifier: "anthropics/skills/", path: "" }),
+      ]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBe("https://github.com/openai/skills");
+    });
+
+    it("omits sourceUrl when neither detail_url nor repo is available", async () => {
+      const noSource = makeEntry();
+      delete noSource.repo;
+      delete noSource.path;
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([noSource]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBeUndefined();
     });
   });
 
