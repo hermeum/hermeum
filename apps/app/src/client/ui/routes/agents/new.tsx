@@ -144,8 +144,8 @@ function NewAgentPage() {
       const { template } = view;
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1">
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -154,10 +154,6 @@ function NewAgentPage() {
               >
                 <ArrowLeft />
               </Button>
-              <p className="min-w-0 truncate text-sm font-medium">
-                {template.name}
-                <span className="text-muted-foreground"> · Template</span>
-              </p>
             </div>
             <Button size="sm" onClick={() => handleUseTemplate(template)}>
               Use template
@@ -168,6 +164,12 @@ function NewAgentPage() {
               value={stringify(template.agentInput, YAML_OPTIONS).trim()}
               readOnly
               height="100%"
+              title={
+                <span className="min-w-0 truncate">
+                  {template.name}
+                  <span className="text-muted-foreground"> · Template</span>
+                </span>
+              }
             />
           </div>
         </div>
@@ -176,7 +178,6 @@ function NewAgentPage() {
 
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <p className="shrink-0 text-sm font-medium">Agent config</p>
         <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
         <div className="min-h-0 flex-1">
           <CodeEditor
@@ -184,6 +185,7 @@ function NewAgentPage() {
             onChange={setEditorValue}
             invalid={!!validationError}
             height="100%"
+            title="Agent config"
           />
         </div>
         {validationError && (
