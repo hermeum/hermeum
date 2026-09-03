@@ -9,7 +9,7 @@ import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
 import { config } from "./libs/config";
-import { trpcMiddleware } from "@/server/routers/trpc/index.js";
+import { trpcMiddleware } from "@/server/routers/trpc/resources/index.js";
 import { agentSessionRouter } from "@/server/routers/trpc/telemetry.js";
 import { webhookRouter } from "./routers/webhook";
 import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
