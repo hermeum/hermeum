@@ -30,6 +30,18 @@ const entries: SkillIndexEntry[] = [
   makeEntry({ name: "web-search", description: "Search the web.", identifier: "skills.sh/web-search", tags: ["web"], extra: { provider: "openai" } }),
 ];
 
+const mixedTrustEntries: SkillIndexEntry[] = [
+  makeEntry({ name: "community-deploy", description: "Deploy things.", identifier: "skills-sh/foo/bar/community-deploy", trust_level: "community", tags: ["deploy"] }),
+  makeEntry({ name: "trusted-deploy", description: "Deploy trusted.", identifier: "anthropics/trusted-deploy", trust_level: "trusted", tags: ["deploy"] }),
+  makeEntry({ name: "builtin-deploy", description: "Deploy builtin.", identifier: "official/builtin-deploy", trust_level: "builtin", tags: ["deploy"] }),
+];
+
+const mixedEntries: SkillIndexEntry[] = [
+  { ...makeEntry({ name: "broken-name" }), name: null as unknown as string },
+  makeEntry({ name: "unknown-trust", trust_level: "mystery" }),
+  makeEntry({ name: "valid-community", identifier: "skills-sh/ok/valid-community", trust_level: "community", tags: [] }),
+];
+
 describe("HermesSkillIndex", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
@@ -178,6 +190,52 @@ describe("HermesSkillIndex", () => {
       const [result] = await adaptor.searchSkills("review", 5);
 
       expect(result?.sourceUrl).toBeUndefined();
+    });
+
+    it("includes community skills", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 10);
+
+      expect(results.map((r) => r.identifier)).toContain("skills-sh/foo/bar/community-deploy");
+    });
+
+    it("ranks builtin and trusted skills ahead of community ones", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 10);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "official/builtin-deploy",
+        "anthropics/trusted-deploy",
+        "skills-sh/foo/bar/community-deploy",
+      ]);
+    });
+
+    it("drops entries with unknown trust levels, keeping the valid ones", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("", 100);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "openai/skills/skills/git-pr-review",
+        "skills-sh/ok/valid-community",
+      ]);
+    });
+
+    it("stops matching at the limit instead of scanning past it", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 2);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "official/builtin-deploy",
+        "anthropics/trusted-deploy",
+      ]);
     });
   });
 
