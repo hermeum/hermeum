@@ -125,7 +125,6 @@ function EditAgentPage() {
 
   const configPane: ReactNode = (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <p className="shrink-0 text-sm font-medium">Agent config</p>
       <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
       <div className="min-h-0 flex-1">
         <CodeEditor
@@ -133,6 +132,7 @@ function EditAgentPage() {
           onChange={setEditorValue}
           invalid={!!validationError}
           height="100%"
+          title="Agent config"
         />
       </div>
       {validationError && (
