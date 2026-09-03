@@ -8,7 +8,7 @@ import { Router } from "express";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Mock heavy routers/auth so createServer stays light and fast in tests.
-vi.mock("@/server/routers/trpc/index.js", () => ({
+vi.mock("@/server/routers/trpc/resources/index.js", () => ({
   trpcMiddleware: Router(),
 }));
 vi.mock("./routers/webhook", () => ({
