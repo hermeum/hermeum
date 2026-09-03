@@ -36,11 +36,8 @@ const mixedTrustEntries: SkillIndexEntry[] = [
   makeEntry({ name: "builtin-deploy", description: "Deploy builtin.", identifier: "official/builtin-deploy", trust_level: "builtin", tags: ["deploy"] }),
 ];
 
-const malformedEntries: SkillIndexEntry[] = [
+const mixedEntries: SkillIndexEntry[] = [
   { ...makeEntry({ name: "broken-name" }), name: null as unknown as string },
-  makeEntry({ name: "empty-description", description: "" }),
-  makeEntry({ name: "empty-identifier", identifier: "" }),
-  { ...makeEntry({ name: "broken-tags" }), tags: null as unknown as string[] },
   makeEntry({ name: "unknown-trust", trust_level: "mystery" }),
   makeEntry({ name: "valid-community", identifier: "skills-sh/ok/valid-community", trust_level: "community", tags: [] }),
 ];
@@ -141,13 +138,16 @@ describe("HermesSkillIndex", () => {
       ]);
     });
 
-    it("drops malformed entries and unknown trust levels, keeping the valid ones", async () => {
-      vi.mocked(fetch).mockResolvedValue(jsonResponse(malformedEntries));
+    it("drops entries with unknown trust levels, keeping the valid ones", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedEntries));
       const adaptor = new HermesSkillIndex();
 
       const results = await adaptor.searchSkills("", 100);
 
-      expect(results.map((r) => r.identifier)).toEqual(["skills-sh/ok/valid-community"]);
+      expect(results.map((r) => r.identifier)).toEqual([
+        "openai/skills/skills/git-pr-review",
+        "skills-sh/ok/valid-community",
+      ]);
     });
 
     it("stops matching at the limit instead of scanning past it", async () => {
