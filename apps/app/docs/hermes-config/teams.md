@@ -28,6 +28,13 @@ Credentials must not be written into `config.yaml` — `config.yaml` is for
 non-secret settings only. An explicit `enabled: false` disables the bot
 while keeping credentials in env.
 
+:::note Upstream difference
+Upstream docs also show `client_id` / `client_secret` /
+`tenant_id` inside `platforms.teams.extra` in `config.yaml`. Hermeum
+forbids that — credentials stay env-only (with `sensitive: true`) to keep
+them out of plain-text config.
+:::
+
 ### Environment variables
 
 | Variable | Default | Description |

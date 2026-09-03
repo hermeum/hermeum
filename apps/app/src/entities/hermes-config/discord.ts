@@ -4,6 +4,11 @@ import { z } from "zod";
 // Full field semantics: docs/hermes-config/discord.md
 // Only the essential fields are validated here; the rest pass through via
 // looseObject so users can configure whatever the Hermes agent supports.
+//
+// Skipped on purpose: discord.missed_message_backfill and the
+// websocket_liveness_interval_seconds / websocket_liveness_failure_threshold /
+// websocket_heartbeat_ack_max_age_seconds / websocket_max_latency_seconds
+// liveness knobs are not typed here — they pass through via looseObject.
 export const DiscordSchema = z
   .looseObject({
     require_mention: z

@@ -6,6 +6,14 @@ description: LLM model configuration (`config.model`) — providers, model ids, 
 
 # LLM model configuration (`config.model`)
 
+> **TODO (pending PR):** the current upstream adds the providers `router`,
+> `fireworks`, `ai-gateway`, `actual`, `alibaba-token-plan` (+ `-cn`),
+> `commandcode`, `nebius-token-factory`, `opencode-free`,
+> `tencent-tokenplan`, and accepts `model: { model: id }` as an alias for
+> `model: { default: id }`. The provider list below is still the
+> v2026.7.7.2 set — it will be updated in a separate PR, in lockstep with
+> `src/entities/hermes-config/model.ts`. Do not edit until then.
+
 Configures which LLM provider and model the Hermes agent uses. Only set this
 when the request names a specific provider or model; otherwise omit it so the
 platform default applies.

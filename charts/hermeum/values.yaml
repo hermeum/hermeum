@@ -52,7 +52,7 @@ config:
   # Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY).
   hermesImageRepository: nousresearch/hermes-agent
   # Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG).
-  hermesImageTag: v2026.7.7.2
+  hermesImageTag: v2026.8.31
   # OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL).
   openaiModel: gpt-5.5
   # Log verbosity level (HERMEUM_LOG_LEVEL): debug | info | warn | error.

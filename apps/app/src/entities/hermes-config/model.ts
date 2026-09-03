@@ -2,6 +2,10 @@ import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/integrations/providers
 // Full field semantics: docs/hermes-config/model.md
+//
+// Skipped on purpose: the provider enum and the `model:` key
+// alias for the default model id are NOT updated here yet — a separate PR
+// will update this file. Do not edit until then.
 export const ModelProviderSchema = z
   .enum([
     "nous",

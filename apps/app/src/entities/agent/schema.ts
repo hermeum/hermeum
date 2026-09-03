@@ -311,7 +311,7 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
     requireSensitiveEnv("WEBHOOK_SECRET", "webhook enabled (env var or config)");
   }
   if (isApiServerEnabled(data)) {
-    requireSensitiveEnv("API_SERVER_KEY", "env.API_SERVER_ENABLED");
+    requireSensitiveEnv("API_SERVER_KEY", "api server enabled (env var or config)");
   }
   if (isTeamsEnabled(data)) {
     requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled (env var or config)");

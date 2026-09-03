@@ -19,6 +19,7 @@ export {
   type Webhook,
 } from "./webhook";
 export { TeamsSchema, type Teams } from "./teams";
+export { ApiServerSchema, type ApiServer } from "./api-server";
 export { SlackSchema, ChannelSkillBindingSchema, type Slack, type ChannelSkillBinding } from "./slack";
 export { DiscordSchema, type Discord } from "./discord";
 export {
@@ -38,6 +39,7 @@ import { z } from "zod";
 import { ModelSchema } from "./model";
 import { WebhookSchema } from "./webhook";
 import { TeamsSchema } from "./teams";
+import { ApiServerSchema } from "./api-server";
 import { SlackSchema } from "./slack";
 import { DiscordSchema } from "./discord";
 import { WebSchema } from "./web";
@@ -60,10 +62,23 @@ export const PlatformsSchema = z
 
 export type Platforms = z.infer<typeof PlatformsSchema>;
 
+// Gateway-scoped server settings (config.gateway.*). Upstream documents the
+// API server block here — `gateway.api_server:` — rather than under
+// config.platforms.*.
+export const GatewaySchema = z
+  .looseObject({
+    api_server: ApiServerSchema,
+  })
+  .optional()
+  .describe("Gateway-scoped settings (API server, ...).");
+
+export type Gateway = z.infer<typeof GatewaySchema>;
+
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema,
     platforms: PlatformsSchema,
+    gateway: GatewaySchema,
     slack: SlackSchema,
     discord: DiscordSchema,
     web: WebSchema,

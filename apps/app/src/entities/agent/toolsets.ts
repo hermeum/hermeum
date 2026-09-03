@@ -237,11 +237,9 @@ export function deriveToolsetAvailability(id: ToolsetId, agent: Agent): ToolsetA
         : { status: "unavailable", reason: "Set DISCORD_BOT_TOKEN to enable Discord." };
     }
     case ToolsetId.ImageGen: {
-      const hasFalKey = hasEnv("FAL_KEY");
-      const useGateway = config?.image_gen?.use_gateway === true;
-      return hasFalKey || useGateway
+      return hasEnv("FAL_KEY")
         ? { status: "available" }
-        : { status: "unavailable", reason: "Set FAL_KEY or enable the managed gateway." };
+        : { status: "unavailable", reason: "Set FAL_KEY to enable image generation." };
     }
     case ToolsetId.VideoGen: {
       const hasFalKey = hasEnv("FAL_KEY");

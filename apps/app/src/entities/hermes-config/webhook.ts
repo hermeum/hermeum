@@ -2,6 +2,11 @@ import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
 // Full field semantics: docs/hermes-config/webhooks.md
+//
+// Skipped on purpose: route fields secret, filters, script, and
+// toolsets are not typed here — Hermeum does not expose them via the agent
+// configuration UI (secrets stay env-only; filters/scripts/toolsets are
+// operator-level concerns). They still pass through via looseObject.
 export const WebhookDeliverSchema = z
   .enum([
     "log",
