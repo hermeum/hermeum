@@ -40,7 +40,7 @@ The container image emitted into every `HermesAgent` CR's `spec.image`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `HERMEUM_HERMES_IMAGE_REPOSITORY` | `nousresearch/hermes-agent` | Container image repository for the Hermes agent. Omit the registry host for Docker Hub, or include it (e.g. `ghcr.io/hermeum/hermes-agent`) for other registries. |
-| `HERMEUM_HERMES_IMAGE_TAG` | `v2026.7.7.2` | Container image tag for the Hermes agent. Pin to a specific release for reproducible agent pods. |
+| `HERMEUM_HERMES_IMAGE_TAG` | `v2026.8.31` | Container image tag for the Hermes agent. Pin to a specific release for reproducible agent pods. |
 
 ### Auth
 

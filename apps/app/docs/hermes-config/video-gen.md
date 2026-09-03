@@ -11,9 +11,10 @@ from a text prompt (text-to-video) or from a prompt plus a source image
 (image-to-video). Every backend is a provider plugin; the active provider
 is picked by `video_gen.provider` in `config.yaml`.
 
-This app documents the **xAI** and **FAL** providers. DeepInfra
-and user-installed plugins are also supported and pass through unchanged;
-only xAI and FAL are covered here.
+This app documents the **xAI** and **FAL** providers. DeepInfra (bundled
+as a built-in provider) and user-installed plugins are
+also supported and pass through unchanged; only xAI and FAL are covered
+here.
 
 The toolset auto-enables when **either** `FAL_KEY` **or** `XAI_API_KEY`
 is set. Without one of them, the `video_generate` tool does not register.

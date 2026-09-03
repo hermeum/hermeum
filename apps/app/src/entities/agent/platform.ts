@@ -1,23 +1,32 @@
 import type { Agent, AgentInput } from "./schema";
 
-// API server settings are configured exclusively via env vars (see
-// docs/hermes-config/api-server.md). These helpers read those env vars off an
-// `AgentInput`.
+// API server settings can be configured via config.yaml
+// (config.gateway.api_server.enabled / port) or via env vars
+// (API_SERVER_ENABLED / API_SERVER_PORT). Environment variables take
+// precedence over the config values when both are set (upstream behavior);
+// the config block acts as a fallback when the env var is absent. The
+// bearer token (API_SERVER_KEY) is env-only — Hermeum does not surface it
+// in config.yaml.
+// See docs/hermes-config/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
 export function isApiServerEnabled(input: AgentInput): boolean {
-  return (
-    input.env?.some(
-      (v) => v.name === "API_SERVER_ENABLED" && v.value.toLowerCase() === "true"
-    ) ?? false
-  );
+  const envRaw = input.env?.find((v) => v.name === "API_SERVER_ENABLED")?.value;
+  if (envRaw !== undefined && envRaw.trim() !== "") {
+    return envRaw.toLowerCase() === "true";
+  }
+  return input.config?.gateway?.api_server?.enabled ?? false;
 }
 
 export function getApiServerPort(input: AgentInput): number {
-  const raw = input.env?.find((v) => v.name === "API_SERVER_PORT")?.value;
-  if (raw === undefined || raw.trim() === "") return API_SERVER_DEFAULT_PORT;
-  const n = Number(raw);
-  return Number.isInteger(n) && n > 0 ? n : API_SERVER_DEFAULT_PORT;
+  const envRaw = input.env?.find((v) => v.name === "API_SERVER_PORT")?.value;
+  if (envRaw !== undefined && envRaw.trim() !== "") {
+    const n = Number(envRaw);
+    return Number.isInteger(n) && n > 0 ? n : API_SERVER_DEFAULT_PORT;
+  }
+  const configPort = input.config?.gateway?.api_server?.port;
+  if (configPort !== undefined && configPort > 0) return configPort;
+  return API_SERVER_DEFAULT_PORT;
 }
 
 // Webhook settings can be configured via config.yaml
@@ -182,7 +191,10 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
   switch (id) {
     case PlatformId.ApiServer: {
       if (!isApiServerEnabled(agent)) {
-        return { status: "unavailable", reason: "Set API_SERVER_ENABLED=true to enable." };
+        return {
+          status: "unavailable",
+          reason: "Set API_SERVER_ENABLED=true (or config.gateway.api_server.enabled).",
+        };
       }
       const port = getApiServerPort(agent);
       return {

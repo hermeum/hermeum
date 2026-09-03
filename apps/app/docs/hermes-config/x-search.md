@@ -18,7 +18,7 @@ pages, keep `web_search` / `web_extract`.
 
 **Credential path:** only the `XAI_API_KEY` path is supported here.
 SuperGrok / X Premium+ OAuth (`hermes auth add xai-oauth`) is **not**
-wired up in this app yet — set `XAI_API_KEY` instead.
+wired up in this app yet — set `XAI_API_KEY` instead. 
 
 The tool auto-enables when `XAI_API_KEY` is present and the `x_search`
 toolset is on. Disable explicitly via `hermes tools` → Search →
@@ -27,8 +27,8 @@ toolset is on. Disable explicitly via `hermes tools` → Search →
 ## Fields
 
 - `model` — xAI model id used for the Responses call. Default
-  `grok-4.20-reasoning`; any Grok model with `x_search` tool access
-  works. If the configured model lacks access, the call fails with
+  `grok-4.5`; any Grok model with `x_search` tool access works. If the
+  configured model lacks access, the call fails with
   "`x_search` is not enabled for this model".
 - `timeout_seconds` — request timeout in seconds (minimum `30`,
   default `180`). `x_search` can take 60–120s for complex queries, so
@@ -36,6 +36,10 @@ toolset is on. Disable explicitly via `hermes tools` → Search →
 - `retries` — number of automatic retries on `5xx` / `ReadTimeout` /
   `ConnectionError` (default `2`). Each retry backs off at `1.5 ×
   attempt` seconds, capped at `5s`.
+
+Upstream also supports `reasoning_effort` (`low`, `medium`, `high`,
+`xhigh`), which Hermeum deliberately does not surface — it passes
+through if written by hand.
 
 ## Environment variables
 
@@ -48,7 +52,7 @@ toolset is on. Disable explicitly via `hermes tools` → Search →
 ```yaml
 config:
   x_search:
-    model: grok-4.20-reasoning
+    model: grok-4.5
     timeout_seconds: 180
     retries: 2
 env:

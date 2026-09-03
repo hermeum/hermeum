@@ -22,12 +22,15 @@ different backend when the user explicitly requests one.
 
 - `cloud_provider` — explicitly selects the browser backend. Values:
   `camofox` (Hermeum default — local anti-detection Firefox),
-  `browserbase`, `browser-use`, `firecrawl`, `local`. When set to
-  `local`, cloud fallback is disabled and the local `agent-browser`
-  CLI / CDP path is used. When unset, the backend is auto-detected
-  from credentials (Browser Use → Browserbase). Selecting `camofox`
-  routes all browser tools through the Camofox server; `CAMOFOX_URL`
-  and `CAMOFOX_API_KEY` are set automatically by Hermeum.
+  `browserbase`, `browser-use`, `firecrawl`, `local` (Lightpanda /
+  `agent-browser` local engine). When set to `local`, cloud fallback is
+  disabled and the local `agent-browser` CLI / CDP path is used. When
+  unset, the backend is auto-detected from credentials (Browser Use →
+  Browserbase), and never-configured setups autodetect while an existing
+  selection always wins (a selected provider with a missing key errors
+  instead of silently rerouting). Selecting `camofox` routes all browser
+  tools through the Camofox server; `CAMOFOX_URL` and `CAMOFOX_API_KEY`
+  are set automatically by Hermeum.
 - `inactivity_timeout` — seconds of inactivity before a browser session
   is auto-cleaned up (default `120`).
 - `command_timeout` — timeout in seconds for individual browser commands
@@ -39,8 +42,12 @@ different backend when the user explicitly requests one.
   (`localhost`, `127.0.0.1`, `192.168.x.x`, `10.x.x.x`, etc.)
   (default `false`).
 - `engine` — browser engine for local mode: `auto` (default Chrome),
-  `lightpanda` (faster, no screenshots), `chrome` (default `auto`).
-  Also settable via `AGENT_BROWSER_ENGINE`.
+  `lightpanda` (faster, no screenshots — a headless
+  Zig-built browser that works in Browser Use mode and with the built-in
+  tools, with automatic Chrome fallback for unsupported actions),
+  `chrome` (default `auto`). Also settable via `AGENT_BROWSER_ENGINE`.
+  `engine` is the lowest-precedence browser setting — a cloud provider,
+  Camofox, a `cdp_url` override, or `use_real_profile` all shadow it.
 - `auto_local_for_private_urls` — when a cloud provider is configured,
   auto-spawn a local Chromium sidecar for LAN/loopback URLs instead of
   sending them to the cloud (default `true`). Public URLs continue to
@@ -86,7 +93,7 @@ different backend when the user explicitly requests one.
 | `FIRECRAWL_API_KEY` | Firecrawl API key. Enables Firecrawl as a cloud browser provider. | _(none)_ |
 | `FIRECRAWL_API_URL` | Firecrawl API URL for self-hosted instances. | _(cloud)_ |
 | `FIRECRAWL_BROWSER_TTL` | Firecrawl browser session TTL in seconds. | `300` |
-| `CAMOFOX_URL` | Camofox browser server URL for local anti-detection browsing. Set automatically by Hermeum when Camofox is the selected backend. | _(auto)_ |
+| `CAMOFOX_URL` | Camofox browser server URL for local anti-detection browsing. Set automatically by Hermeum when Camofox is the selected backend. Setting it no longer selects the backend by itself once a browser selection exists. | _(auto)_ |
 | `CAMOFOX_API_KEY` | Optional bearer token sent as `Authorization` header to a remote/authenticated Camofox server. Set automatically by Hermeum when Camofox is the selected backend. | _(auto)_ |
 | `CAMOFOX_USER_ID` | Env-var mirror of `browser.camofox.user_id`. Takes precedence over `config.yaml`. | _(none)_ |
 | `CAMOFOX_SESSION_KEY` | Env-var mirror of `browser.camofox.session_key`. Takes precedence over `config.yaml`. | _(none)_ |

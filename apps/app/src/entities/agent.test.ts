@@ -146,6 +146,32 @@ describe("AgentInputSchema api server key validation", () => {
     const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "false" }] });
     expect(result.success).toBe(true);
   });
+
+  it("fails when the api server is enabled via config and API_SERVER_KEY is missing", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true } } },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when the api server is enabled via config and env has a sensitive API_SERVER_KEY", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true } } },
+      env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when config disables the api server while the env var enables it", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { gateway: { api_server: { enabled: false } } },
+      env: [
+        { name: "API_SERVER_ENABLED", value: "true" },
+        { name: "API_SERVER_KEY", value: "shh", sensitive: true },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("isApiServerEnabled", () => {
@@ -170,6 +196,34 @@ describe("isApiServerEnabled", () => {
     expect(isApiServerEnabled({ env: [] })).toBe(false);
     expect(isApiServerEnabled({ env: [{ name: "OTHER", value: "true" }] })).toBe(false);
   });
+
+  it("returns true when config.gateway.api_server.enabled is true", () => {
+    expect(
+      isApiServerEnabled({ config: { gateway: { api_server: { enabled: true } } } })
+    ).toBe(true);
+  });
+
+  it("returns false when config.gateway.api_server.enabled is false or absent", () => {
+    expect(
+      isApiServerEnabled({ config: { gateway: { api_server: { enabled: false } } } })
+    ).toBe(false);
+    expect(isApiServerEnabled({ config: { gateway: { api_server: {} } } })).toBe(false);
+  });
+
+  it("prefers the API_SERVER_ENABLED env var over config.gateway.api_server.enabled", () => {
+    expect(
+      isApiServerEnabled({
+        env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+        config: { gateway: { api_server: { enabled: false } } },
+      })
+    ).toBe(true);
+    expect(
+      isApiServerEnabled({
+        env: [{ name: "API_SERVER_ENABLED", value: "false" }],
+        config: { gateway: { api_server: { enabled: true } } },
+      })
+    ).toBe(false);
+  });
 });
 
 describe("getApiServerPort", () => {
@@ -189,6 +243,30 @@ describe("getApiServerPort", () => {
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "-1" }] })).toBe(8642);
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "abc" }] })).toBe(8642);
     expect(getApiServerPort({ env: [{ name: "API_SERVER_PORT", value: "1.5" }] })).toBe(8642);
+  });
+
+  it("uses config.gateway.api_server.port when the env var is absent", () => {
+    expect(
+      getApiServerPort({ config: { gateway: { api_server: { port: 9000 } } } })
+    ).toBe(9000);
+  });
+
+  it("falls back to 8642 when config.gateway.api_server.port is not positive", () => {
+    expect(
+      getApiServerPort({ config: { gateway: { api_server: { port: 0 } } } })
+    ).toBe(8642);
+    expect(
+      getApiServerPort({ config: { gateway: { api_server: { port: -1 } } } })
+    ).toBe(8642);
+  });
+
+  it("prefers the API_SERVER_PORT env var over config.gateway.api_server.port", () => {
+    expect(
+      getApiServerPort({
+        env: [{ name: "API_SERVER_PORT", value: "9001" }],
+        config: { gateway: { api_server: { enabled: true, port: 9000 } } },
+      })
+    ).toBe(9001);
   });
 });
 
@@ -777,7 +855,7 @@ describe("deriveToolsetAvailability", () => {
     expect(
       deriveToolsetAvailability(
         ToolsetId.Web,
-        makeAgent({ config: { web: { search_backend: "tavily" } } })
+        makeAgent({ config: { web: { search_backend: "keenable" } } })
       ).status
     ).toBe("available");
   });
@@ -828,18 +906,12 @@ describe("deriveToolsetAvailability", () => {
     expect(deriveToolsetAvailability(ToolsetId.DiscordAdmin, agent).status).toBe("available");
   });
 
-  it("marks image_gen unavailable without FAL_KEY or gateway and available with either", () => {
+  it("marks image_gen unavailable without FAL_KEY and available with it", () => {
     expect(deriveToolsetAvailability(ToolsetId.ImageGen, makeAgent()).status).toBe("unavailable");
     expect(
       deriveToolsetAvailability(
         ToolsetId.ImageGen,
         makeAgent({ env: [{ name: "FAL_KEY", value: "fal-key", sensitive: true }] })
-      ).status
-    ).toBe("available");
-    expect(
-      deriveToolsetAvailability(
-        ToolsetId.ImageGen,
-        makeAgent({ config: { image_gen: { use_gateway: true } } })
       ).status
     ).toBe("available");
   });
@@ -885,6 +957,49 @@ describe("derivePlatformAvailability", () => {
         makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
       );
       expect(result).toEqual({ status: "available", port: 8642 });
+    });
+
+    it("is available when enabled via config.gateway.api_server", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          config: { gateway: { api_server: { enabled: true } } },
+          env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
+        })
+      );
+      expect(result).toEqual({ status: "available", port: 8642 });
+    });
+
+    it("uses config.gateway.api_server.port when the env var is absent", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          config: { gateway: { api_server: { enabled: true, port: 9000 } } },
+        })
+      );
+      expect(result).toEqual({ status: "available", port: 9000 });
+    });
+
+    it("prefers API_SERVER_PORT over config.gateway.api_server.port", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          config: { gateway: { api_server: { enabled: true, port: 9000 } } },
+          env: [{ name: "API_SERVER_PORT", value: "9001" }],
+        })
+      );
+      expect(result).toEqual({ status: "available", port: 9001 });
+    });
+
+    it("is unavailable when config disables the api server but the env var enables it", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.ApiServer,
+        makeAgent({
+          config: { gateway: { api_server: { enabled: false } } },
+          env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+        })
+      );
+      expect(result.status).toBe("available");
     });
 
     it("uses API_SERVER_PORT when set", () => {
