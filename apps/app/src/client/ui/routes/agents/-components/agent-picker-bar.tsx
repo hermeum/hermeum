@@ -133,7 +133,7 @@ function SkillsPicker({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-1.5">
       <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
         Skills
       </span>
@@ -217,20 +217,104 @@ function SkillsPicker({
   );
 }
 
+// Multi-select popover over the user's active shared env sets. The env set
+// count is small, so it lists them all at open (no search). Values are env
+// set ids, matching the draft's `sharedEnvSets` field; an empty selection
+// clears the field (undefined).
+function SharedEnvSetsPicker({
+  value,
+  onChange,
+}: {
+  value: string[] | undefined;
+  onChange: (ids: string[] | undefined) => void;
+}) {
+  const trpc = useTRPC();
+  const { data: envSets = [] } = useQuery(
+    trpc.sharedEnvSet.list.queryOptions({ archived: false })
+  );
+
+  const selected = value ?? [];
+
+  function toggle(id: string) {
+    const next = selected.includes(id)
+      ? selected.filter((s) => s !== id)
+      : [...selected, id];
+    onChange(next.length > 0 ? next : undefined);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        Env sets
+      </span>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              size="xs"
+              className="h-auto px-2 py-1 text-xs normal-case tracking-normal"
+            />
+          }
+        >
+          <Plus />
+          {selected.length > 0 ? `Env sets (${selected.length})` : "Add env set"}
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-fit min-w-48 p-1">
+          {envSets.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs opacity-80">No shared env sets.</p>
+          ) : (
+            <div className={`flex flex-col gap-0.5 ${LIST_MAX_H}`}>
+            {envSets.map((envSet) => (
+              <button
+                key={envSet.id}
+                type="button"
+                className="flex w-full items-start gap-2 rounded-none px-2 py-1.5 text-left text-xs hover:bg-background/20"
+                onClick={() => toggle(envSet.id)}
+              >
+                <Check
+                  className={`mt-0.5 size-3 shrink-0 ${
+                    selected.includes(envSet.id) ? "" : "invisible"
+                  }`}
+                />
+                <span className="min-w-0">
+                  <span>{envSet.name}</span>
+                  {envSet.description && (
+                    <span className="block opacity-80">{envSet.description}</span>
+                  )}
+                </span>
+              </button>
+            ))}
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // Bar rendered above the agent config editor. Edits the draft's user-managed
-// fields (`type`, `skills`) directly; the YAML editor and chat stay in sync
-// through the same `onChange` path as hand edits.
+// fields (`type`, `skills`, `sharedEnvSets`) directly; the YAML editor and
+// chat stay in sync through the same `onChange` path as hand edits.
 export function AgentPickerBar({
   config,
   onChange,
 }: {
   config: AgentInput | undefined;
-  onChange: (patch: { type?: string | undefined; skills?: string[] | undefined }) => void;
+  onChange: (patch: {
+    type?: string | undefined;
+    skills?: string[] | undefined;
+    sharedEnvSets?: string[] | undefined;
+  }) => void;
 }) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5">
       <AgentTypePicker value={config?.type} onChange={(type) => onChange({ type })} />
       <SkillsPicker value={config?.skills} onChange={(skills) => onChange({ skills })} />
+      <SharedEnvSetsPicker
+        value={config?.sharedEnvSets}
+        onChange={(sharedEnvSets) => onChange({ sharedEnvSets })}
+      />
     </div>
   );
 }
