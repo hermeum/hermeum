@@ -82,9 +82,13 @@ function EditAgentPage() {
     setValidationError(null);
   }
 
-  // Merge a user-managed-field patch (agent type / skills) into the current
-  // draft.
-  function handlePickerChange(patch: { type?: string | undefined; skills?: string[] | undefined }) {
+  // Merge a user-managed-field patch (agent type / skills / shared env sets)
+  // into the current draft.
+  function handlePickerChange(patch: {
+    type?: string | undefined;
+    skills?: string[] | undefined;
+    sharedEnvSets?: string[] | undefined;
+  }) {
     const current = getConfig();
     if (current === undefined) return;
     handleConfigUpdate({ ...current, ...patch });

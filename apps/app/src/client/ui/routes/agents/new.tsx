@@ -78,10 +78,14 @@ function NewAgentPage() {
     handleConfigUpdate(template.agentInput);
   }
 
-  // Merge a user-managed-field patch (agent type / skills) into the current
-  // draft. No-op when editing hasn't started — pickers appear once a draft
-  // exists.
-  function handlePickerChange(patch: { type?: string | undefined; skills?: string[] | undefined }) {
+  // Merge a user-managed-field patch (agent type / skills / shared env sets)
+  // into the current draft. No-op when editing hasn't started — pickers
+  // appear once a draft exists.
+  function handlePickerChange(patch: {
+    type?: string | undefined;
+    skills?: string[] | undefined;
+    sharedEnvSets?: string[] | undefined;
+  }) {
     const current = getConfig();
     if (current === undefined) return;
     handleConfigUpdate({ ...current, ...patch });
