@@ -348,26 +348,30 @@ function AgentDetailPage() {
         <TabsContent value="agent">
           <div className="flex flex-col divide-y">
             {/* soul */}
-            {agent.soul && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Soul</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Soul</p>
+              {agent.soul ? (
                 <pre className="rounded bg-muted p-3 text-xs overflow-y-auto max-h-64 whitespace-pre-wrap break-words">
                   {agent.soul}
                 </pre>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
+              )}
+            </div>
 
             {/* config */}
-            {agent.config && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Configuration</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Configuration</p>
+              {agent.config ? (
                 <CodeEditor
                   value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
                   readOnly
                   maxHeight="300px"
                 />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
+              )}
+            </div>
 
             {/* toolsets */}
             <ToolsetsSection agent={agent} />
@@ -377,40 +381,48 @@ function AgentDetailPage() {
 
 
             {/* skills */}
-            {agent.skills && agent.skills.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Skills</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Skills</p>
+              {agent.skills && agent.skills.length > 0 ? (
                 <ButtonList items={agent.skills} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No skills configured.</p>
+              )}
+            </div>
 
             {/* plugins */}
-            {agent.plugins && agent.plugins.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Plugins</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Plugins</p>
+              {agent.plugins && agent.plugins.length > 0 ? (
                 <ButtonList items={agent.plugins} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No plugins configured.</p>
+              )}
+            </div>
 
             {/* packages */}
-            {agent.packages?.pip && agent.packages.pip.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Python Packages</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Python Packages</p>
+              {agent.packages?.pip && agent.packages.pip.length > 0 ? (
                 <ButtonList items={agent.packages.pip} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No Python packages configured.</p>
+              )}
+            </div>
 
-            {agent.packages?.npm && agent.packages.npm.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">NPM Packages</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">NPM Packages</p>
+              {agent.packages?.npm && agent.packages.npm.length > 0 ? (
                 <ButtonList items={agent.packages.npm} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No NPM packages configured.</p>
+              )}
+            </div>
 
             {/* env */}
-            {agent.env && agent.env.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Env Vars</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Env Vars</p>
+              {agent.env && agent.env.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {agent.env.map((v) => (
                     <Button
@@ -423,8 +435,10 @@ function AgentDetailPage() {
                     </Button>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No environment variables set.</p>
+              )}
+            </div>
 
             {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">
