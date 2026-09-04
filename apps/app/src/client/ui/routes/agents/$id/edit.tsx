@@ -15,7 +15,7 @@ import { useTRPC } from "@/router";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { AgentEditorMobileTabs } from "../-components/agent-editor-mobile-tabs";
 import { AgentPickerBar } from "../-components/agent-picker-bar";
 
@@ -131,7 +131,7 @@ function EditAgentPage() {
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
       <div className="min-h-0 flex-1">
-        <CodeEditor
+        <AgentConfigEditor
           value={editorValue}
           onChange={setEditorValue}
           invalid={!!validationError}

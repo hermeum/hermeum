@@ -4,7 +4,7 @@ import { unifiedMergeView } from "@codemirror/merge";
 import { cn } from "@hermeum/components/lib/utils";
 import { CopyButton } from "@/client/ui/components/copy-button";
 
-interface CodeEditorProps {
+interface AgentConfigEditorProps {
   value: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
@@ -16,7 +16,7 @@ interface CodeEditorProps {
   originalValue?: string;
 }
 
-export function CodeEditor({
+export function AgentConfigEditor({
   value,
   onChange,
   readOnly = false,
@@ -26,7 +26,7 @@ export function CodeEditor({
   title,
   foldable = false,
   originalValue,
-}: CodeEditorProps) {
+}: AgentConfigEditorProps) {
   return (
     <div
       className={cn(
@@ -77,7 +77,7 @@ export function CodeEditor({
             highlightActiveLineGutter: !readOnly,
           }}
           className={cn(
-            "h-full [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans! [&_.cm-scroller]:overflow-auto! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
+            "h-full [&_.cm-content]:outline-none! [&_.cm-editor.cm-focused]:outline-none! [&_.cm-scroller]:font-sans! [&_.cm-scroller]:overflow-auto! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
           )}
         />
       </div>
