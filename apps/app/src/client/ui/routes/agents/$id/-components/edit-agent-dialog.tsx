@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTRPC } from "@/router";
 import type { Agent, AgentInput } from "@/entities";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { Button } from "@hermeum/components/ui/button";
 import {
   Dialog,
@@ -98,7 +98,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange }: EditInstanc
         </DialogHeader>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto space-y-2 p-px">
-          <CodeEditor
+          <AgentConfigEditor
             value={editorValue}
             onChange={setEditorValue}
             invalid={!!validationError}

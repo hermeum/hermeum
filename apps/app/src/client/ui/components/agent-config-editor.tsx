@@ -1,9 +1,10 @@
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
+import { unifiedMergeView } from "@codemirror/merge";
 import { cn } from "@hermeum/components/lib/utils";
 import { CopyButton } from "@/client/ui/components/copy-button";
 
-interface CodeEditorProps {
+interface AgentConfigEditorProps {
   value: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
@@ -11,9 +12,11 @@ interface CodeEditorProps {
   maxHeight?: string;
   height?: string;
   title?: React.ReactNode;
+  foldable?: boolean;
+  originalValue?: string;
 }
 
-export function CodeEditor({
+export function AgentConfigEditor({
   value,
   onChange,
   readOnly = false,
@@ -21,7 +24,9 @@ export function CodeEditor({
   maxHeight,
   height,
   title,
-}: CodeEditorProps) {
+  foldable = false,
+  originalValue,
+}: AgentConfigEditorProps) {
   return (
     <div
       className={cn(
@@ -41,7 +46,22 @@ export function CodeEditor({
       <div className={cn("min-w-0", title !== undefined && "min-h-0 flex-1")}>
         <CodeMirror
           value={value}
-          extensions={[yamlLang(), EditorView.lineWrapping]}
+          extensions={[
+            yamlLang(),
+            EditorView.lineWrapping,
+            ...(originalValue !== undefined && !readOnly
+              ? [
+                  unifiedMergeView({
+                    original: originalValue,
+                    // Show the diff (line highlights + deleted-content
+                    // widgets) without merge interactivity or text-level
+                    // underline marks.
+                    highlightChanges: false,
+                    mergeControls: false,
+                  }),
+                ]
+              : []),
+          ]}
           {...(onChange !== undefined && { onChange })}
           editable={!readOnly}
           {...(maxHeight !== undefined && { maxHeight })}
@@ -49,7 +69,7 @@ export function CodeEditor({
           style={{ wordSpacing: "2.5px" }}
           basicSetup={{
             lineNumbers: true,
-            foldGutter: false,
+            foldGutter: foldable,
             searchKeymap: false,
             autocompletion: false,
             lintKeymap: false,
@@ -57,7 +77,7 @@ export function CodeEditor({
             highlightActiveLineGutter: !readOnly,
           }}
           className={cn(
-            "h-full [&_.cm-content]:outline-none [&_.cm-editor.cm-focused]:outline-none [&_.cm-scroller]:font-sans! [&_.cm-scroller]:overflow-auto! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
+            "h-full [&_.cm-content]:outline-none! [&_.cm-editor.cm-focused]:outline-none! [&_.cm-scroller]:font-sans! [&_.cm-scroller]:overflow-auto! [&_.cm-line]:py-[0.15rem]! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
           )}
         />
       </div>

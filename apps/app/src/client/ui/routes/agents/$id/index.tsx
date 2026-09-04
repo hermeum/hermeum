@@ -25,7 +25,7 @@ import {
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "./-components/edit-agent-dialog";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
   Accordion,
@@ -363,10 +363,11 @@ function AgentDetailPage() {
             <div className="py-8 flex flex-col gap-3">
               <p className="text-sm font-bold">Configuration</p>
               {agent.config ? (
-                <CodeEditor
+                <AgentConfigEditor
                   value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
                   readOnly
                   maxHeight="300px"
+                  foldable
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
