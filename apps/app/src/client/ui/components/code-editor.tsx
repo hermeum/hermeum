@@ -1,5 +1,6 @@
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { yaml as yamlLang } from "@codemirror/lang-yaml";
+import { unifiedMergeView } from "@codemirror/merge";
 import { cn } from "@hermeum/components/lib/utils";
 import { CopyButton } from "@/client/ui/components/copy-button";
 
@@ -12,6 +13,7 @@ interface CodeEditorProps {
   height?: string;
   title?: React.ReactNode;
   foldable?: boolean;
+  originalValue?: string;
 }
 
 export function CodeEditor({
@@ -23,6 +25,7 @@ export function CodeEditor({
   height,
   title,
   foldable = false,
+  originalValue,
 }: CodeEditorProps) {
   return (
     <div
@@ -43,7 +46,22 @@ export function CodeEditor({
       <div className={cn("min-w-0", title !== undefined && "min-h-0 flex-1")}>
         <CodeMirror
           value={value}
-          extensions={[yamlLang(), EditorView.lineWrapping]}
+          extensions={[
+            yamlLang(),
+            EditorView.lineWrapping,
+            ...(originalValue !== undefined && !readOnly
+              ? [
+                  unifiedMergeView({
+                    original: originalValue,
+                    // Show the diff (line highlights + deleted-content
+                    // widgets) without merge interactivity or text-level
+                    // underline marks.
+                    highlightChanges: false,
+                    mergeControls: false,
+                  }),
+                ]
+              : []),
+          ]}
           {...(onChange !== undefined && { onChange })}
           editable={!readOnly}
           {...(maxHeight !== undefined && { maxHeight })}

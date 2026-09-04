@@ -137,6 +137,7 @@ function EditAgentPage() {
           invalid={!!validationError}
           height="100%"
           title="Agent config"
+          originalValue={agentToYaml(agent)}
         />
       </div>
       {validationError && (
