@@ -11,6 +11,7 @@ interface CodeEditorProps {
   maxHeight?: string;
   height?: string;
   title?: React.ReactNode;
+  foldable?: boolean;
 }
 
 export function CodeEditor({
@@ -21,6 +22,7 @@ export function CodeEditor({
   maxHeight,
   height,
   title,
+  foldable = false,
 }: CodeEditorProps) {
   return (
     <div
@@ -49,7 +51,7 @@ export function CodeEditor({
           style={{ wordSpacing: "2.5px" }}
           basicSetup={{
             lineNumbers: true,
-            foldGutter: false,
+            foldGutter: foldable,
             searchKeymap: false,
             autocompletion: false,
             lintKeymap: false,

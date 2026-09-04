@@ -367,6 +367,7 @@ function AgentDetailPage() {
                   value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
                   readOnly
                   maxHeight="300px"
+                  foldable
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
