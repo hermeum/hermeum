@@ -8,7 +8,7 @@ import {
   SkillIdentifier,
 } from "../skill";
 
-import { isApiServerEnabled, isTeamsEnabled, isWebhookEnabled } from "./platform";
+import { isApiServerEnabled, isTeamsEnabled, isWebhookEnabled, PlatformId } from "./platform";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
@@ -342,6 +342,15 @@ export const AgentPhaseSchema = z.enum([
 ]);
 export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
 
+// Endpoint URL or null per HTTP platform. Every key is always present —
+// platforms without an ingress/Service surface null rather than a missing key.
+export const AgentEndpointsSchema = z.object({
+  [PlatformId.ApiServer]: z.url().nullable(),
+  [PlatformId.Webhook]: z.url().nullable(),
+  [PlatformId.Teams]: z.url().nullable(),
+});
+export type AgentEndpoints = z.infer<typeof AgentEndpointsSchema>;
+
 export const AgentSchema = AgentInputObjectSchema.extend({
   id: z.string().min(1),
   userId: z.string().min(1),
@@ -349,8 +358,10 @@ export const AgentSchema = AgentInputObjectSchema.extend({
   archived: z.boolean().optional(),
   phase: AgentPhaseSchema.optional(),
   reason: z.string().optional(),
-  // Public base URL of the agent's ingress. Output-only; null when no ingress.
-  endpoint: z.string().url().nullable().optional(),
+  // Per-platform base endpoint URLs, one entry per HTTP platform
+  // (PlatformId). Output-only. Keys are fixed by PlatformId — every field is
+  // always present; platforms without an ingress/Service surface null.
+  endpoints: AgentEndpointsSchema.optional(),
   createdAt: z.date().optional(),
 }).readonly();
 

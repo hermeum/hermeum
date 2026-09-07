@@ -67,8 +67,9 @@ export const ConfigSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Base hostname for per-agent ingresses (<agent-id>.<base>) (HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). " +
-        "When unset, no ingress is generated."
+      "Base hostname for per-agent ingresses; each HTTP platform gets its own subdomain " +
+        "<agent-id>.<platform-label>.<base> (api-server → api, webhook → hooks, teams → teams) " +
+        "(HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). When unset, no ingress is generated."
     ),
   agentIngressClassName: z
     .string()
