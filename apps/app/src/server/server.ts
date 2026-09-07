@@ -9,10 +9,12 @@ import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
 import { config } from "./libs/config";
-import { trpcMiddleware } from "@/server/routers/trpc/index.js";
+import { trpcMiddleware } from "@/server/routers/trpc/resources/index.js";
+import { agentSessionRouter } from "@/server/routers/trpc/telemetry.js";
 import { webhookRouter } from "./routers/webhook";
 import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
 import { auth } from "./routers/better-auth/auth";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 const { port, hmrPort } = config;
 
@@ -50,6 +52,7 @@ export const createServer = async (
   app.all("/auth/*", toNodeHandler(auth));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
+  app.use("/telemetry/trpc", createExpressMiddleware({ router: agentSessionRouter }));
   app.use("/chat", aiSdkRouter);
 
   if (!isProd) {
