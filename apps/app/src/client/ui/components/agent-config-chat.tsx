@@ -34,7 +34,13 @@ type SearchSkillsOutput = { results: { name: string; identifier: string; descrip
 
 // Max consecutive failed `updateAgentConfig` tool calls the model may make in
 // a row before it is told to stop retrying and explain the problem instead.
-const MAX_CONFIG_UPDATE_ATTEMPTS = 1;
+const MAX_CONFIG_UPDATE_FAILURES = 1;
+
+// Max successful `updateAgentConfig` calls per conversation turn. The
+// auto-resubmit loop re-runs after every tool call, so without a cap the model
+// can chain unlimited "successful" updates, iterating its own mistakes as
+// noisy edit history. When exceeded, it is told to stop and explain in text.
+const MAX_CONFIG_UPDATE_SUCCESSES = 2;
 
 type AgentConfigChatMessage = UIMessage<
   unknown,
@@ -129,8 +135,13 @@ export function AgentConfigChat({
   const callbacksRef = useRef({ getConfig, onConfigUpdate });
   callbacksRef.current = { getConfig, onConfigUpdate };
 
-  // Consecutive failed `updateAgentConfig` calls in the current auto-resubmit
-  // loop. Reset when the user sends a new message.
+  // `updateAgentConfig` call counters for the current auto-resubmit loop,
+  // reset when the user sends a new message. `successes` caps the chained
+  // "successful" updates the model can make per turn (the loop re-runs after
+  // every tool call, so without a cap it can iterate its own mistakes as
+  // noisy edit history); `failures` caps consecutive validation errors before
+  // the model is told to explain the problem in text instead.
+  const configUpdateSuccessesRef = useRef(0);
   const configUpdateFailuresRef = useRef(0);
 
   const { messages, sendMessage, stop, status, error, addToolOutput } =
@@ -149,11 +160,25 @@ export function AgentConfigChat({
           return;
         }
         if (toolCall.toolName !== "updateAgentConfig") return;
+        if (configUpdateSuccessesRef.current >= MAX_CONFIG_UPDATE_SUCCESSES) {
+          addToolOutput({
+            tool: "updateAgentConfig",
+            toolCallId: toolCall.toolCallId,
+            state: "output-error",
+            errorText:
+              `Update limit reached: the agent config has already been updated ` +
+              `${configUpdateSuccessesRef.current} times this turn. Do not call ` +
+              "updateAgentConfig again — summarize the applied state to the user " +
+              "in plain text instead.",
+          });
+          return;
+        }
         const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;
           const path = `/${issue.path.join("/")}`;
-          const exhausted = configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_ATTEMPTS;
+          const exhausted =
+            configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_FAILURES;
           configUpdateFailuresRef.current += 1;
           addToolOutput({
             tool: "updateAgentConfig",
@@ -161,14 +186,14 @@ export function AgentConfigChat({
             state: "output-error",
             errorText: exhausted
               ? `Invalid agent config: ${issue.message} (path: ${path}). ` +
-                `Failed to update the agent config after ${MAX_CONFIG_UPDATE_ATTEMPTS + 1} ` +
+                `Failed to update the agent config after ${MAX_CONFIG_UPDATE_FAILURES + 1} ` +
                 "attempts. Do not call updateAgentConfig again — explain the problem " +
                 "to the user in plain text instead."
               : `Invalid agent config: ${issue.message} (path: ${path})`,
           });
           return;
         }
-        configUpdateFailuresRef.current = 0;
+        configUpdateSuccessesRef.current += 1;
         callbacksRef.current.onConfigUpdate(parsed.data);
         addToolOutput({
           tool: "updateAgentConfig",
@@ -184,6 +209,7 @@ export function AgentConfigChat({
   function handleSend() {
     const text = input.trim();
     if (text.length === 0 || status !== "ready") return;
+    configUpdateSuccessesRef.current = 0;
     configUpdateFailuresRef.current = 0;
     sendMessage({ text }, { body: { config: callbacksRef.current.getConfig() } });
     setInput("");

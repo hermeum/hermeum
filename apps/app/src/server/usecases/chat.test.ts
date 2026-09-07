@@ -181,6 +181,19 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     // No execute: the tool runs on the client, which applies the config to
     // the editor and reports back.
     expect(tools.updateAgentConfig!.execute).toBeUndefined();
+    // The single-call rule lives in the tool description so the model sees
+    // it alongside the tool definition.
+    expect(tools.updateAgentConfig!.description).toContain("single call");
+    expect(tools.updateAgentConfig!.description).toContain("readDocument");
+  });
+
+  it("instructs the model about the config wrapper key and the single-update rule", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain('"config" key');
+    expect(instructions).toContain("single updateAgentConfig call");
   });
 
   it("exposes a client-side readAgentConfig tool and instructs the model to use it when stale", async () => {
