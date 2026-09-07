@@ -22,22 +22,37 @@ Hermeum exposes three distinct TLS surfaces, each configured independently:
 
 When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, Hermeum emits an
 `Ingress` per agent that routes each enabled HTTP platform on its own
-**subdomain**: `<agent-id>.<platform-label>.<base hostname>` — api-server →
-`<agent-id>.api.<base>`, webhook → `<agent-id>.hooks.<base>`, teams →
-`<agent-id>.teams.<base>`. Each subdomain maps wholesale to the platform's
-Service port (a single root-prefix route per host), so there are no
-cross-platform path-prefix conflicts.
+**subdomain**:
+
+| Platform | Subdomain | Backend |
+| --- | --- | --- |
+| api-server | `<agent-id>.api.<base hostname>` | api-server Service port (default 8642) |
+| webhook | `<agent-id>.hooks.<base hostname>` | webhook Service port (default 8644) |
+| teams | `<agent-id>.teams.<base hostname>` | teams Service port (default 3978) |
+
+Each subdomain maps wholesale to the platform's Service port (a single
+root-prefix route per host), so there are no cross-platform path-prefix
+conflicts.
 
 When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is unset, **no per-agent ingress
 is generated**.
 
-:::note
-Each platform label adds a DNS level below the base hostname. A single
-`*.agents.example.com` record does **not** cover
-`<agent-id>.api.agents.example.com` — you need one wildcard record per
-platform label: `*.api.agents.example.com`, `*.hooks.agents.example.com`,
-`*.teams.agents.example.com`.
-:::
+### DNS setup
+
+Each platform label adds a DNS level below the base hostname, so a wildcard
+record is required **per platform label** — a single `*.<base hostname>`
+record does not cover the two-level `<agent-id>.<platform-label>.<base>`
+hosts:
+
+| Wildcard record | Example (base = `agents.example.com`) | Covers |
+| --- | --- | --- |
+| `*.api.<base hostname>` | `*.api.agents.example.com` | api-server subdomains |
+| `*.hooks.<base hostname>` | `*.hooks.agents.example.com` | webhook subdomains |
+| `*.teams.<base hostname>` | `*.teams.agents.example.com` | teams subdomains |
+
+Point each record (A/CNAME) at the same ingress load balancer that fronts
+the Hermeum UI ingress. Only labels for platforms you actually enable need
+records.
 
 | Variable | Default | Description |
 | --- | --- | --- |
