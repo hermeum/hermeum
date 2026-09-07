@@ -63,6 +63,7 @@ const baseOptions: PostHogTelemetryOptions = {
   posthogHost: "https://us.i.posthog.com",
   deploymentId: "deployment-123",
   telemetryDisabled: false,
+  isProduction: true,
 };
 
 const lastInstance = () => __instances[__instances.length - 1]!;
@@ -196,6 +197,15 @@ describe("PostHogTelemetry", () => {
       vi.advanceTimersByTime(HEARTBEAT_INTERVAL_MS);
       expect(captures).toHaveLength(1);
       expect(captures[0]?.event).toBe(HEARTBEAT_EVENT);
+    });
+
+    it("captures no heartbeat and runs no interval outside production", () => {
+      const telemetry = new PostHogTelemetry({ ...baseOptions, isProduction: false });
+      telemetry.heartbeat();
+      expect(captures).toHaveLength(0);
+
+      vi.advanceTimersByTime(HEARTBEAT_INTERVAL_MS * 3);
+      expect(captures).toHaveLength(0);
     });
   });
 

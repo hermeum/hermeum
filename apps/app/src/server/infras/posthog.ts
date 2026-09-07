@@ -30,6 +30,7 @@ export type PostHogTelemetryOptions = {
   posthogHost: string;
   deploymentId?: string | undefined;
   telemetryDisabled: boolean;
+  isProduction: boolean;
 };
 
 export class PostHogTelemetry implements TelemetryAdaptor {
@@ -37,11 +38,13 @@ export class PostHogTelemetry implements TelemetryAdaptor {
   #sdk?: NodeSDK;
   #events: PostHog;
   #distinctId: string;
+  #isProduction: boolean;
   #timer: NodeJS.Timeout | undefined;
 
   constructor(options: PostHogTelemetryOptions) {
     this.#level = options.logLevel;
     this.#distinctId = options.deploymentId ?? randomUUID();
+    this.#isProduction = options.isProduction;
     this.#events = new PostHog(options.posthogApiKey ?? "", { host: options.posthogHost });
     if (!options.telemetryDisabled && options.posthogApiKey) {
       this.#sdk = new NodeSDK({
@@ -58,8 +61,10 @@ export class PostHogTelemetry implements TelemetryAdaptor {
       });
       this.#sdk.start();
     }
-    this.#timer = setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL_MS);
-    this.#timer.unref();
+    if (options.isProduction) {
+      this.#timer = setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL_MS);
+      this.#timer.unref();
+    }
   }
 
   debug(message: string, context?: LogContext): void {
@@ -78,7 +83,10 @@ export class PostHogTelemetry implements TelemetryAdaptor {
     this.#emit("error", console.error, message, context);
   }
 
+  // Heartbeats only run in production deployments — local development never
+  // reports.
   heartbeat(properties: LogContext = {}): void {
+    if (!this.#isProduction) return;
     this.#events.capture({
       distinctId: this.#distinctId,
       event: HEARTBEAT_EVENT,
@@ -125,4 +133,5 @@ export const telemetry = new PostHogTelemetry({
   posthogHost: config.posthogHost,
   deploymentId: config.deploymentId,
   telemetryDisabled: config.telemetryDisabled,
+  isProduction: process.env.NODE_ENV === "production",
 });
