@@ -258,8 +258,7 @@ conversation. The current draft is shown to you as JSON; the user also sees
 it in an editor and may change it by hand between messages.
 
 Note 
-- Only write fields the user has asked for or that are strictly required. Skip
-every optional field unless the user requests it.
+- Skip every optional field unless the user requests it.
 - Never guess at field semantics. When you're not fully sure about a config
 section, settle it with the documentation before writing it into the draft.
 
