@@ -85,7 +85,7 @@ templates:
       name: Software Engineer
       description: An autonomous software engineer. Given a task, it reads the code, implements the change with tests, and opens a pull request. Also reviews code on request and debugs failures to root cause.
 
-      type: medium
+      type: large
       soul: |-
         You are a software engineer. You own engineering work end-to-end:
         writing code, opening pull requests, reviewing changes, and debugging
@@ -139,7 +139,8 @@ agentTypes:
   medium:
     description: >-
       Standard performance — handles everyday workloads reliably, including
-      browsing and web search. A good fit for most agents.
+      browsing and web search. A good fit for most agents. Persists the agent
+      workspace on a 10Gi volume.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
@@ -157,6 +158,12 @@ agentTypes:
             limits:
               cpu: "4"
               memory: 2Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
         - op: add
           path: /spec/searxng/resources
           value:
@@ -189,6 +196,12 @@ agentTypes:
               cpu: "4"
               memory: 2Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
+        - op: add
           path: /spec/searxng/resources
           value:
             requests:
@@ -211,6 +224,12 @@ agentTypes:
               cpu: "4"
               memory: 2Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
+        - op: add
           path: /spec/camofox/resources
           value:
             requests:
@@ -229,10 +248,17 @@ agentTypes:
             limits:
               cpu: "4"
               memory: 2Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
   large:
     description: >-
       High performance — extra capacity for demanding tasks, such as very long
       conversations, heavy document analysis, or many concurrent users.
+      Persists the agent workspace on a 20Gi volume.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
@@ -250,6 +276,12 @@ agentTypes:
             limits:
               cpu: "8"
               memory: 4Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
         - op: add
           path: /spec/searxng/resources
           value:
@@ -282,6 +314,12 @@ agentTypes:
               cpu: "8"
               memory: 4Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
+        - op: add
           path: /spec/searxng/resources
           value:
             requests:
@@ -304,6 +342,12 @@ agentTypes:
               cpu: "8"
               memory: 4Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
+        - op: add
           path: /spec/camofox/resources
           value:
             requests:
@@ -322,3 +366,9 @@ agentTypes:
             limits:
               cpu: "8"
               memory: 4Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
