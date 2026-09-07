@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@hermeum/components/ui/textarea";
 import { Streamdown } from "streamdown";
 import type { AgentInput } from "@/entities";
-import { AgentInputObjectSchema } from "@/entities";
+import { AgentInputObjectSchema, AgentPatchSchema, applyAgentPatch, type AgentPatch } from "@/entities";
 
 // Mirrors the server-executed tools declared in ChatUseCase.getAgentConfigContext
 // so the UI can render their lifecycle as markers alongside the client tools.
@@ -32,14 +32,16 @@ type ReadSharedEnvSetOutput = {
 };
 type SearchSkillsOutput = { results: { name: string; identifier: string; description: string }[] };
 
-// Max consecutive failed `updateAgentConfig` tool calls the model may make in
-// a row before it is told to stop retrying and explain the problem instead.
+// Max consecutive failed config-writing tool calls (replaceAgentConfig or
+// patchAgentConfig) the model may make in a row before it is told to stop
+// retrying and explain the problem instead.
 const MAX_CONFIG_UPDATE_FAILURES = 1;
 
-// Max successful `updateAgentConfig` calls per conversation turn. The
-// auto-resubmit loop re-runs after every tool call, so without a cap the model
-// can chain unlimited "successful" updates, iterating its own mistakes as
-// noisy edit history. When exceeded, it is told to stop and explain in text.
+// Max successful config-writing tool calls (replaceAgentConfig or
+// patchAgentConfig) per conversation turn. The auto-resubmit loop re-runs
+// after every tool call, so without a cap the model can chain unlimited
+// "successful" updates, iterating its own mistakes as noisy edit history.
+// When exceeded, it is told to stop and explain in text.
 const MAX_CONFIG_UPDATE_SUCCESSES = 2;
 
 type AgentConfigChatMessage = UIMessage<
@@ -47,7 +49,8 @@ type AgentConfigChatMessage = UIMessage<
   UIDataTypes,
   {
     // Client-executed (handled in onToolCall).
-    updateAgentConfig: { input: AgentInput; output: string };
+    replaceAgentConfig: { input: AgentInput; output: string };
+    patchAgentConfig: { input: AgentPatch; output: string };
     readAgentConfig: { input: undefined; output: AgentInput | undefined };
     // Server-executed (lifecycle only — no client handler).
     readDocument: { input: { names: string[] }; output: ReadDocumentOutput };
@@ -135,14 +138,72 @@ export function AgentConfigChat({
   const callbacksRef = useRef({ getConfig, onConfigUpdate });
   callbacksRef.current = { getConfig, onConfigUpdate };
 
-  // `updateAgentConfig` call counters for the current auto-resubmit loop,
-  // reset when the user sends a new message. `successes` caps the chained
-  // "successful" updates the model can make per turn (the loop re-runs after
-  // every tool call, so without a cap it can iterate its own mistakes as
-  // noisy edit history); `failures` caps consecutive validation errors before
-  // the model is told to explain the problem in text instead.
+  // Config-writing tool call counters (replaceAgentConfig or patchAgentConfig)
+  // for the current auto-resubmit loop, reset when the user sends a new
+  // message. `successes` caps the chained "successful" updates the model can
+  // make per turn (the loop re-runs after every tool call, so without a cap
+  // it can iterate its own mistakes as noisy edit history); `failures` caps
+  // consecutive validation errors before the model is told to explain the
+  // problem in text instead.
   const configUpdateSuccessesRef = useRef(0);
   const configUpdateFailuresRef = useRef(0);
+
+  // Shared apply path for both config-writing tools: validate the final
+  // config that will land in the editor, report the outcome to the model,
+  // and carry the applied draft in the automatic follow-up request body.
+  // Parsed with AgentInputObjectSchema, NOT AgentInputSchema — drafts
+  // legitimately carry "<fill-me>" placeholder env values that the user
+  // fills in later; the superRefine cross-field rules would reject those.
+  function applyConfig(
+    toolName: "replaceAgentConfig" | "patchAgentConfig",
+    toolCallId: string,
+    config: unknown
+  ): boolean {
+    if (configUpdateSuccessesRef.current >= MAX_CONFIG_UPDATE_SUCCESSES) {
+      addToolOutput({
+        tool: toolName,
+        toolCallId,
+        state: "output-error",
+        errorText:
+          `Update limit reached: the agent config has already been updated ` +
+          `${configUpdateSuccessesRef.current} times this turn. Do not call ` +
+          "config-writing tools again — summarize the applied state to the " +
+          "user in plain text instead.",
+      });
+      return false;
+    }
+    const parsed = AgentInputObjectSchema.safeParse(config);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]!;
+      const path = `/${issue.path.join("/")}`;
+      const exhausted = configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_FAILURES;
+      configUpdateFailuresRef.current += 1;
+      addToolOutput({
+        tool: toolName,
+        toolCallId,
+        state: "output-error",
+        errorText: exhausted
+          ? `Invalid agent config: ${issue.message} (path: ${path}). ` +
+            `Failed to update the agent config after ${MAX_CONFIG_UPDATE_FAILURES + 1} ` +
+            "attempts. Do not call config-writing tools again — explain the " +
+            "problem to the user in plain text instead."
+          : `Invalid agent config: ${issue.message} (path: ${path})`,
+      });
+      return false;
+    }
+    configUpdateFailuresRef.current = 0;
+    configUpdateSuccessesRef.current += 1;
+    callbacksRef.current.onConfigUpdate(parsed.data);
+    addToolOutput({
+      tool: toolName,
+      toolCallId,
+      output: "Applied to the editor.",
+      // The automatic follow-up request should also carry the draft it
+      // just produced.
+      options: { body: { config: parsed.data } },
+    });
+    return true;
+  }
 
   const { messages, sendMessage, stop, status, error, addToolOutput } =
     useChat<AgentConfigChatMessage>({
@@ -159,50 +220,35 @@ export function AgentConfigChat({
           });
           return;
         }
-        if (toolCall.toolName !== "updateAgentConfig") return;
-        if (configUpdateSuccessesRef.current >= MAX_CONFIG_UPDATE_SUCCESSES) {
-          addToolOutput({
-            tool: "updateAgentConfig",
-            toolCallId: toolCall.toolCallId,
-            state: "output-error",
-            errorText:
-              `Update limit reached: the agent config has already been updated ` +
-              `${configUpdateSuccessesRef.current} times this turn. Do not call ` +
-              "updateAgentConfig again — summarize the applied state to the user " +
-              "in plain text instead.",
-          });
+        if (toolCall.toolName === "replaceAgentConfig") {
+          applyConfig("replaceAgentConfig", toolCall.toolCallId, toolCall.input);
           return;
         }
-        const parsed = AgentInputObjectSchema.safeParse(toolCall.input);
+        if (toolCall.toolName !== "patchAgentConfig") return;
+        const parsed = AgentPatchSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;
           const path = `/${issue.path.join("/")}`;
-          const exhausted =
-            configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_FAILURES;
+          const exhausted = configUpdateFailuresRef.current >= MAX_CONFIG_UPDATE_FAILURES;
           configUpdateFailuresRef.current += 1;
           addToolOutput({
-            tool: "updateAgentConfig",
+            tool: "patchAgentConfig",
             toolCallId: toolCall.toolCallId,
             state: "output-error",
             errorText: exhausted
-              ? `Invalid agent config: ${issue.message} (path: ${path}). ` +
+              ? `Invalid agent config patch: ${issue.message} (path: ${path}). ` +
                 `Failed to update the agent config after ${MAX_CONFIG_UPDATE_FAILURES + 1} ` +
-                "attempts. Do not call updateAgentConfig again — explain the problem " +
-                "to the user in plain text instead."
-              : `Invalid agent config: ${issue.message} (path: ${path})`,
+                "attempts. Do not call config-writing tools again — explain the " +
+                "problem to the user in plain text instead."
+              : `Invalid agent config patch: ${issue.message} (path: ${path})`,
           });
           return;
         }
-        configUpdateSuccessesRef.current += 1;
-        callbacksRef.current.onConfigUpdate(parsed.data);
-        addToolOutput({
-          tool: "updateAgentConfig",
-          toolCallId: toolCall.toolCallId,
-          output: "Applied to the editor.",
-          // The automatic follow-up request should also carry the draft it
-          // just produced.
-          options: { body: { config: parsed.data } },
-        });
+        applyConfig(
+          "patchAgentConfig",
+          toolCall.toolCallId,
+          applyAgentPatch(callbacksRef.current.getConfig(), parsed.data)
+        );
       },
     });
 
@@ -271,14 +317,25 @@ export function AgentConfigChat({
                               />
                             );
                           }
-                          if (part.type === "tool-updateAgentConfig") {
+                          if (part.type === "tool-replaceAgentConfig") {
                             return (
                               <ToolMarker
                                 key={index}
                                 state={part.state}
-                                runningLabel="Updating the config…"
-                                doneLabel="Config updated"
-                                errorLabel="Couldn’t update the config"
+                                runningLabel="Replacing the config…"
+                                doneLabel="Config replaced"
+                                errorLabel="Couldn’t replace the config"
+                              />
+                            );
+                          }
+                          if (part.type === "tool-patchAgentConfig") {
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel="Patching the config…"
+                                doneLabel="Config patched"
+                                errorLabel="Couldn’t patch the config"
                               />
                             );
                           }

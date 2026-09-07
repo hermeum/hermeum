@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AgentInput, AgentInputObjectSchema, tool, ToolSet } from "@/entities";
+import { AgentInput, AgentInputObjectSchema, AgentPatchSchema, tool, ToolSet } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
@@ -69,17 +69,32 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           // No `execute`: the client returns the latest editor draft and
           // reports it back.
         }),
-        updateAgentConfig: tool({
+        replaceAgentConfig: tool({
           description:
             "Replace the agent config draft with a full updated definition. " +
             "Always pass the COMPLETE config, keeping every field not affected " +
             "by the requested change unchanged. Apply each user request in a " +
             "single call — do not iterate with successive updates. If unsure " +
             "about a section's shape, call readDocument for that section " +
-            "before the call.",
+            "before the call. For small changes to an existing draft, prefer " +
+            "patchAgentConfig instead.",
           inputSchema: AgentInputObjectSchema,
           // No `execute`: the client applies the config to its editor and
           // reports the result back.
+        }),
+        patchAgentConfig: tool({
+          description:
+            "Apply a partial update to the current agent config draft. Send " +
+            "ONLY the part being changed: plain objects merge recursively " +
+            "(e.g. { config: { web: { port: 8900 } } } changes just that " +
+            "port); set a field to null to delete it at any depth; arrays " +
+            "and scalars replace the whole current value, so always send a " +
+            "COMPLETE array. Fields you omit are left untouched. Prefer this " +
+            "over replaceAgentConfig for small edits to an existing draft; " +
+            "use replaceAgentConfig to create a draft or rewrite most of it.",
+          inputSchema: AgentPatchSchema,
+          // No `execute`: the client merges the patch onto its editor draft,
+          // validates the merged result, and reports the outcome back.
         }),
       },
     };
@@ -252,9 +267,9 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 
 // Behavioral rules for the agent-config chat. Tool-specific guidance (when to
 // call `readDocument`, `readSharedEnvSet`, `readAgentConfig`,
-// `updateAgentConfig`, and the available doc/shared-env-set lists) lives in
-// the tool `description` fields, not here, so the model sees each tool's usage
-// rules alongside its definition.
+// `replaceAgentConfig`, `patchAgentConfig`, and the available doc/shared-env-set
+// lists) lives in the tool `description` fields, not here, so the model sees
+// each tool's usage rules alongside its definition.
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
@@ -267,6 +282,7 @@ section, settle it with the documentation before writing it into the draft.
 - The draft wraps the Hermes config under a top-level "config" key: fields
 the Hermes docs describe as top-level (e.g. "slack:") live under "config."
 in the draft.
-- Apply each user request with a single updateAgentConfig call.
+- Apply each user request with a single config-writing call (replaceAgentConfig
+or patchAgentConfig).
 
 `;

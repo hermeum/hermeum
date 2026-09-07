@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent, type AgentInput } from "./agent";
+import { AgentPatchSchema, applyAgentPatch, type AgentPatch } from "./agent/patch";
 import { SkillIdentifierSchema } from "./skill";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
@@ -708,6 +709,147 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
 
   it("is convertible to JSON Schema for the AI SDK", () => {
     expect(() => z.toJSONSchema(AgentInputObjectSchema)).not.toThrow();
+  });
+});
+
+describe("AgentPatchSchema envelope validation", () => {
+  it("accepts a top-level scalar patch", () => {
+    expect(AgentPatchSchema.safeParse({ name: "pr-reviewer" }).success).toBe(true);
+  });
+
+  it("accepts a nested config patch", () => {
+    const result = AgentPatchSchema.safeParse({
+      config: { web: { port: 8900 } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null values for deletion at any depth", () => {
+    const result = AgentPatchSchema.safeParse({
+      soul: null,
+      config: { slack: { channel_prompts: { "C123": null } } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts complete array replacements", () => {
+    const result = AgentPatchSchema.safeParse({
+      env: [{ name: "OPENAI_API_KEY", value: "<fill-me>", sensitive: true }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty patch", () => {
+    const result = AgentPatchSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unknown top-level field", () => {
+    const result = AgentPatchSchema.safeParse({ skils: ["typescript"] });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues[0]!.path).toEqual(["skils"]);
+    expect(result.error.issues[0]!.message).toContain("Unknown top-level field");
+  });
+
+  it("lets unknown nested keys pass through (looseObject policy)", () => {
+    const result = AgentPatchSchema.safeParse({
+      config: { someUntypedHermesField: { anything: true } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // Regression: an empty `looseObject({})` emitted "properties": {} to the
+  // model, which then had no visible keys to patch and sent `{}`. The patch
+  // schema must surface every top-level AgentInput field name in its JSON
+  // Schema, and the derivation keeps that list drift-proof.
+  it("exposes every AgentInputObjectSchema field name in its emitted JSON Schema", () => {
+    const jsonSchema = z.toJSONSchema(AgentPatchSchema);
+    const properties = (jsonSchema as { properties: Record<string, unknown> }).properties;
+    expect(Object.keys(properties).sort()).toEqual(
+      Object.keys(AgentInputObjectSchema.shape).sort()
+    );
+  });
+});
+
+describe("applyAgentPatch", () => {
+  const draft = {
+    name: "pr-reviewer",
+    soul: "You review PRs.",
+    env: [{ name: "GH_TOKEN", value: "x", sensitive: true }],
+    config: { web: { port: 8900, enabled: true }, model: { provider: "anthropic" } },
+  } as unknown as AgentInput;
+
+  it("replaces provided scalars and leaves others untouched", () => {
+    const merged = applyAgentPatch(draft, { name: "renamed" });
+    expect(merged).toEqual({ ...draft, name: "renamed" });
+  });
+
+  it("merges plain objects recursively", () => {
+    const merged = applyAgentPatch(draft, { config: { web: { port: 9000 } } });
+    expect(merged.config).toEqual({
+      web: { port: 9000, enabled: true },
+      model: { provider: "anthropic" },
+    });
+  });
+
+  it("deletes a key at any depth via null", () => {
+    const merged = applyAgentPatch(draft, { config: { web: { enabled: null } } });
+    expect(merged.config).toEqual({ web: { port: 8900 }, model: { provider: "anthropic" } });
+  });
+
+  it("deletes a top-level field via null", () => {
+    const merged = applyAgentPatch(draft, { soul: null });
+    expect(merged).not.toHaveProperty("soul");
+    expect(merged).toHaveProperty("name", "pr-reviewer");
+  });
+
+  it("replaces arrays wholesale", () => {
+    const merged = applyAgentPatch(draft, {
+      env: [{ name: "OTHER", value: "y", sensitive: false }],
+    });
+    expect(merged.env).toEqual([{ name: "OTHER", value: "y", sensitive: false }]);
+  });
+
+  it("replaces a non-object current value with a merged object when patching over a scalar", () => {
+    const merged = applyAgentPatch(draft, { description: "text", config: { web: { port: 1 } } });
+    // "description" absent in draft: merged in as-is.
+    expect(merged.description).toBe("text");
+    // A scalar current value is replaced by the patch object's merge result.
+    const overScalar = applyAgentPatch({ name: "x", soul: "text" } as AgentInput, {
+      soul: { bold: true },
+    });
+    expect(overScalar.soul).toEqual({ bold: true });
+  });
+
+  it("seeds a new draft when there is no current config", () => {
+    const merged = applyAgentPatch(undefined, { name: "first", config: { web: { port: 1 } } });
+    expect(merged).toEqual({ name: "first", config: { web: { port: 1 } } });
+  });
+
+  it("does not mutate its inputs", () => {
+    const draftCopy = structuredClone(draft);
+    const patch = { config: { web: { port: null } } } as unknown as AgentPatch;
+    applyAgentPatch(draft, patch);
+    expect(draft).toEqual(draftCopy);
+    expect(patch.config).toEqual({ web: { port: null } });
+  });
+
+  it("merged results pass AgentInputSchema and re-apply pinned defaults", () => {
+    // null-deleting a .default() field re-materializes the default when the
+    // merged result is validated — pinned policy (e.g. Slack
+    // unauthorized_dm_behavior: "ignore") is not weakened.
+    const withSlack = {
+      config: { slack: { unauthorized_dm_behavior: "pair", enabled: true } },
+    } as unknown as AgentInput;
+    const merged = applyAgentPatch(withSlack, {
+      config: { slack: { unauthorized_dm_behavior: null } },
+    });
+    const parsed = AgentInputSchema.safeParse(merged);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    const slack = (parsed.data.config as { slack?: { unauthorized_dm_behavior?: string } }).slack;
+    expect(slack?.unauthorized_dm_behavior).toBe("ignore");
   });
 });
 
