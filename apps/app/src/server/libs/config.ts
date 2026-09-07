@@ -121,6 +121,31 @@ export const ConfigSchema = z.object({
     .max(65535)
     .default(8443)
     .describe("HTTPS port for the mutating admission webhook (HERMEUM_WEBHOOK_PORT). Only used when HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set."),
+  deploymentId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Stable identifier for this Hermeum deployment, used as the PostHog distinct id in deployment heartbeats (HERMEUM_DEPLOYMENT_ID). " +
+        "When unset, a random id is generated per process boot."
+    ),
+  posthogApiKey: z
+    .string()
+    .min(1)
+    .default("phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo")
+    .describe(
+      "PostHog project API key used for deployment telemetry (HERMEUM_POSTHOG_API_KEY). " +
+        "Defaults to the Hermeum project token — a public, client-safe credential; override to report to a different PostHog project."
+    ),
+  posthogHost: z
+    .string()
+    .min(1)
+    .default("https://us.i.posthog.com")
+    .describe("PostHog ingestion host (HERMEUM_POSTHOG_HOST)."),
+  telemetryDisabled: z
+    .boolean()
+    .default(false)
+    .describe("Disable all deployment telemetry heartbeats (HERMEUM_TELEMETRY_DISABLED)."),
 });
 
 export const config = ConfigSchema.parse({
@@ -152,4 +177,8 @@ export const config = ConfigSchema.parse({
   webhookPort: process.env.HERMEUM_WEBHOOK_PORT
     ? parseInt(process.env.HERMEUM_WEBHOOK_PORT, 10)
     : undefined,
+  deploymentId: process.env.HERMEUM_DEPLOYMENT_ID,
+  posthogApiKey: process.env.HERMEUM_POSTHOG_API_KEY ?? "phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo",
+  posthogHost: process.env.HERMEUM_POSTHOG_HOST,
+  telemetryDisabled: process.env.HERMEUM_TELEMETRY_DISABLED === "true",
 });

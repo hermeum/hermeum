@@ -9,6 +9,7 @@ import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
 import { config } from "./libs/config";
+import { telemetry } from "./infras/posthog";
 import { trpcMiddleware } from "@/server/routers/trpc/index.js";
 import { webhookRouter } from "./routers/webhook";
 import { aiSdkRouter } from "./routers/ai-sdk/agent-config";
@@ -119,9 +120,25 @@ export const createServer = async (
     webServer,
     webhookServer,
   };
+}
+
+const shutdownTelemetry = async () => {
+  try {
+    await telemetry.shutdown();
+  } catch (e) {
+    console.warn("Failed to flush telemetry on shutdown:", e);
+  }
 };
 
 if (!isTest) {
+  telemetry.heartbeat();
+
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+      void shutdownTelemetry().finally(() => process.exit(0));
+    });
+  }
+
   createServer()
     .then(({ webServer, webhookServer }) => {
       webServer.listen(port, () => {
