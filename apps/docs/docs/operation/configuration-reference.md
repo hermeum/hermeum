@@ -60,7 +60,7 @@ draft agent `config.yaml` blocks from natural-language prompts.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_OPENAI_MODEL` | `gpt-5.5` | Model id passed to the completion call. Must be a model the configured endpoint serves. |
+| `HERMEUM_OPENAI_MODEL` | `gpt-5.6-sol` | Model id passed to the completion call. Must be a model the configured endpoint serves. |
 | `HERMEUM_OPENAI_BASE_URL` | — | Override the OpenAI API base URL. Point this at any OpenAI-compatible gateway (vLLM, Ollama, Azure OpenAI, etc.). When unset, the OpenAI default is used. |
 | `HERMEUM_OPENAI_API_KEY` | — | API key for the OpenAI-compatible endpoint. Required when targeting the hosted OpenAI API; may be unused for local gateways. |
 

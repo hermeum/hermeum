@@ -1,19 +1,23 @@
 templates:
   - id: support-agent
     name: Support Agent
-    description: Answers support questions using the docs and Notion knowledge base.
+    description: Handles customer-support conversations through email using the docs and Notion knowledge base.
     agentInput:
       name: Support Agent
-      description: Answers support questions using the docs and Notion knowledge base, and escalates to a human when the answer is missing, uncertain, or requires account-specific handling.
+      description: Handles customer-support conversations through email using the docs and Notion knowledge base, and communicates with owners through Slack for escalations, guidance, and account-specific decisions.
       type: medium
       soul: |-
-        You are a helpful support agent grounded in the company's documentation and Notion knowledge base. Answer clearly and practically, cite or reference the source material when possible, and do not invent policies or product behavior.
+        You are a dependable customer-support agent. Be clear, practical, and empathetic. Ground every answer in the company's documentation and Notion knowledge base, and never invent policies, promises, or product behavior.
 
-        Escalate when the knowledge base does not contain enough information, the user reports a bug or outage, the issue involves billing/account/security/privacy, or the user needs a human decision. When escalating, summarize the user's question, relevant context, what you checked, and the next action needed.
+        Escalate to the owners when information is missing or uncertain, a customer reports a bug or outage, the issue involves billing, accounts, security, or privacy, or a human decision is needed. Provide the relevant context and get owner confirmation before sending the customer an answer that depends on the escalation.
+
+        Email: Use the Himalaya skill for customer support. Read `EMAIL_ADDRESS` and `EMAIL_PASSWORD` from the deployment `.env`, and never disclose credentials.
+
+        Slack: Use it only for internal communication with owners, including escalations and confirmations. Never expose internal discussions to customers.
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
+          default: gpt-5.6-sol
       env:
         - name: OPENAI_API_KEY
           value: <fill-me>
@@ -21,8 +25,79 @@ templates:
         - name: NOTION_API_KEY
           value: <fill-me>
           sensitive: true
+        - name: EMAIL_ADDRESS
+          value: <fill-me>
+        - name: EMAIL_PASSWORD
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
       skills:
         - skills/productivity/notion
+        - skills/creative/humanizer
+        - skills/email/himalaya
+  - id: marketer
+    name: Marketing Content Agent
+    description: Plans campaigns, drafts and publishes X posts and blog articles, and monitors competitors.
+    agentInput:
+      name: Marketing Content Agent
+      description: A hands-on marketing agent. Plans campaigns, drafts and publishes X posts and blog articles, repurposes content across formats, and monitors competitors and market news.
+      type: medium
+      soul: |-
+        You are a marketing agent. You own marketing work end-to-end:
+        campaign planning, social posts, blog articles, and market
+        intelligence. You do not hand back half-done work — when you take a
+        task, you carry it to a ready-to-post deliverable.
+
+        Write like a marketer, not like an AI: no hype language, no filler,
+        no "delve" or "game-changer". Ground every claim about competitors
+        or the market in sources you actually found. When you couldn't
+        verify something, say so.
+
+        Publishing is a two-step: draft, get human approval, then post.
+        Never publish on your own initiative. If a brief is ambiguous,
+        ask before writing.
+
+        When authenticating xurl with OAuth2, always use the `--headless` option.
+      config:
+        model:
+          provider: openai-api
+          default: gpt-5.6-terra
+      env:
+        - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
+        - name: FAL_KEY
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
+      skills:
+        - skills/research/rss-feeds
+        - optional-skills/research/blogwatcher
+        - skills/research/competitor-news-monitor
+        - skills/media/youtube-content
+        - skills/creative/humanizer
+        - skills/social-media/xurl
+      packages:
+        pip:
+          - youtube-transcript-api
   - id: incident-commander
     name: Incident Commander
     description: Receives incident alerts by webhook, investigates likely causes, and posts a structured triage summary to Slack.
@@ -34,7 +109,7 @@ templates:
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
+          default: gpt-5.6-terra
         platforms:
           webhook:
             enabled: true
@@ -78,61 +153,69 @@ templates:
           value: <fill-me>
         - name: SLACK_HOME_CHANNEL
           value: <fill-me>
-  - id: code-reviewer
-    name: Code Reviewer
-    description: Reviews GitHub pull requests and post a feedback back to the PR.
+  - id: software-engineer
+    name: Software Engineer
+    description: Implements changes with tests, opens pull requests, and debugs failures.
     agentInput:
-      name: GitHub PR Code Reviewer
-      description: Reviews GitHub pull requests received via webhook and posts review feedback back to the PR.
-      type: medium
-      soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
+      name: Software Engineer
+      description: An autonomous software engineer. Given a task, it reads the code, implements the change with tests, and opens a pull request. Also reviews code on request and debugs failures to root cause.
+
+      type: large
+      soul: |-
+        You are a software engineer. You own engineering work end-to-end:
+        writing code, opening pull requests, reviewing changes, and debugging
+        failures. You do not hand the work back half-done — when you take a
+        task, you carry it to review-ready.
+
+        Work from evidence. Read the issue, the surrounding code, and the
+        tests before writing anything; read the actual error before
+        proposing a fix. Keep every change minimal and reviewable — one
+        concern per pull request — and write tests for new behavior. Run
+        the test suite before opening a PR; if you couldn't, say so in the
+        description rather than implying it passes.
+
+        When reviewing, be direct and specific: correctness first, then
+        security, maintainability, and performance. Cite file and line, and
+        suggest the fix rather than just the flaw.
+
+        When debugging, reproduce before theorizing. Separate facts from
+        hypotheses, and fix the root cause, not the symptom.
+
+        Never push to a protected branch or rewrite history — finished work
+        goes through a pull request. If a task is ambiguous or larger than
+        one focused change, say what you'd cut or ask for direction before
+        writing code.
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
-        platforms:
-          webhook:
-            enabled: true
-            extra:
-              port: 8644
-              routes:
-                github-pr-review:
-                  events:
-                    - pull_request
-                  prompt: |-
-                    Review this GitHub pull request using the loaded GitHub code review skill.
-
-                    Repository: {repository.full_name}
-                    PR #{number}: {pull_request.title}
-                    Author: {pull_request.user.login}
-                    URL: {pull_request.html_url}
-                    Diff URL: {pull_request.diff_url}
-                    Action: {action}
-
-                    Provide concise, actionable review feedback. Prioritize high-impact issues and include file/line references where possible.
-                  skills:
-                    - github-code-review
-                  deliver: github_comment
-                  deliver_extra:
-                    repo: "{repository.full_name}"
-                    pr_number: "{number}"
+          default: gpt-5.6-sol
       env:
         - name: OPENAI_API_KEY
-          value: <fill-me>
-          sensitive: true
-        - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
         - name: GITHUB_TOKEN
           value: <fill-me>
           sensitive: true
-skills:
-  - skills/github/github-code-review
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
+      skills:
+        - skills/software-development/github
+        - skills/software-development/requesting-code-review
+        - openai/skills/skills/.curated/gh-fix-ci
 agentTypes:
   medium:
     description: >-
       Standard performance — handles everyday workloads reliably, including
-      browsing and web search. A good fit for most agents.
+      browsing and web search. A good fit for most agents. Persists the agent
+      workspace on a 10Gi volume.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
@@ -150,6 +233,12 @@ agentTypes:
             limits:
               cpu: "4"
               memory: 2Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
         - op: add
           path: /spec/searxng/resources
           value:
@@ -182,6 +271,12 @@ agentTypes:
               cpu: "4"
               memory: 2Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
+        - op: add
           path: /spec/searxng/resources
           value:
             requests:
@@ -204,6 +299,12 @@ agentTypes:
               cpu: "4"
               memory: 2Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
+        - op: add
           path: /spec/camofox/resources
           value:
             requests:
@@ -222,10 +323,17 @@ agentTypes:
             limits:
               cpu: "4"
               memory: 2Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 10Gi
   large:
     description: >-
       High performance — extra capacity for demanding tasks, such as very long
       conversations, heavy document analysis, or many concurrent users.
+      Persists the agent workspace on a 20Gi volume.
     mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
@@ -243,6 +351,12 @@ agentTypes:
             limits:
               cpu: "8"
               memory: 4Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
         - op: add
           path: /spec/searxng/resources
           value:
@@ -275,6 +389,12 @@ agentTypes:
               cpu: "8"
               memory: 4Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
+        - op: add
           path: /spec/searxng/resources
           value:
             requests:
@@ -297,6 +417,12 @@ agentTypes:
               cpu: "8"
               memory: 4Gi
         - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
+        - op: add
           path: /spec/camofox/resources
           value:
             requests:
@@ -315,3 +441,9 @@ agentTypes:
             limits:
               cpu: "8"
               memory: 4Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 20Gi
