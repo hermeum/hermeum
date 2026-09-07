@@ -131,8 +131,11 @@ export const ConfigSchema = z.object({
   posthogApiKey: z
     .string()
     .min(1)
-    .optional()
-    .describe("PostHog project API key used for deployment telemetry (HERMEUM_POSTHOG_API_KEY). When unset, deployment telemetry is disabled."),
+    .default("phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo")
+    .describe(
+      "PostHog project API key used for deployment telemetry (HERMEUM_POSTHOG_API_KEY). " +
+        "Defaults to the Hermeum project token — a public, client-safe credential; override to report to a different PostHog project."
+    ),
   posthogHost: z
     .string()
     .min(1)
@@ -174,7 +177,7 @@ export const config = ConfigSchema.parse({
     ? parseInt(process.env.HERMEUM_WEBHOOK_PORT, 10)
     : undefined,
   deploymentId: process.env.HERMEUM_DEPLOYMENT_ID,
-  posthogApiKey: process.env.HERMEUM_POSTHOG_API_KEY,
+  posthogApiKey: process.env.HERMEUM_POSTHOG_API_KEY ?? "phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo",
   posthogHost: process.env.HERMEUM_POSTHOG_HOST,
   telemetryDisabled: process.env.HERMEUM_TELEMETRY_DISABLED === "true",
 });

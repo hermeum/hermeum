@@ -121,7 +121,7 @@ official PostHog OpenTelemetry (OTLP) integration.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_POSTHOG_API_KEY` | — | PostHog project API key (`phc_...`). Required for the heartbeat and for log mirroring. |
+| `HERMEUM_POSTHOG_API_KEY` | Hermeum's project token | PostHog project API key (`phc_...`), baked in as the default so heartbeats work out of the box. The token is public by design — override to report to a different PostHog project. |
 | `HERMEUM_POSTHOG_HOST` | `https://us.i.posthog.com` | PostHog ingestion host. |
 | `HERMEUM_DEPLOYMENT_ID` | — | Stable identifier for this deployment, used as the heartbeat's distinct id. When unset, a random id is generated per process boot — set this (e.g. to the Helm release name) for accurate server counts across restarts. |
 | `HERMEUM_TELEMETRY_DISABLED` | `false` | Set to `true` to disable log mirroring to PostHog Logs. Console output is always enabled; the deployment heartbeat event is not affected. |
