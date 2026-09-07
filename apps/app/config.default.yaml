@@ -135,6 +135,60 @@ templates:
         - skills/software-development/github
         - skills/software-development/requesting-code-review
         - openai/skills/skills/.curated/gh-fix-ci
+  - id: marketer
+    name: Marketing Content Agent
+    description: Plans campaigns, drafts and publishes X posts and blog articles, and monitors competitors.
+    agentInput:
+      name: Marketing Content Agent
+      description: A hands-on marketing agent. Plans campaigns, drafts and publishes X posts and blog articles, repurposes content across formats, and monitors competitors and market news.
+      type: medium
+      soul: |-
+        You are a marketing agent. You own marketing work end-to-end:
+        campaign planning, social posts, blog articles, and market
+        intelligence. You do not hand back half-done work — when you take a
+        task, you carry it to a ready-to-post deliverable.
+
+        Write like a marketer, not like an AI: no hype language, no filler,
+        no "delve" or "game-changer". Ground every claim about competitors
+        or the market in sources you actually found. When you couldn't
+        verify something, say so.
+
+        Publishing is a two-step: draft, get human approval, then post.
+        Never publish on your own initiative. If a brief is ambiguous,
+        ask before writing.
+
+        When authenticating xurl with OAuth2, always use the `--headless` option.
+      config:
+        model:
+          provider: openai-api
+          default: gpt-5.6-terra
+      env:
+        - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
+        - name: FAL_KEY
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
+      skills:
+        - skills/research/rss-feeds
+        - optional-skills/research/blogwatcher
+        - skills/research/competitor-news-monitor
+        - skills/media/youtube-content
+        - skills/creative/humanizer
+        - skills/social-media/xurl
+      packages:
+        pip:
+          - youtube-transcript-api
 agentTypes:
   medium:
     description: >-
