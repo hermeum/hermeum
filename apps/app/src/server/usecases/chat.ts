@@ -73,7 +73,10 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           description:
             "Replace the agent config draft with a full updated definition. " +
             "Always pass the COMPLETE config, keeping every field not affected " +
-            "by the requested change unchanged.",
+            "by the requested change unchanged. Apply each user request in a " +
+            "single call — do not iterate with successive updates. If unsure " +
+            "about a section's shape, call readDocument for that section " +
+            "before the call.",
           inputSchema: AgentInputObjectSchema,
           // No `execute`: the client applies the config to its editor and
           // reports the result back.
@@ -257,9 +260,13 @@ You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
 it in an editor and may change it by hand between messages.
 
-Note 
+Note
 - Skip every optional field unless the user requests it.
 - Never guess at field semantics. When you're not fully sure about a config
 section, settle it with the documentation before writing it into the draft.
+- The draft wraps the Hermes config under a top-level "config" key: fields
+the Hermes docs describe as top-level (e.g. "slack:") live under "config."
+in the draft.
+- Apply each user request with a single updateAgentConfig call.
 
 `;
