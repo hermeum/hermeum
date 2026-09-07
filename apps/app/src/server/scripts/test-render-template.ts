@@ -26,7 +26,7 @@ import * as fastJsonPatch from "fast-json-patch";
 import { stringify } from "yaml";
 
 import { AgentInputObjectSchema, Context, Template } from "@/entities";
-import { ConsoleLogger } from "@/server/infras/console-logger";
+import { telemetry } from "@/server/infras/posthog";
 import { HermesSkillIndex } from "@/server/infras/hermes-skill-index";
 import { LocalFiles } from "@/server/infras/local-files";
 import { agentToHermesAgent } from "@/server/infras/kubernetes/client";
@@ -56,8 +56,8 @@ const stubRuntime: Runtime = new Proxy({} as Runtime, {
 
 const ctx: Context = { session: null, user: null };
 
-const templateUseCase = new TemplateUseCase(stubRuntime, new LocalFiles(), new HermesSkillIndex(), new ConsoleLogger(config.logLevel));
-const agentUseCase = new AgentUseCase(stubRuntime, new LocalFiles(), new HermesSkillIndex(), new ConsoleLogger(config.logLevel));
+const templateUseCase = new TemplateUseCase(stubRuntime, new LocalFiles(), new HermesSkillIndex(), telemetry);
+const agentUseCase = new AgentUseCase(stubRuntime, new LocalFiles(), new HermesSkillIndex(), telemetry);
 
 const template: Template | null = await templateUseCase.get(ctx, templateId);
 if (!template) {

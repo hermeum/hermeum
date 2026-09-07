@@ -106,6 +106,26 @@ otherwise the webhook is not served.
 See [Mutating webhook](../mutating-webhook) for how the webhook is wired into
 the cluster and how its `caBundle` gets populated.
 
+### Telemetry
+
+Hermeum's telemetry adaptor logs to the console and reports a lightweight
+deployment heartbeat (`deployment.heartbeat` event) to a Hermeum-owned PostHog
+project so the team can count running self-hosted servers and track version
+adoption. The heartbeat is captured as a PostHog event on startup and then
+hourly, and carries only anonymous deployment-level properties: the deployment
+id, `hosting`, the app version, and the database dialect. The heartbeat is
+always reported and is not governed by the log-mirroring toggle below.
+
+Optionally, console log messages can also be mirrored to PostHog Logs via the
+official PostHog OpenTelemetry (OTLP) integration.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HERMEUM_POSTHOG_API_KEY` | — | PostHog project API key (`phc_...`). Required for the heartbeat and for log mirroring. |
+| `HERMEUM_POSTHOG_HOST` | `https://us.i.posthog.com` | PostHog ingestion host. |
+| `HERMEUM_DEPLOYMENT_ID` | — | Stable identifier for this deployment, used as the heartbeat's distinct id. When unset, a random id is generated per process boot — set this (e.g. to the Helm release name) for accurate server counts across restarts. |
+| `HERMEUM_TELEMETRY_DISABLED` | `false` | Set to `true` to disable log mirroring to PostHog Logs. Console output is always enabled; the deployment heartbeat event is not affected. |
+
 ## RBAC notes
 
 Hermeum runs as a Kubernetes controller for `HermesAgent` CRs inside
