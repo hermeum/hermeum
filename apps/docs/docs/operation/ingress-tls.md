@@ -30,12 +30,10 @@ When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, Hermeum emits an
 | webhook | `<agent-id>.hooks.<base hostname>` | webhook port (default 8644) |
 | teams | `<agent-id>.teams.<base hostname>` | teams port (default 3978) |
 
-Each subdomain maps wholesale to the platform's Service port — one host per
-platform with a single root-prefix route — so the platform's own paths are
-served at the host root and different platforms can never conflict on a
-shared path prefix. Only platforms that are enabled for the agent get a
-subdomain. When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is unset, **no
-per-agent ingress is generated** and agents remain reachable only in-cluster.
+Each subdomain maps wholesale to the platform's Service port, so
+platforms can never conflict on a shared path prefix. Platforms that are
+not enabled get no subdomain. When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME`
+is unset, **no per-agent ingress is generated**.
 
 | Variable | Default | Description |
 | --- | --- | --- |
