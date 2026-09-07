@@ -511,7 +511,7 @@ describe("agentToHermesAgent ingress wiring", () => {
     expect(hermesAgent.spec.networking?.ingress).toBeUndefined();
   });
 
-  it("emits all four routes when both api-server and webhook are enabled", async () => {
+  it("emits one host per platform when both api-server and webhook are enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -527,43 +527,46 @@ describe("agentToHermesAgent ingress wiring", () => {
       annotations: {},
       hosts: [
         {
-          host: "agent-1.agents.example.com",
-          paths: [
-            { path: "/webhooks", pathType: "Prefix", port: 8644 },
-            { path: "/v1", pathType: "Prefix", port: 8642 },
-            { path: "/api", pathType: "Prefix", port: 8642 },
-            { path: "/health", pathType: "Prefix", port: 8642 },
-          ],
+          host: "agent-1.hooks.agents.example.com",
+          paths: [{ path: "/", pathType: "Prefix", port: 8644 }],
+        },
+        {
+          host: "agent-1.api.agents.example.com",
+          paths: [{ path: "/", pathType: "Prefix", port: 8642 }],
         },
       ],
     });
   });
 
-  it("includes only the api-server routes when only api-server is enabled", async () => {
+  it("includes only the api-server host when only api-server is enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
     );
-    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/v1", pathType: "Prefix", port: 8642 },
-      { path: "/api", pathType: "Prefix", port: 8642 },
-      { path: "/health", pathType: "Prefix", port: 8642 },
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1.api.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8642 }],
+      },
     ]);
   });
 
-  it("includes only the webhook route when only webhook is enabled", async () => {
+  it("includes only the webhook host when only webhook is enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({ env: [{ name: "WEBHOOK_ENABLED", value: "true" }] })
     );
-    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/webhooks", pathType: "Prefix", port: 8644 },
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1.hooks.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8644 }],
+      },
     ]);
   });
 
-  it("includes only the teams route when only teams is enabled", async () => {
+  it("includes only the teams host when only teams is enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -575,12 +578,15 @@ describe("agentToHermesAgent ingress wiring", () => {
         ],
       })
     );
-    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/api/messages", pathType: "Prefix", port: 3978 },
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1.teams.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 3978 }],
+      },
     ]);
   });
 
-  it("emits /api/messages before /v1 and /api when teams + api-server are both enabled", async () => {
+  it("routes teams and api-server on separate subdomains when both are enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -593,19 +599,20 @@ describe("agentToHermesAgent ingress wiring", () => {
         ],
       })
     );
-    const paths = hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths ?? [];
-    const teamsIdx = paths.findIndex((p) => p.path === "/api/messages");
-    const apiIdx = paths.findIndex((p) => p.path === "/api");
-    const v1Idx = paths.findIndex((p) => p.path === "/v1");
-    expect(teamsIdx).toBeGreaterThanOrEqual(0);
-    expect(apiIdx).toBeGreaterThan(teamsIdx);
-    expect(v1Idx).toBeGreaterThan(teamsIdx);
-    // Teams routes to its own port (3978), not the api-server port (8642).
-    expect(paths[teamsIdx]?.port).toBe(3978);
-    expect(paths[apiIdx]?.port).toBe(8642);
+    const hosts = hermesAgent.spec.networking?.ingress?.hosts ?? [];
+    const teamsHost = hosts.find((h) => h.host === "agent-1.teams.agents.example.com");
+    const apiHost = hosts.find((h) => h.host === "agent-1.api.agents.example.com");
+    // Each platform is on its own subdomain — no /api vs /api/messages prefix
+    // collision, so no ordering workaround is needed.
+    expect(teamsHost?.paths).toEqual([
+      { path: "/", pathType: "Prefix", port: 3978 },
+    ]);
+    expect(apiHost?.paths).toEqual([
+      { path: "/", pathType: "Prefix", port: 8642 },
+    ]);
   });
 
-  it("emits all routes in precedence order when webhook, teams, and api-server are enabled", async () => {
+  it("emits a host per platform when webhook, teams, and api-server are enabled", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -619,12 +626,19 @@ describe("agentToHermesAgent ingress wiring", () => {
         ],
       })
     );
-    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/webhooks", pathType: "Prefix", port: 8644 },
-      { path: "/api/messages", pathType: "Prefix", port: 3978 },
-      { path: "/v1", pathType: "Prefix", port: 8642 },
-      { path: "/api", pathType: "Prefix", port: 8642 },
-      { path: "/health", pathType: "Prefix", port: 8642 },
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1.hooks.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8644 }],
+      },
+      {
+        host: "agent-1.teams.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 3978 }],
+      },
+      {
+        host: "agent-1.api.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8642 }],
+      },
     ]);
   });
 
@@ -648,8 +662,11 @@ describe("agentToHermesAgent ingress wiring", () => {
         },
       })
     );
-    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.paths).toEqual([
-      { path: "/api/messages", pathType: "Prefix", port: 4000 },
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1.teams.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 4000 }],
+      },
     ]);
   });
 
@@ -674,15 +691,26 @@ describe("agentToHermesAgent ingress wiring", () => {
     });
   });
 
-  it("emits a tls block with secretName when a tls secret is configured (regardless of scheme)", async () => {
+  it("emits a tls block with secretName covering all platform hosts when a tls secret is configured (regardless of scheme)", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     vi.stubEnv("HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME", "agent-tls");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+      makeAgent({
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "WEBHOOK_ENABLED", value: "true" },
+        ],
+      })
     );
     expect(hermesAgent.spec.networking?.ingress?.tls).toEqual([
-      { hosts: ["agent-1.agents.example.com"], secretName: "agent-tls" },
+      {
+        hosts: [
+          "agent-1.hooks.agents.example.com",
+          "agent-1.api.agents.example.com",
+        ],
+        secretName: "agent-tls",
+      },
     ]);
   });
 
@@ -715,7 +743,7 @@ describe("agentToHermesAgent ingress wiring", () => {
     expect(hermesAgent.spec.networking?.ingress?.className).toBeUndefined();
   });
 
-  it("builds the host from the agent id and base hostname", async () => {
+  it("builds per-platform hosts from the agent id and base hostname", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     const { agentToHermesAgent, mapHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
@@ -725,19 +753,20 @@ describe("agentToHermesAgent ingress wiring", () => {
       })
     );
     expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.host).toBe(
-      "agent-42.agents.example.com"
+      "agent-42.api.agents.example.com"
     );
-    expect(mapHermesAgent(hermesAgent).endpoint).toBe(
-      "http://agent-42.agents.example.com"
-    );
+    expect(mapHermesAgent(hermesAgent).endpoints).toEqual({
+      "api-server": "http://agent-42.api.agents.example.com",
+      webhook: null,
+      teams: null,
+    });
   });
 });
 
-describe("buildAgentEndpoint", () => {
+describe("buildAgentEndpoints", () => {
   const ENV_VARS = [
     "HERMEUM_AGENT_INGRESS_SCHEME",
     "HERMEUM_AGENT_INGRESS_BASE_HOSTNAME",
-    "HERMEUM_KUBERNETES_NAMESPACE",
   ];
   const ORIGINAL: Record<string, string | undefined> = {};
 
@@ -759,100 +788,116 @@ describe("buildAgentEndpoint", () => {
     return (await import("./client")) as typeof import("./client");
   }
 
-  function makeHermesAgentWithIngress(host: string | undefined): HermesAgent {
-    return {
-      metadata: { name: "agent-1" },
-      spec: {
-        networking: {
-          ingress: {
-            enabled: true,
-            hosts: host
-              ? [{ host, paths: [{ path: "/api", pathType: "Prefix", port: 8642 }] }]
-              : undefined,
-          },
-        },
-      },
-    } as unknown as HermesAgent;
-  }
-
-  function makeHermesAgentWithServicePorts(portNames: string[]): HermesAgent {
+  function makeHermesAgentWithServicePorts(
+    portNames: { name: string; port: number }[]
+  ): HermesAgent {
     return {
       metadata: { name: "agent-1" },
       spec: {
         networking: {
           service: {
-            ports: portNames.map((name) => ({ name, port: 8642, targetPort: 8642, protocol: "TCP" })),
+            ports: portNames.map(({ name, port }) => ({
+              name,
+              port,
+              targetPort: port,
+              protocol: "TCP",
+            })),
           },
         },
       },
     } as unknown as HermesAgent;
   }
 
-  it("returns the scheme + host URL when an ingress host is present", async () => {
+  it("constructs per-platform URLs from service ports and the configured base hostname", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithIngress("agent-1.agents.example.com"))).toBe(
-      "http://agent-1.agents.example.com"
-    );
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([
+          { name: "api-server", port: 8642 },
+          { name: "webhook", port: 8644 },
+        ])
+      )
+    ).toEqual({
+      "api-server": "http://agent-1.api.agents.example.com",
+      webhook: "http://agent-1.hooks.agents.example.com",
+      teams: null,
+    });
   });
 
-  it("returns null when the CR has no ingress host and no HTTP service ports", async () => {
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithIngress(undefined))).toBeNull();
+  it("serves the in-cluster Service DNS for platforms with a service port when no base hostname is configured", async () => {
+    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([
+          { name: "api-server", port: 8642 },
+          { name: "webhook", port: 8644 },
+          { name: "teams", port: 3978 },
+        ])
+      )
+    ).toEqual({
+      "api-server": "http://agent-1.hermeum.svc.cluster.local:8642",
+      webhook: "http://agent-1.hermeum.svc.cluster.local:8644",
+      teams: "http://agent-1.hermeum.svc.cluster.local:3978",
+    });
   });
 
-  it("returns null when the CR has no networking at all", async () => {
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint({ spec: {} } as unknown as HermesAgent)).toBeNull();
+  it("sets null for platforms without a service port when no base hostname is configured", async () => {
+    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([{ name: "api-server", port: 8642 }])
+      )
+    ).toEqual({
+      "api-server": "http://agent-1.hermeum.svc.cluster.local:8642",
+      webhook: null,
+      teams: null,
+    });
+  });
+
+  it("sets null for every platform when the CR has no service ports", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints({ metadata: { name: "agent-1" }, spec: {} } as unknown as HermesAgent)
+    ).toEqual({
+      "api-server": null,
+      webhook: null,
+      teams: null,
+    });
   });
 
   it("honours agentIngressScheme when set to https", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
     vi.stubEnv("HERMEUM_AGENT_INGRESS_SCHEME", "https");
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithIngress("agent-1.agents.example.com"))).toBe(
-      "https://agent-1.agents.example.com"
-    );
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([{ name: "api-server", port: 8642 }])
+      )
+    ).toEqual({
+      "api-server": "https://agent-1.api.agents.example.com",
+      webhook: null,
+      teams: null,
+    });
   });
 
-  it("falls back to the in-cluster Service DNS when no ingress host is present but api-server is enabled", async () => {
-    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithServicePorts(["api-server"]))).toBe(
-      "http://agent-1.hermeum.svc.cluster.local"
-    );
-  });
-
-  it("falls back to the in-cluster Service DNS when only webhook is enabled", async () => {
-    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithServicePorts(["webhook"]))).toBe(
-      "http://agent-1.hermeum.svc.cluster.local"
-    );
-  });
-
-  it("prefers the ingress host over the internal Service DNS when both are present", async () => {
+  it("includes teams when its service port exists", async () => {
     vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
-    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
-    const { buildAgentEndpoint } = await importFresh();
-    const raw = {
-      metadata: { name: "agent-1" },
-      spec: {
-        networking: {
-          ingress: {
-            enabled: true,
-            hosts: [{ host: "agent-1.agents.example.com", paths: [] }],
-          },
-          service: { ports: [{ name: "api-server", port: 8642, targetPort: 8642, protocol: "TCP" }] },
-        },
-      },
-    } as unknown as HermesAgent;
-    expect(buildAgentEndpoint(raw)).toBe("http://agent-1.agents.example.com");
-  });
-
-  it("returns null when service ports exist but none are HTTP platforms", async () => {
-    vi.stubEnv("HERMEUM_KUBERNETES_NAMESPACE", "hermeum");
-    const { buildAgentEndpoint } = await importFresh();
-    expect(buildAgentEndpoint(makeHermesAgentWithServicePorts(["misc"]))).toBeNull();
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([
+          { name: "api-server", port: 8642 },
+          { name: "teams", port: 3978 },
+        ])
+      )
+    ).toEqual({
+      "api-server": "http://agent-1.api.agents.example.com",
+      webhook: null,
+      teams: "http://agent-1.teams.agents.example.com",
+    });
   });
 });

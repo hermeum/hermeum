@@ -173,6 +173,7 @@ helm show values charts/hermeum
 | `agentConfig`                        | `{}`                             | Full `config.yaml` content (mounted as a ConfigMap). |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
+| `config.agentIngress.baseHostname`   | `""`                             | Per-agent ingress base hostname — each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams). Unset = no agent ingress. |
 | `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |
 | `persistence.enabled`                | `true`                           | PVC for sqlite (ignored for postgres).       |
 

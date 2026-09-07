@@ -4,11 +4,12 @@ import * as k8s from "@kubernetes/client-node";
 
 import {
   Agent,
+  AgentEndpoints,
   AgentPhase,
   ENV_SECRET_SENTINEL,
   Env,
   EnvVar,
-  PLATFORM_INGRESS_SUBPATHS,
+  PLATFORM_INGRESS_LABELS,
   PlatformId,
   SharedEnvSet,
   SharedEnvSetEnvVar,
@@ -35,7 +36,7 @@ import {
   HermesAgentSpec,
   HermesConfig,
   Ingress,
-  IngressPath,
+  IngressHost,
   ServicePort,
 } from "./types/hermes-agent";
 
@@ -147,6 +148,16 @@ export function agentEnvToSecret(
   };
 }
 
+// Build the ingress host for one platform subdomain:
+// <agent-id>.<platform-label>.<base-hostname>
+function ingressHostFor(agentId: string, platform: PlatformId): string {
+  const label = PLATFORM_INGRESS_LABELS[platform];
+  if (label === undefined) {
+    throw new Error(`No ingress subdomain label configured for platform "${platform}"`);
+  }
+  return `${agentId}.${label}.${config.agentIngressBaseHostname ?? ""}`;
+}
+
 export function agentToHermesAgent(agent: Agent): HermesAgent {
   const labels: Record<string, string> = {
     [HermeumLabel.ManagedBy]: HermeumLabelValue.ManagedBy,
@@ -226,46 +237,47 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   }
   // Ingress is generated only when the operator configures a base hostname —
   // routing inbound traffic from message platforms (api-server, webhook,
-  // teams) to the agent's Service. Host takes the form <agent-id>.<base-hostname>.
+  // teams) to the agent's Service. Each HTTP platform gets its own subdomain
+  // <agent-id>.<platform-label>.<base-hostname> mapped to the platform's
+  // Service port. Routing is entirely subdomain-based: the whole host maps to
+  // the platform's Service port, so no subpath rules are needed.
   let ingress: Ingress | undefined;
   if (servicePorts.length > 0 && config.agentIngressBaseHostname !== undefined) {
-    const host = `${agent.id}.${config.agentIngressBaseHostname}`;
-    const ingressPaths: IngressPath[] = [];
+    const ingressHosts: IngressHost[] = [];
     if (webhookPort !== null) {
-      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.Webhook] ?? []) {
-        ingressPaths.push({ path, pathType: "Prefix", port: webhookPort });
-      }
+      ingressHosts.push({
+        host: ingressHostFor(agent.id, PlatformId.Webhook),
+        paths: [{ path: "/", pathType: "Prefix", port: webhookPort }],
+      });
     }
-    // Teams must be emitted BEFORE api-server: the api-server route uses the
-    // broad /api prefix, which would otherwise swallow /api/messages. The
-    // ingress controller's longest-prefix match routes /api/messages to the
-    // Teams port (3978) only if it appears before /api.
     if (teamsPort !== null) {
-      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.Teams] ?? []) {
-        ingressPaths.push({ path, pathType: "Prefix", port: teamsPort });
-      }
+      ingressHosts.push({
+        host: ingressHostFor(agent.id, PlatformId.Teams),
+        paths: [{ path: "/", pathType: "Prefix", port: teamsPort }],
+      });
     }
     if (apiServerPort !== null) {
-      for (const path of PLATFORM_INGRESS_SUBPATHS[PlatformId.ApiServer] ?? []) {
-        ingressPaths.push({ path, pathType: "Prefix", port: apiServerPort });
-      }
-      // /health is an infra health probe, not a messaging endpoint — kept
-      // local to the ingress builder (not surfaced in the UI subpath map).
-      ingressPaths.push({ path: "/health", pathType: "Prefix", port: apiServerPort });
+      ingressHosts.push({
+        host: ingressHostFor(agent.id, PlatformId.ApiServer),
+        paths: [{ path: "/", pathType: "Prefix", port: apiServerPort }],
+      });
     }
+    const hosts = ingressHosts.map((h) => h.host);
     ingress = {
       enabled: true,
       ...(config.agentIngressClassName !== undefined && { className: config.agentIngressClassName }),
       annotations: {},
-      hosts: [{ host, paths: ingressPaths }],
+      hosts: ingressHosts,
       // TLS is emitted only when a TLS secret name is configured — i.e. TLS is
       // terminated at the ingress controller. When unset, no tls block is
       // emitted, which covers both plain HTTP and load-balancer-terminated TLS
-      // (the LB handles the cert; the ingress receives plain HTTP).
+      // (the LB handles the cert; the ingress receives plain HTTP). The secret
+      // must cover every emitted host (e.g. a wildcard cert per platform
+      // label, *.hooks.<base> / *.api.<base> / *.teams.<base>).
       ...(config.agentIngressTlsSecretName !== undefined && {
         tls: [
           {
-            hosts: [host],
+            hosts,
             secretName: config.agentIngressTlsSecretName,
           },
         ],
@@ -335,33 +347,37 @@ export function mapHermesConfig(config: HermesConfig | undefined): Agent["config
   return config?.raw;
 }
 
-// Derive the agent's base endpoint URL.
+// Derive the agent's per-platform base endpoint URLs — one entry per HTTP
+// platform (PlatformId), always fully populated: an endpoint is set only when
+// the platform is available (its Service port exists), null otherwise.
 //
-// When the operator configures agentIngressBaseHostname, the reconciled
-// ingress writes its host into spec.networking.ingress and we surface it as
-// `${agentIngressScheme}://${host}` — a single host serving all HTTP platforms
-// (routing by path), so no port appears in the URL.
+// When the operator configures agentIngressBaseHostname, ingress hosts are
+// deterministic — <agent-id>.<platform-label>.<base> per enabled platform,
+// authored by agentToHermesAgent — so URLs are constructed directly from
+// config + the CR's Service ports. Subdomain-routed, so no port appears in
+// the URL.
 //
-// When no base hostname is configured, the per-agent ClusterIP Service is
-// still emitted (it is independent of ingress), so callers can reach the
-// agent in-cluster at `http://${agent.id}.${kubernetesNamespace}.svc.cluster.local`.
-// The per-platform port is inserted client-side (different platforms listen
-// on different ports), which is why this base carries no port.
-//
-// Returns null only when neither an ingress host nor an enabled HTTP platform
-// (api-server / webhook) is present — i.e. no endpoint exists at all.
-export function buildAgentEndpoint(raw: HermesAgent): string | null {
-  const ingressHost = raw.spec.networking?.ingress?.hosts?.[0]?.host;
-  if (ingressHost) {
-    return `${config.agentIngressScheme}://${ingressHost}`;
-  }
-  const hasHttpPlatform =
-    raw.spec.networking?.service?.ports?.some((p) => p.name === "api-server" || p.name === "webhook") ?? false;
-  if (hasHttpPlatform) {
-    const id = raw.metadata?.name ?? "";
-    return `http://${id}.${config.kubernetesNamespace}.svc.cluster.local`;
-  }
-  return null;
+// When no base hostname is configured, platforms fall back to the in-cluster
+// Service DNS at
+// `http://${agent.id}.${kubernetesNamespace}.svc.cluster.local` with the
+// platform's Service port embedded — different platforms listen on different
+// ports.
+export function buildAgentEndpoints(raw: HermesAgent): AgentEndpoints {
+  const id = raw.metadata?.name ?? "";
+  const servicePorts = raw.spec.networking?.service?.ports ?? [];
+  const endpoint = (platform: keyof AgentEndpoints): string | null => {
+    const port = servicePorts.find((p) => p.name === platform)?.port;
+    if (port === undefined) return null;
+    if (config.agentIngressBaseHostname !== undefined) {
+      return `${config.agentIngressScheme}://${ingressHostFor(id, platform)}`;
+    }
+    return `http://${id}.${config.kubernetesNamespace}.svc.cluster.local:${port}`;
+  };
+  return {
+    [PlatformId.ApiServer]: endpoint(PlatformId.ApiServer),
+    [PlatformId.Webhook]: endpoint(PlatformId.Webhook),
+    [PlatformId.Teams]: endpoint(PlatformId.Teams),
+  };
 }
 
 export function mapHermesAgent(raw: HermesAgent): Agent {
@@ -372,7 +388,7 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     description: raw.metadata?.annotations?.[HermeumAnnotation.Description],
     type: raw.metadata?.annotations?.[HermeumAnnotation.Type],
     config: mapHermesConfig(raw.spec.hermes?.config),
-    endpoint: buildAgentEndpoint(raw),
+    endpoints: buildAgentEndpoints(raw),
     sharedEnvSets: raw.spec.hermes?.envFrom?.flatMap((e) =>
       e.secretRef?.name ? [e.secretRef.name] : []
     ),

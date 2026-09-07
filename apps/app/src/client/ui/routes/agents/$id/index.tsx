@@ -139,7 +139,7 @@ function ToolsetsSection({ agent }: { agent: Agent }) {
 }
 
 function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
-  const { status, reason, home, endpoints } = derivePlatformAvailability(id, agent);
+  const { status, reason, home, endpoint } = derivePlatformAvailability(id, agent);
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
@@ -160,14 +160,13 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
       <TooltipContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
-          {endpoints !== undefined && endpoints.length > 0 && (
-            <div className="mt-1 flex flex-col gap-1">
-              {endpoints.map((url) => (
-                <div key={url} className="group flex min-w-0 items-center gap-1">
-                  <span className="min-w-0 break-all font-mono">{url}</span>
-                  <CopyButton text={url} className="shrink-0 opacity-0 group-hover:opacity-100" />
-                </div>
-              ))}
+          {endpoint !== undefined && (
+            <div className="group flex min-w-0 items-center gap-1">
+              <span className="min-w-0 break-all font-mono">{endpoint}</span>
+              <CopyButton
+                text={endpoint}
+                className="shrink-0 opacity-0 group-hover:opacity-100"
+              />
             </div>
           )}
           {home !== undefined && <span>Home channel: {home}</span>}

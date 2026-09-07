@@ -951,12 +951,12 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("API_SERVER_ENABLED");
     });
 
-    it("is available with the default port when enabled", () => {
+    it("is available when enabled", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
       );
-      expect(result).toEqual({ status: "available", port: 8642 });
+      expect(result.status).toBe("available");
     });
 
     it("is available when enabled via config.gateway.api_server", () => {
@@ -967,20 +967,20 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
         })
       );
-      expect(result).toEqual({ status: "available", port: 8642 });
+      expect(result.status).toBe("available");
     });
 
-    it("uses config.gateway.api_server.port when the env var is absent", () => {
+    it("is available when the port comes from config.gateway.api_server.port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
           config: { gateway: { api_server: { enabled: true, port: 9000 } } },
         })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("prefers API_SERVER_PORT over config.gateway.api_server.port", () => {
+    it("is available when API_SERVER_PORT overrides the config port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
@@ -988,7 +988,7 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "API_SERVER_PORT", value: "9001" }],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9001 });
+      expect(result.status).toBe("available");
     });
 
     it("is unavailable when config disables the api server but the env var enables it", () => {
@@ -1002,7 +1002,7 @@ describe("derivePlatformAvailability", () => {
       expect(result.status).toBe("available");
     });
 
-    it("uses API_SERVER_PORT when set", () => {
+    it("is available when API_SERVER_PORT is set", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
@@ -1012,65 +1012,61 @@ describe("derivePlatformAvailability", () => {
           ],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("derives endpoints with /v1 first then /api when agent.endpoint is set", () => {
+    it("surfaces the api-server endpoint when set", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "https://a1.example.com",
+          endpoints: {
+            "api-server": "https://a1.api.example.com",
+            webhook: null,
+            teams: null,
+          },
           env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "https://a1.example.com/v1",
-        "https://a1.example.com/api",
-      ]);
+      expect(result.endpoint).toBe("https://a1.api.example.com");
     });
 
-    it("inserts the per-platform port into internal (.svc.cluster.local) endpoints", () => {
+    it("ignores endpoints belonging to other platforms", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
           env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:8642/v1",
-        "http://a1.hermeum.svc.cluster.local:8642/api",
-      ]);
+      expect(result.endpoint).toBeUndefined();
     });
 
-    it("inserts a custom API_SERVER_PORT into internal endpoints", () => {
+    it("surfaces the internal endpoint with the embedded platform port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
-          env: [
-            { name: "API_SERVER_ENABLED", value: "true" },
-            { name: "API_SERVER_PORT", value: "9000" },
-          ],
+          endpoints: {
+            "api-server": "http://a1.hermeum.svc.cluster.local:8642",
+            webhook: null,
+            teams: null,
+          },
+          env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:9000/v1",
-        "http://a1.hermeum.svc.cluster.local:9000/api",
-      ]);
+      expect(result.endpoint).toBe("http://a1.hermeum.svc.cluster.local:8642");
     });
 
-    it("omits endpoints when agent.endpoint is null", () => {
+    it("omits the endpoint when the endpoints map is null", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
-    it("omits endpoints when unavailable", () => {
+    it("omits the endpoint when unavailable", () => {
       const result = derivePlatformAvailability(PlatformId.ApiServer, makeAgent());
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
   });
 
@@ -1081,23 +1077,23 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("WEBHOOK_ENABLED");
     });
 
-    it("is available with the default port when enabled via config", () => {
+    it("is available when enabled via config", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
       );
-      expect(result).toEqual({ status: "available", port: 8644 });
+      expect(result.status).toBe("available");
     });
 
-    it("uses config.platforms.webhook.extra.port when set", () => {
+    it("is available when the port comes from config.platforms.webhook.extra.port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } } })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("is available via WEBHOOK_ENABLED env var and respects WEBHOOK_PORT", () => {
+    it("is available via WEBHOOK_ENABLED env var with WEBHOOK_PORT", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
@@ -1107,39 +1103,41 @@ describe("derivePlatformAvailability", () => {
           ],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9001 });
+      expect(result.status).toBe("available");
     });
 
-    it("derives the /webhooks endpoint when agent.endpoint is set", () => {
+    it("surfaces the webhook endpoint when set", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          endpoint: "https://a1.example.com",
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
           config: { platforms: { webhook: { enabled: true } } },
         })
       );
-      expect(result.endpoints).toEqual(["https://a1.example.com/webhooks"]);
+      expect(result.endpoint).toBe("https://a1.hooks.example.com");
     });
 
-    it("inserts the webhook port into internal (.svc.cluster.local) endpoints", () => {
+    it("surfaces the internal endpoint with the embedded webhook port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
+          endpoints: {
+            "api-server": null,
+            webhook: "http://a1.hermeum.svc.cluster.local:8644",
+            teams: null,
+          },
           config: { platforms: { webhook: { enabled: true } } },
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:8644/webhooks",
-      ]);
+      expect(result.endpoint).toBe("http://a1.hermeum.svc.cluster.local:8644");
     });
 
-    it("omits endpoints when agent.endpoint is null even when enabled", () => {
+    it("omits the endpoint when the endpoints map is null even when enabled", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
     it("is unavailable via config even when the WEBHOOK_ENABLED env var is set", () => {
@@ -1191,12 +1189,15 @@ describe("derivePlatformAvailability", () => {
       expect(result).toEqual({ status: "available" });
     });
 
-    it("never exposes endpoints — Slack uses Socket Mode", () => {
+    it("never exposes an endpoint — Slack uses Socket Mode", () => {
       const result = derivePlatformAvailability(
         PlatformId.Slack,
-        makeAgent({ endpoint: "https://a1.example.com", env: slackEnv })
+        makeAgent({
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
+          env: slackEnv,
+        })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
     it("treats the <secret> sentinel for sensitive tokens as set", () => {
@@ -1255,12 +1256,15 @@ describe("derivePlatformAvailability", () => {
       expect(result).toEqual({ status: "available" });
     });
 
-    it("never exposes endpoints — Discord uses the Gateway WebSocket", () => {
+    it("never exposes an endpoint — Discord uses the Gateway WebSocket", () => {
       const result = derivePlatformAvailability(
         PlatformId.Discord,
-        makeAgent({ endpoint: "https://a1.example.com", env: discordEnv })
+        makeAgent({
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
+          env: discordEnv,
+        })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
     it("reports DISCORD_HOME_CHANNEL as home when set", () => {
@@ -1336,7 +1340,6 @@ describe("derivePlatformAvailability", () => {
         makeAgent({ env: teamsCredsEnv })
       );
       expect(result.status).toBe("available");
-      expect(result.port).toBe(3978);
       expect(result.home).toBeUndefined();
     });
 
@@ -1346,43 +1349,33 @@ describe("derivePlatformAvailability", () => {
         makeAgent({ config: { platforms: { teams: { enabled: true } } } })
       );
       expect(result.status).toBe("available");
-      expect(result.port).toBe(3978);
     });
 
-    it("reports endpoints on an ingress base URL (no port inserted)", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Teams,
-        makeAgent({ endpoint: "https://a1.example.com", env: teamsCredsEnv })
-      );
-      expect(result.status).toBe("available");
-      expect(result.endpoints).toEqual(["https://a1.example.com/api/messages"]);
-    });
-
-    it("inserts the port on internal .svc.cluster.local endpoints", () => {
+    it("surfaces the teams endpoint on the teams subdomain", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
         makeAgent({
-          endpoint: "http://a1.agents.svc.cluster.local",
+          endpoints: { "api-server": null, webhook: null, teams: "https://a1.teams.example.com" },
           env: teamsCredsEnv,
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.agents.svc.cluster.local:3978/api/messages",
-      ]);
+      expect(result.status).toBe("available");
+      expect(result.endpoint).toBe("https://a1.teams.example.com");
     });
 
-    it("respects a custom TEAMS_PORT env var in the endpoint URL", () => {
+    it("surfaces the internal endpoint with the embedded teams port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
         makeAgent({
-          endpoint: "http://a1.agents.svc.cluster.local",
-          env: [...teamsCredsEnv, { name: "TEAMS_PORT", value: "4000" }],
+          endpoints: {
+            "api-server": null,
+            webhook: null,
+            teams: "http://a1.agents.svc.cluster.local:3978",
+          },
+          env: teamsCredsEnv,
         })
       );
-      expect(result.port).toBe(4000);
-      expect(result.endpoints).toEqual([
-        "http://a1.agents.svc.cluster.local:4000/api/messages",
-      ]);
+      expect(result.endpoint).toBe("http://a1.agents.svc.cluster.local:3978");
     });
   });
 });
