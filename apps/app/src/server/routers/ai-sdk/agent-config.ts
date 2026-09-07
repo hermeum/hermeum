@@ -37,7 +37,7 @@ function model() {
   if (!config.openaiModel) {
     throw new Error(
       "AI config generation is not configured: set HERMEUM_OPENAI_MODEL to an " +
-        'OpenAI model id, e.g. "gpt-5.5".'
+        'OpenAI model id, e.g. "gpt-5.6-sol".'
     );
   }
   const baseURL = config.openaiBaseUrl ? { baseURL: config.openaiBaseUrl } : {};

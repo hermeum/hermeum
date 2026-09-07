@@ -13,7 +13,7 @@ templates:
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
+          default: gpt-5.6-sol
       env:
         - name: OPENAI_API_KEY
           value: <fill-me>
@@ -34,7 +34,7 @@ templates:
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
+          default: gpt-5.6-sol
         platforms:
           webhook:
             enabled: true
@@ -78,56 +78,63 @@ templates:
           value: <fill-me>
         - name: SLACK_HOME_CHANNEL
           value: <fill-me>
-  - id: code-reviewer
-    name: Code Reviewer
-    description: Reviews GitHub pull requests and post a feedback back to the PR.
+  - id: software-engineer
+    name: Software Engineer
+    description: Implements changes with tests, opens pull requests, and debugs failures.
     agentInput:
-      name: GitHub PR Code Reviewer
-      description: Reviews GitHub pull requests received via webhook and posts review feedback back to the PR.
+      name: Software Engineer
+      description: An autonomous software engineer. Given a task, it reads the code, implements the change with tests, and opens a pull request. Also reviews code on request and debugs failures to root cause.
+
       type: medium
-      soul: You are a pragmatic senior software engineer reviewing pull requests. Focus on correctness, maintainability, security, performance, and test coverage; be direct, specific, and constructive.
+      soul: |-
+        You are a software engineer. You own engineering work end-to-end:
+        writing code, opening pull requests, reviewing changes, and debugging
+        failures. You do not hand the work back half-done — when you take a
+        task, you carry it to review-ready.
+
+        Work from evidence. Read the issue, the surrounding code, and the
+        tests before writing anything; read the actual error before
+        proposing a fix. Keep every change minimal and reviewable — one
+        concern per pull request — and write tests for new behavior. Run
+        the test suite before opening a PR; if you couldn't, say so in the
+        description rather than implying it passes.
+
+        When reviewing, be direct and specific: correctness first, then
+        security, maintainability, and performance. Cite file and line, and
+        suggest the fix rather than just the flaw.
+
+        When debugging, reproduce before theorizing. Separate facts from
+        hypotheses, and fix the root cause, not the symptom.
+
+        Never push to a protected branch or rewrite history — finished work
+        goes through a pull request. If a task is ambiguous or larger than
+        one focused change, say what you'd cut or ask for direction before
+        writing code.
       config:
         model:
           provider: openai-api
-          default: gpt-5.5
-        platforms:
-          webhook:
-            enabled: true
-            extra:
-              port: 8644
-              routes:
-                github-pr-review:
-                  events:
-                    - pull_request
-                  prompt: |-
-                    Review this GitHub pull request using the loaded GitHub code review skill.
-
-                    Repository: {repository.full_name}
-                    PR #{number}: {pull_request.title}
-                    Author: {pull_request.user.login}
-                    URL: {pull_request.html_url}
-                    Diff URL: {pull_request.diff_url}
-                    Action: {action}
-
-                    Provide concise, actionable review feedback. Prioritize high-impact issues and include file/line references where possible.
-                  skills:
-                    - github-code-review
-                  deliver: github_comment
-                  deliver_extra:
-                    repo: "{repository.full_name}"
-                    pr_number: "{number}"
+          default: gpt-5.6-sol
       env:
         - name: OPENAI_API_KEY
-          value: <fill-me>
-          sensitive: true
-        - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
         - name: GITHUB_TOKEN
           value: <fill-me>
           sensitive: true
-skills:
-  - skills/github/github-code-review
+        - name: SLACK_BOT_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_APP_TOKEN
+          value: <fill-me>
+          sensitive: true
+        - name: SLACK_ALLOWED_USERS
+          value: <fill-me>
+        - name: SLACK_HOME_CHANNEL
+          value: <fill-me>
+      skills:
+        - skills/software-development/github
+        - skills/software-development/requesting-code-review
+        - openai/skills/skills/.curated/gh-fix-ci
 agentTypes:
   medium:
     description: >-

@@ -54,7 +54,7 @@ config:
   # Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG).
   hermesImageTag: v2026.8.31
   # OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL).
-  openaiModel: gpt-5.5
+  openaiModel: gpt-5.6-sol
   # Log verbosity level (HERMEUM_LOG_LEVEL): debug | info | warn | error.
   logLevel: info
   # Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN).
