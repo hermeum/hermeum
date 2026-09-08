@@ -71,6 +71,11 @@ Full documentation is published at [here](https://docs.hermeum.app).
 | [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/)           | Ingress gateway and per-agent TLS.                      |
 
 
+## Community
+
+Join the [Hermeum Discord](https://discord.gg/ZW44yyCAHP) to ask questions,
+share what you're building, and talk to the team.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up a local development
