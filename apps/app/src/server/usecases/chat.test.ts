@@ -42,7 +42,6 @@ function makeRuntime(sets: SharedEnvSet[] = []): Runtime {
     createHermesAgent: vi.fn(),
     patchHermesAgent: vi.fn(),
     archiveHermesAgent: vi.fn(),
-    getGatewayToken: vi.fn(),
     createSharedEnvSet: vi.fn(),
     archiveSharedEnvSet: vi.fn(),
     patchSharedEnvSet: vi.fn(),

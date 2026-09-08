@@ -119,18 +119,6 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     return resumed;
   }
 
-  async getGatewayToken(ctx: Context, agentId: string): Promise<string | null> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      this.logger.warn("can't get gateway token — agent not found", { agentId });
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const token = await this.runtime.getGatewayToken(agentId);
-    this.logger.info("got gateway token", { agentId, userId: this.requireUser(ctx).id });
-    return token;
-  }
-
   private async checkAgentInputAllowed(
     input: Pick<AgentInput, "type" | "sharedEnvSets">
   ): Promise<void> {
