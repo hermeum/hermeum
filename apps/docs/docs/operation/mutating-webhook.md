@@ -31,7 +31,9 @@ webhook:
 1. Reads the incoming object's `type` (from the `hermeum.app/type`
    annotation).
 2. Looks up `agentTypes[<type>].mutatingWebhookJsonPatch` in the loaded
-   instance config — a list of candidate patches.
+   instance config — a list of candidate patches. When the agent has **no**
+   `type`, Hermeum looks up the reserved `default` type instead (see
+   [Instance config](../instance-config#the-reserved-default-type)).
 3. If candidates begin with `test` ops, evaluates each candidate's `test`
    ops against the incoming object and returns the **first** one whose tests
    all pass (first-match-wins). If none match, no patch is returned.
@@ -39,8 +41,10 @@ webhook:
    as the admission response's `patch`.
 
 If the type is unknown or has no `mutatingWebhookJsonPatch`, the webhook
-returns no patch — i.e. it is a no-op. The webhook is therefore inert until
-you populate at least one `agentTypes` entry with a non-empty patch.
+returns no patch — i.e. it is a no-op. Typeless agents fall back to the
+reserved `default` type when it is configured; otherwise they are a no-op
+too. The webhook is therefore inert until you populate at least one
+`agentTypes` entry with a non-empty patch.
 
 ## Configuring a patch
 

@@ -133,7 +133,8 @@ secrets:
 #
 # The mutating webhook for HermesAgent is driven by
 # `agentTypes.<type>.mutatingWebhookJsonPatch` — populate this to apply
-# JSON-Patch mutations to matching HermesAgent CRs on CREATE/UPDATE.
+# JSON-Patch mutations to matching HermesAgent CRs on CREATE/UPDATE. Agents
+# without a `type` fall back to the reserved `agentTypes.default` entry.
 #
 # Example:
 #   agentConfig:
@@ -160,7 +161,8 @@ agentConfig: {}
 # The hermeum app serves POST /webhook/mutating on the HTTPS port below. The
 # MutatingWebhookConfiguration admits CREATE/UPDATE on hermesagents and
 # dispatches AdmissionReviews here; the hermeum app returns the JSON-Patch from
-# agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch.
+# agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch (falling back to
+# the reserved `default` type for agents without a type).
 #
 # The hermeum app starts its webhook HTTPS listener only when both
 # HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set; the

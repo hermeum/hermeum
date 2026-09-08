@@ -4,6 +4,12 @@ import { z } from "zod";
 // picker-facing summary shape. Agent types are defined in Hermeum's own
 // configuration (see hermeum-config.ts); agents reference them by `type` key.
 
+// Reserved agent type key: agents without an explicit `type` fall back to
+// `agentTypes[DEFAULT_AGENT_TYPE_KEY]` when the mutating webhook resolves
+// their patch. It is a normal, settable type everywhere else, but hidden
+// from the picker and the AI config generator's type list.
+export const DEFAULT_AGENT_TYPE_KEY = "default";
+
 export const AgentTypeKeySchema = z
   .string()
   .min(1)

@@ -88,13 +88,52 @@ function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
 }
 
 describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
-  it("returns null when agent.type is undefined", async () => {
+  it("returns null when agent.type is undefined and no default type is configured", async () => {
     const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } })
     );
     const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
     expect(result).toBeNull();
+  });
+
+  it("falls back to the default agent type when agent.type is undefined", async () => {
+    const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({
+        "some-type": { mutatingWebhookJsonPatch: [] },
+        default: { mutatingWebhookJsonPatch: patch },
+      })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
+    expect(result).toEqual(patch);
+  });
+
+  it("does not fall back to the default agent type when a set type is unknown", async () => {
+    const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ default: { mutatingWebhookJsonPatch: patch } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "unknown-type" }));
+    expect(result).toBeNull();
+  });
+
+  it("evaluates the default type's candidates against the incoming object", async () => {
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
+      [{ op: "add", path: "/b", value: 2 }],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ default: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: undefined }),
+      { spec: { model: "claude" } },
+    );
+    expect(result).toEqual(candidates[1]);
   });
 
   it("returns null when config.agentTypes is undefined", async () => {

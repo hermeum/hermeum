@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as fastJsonPatch from "fast-json-patch";
 
-import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp } from "@/entities";
+import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp, DEFAULT_AGENT_TYPE_KEY } from "@/entities";
 
 import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 
@@ -129,9 +129,10 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     agent: Agent,
     incomingObject?: unknown,
   ): Promise<JsonPatchOp[] | null> {
-    if (!agent.type) return null;
     const { agentTypes } = await this.loadHermeumConfig();
-    const agentType = agentTypes?.[agent.type];
+    // Agents without an explicit type fall back to the reserved `default`
+    // agent type; a set-but-unknown type stays a no-op.
+    const agentType = agentTypes?.[agent.type ?? DEFAULT_AGENT_TYPE_KEY];
     if (!agentType) return null;
     // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
     // transform. When an incoming object is provided, select the first
