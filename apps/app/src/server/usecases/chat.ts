@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AgentInput, AgentInputObjectSchema, AgentPatchSchema, tool, ToolSet } from "@/entities";
+import { AgentInput, AgentInputObjectSchema, AgentPatchSchema, tool, ToolSet, DEFAULT_AGENT_TYPE_KEY } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
@@ -178,11 +178,15 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // empty array when no agent types are configured.
   private async buildListAgentTypesTool(): Promise<ToolSet[string]> {
     const { agentTypes } = await this.loadHermeumConfig();
+    // The reserved `default` type is the typeless fallback for the webhook —
+    // not offered as an explicit choice to the model.
     const entries = agentTypes
-      ? Object.entries(agentTypes).map(([key, t]) => ({
-          key,
-          ...(t.description !== undefined ? { description: t.description } : {}),
-        }))
+      ? Object.entries(agentTypes)
+          .filter(([key]) => key !== DEFAULT_AGENT_TYPE_KEY)
+          .map(([key, t]) => ({
+            key,
+            ...(t.description !== undefined ? { description: t.description } : {}),
+          }))
       : [];
     return tool({
       description:

@@ -125,6 +125,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
         {
           "pr-review": { description: "Reviews pull requests", mutatingWebhookJsonPatch: [] },
           plain: { mutatingWebhookJsonPatch: [] },
+          default: { description: "Fallback", mutatingWebhookJsonPatch: [] },
         }
       )
     );
@@ -138,6 +139,8 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.listAgentTypes).toBeDefined();
     expect(tools.listAgentTypes?.execute).toBeDefined();
     const result = await tools.listAgentTypes!.execute!({}, callOptions);
+    // The reserved `default` type is hidden from the model — it applies
+    // automatically to typeless agents via the webhook.
     expect(result).toEqual({
       agentTypes: [
         { key: "pr-review", description: "Reviews pull requests" },

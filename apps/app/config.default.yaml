@@ -216,7 +216,7 @@ agentTypes:
       Standard performance — handles everyday workloads reliably, including
       browsing and web search. A good fit for most agents. Persists the agent
       workspace on a 10Gi volume.
-    mutatingWebhookJsonPatch:
+    mutatingWebhookJsonPatch: &mediumPatch
       # Both sidecars enabled.
       - - op: test
           path: /spec/searxng/enabled
@@ -329,6 +329,12 @@ agentTypes:
             persistence:
               enabled: true
               size: 10Gi
+  default:
+    description: >-
+      Fallback for agents without an explicit type — same resources as
+      medium. The reserved `default` key applies to typeless agents via the
+      mutating webhook and is hidden from the agent-type picker.
+    mutatingWebhookJsonPatch: *mediumPatch
   large:
     description: >-
       High performance — extra capacity for demanding tasks, such as very long
