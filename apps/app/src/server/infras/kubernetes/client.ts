@@ -703,41 +703,6 @@ export class KubernetesClient implements Runtime {
     }
   }
 
-  async getGatewayToken(agentId: string): Promise<string | null> {
-    let raw: HermesAgent | null = null;
-    try {
-      raw = (await this.customObjectsApi.getNamespacedCustomObject({
-        namespace: config.kubernetesNamespace,
-        group: HermesGroup.Default,
-        version: HermesVersion.V1Alpha1,
-        plural: HermesPlural.Agents,
-        name: agentId,
-      })) as HermesAgent;
-    } catch {
-      return null;
-    }
-
-    const secretName = raw?.status?.managedResources?.hermesSecret;
-    if (!secretName) {
-      return null;
-    }
-
-    try {
-      const secret = await this.coreV1Api.readNamespacedSecret({
-        name: secretName,
-        namespace: config.kubernetesNamespace,
-      });
-      const encoded = secret?.data?.["token"];
-      if (!encoded) {
-        return null;
-      }
-
-      return Buffer.from(encoded, "base64").toString("utf-8");
-    } catch {
-      return null;
-    }
-  }
-
   async createSharedEnvSet(input: CreateSharedEnvSetInput): Promise<SharedEnvSet> {
     const id = `envset-${Math.random().toString(36).slice(2, 8)}`;
     const body = sharedEnvSetToKubernetesSecret({

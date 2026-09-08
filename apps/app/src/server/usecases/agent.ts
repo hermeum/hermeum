@@ -15,23 +15,6 @@ export const ListAgentsFilterSchema = z.object({
 export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 
 export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUseCase)) {
-  async getmutatingWebhookJsonPatch(
-    agent: Agent,
-    incomingObject?: unknown,
-  ): Promise<JsonPatchOp[] | null> {
-    if (!agent.type) return null;
-    const { agentTypes } = await this.loadHermeumConfig();
-    const agentType = agentTypes?.[agent.type];
-    if (!agentType) return null;
-    // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
-    // transform. When an incoming object is provided, select the first
-    // candidate whose `test` ops pass (first-match-wins); without one, return
-    // the first (only) candidate as-is for backwards compatibility.
-    const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
-    if (incomingObject === undefined) return candidates[0] ?? null;
-    return this.selectPatch(candidates, incomingObject);
-  }
-
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
     const agents = await this.runtime.listHermesAgents(input);
     this.logger.info("listed hermes agents", { count: agents.length, filter: input });
@@ -119,18 +102,6 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     return resumed;
   }
 
-  async getGatewayToken(ctx: Context, agentId: string): Promise<string | null> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      this.logger.warn("can't get gateway token — agent not found", { agentId });
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
-    const token = await this.runtime.getGatewayToken(agentId);
-    this.logger.info("got gateway token", { agentId, userId: this.requireUser(ctx).id });
-    return token;
-  }
-
   private async checkAgentInputAllowed(
     input: Pick<AgentInput, "type" | "sharedEnvSets">
   ): Promise<void> {
@@ -152,6 +123,23 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
         throw new Error(`Shared env set "${id}" is archived`);
       }
     }
+  }
+
+  async getmutatingWebhookJsonPatch(
+    agent: Agent,
+    incomingObject?: unknown,
+  ): Promise<JsonPatchOp[] | null> {
+    if (!agent.type) return null;
+    const { agentTypes } = await this.loadHermeumConfig();
+    const agentType = agentTypes?.[agent.type];
+    if (!agentType) return null;
+    // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
+    // transform. When an incoming object is provided, select the first
+    // candidate whose `test` ops pass (first-match-wins); without one, return
+    // the first (only) candidate as-is for backwards compatibility.
+    const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
+    if (incomingObject === undefined) return candidates[0] ?? null;
+    return this.selectPatch(candidates, incomingObject);
   }
 
   /**
