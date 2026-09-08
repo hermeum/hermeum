@@ -57,6 +57,14 @@ const config: Config = {
           target: "_blank",
           rel: "noopener noreferrer",
         },
+        {
+          href: "https://discord.gg/ZW44yyCAHP",
+          position: "right",
+          className: "header-discord-link",
+          "aria-label": "Discord community",
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
       ],
     },
     footer: {
