@@ -41,7 +41,13 @@
   text-decoration: underline !important;
 }
 
-/* GitHub icon in the navbar (top-right). */
+/* GitHub and Discord icons in the navbar (top-right). Docusaurus adds a
+   default margin between right-side items; pull the icons closer together. */
+.header-github-link:not(:first-child),
+.header-discord-link {
+  margin-left: 0;
+}
+
 .header-github-link:hover,
 .header-discord-link:hover {
   opacity: 0.6;
