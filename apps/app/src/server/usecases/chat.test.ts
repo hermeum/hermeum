@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { z } from "zod";
 import type { ToolExecutionOptions } from "@/entities";
 import { stringify } from "yaml";
 
@@ -171,20 +172,23 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(prompt).toContain('"pr-reviewer"');
   });
 
-  it("exposes a client-side updateAgentConfig tool", async () => {
+  it("exposes a client-side replaceAgentConfig tool", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
-    expect(tools.updateAgentConfig).toBeDefined();
-    expect(tools.updateAgentConfig!.inputSchema).toBeDefined();
+    expect(tools.replaceAgentConfig).toBeDefined();
+    expect(tools.replaceAgentConfig!.inputSchema).toBeDefined();
     // No execute: the tool runs on the client, which applies the config to
     // the editor and reports back.
-    expect(tools.updateAgentConfig!.execute).toBeUndefined();
+    expect(tools.replaceAgentConfig!.execute).toBeUndefined();
     // The single-call rule lives in the tool description so the model sees
     // it alongside the tool definition.
-    expect(tools.updateAgentConfig!.description).toContain("single call");
-    expect(tools.updateAgentConfig!.description).toContain("readDocument");
+    expect(tools.replaceAgentConfig!.description).toContain("single call");
+    expect(tools.replaceAgentConfig!.description).toContain("readDocument");
+    // Cross-reference: for small edits to an existing draft the model is
+    // steered toward patchAgentConfig instead.
+    expect(tools.replaceAgentConfig!.description).toContain("patchAgentConfig");
   });
 
   it("instructs the model about the config wrapper key and the single-update rule", async () => {
@@ -193,7 +197,41 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     const { instructions } = await useCase.getAgentConfigContext();
 
     expect(instructions).toContain('"config" key');
-    expect(instructions).toContain("single updateAgentConfig call");
+    expect(instructions).toContain("config-writing call");
+  });
+
+  it("exposes a client-side patchAgentConfig tool with the merge rules in its description", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.patchAgentConfig).toBeDefined();
+    expect(tools.patchAgentConfig!.inputSchema).toBeDefined();
+    // No execute: the client merges the patch onto its editor draft,
+    // validates the merged result, and reports back.
+    expect(tools.patchAgentConfig!.execute).toBeUndefined();
+    // The merge semantics must be stated in prose (the patch schema is an
+    // untyped envelope): recursive object merge, null deletes, arrays and
+    // scalars replace wholesale, omitted fields stay untouched.
+    expect(tools.patchAgentConfig!.description).toContain("merge recursively");
+    expect(tools.patchAgentConfig!.description).toContain("null");
+    expect(tools.patchAgentConfig!.description).toContain("COMPLETE array");
+    expect(tools.patchAgentConfig!.description).toContain("replaceAgentConfig");
+  });
+
+  it("exposes the patchable top-level field names in the patchAgentConfig tool schema", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    // Regression guard: the schema the model sees must list the top-level
+    // fields — an empty-properties emission leaves the model nothing to
+    // patch, and it falls back to the full-config tool.
+    const jsonSchema = z.toJSONSchema(tools.patchAgentConfig!.inputSchema);
+    const properties = (jsonSchema as { properties: Record<string, unknown> }).properties;
+    expect(Object.keys(properties)).toContain("config");
+    expect(Object.keys(properties)).toContain("soul");
+    expect(Object.keys(properties)).toContain("env");
   });
 
   it("exposes a client-side readAgentConfig tool and instructs the model to use it when stale", async () => {
