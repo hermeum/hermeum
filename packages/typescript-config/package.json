@@ -1,6 +1,6 @@
 {
   "name": "@hermeum/typescript-config",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "exports": {
     "./base.json": "./base.json",
