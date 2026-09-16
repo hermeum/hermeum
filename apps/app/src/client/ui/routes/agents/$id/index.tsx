@@ -181,6 +181,81 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
   );
 }
 
+function CronsSection({ agent }: { agent: Agent }) {
+  const crons = agent.crons ?? [];
+  return (
+    <div className="py-8 flex flex-col gap-3">
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-bold">Crons</p>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Crons info" />
+            }
+          />
+          <TooltipContent>
+            <div className="max-w-xs">
+              Scheduled jobs that trigger this agent on a timer.
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      {crons.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No cron jobs configured.</p>
+      ) : (
+        <TooltipProvider>
+          <Accordion multiple className="w-full border rounded-md px-4">
+            {crons.map((cron) => (
+              <AccordionItem key={cron.name} value={cron.name}>
+                <AccordionTrigger className="items-center hover:no-underline">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium hover:underline">{cron.name}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
+                    >
+                      {cron.schedule}
+                    </Button>
+                    {cron.deliver && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
+                      >
+                        → {cron.deliver}
+                      </Button>
+                    )}
+                    {cron.repeat !== undefined && (
+                      <span className="text-xs text-muted-foreground">×{cron.repeat}</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-3 pb-2">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Prompt</p>
+                      <pre className="rounded bg-muted p-3 text-xs overflow-y-auto max-h-64 whitespace-pre-wrap break-words">
+                        {cron.prompt}
+                      </pre>
+                    </div>
+                    {cron.skills && cron.skills.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Skills</p>
+                        <ButtonList items={cron.skills} max={10} />
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </TooltipProvider>
+      )}
+    </div>
+  );
+}
+
 function PlatformsSection({ agent }: { agent: Agent }) {
   return (
     <div className="py-8 flex flex-col gap-3">
@@ -443,6 +518,9 @@ function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">No environment variables set.</p>
               )}
             </div>
+
+            {/* crons */}
+            <CronsSection agent={agent} />
 
             {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">
