@@ -34,7 +34,7 @@ export const WebhookDeliverSchema = z
 export type WebhookDeliver = z.infer<typeof WebhookDeliverSchema>;
 
 export const DeliverExtraSchema = z
-  .object({
+  .looseObject({
     chat_id: z.string().optional().describe("Destination chat/channel id."),
     repo: z.string().optional().describe('Repository in "owner/repo" form.'),
     pr_number: z.string().optional().describe("PR/issue number to comment on."),
@@ -45,7 +45,7 @@ export const DeliverExtraSchema = z
 export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 
 export const WebhookRouteSchema = z
-  .object({
+  .looseObject({
     events: z.array(z.string()).optional().describe("Event types this route accepts."),
     prompt: z
       .string()
@@ -64,10 +64,10 @@ export const WebhookRouteSchema = z
 export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 
 export const WebhookSchema = z
-  .object({
+  .looseObject({
     enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
     extra: z
-      .object({
+      .looseObject({
         port: z.number().int().optional().describe("Webhook server port."),
         rate_limit: z.number().optional().describe("Max requests per minute."),
         max_body_bytes: z.number().optional().describe("Max request body size in bytes."),

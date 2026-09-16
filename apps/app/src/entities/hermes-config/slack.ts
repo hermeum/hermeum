@@ -14,7 +14,7 @@ import { z } from "zod";
 // via looseObject. unauthorized_dm_behavior stays pinned to "ignore":
 // Hermeum deployments deny-by-default rather than upstream's "pair" prompt.
 export const ChannelSkillBindingSchema = z
-  .object({
+  .looseObject({
     id: z.string().describe("Slack channel/DM ID the binding matches."),
     skills: z
       .array(z.string())
