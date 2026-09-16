@@ -100,6 +100,14 @@ spec:
               value: {{ .Values.config.hermesImageTag | quote }}
             - name: HERMEUM_OPENAI_MODEL
               value: {{ .Values.config.openaiModel | quote }}
+            {{- if .Values.config.openaiBaseUrl }}
+            - name: HERMEUM_OPENAI_BASE_URL
+              value: {{ .Values.config.openaiBaseUrl | quote }}
+            {{- end }}
+            {{- if .Values.config.betterAuthUrl }}
+            - name: BETTER_AUTH_URL
+              value: {{ .Values.config.betterAuthUrl | quote }}
+            {{- end }}
             - name: HERMEUM_LOG_LEVEL
               value: {{ .Values.config.logLevel | quote }}
             {{- if .Values.config.allowedEmailDomain }}
@@ -133,26 +141,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "hermeum.secretName" . }}
                   key: better-auth-secret
-            {{- if .Values.secrets.betterAuthUrl }}
-            - name: BETTER_AUTH_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "hermeum.secretName" . }}
-                  key: better-auth-url
-            {{- end }}
             {{- if .Values.secrets.smtpUrl }}
             - name: HERMEUM_SMTP_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "hermeum.secretName" . }}
                   key: smtp-url
-            {{- end }}
-            {{- if .Values.secrets.openaiBaseUrl }}
-            - name: HERMEUM_OPENAI_BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "hermeum.secretName" . }}
-                  key: openai-base-url
             {{- end }}
             {{- if .Values.secrets.openaiApiKey }}
             - name: HERMEUM_OPENAI_API_KEY
