@@ -3,7 +3,7 @@ import { z } from "zod";
 import { SecretRefSchema } from "./shared";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
-// Full field semantics: docs/hermes-config/teams.md
+// Full field semantics: docs/official/teams.md
 // Behavioral settings and credentials live here. client_secret is typed as
 // a ${VAR} reference (actual value in the sensitive TEAMS_CLIENT_SECRET env
 // entry, substituted by hermes at config load).

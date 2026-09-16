@@ -3,7 +3,7 @@ import { z } from "zod";
 import { SecretRefSchema } from "./shared";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
-// Full field semantics: docs/hermes-config/api-server.md
+// Full field semantics: docs/official/api-server.md
 //
 // Mirrors the upstream `gateway.api_server:` block in config.yaml (flat
 // fields, no `extra:` nesting). Environment variables take precedence over

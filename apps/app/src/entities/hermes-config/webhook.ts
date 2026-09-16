@@ -3,7 +3,7 @@ import { z } from "zod";
 import { SecretRefSchema } from "./shared";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
-// Full field semantics: docs/hermes-config/webhooks.md
+// Full field semantics: docs/official/webhooks.md
 //
 // Adapter settings (secret, port, ...) are valid directly under
 // platforms.webhook: as well as under extra: (upstream: both spellings reach

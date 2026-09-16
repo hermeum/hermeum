@@ -38,9 +38,9 @@ config:
   # Path to the hermeum config file (HERMEUM_CONFIG_PATH).
   # The chart mounts the agentConfig ConfigMap at this path when non-empty.
   configPath: /app/config.yaml
-  # Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH).
+  # Path to the hermes docs directory (HERMEUM_HERMES_DOCS_PATH).
   # Shipped inside the image; override only if you mount custom docs.
-  hermesDocsPath: /app/docs/hermes-config
+  hermesDocsPath: /app/docs
   # Database backend dialect (HERMEUM_DATABASE_DIALECT): "sqlite" or "postgres".
   databaseDialect: sqlite
   # Kubernetes namespace where HermesAgent CRs are reconciled

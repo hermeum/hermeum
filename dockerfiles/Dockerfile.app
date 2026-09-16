@@ -68,7 +68,7 @@ COPY --from=builder --chown=node:node /deploy/dist ./dist
 # example as the runtime default. Operators override via a volume mount or
 # HERMEUM_CONFIG_PATH.
 COPY --from=builder --chown=node:node /app/apps/app/config.default.yaml ./config.yaml
-COPY --from=builder --chown=node:node /app/apps/app/docs/hermes-config ./docs/hermes-config
+COPY --from=builder --chown=node:node /app/apps/app/docs ./docs
 # Drizzle migrations + config for both dialects (postgres & sqlite).
 COPY --from=builder --chown=node:node /app/apps/app/src/server/migrations ./src/server/migrations
 COPY --from=builder --chown=node:node /app/apps/app/drizzle.config.postgres.ts ./drizzle.config.postgres.ts

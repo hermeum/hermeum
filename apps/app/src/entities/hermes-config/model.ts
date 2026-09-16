@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/integrations/providers
-// Full field semantics: docs/hermes-config/model.md
+// Full field semantics: docs/official/model.md
 //
 // Skipped on purpose: OAuth-gated providers are omitted — Hermeum does not
 // support browser OAuth in container mode, so there is no way to authorize

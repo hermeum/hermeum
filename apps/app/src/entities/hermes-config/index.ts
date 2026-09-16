@@ -2,7 +2,7 @@
 //
 // Only well-known fields are typed here (see the per-field modules below); any
 // additional fields pass through unchanged via looseObject. Full field
-// semantics live in docs/hermes-config/ and are surfaced to the LLM via the
+// semantics live in docs/official/ and are surfaced to the LLM via the
 // readDocument tool, so .describe() texts are kept minimal — use the
 // `readDocument` tool to look up the semantics of any config field you are not
 // fully sure about before writing it into the draft.

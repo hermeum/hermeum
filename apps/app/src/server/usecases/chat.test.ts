@@ -17,7 +17,7 @@ vi.mock("../infras/posthog", () => ({
   },
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
@@ -66,7 +66,7 @@ function makeFiles(
   agentTypes?: HermeumConfig["agentTypes"]
 ): FileAdaptor {
   const toFile = (name: string): File => ({
-    path: `./docs/hermes-config/${name}.md`,
+    path: `./docs/${name}.md`,
     name,
     content: docs[name]!.content,
     data: docs[name]!.data ?? {},
@@ -84,7 +84,7 @@ function makeFiles(
       }
       return (
         Object.keys(docs)
-          .filter((name) => path === `./docs/hermes-config/${name}.md`)
+          .filter((name) => path === `./docs/${name}.md`)
           .map(toFile)
           .at(0) ?? null
       );
@@ -401,18 +401,60 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     const { tools } = await useCase.getAgentConfigContext();
     vi.mocked(files.readFile).mockClear();
     const result = await tools.readDocument!.execute!(
-      { names: ["../secrets", "sub/model", ".hidden"] },
+      { names: ["../secrets", ".hidden", "examples/../model", "a//b", "examples/"] },
       callOptions
     );
 
     expect(result).toEqual({
       documents: [
         { name: "../secrets", error: expect.stringContaining("not found") },
-        { name: "sub/model", error: expect.stringContaining("not found") },
         { name: ".hidden", error: expect.stringContaining("not found") },
+        { name: "examples/../model", error: expect.stringContaining("not found") },
+        { name: "a//b", error: expect.stringContaining("not found") },
+        { name: "examples/", error: expect.stringContaining("not found") },
       ],
     });
     expect(files.readFile).not.toHaveBeenCalled();
+  });
+
+  it("reads nested documents by slash name", async () => {
+    const useCase = new ChatUseCase(
+      makeRuntime(),
+      makeFiles({
+        "examples/github-issue": { content: "# GitHub issue example" },
+        model: { content: "# Model doc" },
+      })
+    );
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.readDocument!.execute!(
+      { names: ["examples/github-issue", "model"] },
+      callOptions
+    );
+
+    expect(result).toEqual({
+      documents: [
+        { name: "examples/github-issue", content: "# GitHub issue example" },
+        { name: "model", content: "# Model doc" },
+      ],
+    });
+  });
+
+  it("lists nested documents with their slash names in the readDocument description", async () => {
+    const useCase = new ChatUseCase(
+      makeRuntime(),
+      makeFiles({
+        "examples/github-issue": {
+          content: "# GitHub issue example",
+          data: { category: "examples", description: "GitHub issue prompt" },
+        },
+      })
+    );
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const description = tools.readDocument!.description ?? "";
+
+    expect(description).toContain("examples:\n- examples/github-issue: GitHub issue prompt");
   });
 
   it("emits the none sentinel in the readSharedEnvSet description when no sets exist", async () => {

@@ -7,7 +7,7 @@ import type { Agent, AgentInput } from "./schema";
 // the config block acts as a fallback when the env var is absent. The bearer
 // token is set in config as a ${API_SERVER_KEY} reference; the actual value
 // lives in the sensitive API_SERVER_KEY env entry.
-// See docs/hermes-config/api-server.md.
+// See docs/official/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
 export function isApiServerEnabled(input: AgentInput): boolean {

@@ -8,9 +8,10 @@ import type { File } from "./adaptors/file";
 
 const DOCS_PATH = config.hermesDocsPath;
 
-// Document names come from the LLM; only simple slugs are accepted so a
-// crafted name can't traverse outside DOCS_PATH.
-const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+// Document names come from the LLM; only slash-separated simple slugs are
+// accepted so a crafted name can't traverse outside DOCS_PATH. Each segment
+// must start with an alphanumeric character, which rules out "." and "..".
+const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*(\/[a-zA-Z0-9][a-zA-Z0-9._-]*)*$/;
 
 // Label used for the trailing block that groups docs with no `category`
 // frontmatter field.
@@ -111,10 +112,13 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     return tool({
       description:
         "Read one or more Hermes agent configuration documents by name. " +
-        "Pass every document you need in a single call to minimize " +
-        "round-trips.\n\n" + docList,
+        "Names may be nested paths (e.g. examples/github-issue). Pass every " +
+        "document you need in a single call to minimize round-trips.\n\n" + docList,
       inputSchema: z.object({
-        names: z.array(z.string()).min(1).describe("Document names from the list above."),
+        names: z
+          .array(z.string())
+          .min(1)
+          .describe("Document names from the list above; nested names use slashes (e.g. examples/github-issue)."),
       }),
       execute: async ({ names }) => {
         const documents = await Promise.all(
