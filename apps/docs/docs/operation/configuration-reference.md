@@ -30,7 +30,7 @@ others fall back to the defaults listed here.
 | `HERMEUM_DATABASE_DIALECT` | `sqlite` | Database backend dialect. One of `sqlite`, `postgres`. Must match the scheme of `HERMEUM_DATABASE_URL`. |
 | `HERMEUM_KUBERNETES_NAMESPACE` | `hermeum` | Kubernetes namespace where `HermesAgent` custom resources are reconciled. Hermeum must have RBAC to read/write this namespace. |
 | `HERMEUM_CONFIG_PATH` | `./config.yaml` | Path to the Hermeum instance config file. See [Instance config](../instance-config) for the schema. |
-| `HERMEUM_HERMES_DOCS_PATH` | `./docs/official` | Path to the official hermes docs directory used by the docs file adaptor. |
+| `HERMEUM_HERMES_DOCS_PATH` | `./docs` | Path to the hermes docs directory, scanned recursively by the docs file adaptor. |
 | `HERMEUM_LOG_LEVEL` | `info` | Log verbosity. One of `debug`, `info`, `warn`, `error`. |
 
 ### Agent image
