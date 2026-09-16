@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
-// Full field semantics: docs/hermes-config/webhooks.md
+// Full field semantics: docs/official/webhooks.md
 //
 // Skipped on purpose: route fields secret, filters, script, and
 // toolsets are not typed here — Hermeum does not expose them via the agent

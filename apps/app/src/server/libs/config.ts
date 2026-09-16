@@ -10,8 +10,8 @@ export const ConfigSchema = z.object({
     .describe("Path to the hermeum config file (HERMEUM_CONFIG_PATH)."),
   hermesDocsPath: z
     .string()
-    .default("./docs/hermes-config")
-    .describe("Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH)."),
+    .default("./docs/official")
+    .describe("Path to the official hermes docs directory (HERMEUM_HERMES_DOCS_PATH)."),
   databaseDialect: z
     .enum(["postgres", "sqlite"])
     .default("sqlite")

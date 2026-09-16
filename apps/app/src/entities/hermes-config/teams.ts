@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
-// Full field semantics: docs/hermes-config/teams.md
+// Full field semantics: docs/official/teams.md
 // Only behavioral settings live here — credentials (client_id, client_secret,
 // tenant_id) are env-only (TEAMS_*) and must not be written into config.yaml.
 export const TeamsSchema = z

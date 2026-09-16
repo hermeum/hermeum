@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack
-// Full field semantics: docs/hermes-config/slack.md
+// Full field semantics: docs/official/slack.md
 // Only the essential fields are validated here; the rest pass through via
 // looseObject so users can configure whatever the Hermes agent supports.
 //

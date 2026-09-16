@@ -52,7 +52,7 @@ When upgrading `hermesImageTag` (the pinned hermes-agent release), update every 
 - `apps/docs/docs/operation/configuration-reference.md` — the `HERMEUM_HERMES_IMAGE_TAG` default.
 - `charts/hermeum/Chart.yaml` — bump the chart `version` patch (the chart is republished for the upgrade; `appVersion` tracks the Hermeum app release, not the agent image, and stays untouched).
 
-Then sync `apps/app/src/entities/hermes-config/` (Zod schemas) and `apps/app/docs/hermes-config/` (field-semantics docs) against the official docs at the new submodule pin. Both directories always reflect the pinned submodule version — never mention the version string in their comments or prose; the submodule pointer implies it.
+Then sync `apps/app/src/entities/hermes-config/` (Zod schemas) and `apps/app/docs/official/` (field-semantics docs) against the official docs at the new submodule pin. Both directories always reflect the pinned submodule version — never mention the version string in their comments or prose; the submodule pointer implies it.
 
 **Apply the standing Hermeum policy deltas instead of re-deciding them per upgrade.** When an upstream change touches one of these, keep Hermeum's behavior and record the omission in a header comment on the schema file ("Skipped on purpose: …") and/or an upstream-differs `:::note` in the doc — do not adopt the upstream shape:
 
@@ -81,9 +81,9 @@ Run from the repo root via pnpm filter, or from this directory directly.
 
 - It follows clean architecture. Entities and use cases must not depend on any infrastructure or framework — dependencies point inward toward the domain. Drawing the dependency graph: `frameworks/drivers → interface adapters → use cases → entities`, with each layer only depending on the layer(s) to its left. Inject infrastructures (persistence, file adaptors, etc.) behind interfaces (`Runtime`, `FileAdaptor`) at the use-case boundary rather than importing concrete adaptors directly.
 
-- `src/entities/hermes-config/` (Zod schemas) and `docs/hermes-config/` (field-semantics docs) track the pinned hermes-agent version in the `vendor/hermes-agent` submodule. When the default version changes, verify against the official docs in the submodule and update both the schemas and the docs in lockstep — each schema file's header links the upstream page it mirrors.
+- `src/entities/hermes-config/` (Zod schemas) and `docs/official/` (field-semantics docs) track the pinned hermes-agent version in the `vendor/hermes-agent` submodule. When the default version changes, verify against the official docs in the submodule and update both the schemas and the docs in lockstep — each schema file's header links the upstream page it mirrors.
 - `src/entities/hermes-config/` extracts only the core fields from the official documents — not every field.
-- `docs/hermes-config/` extracts only the information Hermeum needs: description, configuration, env vars, and the like.
+- `docs/official/` extracts only the information Hermeum needs: description, configuration, env vars, and the like.
 - Field semantics for the chat agent live in tool input-schema `.describe()` texts (Zod), not in the system prompt — see the header comment on `AGENT_CONFIG_CHAT_SYSTEM_PROMPT` in `src/server/usecases/chat.ts`.
 - New chat tools follow the `readDocument` precedent: embed a lightweight list (names/ids + descriptions) in the system prompt up front via a `build*List()` method, and add a `read*` server-executed tool for fetching richer per-item detail on demand. Keep the prompt lean — batch lists into the prompt, batch detail calls into one tool invocation.
 - Route-scoped components live in a `-components/` folder next to the consuming route (e.g. `routes/agents/$id/-components/`). The TanStack Router plugin's `routeFileIgnorePrefix` defaults to `-`, so `-`-prefixed folders are skipped during route generation and aren't picked up as routes. Promote a component back to `src/client/ui/components/` the moment a second consumer appears — otherwise route-local duplicates accumulate.

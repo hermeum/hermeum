@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search
-// Full field semantics: docs/hermes-config/web-search.md
+// Full field semantics: docs/official/web-search.md
 //
 // Skipped on purpose: web.extract_char_limit,
 // web.keyless_fallback, and web.keyless_rescue are validated by looseObject

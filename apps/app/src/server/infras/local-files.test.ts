@@ -18,6 +18,11 @@ beforeAll(() => {
   // "---" here is a YAML document separator, not frontmatter.
   fs.writeFileSync(path.join(dir, "config.yaml"), "---\nkey: value\n");
   fs.mkdirSync(path.join(dir, "subdir"));
+  fs.mkdirSync(path.join(dir, "examples"));
+  fs.writeFileSync(
+    path.join(dir, "examples", "github-issue.md"),
+    "---\ndescription: GitHub issue example\n---\n# GitHub issue\n\nDetails.\n"
+  );
 });
 
 afterAll(() => {
@@ -25,7 +30,7 @@ afterAll(() => {
 });
 
 describe("LocalFiles.listFiles", () => {
-  it("lists loaded files, skipping directories", async () => {
+  it("lists loaded files, skipping empty directories", async () => {
     const files = await new LocalFiles().listFiles(dir);
 
     expect(files).toEqual(
@@ -50,7 +55,19 @@ describe("LocalFiles.listFiles", () => {
         },
       ])
     );
-    expect(files).toHaveLength(3);
+    expect(files).toHaveLength(4);
+  });
+
+  it("lists nested files recursively with slash-relative names", async () => {
+    const files = await new LocalFiles().listFiles(dir);
+
+    const nested = files.find((f) => f.name === "examples/github-issue");
+    expect(nested).toEqual({
+      path: path.join(dir, "examples", "github-issue.md"),
+      name: "examples/github-issue",
+      content: "# GitHub issue\n\nDetails.\n",
+      data: { description: "GitHub issue example" },
+    });
   });
 
   it("returns an empty list for a missing directory", async () => {

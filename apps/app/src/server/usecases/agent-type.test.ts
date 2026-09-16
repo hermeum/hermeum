@@ -13,7 +13,7 @@ vi.mock("../infras/posthog", () => ({
   },
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/official" },
 }));
 
 import { stringify } from "yaml";

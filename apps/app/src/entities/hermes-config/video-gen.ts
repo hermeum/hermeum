@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/developer-guide/video-gen-provider-plugin
-// Full field semantics: docs/hermes-config/video-gen.md
+// Full field semantics: docs/official/video-gen.md
 // Only the essential fields are validated here; the rest pass through via
 // looseObject so users can configure whatever the Hermes agent supports.
 export const VideoGenSchema = z
