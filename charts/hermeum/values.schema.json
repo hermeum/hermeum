@@ -31,6 +31,8 @@
         "hermesImageRepository": { "type": "string" },
         "hermesImageTag": { "type": "string" },
         "openaiModel": { "type": "string", "minLength": 1 },
+        "openaiBaseUrl": { "type": "string" },
+        "betterAuthUrl": { "type": "string" },
         "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "allowedEmailDomain": { "type": "string" },
         "webTls": {
@@ -68,9 +70,7 @@
       "properties": {
         "databaseUrl": { "type": "string" },
         "betterAuthSecret": { "type": "string" },
-        "betterAuthUrl": { "type": "string" },
         "smtpUrl": { "type": "string" },
-        "openaiBaseUrl": { "type": "string" },
         "openaiApiKey": { "type": "string" },
         "existingSecret": { "type": "string" }
       },
