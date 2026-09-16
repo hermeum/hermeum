@@ -143,12 +143,16 @@ describe("agentToHermesAgent packages wiring", () => {
 describe("agentToHermesAgent config.webhook no longer populated", () => {
   it("does not write hermes.config.webhook even when config.platforms.webhook is set", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 8644 } } } } })
+      makeAgent({
+        config: {
+          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 8644 } } },
+        },
+      })
     );
     expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
     // The raw config still passes through unchanged.
     expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
-      platforms: { webhook: { enabled: true, extra: { port: 8644 } } },
+      platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 8644 } } },
     });
   });
 
@@ -191,7 +195,11 @@ describe("agentToHermesAgent webhook networking wiring", () => {
 
   it("uses config.platforms.webhook.extra.port when WEBHOOK_PORT env var is absent", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } } })
+      makeAgent({
+        config: {
+          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+        },
+      })
     );
     expect(hermesAgent.spec.hermes?.ports).toEqual([
       { name: "webhook", containerPort: 9000, protocol: "TCP" },
@@ -203,7 +211,9 @@ describe("agentToHermesAgent webhook networking wiring", () => {
 
   it("falls back to the default 8644 port when neither WEBHOOK_PORT nor extra.port is set", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+      makeAgent({
+        config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+      })
     );
     expect(hermesAgent.spec.hermes?.ports).toEqual([
       { name: "webhook", containerPort: 8644, protocol: "TCP" },
@@ -217,7 +227,9 @@ describe("agentToHermesAgent webhook networking wiring", () => {
           { name: "WEBHOOK_ENABLED", value: "true" },
           { name: "WEBHOOK_PORT", value: "9001" },
         ],
-        config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
+        config: {
+          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+        },
       })
     );
     expect(hermesAgent.spec.hermes?.ports).toEqual([
@@ -571,11 +583,19 @@ describe("agentToHermesAgent ingress wiring", () => {
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
-        env: [
-          { name: "TEAMS_CLIENT_ID", value: "cid" },
-          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-          { name: "TEAMS_TENANT_ID", value: "tid" },
-        ],
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
+                tenant_id: "tid",
+              },
+            },
+          },
+        },
+        env: [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }],
       })
     );
     expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
@@ -591,11 +611,21 @@ describe("agentToHermesAgent ingress wiring", () => {
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
+                tenant_id: "tid",
+              },
+            },
+          },
+        },
         env: [
           { name: "API_SERVER_ENABLED", value: "true" },
-          { name: "TEAMS_CLIENT_ID", value: "cid" },
           { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-          { name: "TEAMS_TENANT_ID", value: "tid" },
         ],
       })
     );
@@ -617,12 +647,22 @@ describe("agentToHermesAgent ingress wiring", () => {
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
+                tenant_id: "tid",
+              },
+            },
+          },
+        },
         env: [
           { name: "API_SERVER_ENABLED", value: "true" },
           { name: "WEBHOOK_ENABLED", value: "true" },
-          { name: "TEAMS_CLIENT_ID", value: "cid" },
           { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-          { name: "TEAMS_TENANT_ID", value: "tid" },
         ],
       })
     );
@@ -653,7 +693,7 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "sec",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
                 port: 4000,
               },
@@ -675,11 +715,19 @@ describe("agentToHermesAgent ingress wiring", () => {
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
-        env: [
-          { name: "TEAMS_CLIENT_ID", value: "cid" },
-          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-          { name: "TEAMS_TENANT_ID", value: "tid" },
-        ],
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
+                tenant_id: "tid",
+              },
+            },
+          },
+        },
+        env: [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }],
       })
     );
     const ports = hermesAgent.spec.networking?.service?.ports ?? [];
