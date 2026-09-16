@@ -108,10 +108,7 @@ platforms:
 
 The referenced env entry (`WEBHOOK_SECRET` here) carries the actual secret
 value and must be marked `sensitive: true` — never write the literal secret
-into `config.yaml`. The referenced name is not reserved:
-`secret: ${EXAMPLE}` is equally valid as long as `EXAMPLE` exists in the
-agent's env field; the examples use the conventional name.
-
+into `config.yaml`. 
 
 ## Environment variables
 

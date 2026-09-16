@@ -56,8 +56,7 @@ gateway:
 
 The referenced env entry (`API_SERVER_KEY` here) carries the actual token
 and must be marked `sensitive: true` — never write the literal secret into
-`config.yaml`. The referenced name is not reserved: `key: ${EXAMPLE}` is
-equally valid as long as `EXAMPLE` exists in the agent's env field
+`config.yaml`. 
 
 ## Environment variables
 
