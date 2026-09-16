@@ -1,14 +1,22 @@
 import { z } from "zod";
 
+import { SecretRefSchema } from "./shared";
+
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
 // Full field semantics: docs/official/teams.md
-// Only behavioral settings live here — credentials (client_id, client_secret,
-// tenant_id) are env-only (TEAMS_*) and must not be written into config.yaml.
+// Behavioral settings and credentials live here. client_secret is typed as
+// a ${VAR} reference (actual value in the sensitive TEAMS_CLIENT_SECRET env
+// entry, substituted by hermes at config load).
 export const TeamsSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the Teams bot is enabled."),
     extra: z
       .looseObject({
+        client_id: z.string().optional().describe("Azure AD App (client) ID."),
+        client_secret: SecretRefSchema.optional().describe(
+          "Azure AD client secret, as an env var reference."
+        ),
+        tenant_id: z.string().optional().describe("Azure AD tenant ID."),
         port: z
           .number()
           .int()
@@ -19,6 +27,9 @@ export const TeamsSchema = z
       .describe("Teams bot settings."),
   })
   .optional()
-  .describe("Microsoft Teams platform configuration. Requires TEAMS_* env vars.");
+  .describe(
+    "Microsoft Teams platform configuration. client_secret is set as a " +
+      "${TEAMS_CLIENT_SECRET} reference; the secret value lives in the sensitive env entry."
+  );
 
 export type Teams = z.infer<typeof TeamsSchema>;

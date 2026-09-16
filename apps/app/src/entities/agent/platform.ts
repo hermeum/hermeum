@@ -1,12 +1,12 @@
 import type { Agent, AgentInput } from "./schema";
 
 // API server settings can be configured via config.yaml
-// (config.gateway.api_server.enabled / port) or via env vars
+// (config.gateway.api_server.enabled / port / key) or via env vars
 // (API_SERVER_ENABLED / API_SERVER_PORT). Environment variables take
 // precedence over the config values when both are set (upstream behavior);
-// the config block acts as a fallback when the env var is absent. The
-// bearer token (API_SERVER_KEY) is env-only — Hermeum does not surface it
-// in config.yaml.
+// the config block acts as a fallback when the env var is absent. The bearer
+// token is set in config as a ${API_SERVER_KEY} reference; the actual value
+// lives in the sensitive API_SERVER_KEY env entry.
 // See docs/official/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
@@ -57,17 +57,25 @@ export function getWebhookPort(input: AgentInput): number {
   return WEBHOOK_DEFAULT_PORT;
 }
 
-// Teams is an HTTP webhook platform (like webhook / api-server). Credentials
-// (client_id, client_secret, tenant_id) are env-only (TEAMS_*) — they must not
-// be written into config.yaml. An explicit `enabled` flag overrides the
-// credentials-presence detection (set false to disable while keeping creds);
-// when `enabled` is absent, Teams is on when all three TEAMS_* env vars are set.
+// Teams is an HTTP webhook platform (like webhook / api-server). The client
+// secret is set in config as a ${TEAMS_CLIENT_SECRET} reference (actual value
+// in the sensitive TEAMS_CLIENT_SECRET env entry); client_id and tenant_id
+// are plain-text config values. Each credential is also accepted from its
+// TEAMS_* env var, so the pure env-var path still auto-enables. An explicit
+// `enabled` flag overrides the credentials-presence detection (set false to
+// disable while keeping creds); when `enabled` is absent, Teams is on when
+// all three credentials are set.
 const TEAMS_DEFAULT_PORT = 3978;
-const TEAMS_REQUIRED_ENV_VARS = ["TEAMS_CLIENT_ID", "TEAMS_CLIENT_SECRET", "TEAMS_TENANT_ID"];
 
 function hasAllTeamsCredentials(input: AgentInput): boolean {
-  return TEAMS_REQUIRED_ENV_VARS.every(
-    (name) => input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false,
+  const extra = input.config?.platforms?.teams?.extra;
+  const hasEnv = (name: string) =>
+    input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false;
+  const hasClientSecret = (extra?.client_secret !== undefined && extra.client_secret.trim() !== "") || hasEnv("TEAMS_CLIENT_SECRET");
+  return (
+    ((extra?.client_id !== undefined && extra.client_id.trim() !== "") || hasEnv("TEAMS_CLIENT_ID")) &&
+    hasClientSecret &&
+    ((extra?.tenant_id !== undefined && extra.tenant_id.trim() !== "") || hasEnv("TEAMS_TENANT_ID"))
   );
 }
 
@@ -249,12 +257,22 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
         if (enabledFlag === false) {
           return { status: "unavailable", reason: "Disabled by config.platforms.teams.enabled." };
         }
-        const missing = TEAMS_REQUIRED_ENV_VARS.filter(
-          (name) => !env.some((v) => v.name === name && v.value.trim() !== ""),
-        );
+        const extra = agent.config?.platforms?.teams?.extra;
+        const missing: string[] = [];
+        if (!(extra?.client_id?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_ID" && v.value.trim() !== ""))) {
+          missing.push("client_id");
+        }
+        if (!(extra?.client_secret?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_SECRET" && v.value.trim() !== ""))) {
+          missing.push("client_secret");
+        }
+        if (!(extra?.tenant_id?.trim() || env.some((v) => v.name === "TEAMS_TENANT_ID" && v.value.trim() !== ""))) {
+          missing.push("tenant_id");
+        }
         return {
           status: "unavailable",
-          reason: `Missing env var${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`,
+          reason:
+            `Missing credential${missing.length > 1 ? "s" : ""}: ${missing.join(", ")} ` +
+            "(config.platforms.teams.extra or the matching TEAMS_* env var).",
         };
       }
       return { status: "available", ...(endpoint && { endpoint }) };

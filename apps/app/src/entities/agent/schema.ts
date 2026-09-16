@@ -8,7 +8,7 @@ import {
   SkillIdentifier,
 } from "../skill";
 
-import { isApiServerEnabled, isTeamsEnabled, isWebhookEnabled, PlatformId } from "./platform";
+import { PlatformId } from "./platform";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
@@ -296,27 +296,12 @@ export const AgentInputObjectSchema = z.object({
     .describe("Ids of app-managed shared env sets."),
 });
 
+// Secret pairing is enforced by the config schemas themselves
+// (hermes-config/shared.ts SecretRefSchema): enabled platforms must carry
+// their secret as a ${VAR} reference, and the actual value lives in a
+// sensitive env entry of the same name that hermes substitutes at config
+// load. No cross-checking of the referenced env var happens here.
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
-  const requireSensitiveEnv = (name: string, enabledPath: string) => {
-    const hasVar = data.env?.some((v) => v.name === name && v.sensitive === true);
-    if (!hasVar) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Env var "${name}" (sensitive) is required when ${enabledPath} is true.`,
-        path: ["env"],
-      });
-    }
-  };
-  if (isWebhookEnabled(data)) {
-    requireSensitiveEnv("WEBHOOK_SECRET", "webhook enabled (env var or config)");
-  }
-  if (isApiServerEnabled(data)) {
-    requireSensitiveEnv("API_SERVER_KEY", "api server enabled (env var or config)");
-  }
-  if (isTeamsEnabled(data)) {
-    requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled (env var or config)");
-  }
-
   data.env?.forEach((v, i) => {
     if (v.value === ENV_PLACEHOLDER_SENTINEL) {
       ctx.addIssue({

@@ -1,12 +1,18 @@
 import { z } from "zod";
 
+import { SecretRefSchema } from "./shared";
+
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
 // Full field semantics: docs/official/webhooks.md
 //
-// Skipped on purpose: route fields secret, filters, script, and
-// toolsets are not typed here — Hermeum does not expose them via the agent
-// configuration UI (secrets stay env-only; filters/scripts/toolsets are
-// operator-level concerns). They still pass through via looseObject.
+// Adapter settings (secret, port, ...) are valid directly under
+// platforms.webhook: as well as under extra: (upstream: both spellings reach
+// the adapter; a value nested under extra: wins if the same key appears in
+// both). secret is optional — Hermeum surfaces it as a ${VAR} reference.
+//
+// Skipped on purpose: route fields filters, script, and toolsets are not
+// typed here — they are operator-level concerns and pass through via
+// looseObject.
 export const WebhookDeliverSchema = z
   .enum([
     "log",
@@ -47,6 +53,10 @@ export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 export const WebhookRouteSchema = z
   .looseObject({
     events: z.array(z.string()).optional().describe("Event types this route accepts."),
+    secret: SecretRefSchema.optional().describe(
+      "HMAC secret for this route. Falls back to the global " +
+        "platforms.webhook.secret when omitted."
+    ),
     prompt: z
       .string()
       .optional()
@@ -66,6 +76,10 @@ export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 export const WebhookSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
+    secret: SecretRefSchema.describe(
+      "Global HMAC secret used for signature validation on all routes " +
+        "(per-route secret overrides it)."
+    ).optional(),
     extra: z
       .looseObject({
         port: z.number().int().optional().describe("Webhook server port."),
