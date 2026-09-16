@@ -83,6 +83,7 @@ Run from the repo root via pnpm filter, or from this directory directly.
 
 - `src/entities/hermes-config/` (Zod schemas) and `docs/official/` (field-semantics docs) track the pinned hermes-agent version in the `vendor/hermes-agent` submodule. When the default version changes, verify against the official docs in the submodule and update both the schemas and the docs in lockstep — each schema file's header links the upstream page it mirrors.
 - `src/entities/hermes-config/` extracts only the core fields from the official documents — not every field.
+- **Every object schema in `src/entities/hermes-config/` must use `z.looseObject`, never `z.object`** — including nested objects. New fields introduced by upstream version upgrades then pass through unvalidated instead of being silently stripped. Only promote a field to a typed entry when Hermeum needs to enforce it.
 - `docs/official/` extracts only the information Hermeum needs: description, configuration, env vars, and the like.
 - Field semantics for the chat agent live in tool input-schema `.describe()` texts (Zod), not in the system prompt — see the header comment on `AGENT_CONFIG_CHAT_SYSTEM_PROMPT` in `src/server/usecases/chat.ts`.
 - New chat tools follow the `readDocument` precedent: embed a lightweight list (names/ids + descriptions) in the system prompt up front via a `build*List()` method, and add a `read*` server-executed tool for fetching richer per-item detail on demand. Keep the prompt lean — batch lists into the prompt, batch detail calls into one tool invocation.

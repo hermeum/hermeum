@@ -55,6 +55,13 @@ config:
   hermesImageTag: v2026.8.31
   # OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL).
   openaiModel: gpt-5.6-sol
+  # Optional — override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL).
+  # Point at any OpenAI-compatible gateway (vLLM, Ollama, Azure OpenAI, …).
+  openaiBaseUrl: ""
+  # Optional — public base URL for Better Auth callbacks/redirects
+  # (BETTER_AUTH_URL). Set to the hermeum app's external URL when ingress is
+  # enabled, e.g. "https://dash.example.com".
+  betterAuthUrl: ""
   # Log verbosity level (HERMEUM_LOG_LEVEL): debug | info | warn | error.
   logLevel: info
   # Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN).
@@ -109,21 +116,15 @@ secrets:
   # REQUIRED — session signing secret for Better Auth (BETTER_AUTH_SECRET).
   # Generate with: openssl rand -base64 32
   betterAuthSecret: ""
-  # Optional — public base URL for Better Auth callbacks/redirects
-  # (BETTER_AUTH_URL). Set to the hermeum app's external URL when ingress is
-  # enabled, e.g. "https://dash.example.com".
-  betterAuthUrl: ""
-  # Optional — SMTP server URL for outgoing email (HERMEUM_SMTP_URL).
+  # Optional — SMTP server URL for outgoing email (HERMEUM_SMTP_URL). May
+  # embed credentials, so it stays in the Secret.
   smtpUrl: ""
-  # Optional — override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL).
-  openaiBaseUrl: ""
   # Optional — API key for the OpenAI-compatible API used by the AI config
   # generator (mapped to HERMEUM_OPENAI_API_KEY).
   openaiApiKey: ""
   # Use an existing Secret instead of templating one. When set, the chart
-  # reads databaseUrl / betterAuthSecret / betterAuthUrl / smtpUrl /
-  # openaiBaseUrl / openaiApiKey from the following keys: database-url,
-  # better-auth-secret, better-auth-url, smtp-url, openai-base-url,
+  # reads databaseUrl / betterAuthSecret / smtpUrl / openaiApiKey from the
+  # following keys: database-url, better-auth-secret, smtp-url,
   # openai-api-key.
   existingSecret: ""
 
