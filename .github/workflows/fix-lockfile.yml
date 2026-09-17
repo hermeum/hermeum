@@ -1,0 +1,48 @@
+# Rebuilds pnpm-lock.yaml with the pinned pnpm on Dependabot PRs; dependabot's own
+# resolver output fails `pnpm install --frozen-lockfile`. GITHUB_TOKEN pushes do not
+# re-trigger CI — re-run checks from the Actions tab after this workflow lands.
+name: Fix Lockfile
+
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: fix-lockfile-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  fix-lockfile:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout PR head branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regenerate lockfile
+        run: pnpm install --lockfile-only
+
+      - name: Push fix when the lockfile changed
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "Lockfile already in sync with pinned pnpm; nothing to fix"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "fix(deps): regenerate pnpm lockfile with pinned pnpm"
+          git push
