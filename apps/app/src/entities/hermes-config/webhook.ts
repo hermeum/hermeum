@@ -10,9 +10,8 @@ import { SecretRefSchema } from "./shared";
 // the adapter; a value nested under extra: wins if the same key appears in
 // both). secret is optional — Hermeum surfaces it as a ${VAR} reference.
 //
-// Skipped on purpose: route fields filters, script, and toolsets are not
-// typed here — they are operator-level concerns and pass through via
-// looseObject.
+// Skipped on purpose: route fields filters and script are not typed here —
+// they are operator-level concerns and pass through via looseObject.
 export const WebhookDeliverSchema = z
   .enum([
     "log",
@@ -50,6 +49,44 @@ export const DeliverExtraSchema = z
 
 export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 
+// Toolset keys accepted in a route's `toolsets` list — the snake_case names
+// Hermes' toolset validation resolves (hermes_cli/tools_config.py
+// CONFIGURABLE_TOOLSETS, minus config-only `stt`). Upstream drops unknown
+// names and platform-restricted toolsets (discord, discord_admin) rather
+// than erroring; some keys (homeassistant, spotify, yuanbao, computer_use)
+// cannot work in Hermeum but are accepted to mirror upstream.
+export const WebhookRouteToolsetSchema = z
+  .enum([
+    "web",
+    "browser",
+    "terminal",
+    "file",
+    "code_execution",
+    "vision",
+    "video",
+    "image_gen",
+    "video_gen",
+    "x_search",
+    "tts",
+    "skills",
+    "todo",
+    "memory",
+    "context_engine",
+    "session_search",
+    "clarify",
+    "delegation",
+    "cronjob",
+    "homeassistant",
+    "spotify",
+    "discord",
+    "discord_admin",
+    "yuanbao",
+    "computer_use",
+  ])
+  .describe("A toolset key enabled for runs triggered by this route.");
+
+export type WebhookRouteToolset = z.infer<typeof WebhookRouteToolsetSchema>;
+
 export const WebhookRouteSchema = z
   .looseObject({
     events: z.array(z.string()).optional().describe("Event types this route accepts."),
@@ -62,6 +99,15 @@ export const WebhookRouteSchema = z
       .optional()
       .describe("Prompt template with {dot.notation} payload access."),
     skills: z.array(z.string()).optional().describe("Skill names to load for this route."),
+    toolsets: z
+      .array(WebhookRouteToolsetSchema)
+      .optional()
+      .describe(
+        "Toolsets enabled for runs triggered by this route. REPLACES the " +
+          "platform-level webhook toolset for this route only; when omitted, " +
+          "runs use the constrained webhook default. Grant elevated toolsets " +
+          "only to fully-trusted senders, for what the route's task needs."
+      ),
     deliver: WebhookDeliverSchema,
     deliver_extra: DeliverExtraSchema,
     deliver_only: z
