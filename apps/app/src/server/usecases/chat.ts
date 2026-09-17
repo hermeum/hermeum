@@ -45,7 +45,9 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
         searchSkills: tool({
           description:
             "Search the Hermes Skills Index for an installable agent skill " +
-            "by name, keyword, or capability. Pass an empty query to list " +
+            "by name, keyword, or capability. Call this proactively to " +
+            "suggest skills the user's goal would benefit from, even when " +
+            "they didn't ask for one. Pass an empty query to list " +
             "featured skills.",
           inputSchema: z.object({
             query: z.string().describe("Search query (skill name, capability, or keyword)."),
@@ -86,9 +88,12 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
         }),
         clarify: tool({
           description:
-            "Ask the user to clarify ambiguous requirements before writing " +
-            "config — never guess when a call to this tool can resolve the " +
-            "ambiguity. Batch up to 3 related questions into a single call. " +
+            "Ask the user to clarify when a decision materially shapes the " +
+            "agent and can't be sensibly inferred from their goal " +
+            "(e.g. credentials, ambiguous intent) — never guess " +
+            "on those. For decisions with a sensible, documented default, " +
+            "apply the default instead of asking; the user can override it " +
+            "later. Batch up to 3 related questions into a single call. " +
             "For each question, offer up to 3 concise choices when the " +
             "plausible answers are enumerable (omit them for free-form " +
             "questions). The user answers every question and explicitly " +
@@ -145,8 +150,11 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     return tool({
       description:
         "Read one or more Hermes agent configuration documents by name. " +
-        "Names may be nested paths (e.g. examples/github-issue). Pass every " +
-        "document you need in a single call to minimize round-trips.\n\n" + docList,
+        "Read the relevant sections before drafting a config section for " +
+        "the first time, so the defaults you choose proactively are " +
+        "grounded in the documentation. Names may be nested paths " +
+        "(e.g. examples/github-issue). Pass every document you need in a " +
+        "single call to minimize round-trips.\n\n" + docList,
       inputSchema: z.object({
         names: z
           .array(z.string())
@@ -315,16 +323,25 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
-it in an editor and may change it by hand between messages.
+it in an editor and may change it by hand between messages. Act as a
+proactive agent-builder, not a passive translator: don't just transcribe
+what the user asks into config — anticipate what the agent needs to work.
 
 Note
-- Skip every optional field unless the user requests it.
 - Never guess at field semantics. When you're not fully sure about a config
-section, settle it with the documentation before writing it into the draft.
+  section, settle it with the documentation before writing it into the draft.
 - The draft wraps the Hermes config under a top-level "config" key: fields
-the Hermes docs describe as top-level (e.g. "slack:") live under "config."
-in the draft.
+  the Hermes docs describe as top-level (e.g. "slack:") live under "config."
+  in the draft.
 - Apply each user request with a single config-writing call (replaceAgentConfig
-or patchAgentConfig).
+  or patchAgentConfig).
+- Proactively fill gaps the user hasn't spelled out: infer the toolsets,
+  platforms, and agent type the goal implies, suggest installable skills,
+  and recommend shared env sets the chosen platforms need. Ground every
+  such addition in the documentation first.
+- Ask the user before guessing only when a decision materially shapes the
+  agent and can't be sensibly inferred (e.g. credentials, secrets,
+  ambiguous intent). Everything else gets a sensible, documented default
+  the user can override.
 
 `;

@@ -202,6 +202,37 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(instructions).toContain("config-writing call");
   });
 
+  it("instructs the model to proactively fill gaps instead of only transcribing requests", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    // The passive "skip optional fields" rule is gone...
+    expect(instructions).not.toContain("Skip every optional field");
+    // ...replaced by proactive gap-filling grounded in the docs.
+    expect(instructions).toContain("proactive agent-builder");
+    expect(instructions).toContain("Proactively fill gaps");
+    // Clarify is reserved for decisions that can't be sensibly inferred;
+    // everything else gets a documented default.
+    expect(instructions).toContain("Ask the user before guessing");
+  });
+
+  it("steers the recommendation tools toward proactive use in their descriptions", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.searchSkills!.description).toContain("proactively");
+    expect(tools.readDocument!.description).toContain("proactively");
+    // clarify stays reserved for materially-shaping unknowns, not a
+    // substitute for sensible defaults.
+    expect(tools.clarify!.description).toContain("can't be sensibly inferred");
+    expect(tools.clarify!.description).toContain("never guess");
+    expect(tools.clarify!.description).toContain("up to 3 related questions");
+    expect(tools.clarify!.description).toContain("confirms");
+    expect(tools.clarify!.description).toContain("skip");
+  });
+
   it("exposes a client-side patchAgentConfig tool with the merge rules in its description", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
