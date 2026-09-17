@@ -293,6 +293,85 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(skillIndex.searchSkills).toHaveBeenCalledWith("kubernetes", 25);
   });
 
+  it("exposes a client-side clarify tool with the confirmation semantics in its description", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.clarify).toBeDefined();
+    expect(tools.clarify!.inputSchema).toBeDefined();
+    // No execute: the client collects the answers behind an explicit user
+    // confirmation step (Submit/Skip) and reports them back.
+    expect(tools.clarify!.execute).toBeUndefined();
+    // The batching and confirmation rules live in the description so the
+    // model sees them alongside the tool definition.
+    expect(tools.clarify!.description).toContain("never guess");
+    expect(tools.clarify!.description).toContain("up to 3 related questions");
+    expect(tools.clarify!.description).toContain("confirms");
+    expect(tools.clarify!.description).toContain("skip");
+  });
+
+  it("accepts a single free-form clarify question with no choices", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "Which port should the web server listen on?" }],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts up to 3 clarify questions, each with up to 3 choices", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [
+        { question: "Q1?", choices: ["A", "B", "C"] },
+        { question: "Q2?", choices: ["A", "B"] },
+        { question: "Q3?" },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects more than 3 clarify questions in one call", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [
+        { question: "Q1?" },
+        { question: "Q2?" },
+        { question: "Q3?" },
+        { question: "Q4?" },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a clarify question with more than 3 choices or an empty question", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const tooManyChoices = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "Q1?", choices: ["A", "B", "C", "D"] }],
+    });
+    expect(tooManyChoices.success).toBe(false);
+
+    const emptyQuestion = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "", choices: ["A"] }],
+    });
+    expect(emptyQuestion.success).toBe(false);
+
+    const emptyQuestions = tools.clarify!.inputSchema.safeParse({ questions: [] });
+    expect(emptyQuestions.success).toBe(false);
+  });
+
   it("embeds the available documents in the readDocument description with frontmatter descriptions", async () => {
     const useCase = new ChatUseCase(
       makeRuntime(),

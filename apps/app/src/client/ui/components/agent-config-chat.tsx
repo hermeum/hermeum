@@ -6,6 +6,7 @@ import { ArrowUp, Check, LoaderCircle, Square } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
+import { Input } from "@hermeum/components/ui/input";
 
 import { Marker, MarkerContent, MarkerIcon } from "@hermeum/components/ui/marker";
 import { Message, MessageContent } from "@hermeum/components/ui/message";
@@ -32,6 +33,12 @@ type ReadSharedEnvSetOutput = {
 };
 type SearchSkillsOutput = { results: { name: string; identifier: string; description: string }[] };
 
+// Client-executed: the user answers every question, then confirms (Submit) or
+// declines (Skip) — see ClarifyCard. Answers align with the questions by
+// index; `skipped` is sent instead of answers when the user declines.
+type ClarifyInput = { questions: { question: string; choices?: string[] }[] };
+type ClarifyOutput = { answers: string[]; skipped: boolean };
+
 // Max consecutive failed config-writing tool calls (replaceAgentConfig or
 // patchAgentConfig) the model may make in a row before it is told to stop
 // retrying and explain the problem instead.
@@ -48,10 +55,11 @@ type AgentConfigChatMessage = UIMessage<
   unknown,
   UIDataTypes,
   {
-    // Client-executed (handled in onToolCall).
+    // Client-executed (handled in onToolCall or via user-confirmed UI).
     replaceAgentConfig: { input: AgentInput; output: string };
     patchAgentConfig: { input: AgentPatch; output: string };
     readAgentConfig: { input: undefined; output: AgentInput | undefined };
+    clarify: { input: ClarifyInput; output: ClarifyOutput };
     // Server-executed (lifecycle only — no client handler).
     readDocument: { input: { names: string[] }; output: ReadDocumentOutput };
     readSharedEnvSet: { input: { ids: string[] }; output: ReadSharedEnvSetOutput };
@@ -121,6 +129,183 @@ function ToolMarker({
         {isError ? errorLabel : isDone ? doneLabel : runningLabel}
       </MarkerContent>
     </Marker>
+  );
+}
+
+// Interactive wizard for a pending `clarify` tool call. Questions are shown
+// one at a time: each offers its choices (single-select, click to answer and
+// advance), an "Other" free-text option, or a plain input when the model
+// supplied no choices. A final confirmation step lists every Q→A pair for
+// review (with per-question edit) before Submit reports the answers back to
+// the model — or Skip declines answering at any point.
+function ClarifyCard({
+  questions,
+  onSubmit,
+  onSkip,
+}: {
+  questions: ClarifyInput["questions"];
+  onSubmit: (answers: string[]) => void;
+  onSkip: () => void;
+}) {
+  const total = questions.length;
+  // `step` indexes the question being answered; `total` is the confirmation
+  // step. `editing` holds the question index being re-answered from the
+  // confirmation step (undefined during the first pass).
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [editing, setEditing] = useState<number | undefined>(undefined);
+  // Draft for the current step: the typed "Other"/free-form text. Reset on
+  // every step transition.
+  const [draft, setDraft] = useState("");
+  const [otherMode, setOtherMode] = useState(false);
+
+  const goToStep = (next: number) => {
+    setStep(next);
+    setDraft("");
+    setOtherMode(false);
+  };
+
+  const advance = (answer: string) => {
+    setAnswers((prev) => ({ ...prev, [step]: answer }));
+    const next = editing !== undefined ? total : step + 1;
+    setEditing(undefined);
+    goToStep(next);
+  };
+
+  const back = () => {
+    if (editing !== undefined) {
+      setEditing(undefined);
+      goToStep(total);
+      return;
+    }
+    goToStep(Math.max(0, step - 1));
+  };
+
+  const submitDraft = () => {
+    const text = draft.trim();
+    if (text.length > 0) advance(text);
+  };
+
+  // Confirmation step: review every answer, then Submit (or Skip).
+  if (step === total) {
+    return (
+      <div className="flex flex-col gap-3 rounded-[0.25rem] border p-3">
+        <p className="text-sm font-medium">Confirm your answers</p>
+        <div className="flex flex-col gap-2">
+          {questions.map(({ question }, questionIndex) => (
+            <div key={questionIndex} className="flex flex-col">
+              <p className="text-xs text-muted-foreground">{question}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm">{answers[questionIndex]}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditing(questionIndex);
+                    goToStep(questionIndex);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => onSubmit(questions.map((_, i) => answers[i]!))}>
+            Submit
+          </Button>
+          <Button size="sm" variant="outline" onClick={onSkip}>
+            Skip
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { question, choices } = questions[step]!;
+  const isLast = step === total - 1;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[0.25rem] border p-3">
+      <p className="text-xs text-muted-foreground">
+        Question {step + 1} of {total}
+      </p>
+      <p className="text-sm font-medium">{question}</p>
+      {choices ? (
+        <div className="flex flex-col items-stretch gap-1.5">
+          {choices.map((choice) => (
+            <Button
+              key={choice}
+              variant={answers[step] === choice && !otherMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => advance(choice)}
+              // Full-width with normal wrapping: the button base is
+              // `whitespace-nowrap inline-flex shrink-0`, which would let a
+              // long choice overflow the card instead of wrapping.
+              className="h-auto justify-start whitespace-normal py-2 text-left font-normal normal-case tracking-normal"
+            >
+              {choice}
+            </Button>
+          ))}
+          <Button
+            variant={otherMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setOtherMode(true);
+              setDraft("");
+            }}
+            className="justify-start font-normal normal-case tracking-normal"
+          >
+            Other
+          </Button>
+          {otherMode && (
+            <Input
+              value={draft}
+              autoFocus
+              placeholder="Type your answer…"
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  submitDraft();
+                }
+              }}
+              className="max-w-sm"
+            />
+          )}
+        </div>
+      ) : (
+        <Input
+          value={draft}
+          autoFocus
+          placeholder="Type your answer…"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              submitDraft();
+            }
+          }}
+          className="max-w-sm"
+        />
+      )}
+      <div className="flex items-center gap-2">
+        {(otherMode || !choices) && (
+          <Button size="sm" disabled={draft.trim().length === 0} onClick={submitDraft}>
+            {isLast ? "Review" : "Next"}
+          </Button>
+        )}
+        {(step > 0 || editing !== undefined) && (
+          <Button size="sm" variant="outline" onClick={back}>
+            Back
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={onSkip}>
+          Skip
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -254,7 +439,7 @@ export function AgentConfigChat({
 
   function handleSend() {
     const text = input.trim();
-    if (text.length === 0 || status !== "ready") return;
+    if (text.length === 0 || status !== "ready" || pendingClarify) return;
     configUpdateSuccessesRef.current = 0;
     configUpdateFailuresRef.current = 0;
     sendMessage({ text }, { body: { config: callbacksRef.current.getConfig() } });
@@ -262,6 +447,17 @@ export function AgentConfigChat({
   }
 
   const isBusy = status === "submitted" || status === "streaming";
+
+  // While a clarify call awaits the user's answers the composer is locked:
+  // the model's turn can only resume through the clarify card's Submit/Skip,
+  // so a free-text reply would arrive with a missing tool result.
+  const pendingClarify = messages.some((message) =>
+    message.parts.some(
+      (part) =>
+        part.type === "tool-clarify" &&
+        (part.state === "input-streaming" || part.state === "input-available")
+    )
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -336,6 +532,74 @@ export function AgentConfigChat({
                                 runningLabel="Patching the config…"
                                 doneLabel="Config patched"
                                 errorLabel="Couldn’t patch the config"
+                              />
+                            );
+                          }
+                          if (part.type === "tool-clarify") {
+                            // The card mounts only on complete input: during
+                            // input-streaming the questions array may still be
+                            // partial, and the card's per-step state must not
+                            // initialize against it.
+                            if (part.state === "input-available") {
+                              return (
+                                <ClarifyCard
+                                  key={index}
+                                  questions={part.input.questions.map((partial) => ({
+                                    question: partial.question,
+                                    ...(partial.choices !== undefined ? { choices: partial.choices } : {}),
+                                  }))}
+                                  onSubmit={(answers) =>
+                                    addToolOutput({
+                                      tool: "clarify",
+                                      toolCallId: part.toolCallId,
+                                      output: { answers, skipped: false },
+                                    })
+                                  }
+                                  onSkip={() =>
+                                    addToolOutput({
+                                      tool: "clarify",
+                                      toolCallId: part.toolCallId,
+                                      output: { answers: [], skipped: true },
+                                    })
+                                  }
+                                />
+                              );
+                            }
+                            if (part.state === "output-available" && part.output) {
+                              const { answers, skipped } = part.output;
+                              // Persistent record of the confirmed answers.
+                              // A single marker line gets unreadable (and can
+                              // overflow) once questions or answers are long.
+                              return (
+                                <div
+                                  key={index}
+                                  className="flex flex-col gap-2 rounded-[0.25rem] border bg-muted/40 p-3 text-sm"
+                                >
+                                  {skipped ? (
+                                    <p className="text-muted-foreground">Clarification skipped</p>
+                                  ) : (
+                                    (part.input?.questions ?? []).map((partial, questionIndex) => (
+                                      <div key={questionIndex} className="flex flex-col">
+                                        <span className="text-xs text-muted-foreground">
+                                          {partial?.question}
+                                        </span>
+                                        <span className="whitespace-pre-wrap break-words">
+                                          {answers[questionIndex]}
+                                        </span>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              );
+                            }
+                            return (
+                              <ToolMarker
+                                key={index}
+                                state={part.state}
+                                runningLabel="Preparing questions…"
+                                doneLabel="Clarified"
+                                errorLabel="Clarification failed"
+                                transient
                               />
                             );
                           }
@@ -433,13 +697,20 @@ export function AgentConfigChat({
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          disabled={pendingClarify}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               handleSend();
             }
           }}
-          placeholder={messages.length === 0 ? emptyPlaceholder : "Reply…"}
+          placeholder={
+            pendingClarify
+              ? "Answer the questions above to continue…"
+              : messages.length === 0
+                ? emptyPlaceholder
+                : "Reply…"
+          }
           className="min-h-16 border-transparent px-0 py-0 focus-visible:border-transparent"
         />
         <div className="flex justify-end">
@@ -457,7 +728,7 @@ export function AgentConfigChat({
               size="icon-sm"
               aria-label="Send message"
               onClick={handleSend}
-              disabled={input.trim().length === 0}
+              disabled={input.trim().length === 0 || pendingClarify}
             >
               <ArrowUp />
             </Button>

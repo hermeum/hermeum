@@ -27,7 +27,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
   // tool set the model uses to read docs/shared env sets, list agent types,
-  // search skills, and apply config changes. The available documents and
+  // search skills, clarify ambiguous requirements with the user, and apply
+  // config changes. The available documents and
   // shared env sets are embedded in their respective tool descriptions (not
   // the system prompt) so the model sees them right at the tool definition.
   async getAgentConfigContext(currentConfig?: AgentInput): Promise<AgentConfigContext> {
@@ -82,6 +83,38 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           inputSchema: AgentInputObjectSchema,
           // No `execute`: the client applies the config to its editor and
           // reports the result back.
+        }),
+        clarify: tool({
+          description:
+            "Ask the user to clarify ambiguous requirements before writing " +
+            "config — never guess when a call to this tool can resolve the " +
+            "ambiguity. Batch up to 3 related questions into a single call. " +
+            "For each question, offer up to 3 concise choices when the " +
+            "plausible answers are enumerable (omit them for free-form " +
+            "questions). The user answers every question and explicitly " +
+            "confirms the collected answers before they are returned; they " +
+            "can also skip or type a custom answer instead of picking a choice.",
+          inputSchema: z.object({
+            questions: z
+              .array(
+                z.object({
+                  question: z.string().min(1).describe("One question, phrased so it stands alone."),
+                  choices: z
+                    .array(z.string().min(1))
+                    .min(1)
+                    .max(3)
+                    .optional()
+                    .describe(
+                      "Up to 3 concise answer options for this question; omit for free-form."
+                    ),
+                })
+              )
+              .min(1)
+              .max(3)
+              .describe("Questions to ask; batch all pending questions into one call."),
+          }),
+          // No `execute`: the client collects the answers behind an explicit
+          // user confirmation step and reports them back.
         }),
         patchAgentConfig: tool({
           description:
@@ -275,7 +308,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 
 // Behavioral rules for the agent-config chat. Tool-specific guidance (when to
 // call `readDocument`, `readSharedEnvSet`, `readAgentConfig`,
-// `replaceAgentConfig`, `patchAgentConfig`, and the available doc/shared-env-set
+// `replaceAgentConfig`, `patchAgentConfig`, `clarify`, and the available
+// doc/shared-env-set
 // lists) lives in the tool `description` fields, not here, so the model sees
 // each tool's usage rules alongside its definition.
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
