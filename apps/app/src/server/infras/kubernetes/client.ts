@@ -148,14 +148,16 @@ export function agentEnvToSecret(
   };
 }
 
-// Build the ingress host for one platform subdomain:
-// <agent-id>.<platform-label>.<base-hostname>
+// Build the ingress host for one platform:
+// <agent-id>.<platform-label>.<base-hostname>, or with flattenHosts enabled,
+// <agent-id>-<platform-label>.<base-hostname> (single DNS level).
 function ingressHostFor(agentId: string, platform: PlatformId): string {
   const label = PLATFORM_INGRESS_LABELS[platform];
   if (label === undefined) {
     throw new Error(`No ingress subdomain label configured for platform "${platform}"`);
   }
-  return `${agentId}.${label}.${config.agentIngressBaseHostname ?? ""}`;
+  const agentLabel = config.agentIngressFlattenHosts ? `${agentId}-${label}` : `${agentId}.${label}`;
+  return `${agentLabel}.${config.agentIngressBaseHostname ?? ""}`;
 }
 
 export function agentToHermesAgent(agent: Agent): HermesAgent {
@@ -189,7 +191,8 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     hermes.config = { raw: agent.config };
   }
   // Expose the API server container + service ports when the agent opts in via
-  // the API_SERVER_ENABLED env var.
+  // the API_SERVER_ENABLED env var OR config.gateway.api_server.enabled
+  // (env takes precedence over config).
   const apiServerPort = isApiServerEnabled(agent) ? getApiServerPort(agent) : null;
   // Expose the webhook container + service ports when the agent opts in via
   // the WEBHOOK_ENABLED env var OR config.platforms.webhook.enabled.
@@ -237,9 +240,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   }
   // Ingress is generated only when the operator configures a base hostname —
   // routing inbound traffic from message platforms (api-server, webhook,
-  // teams) to the agent's Service. Each HTTP platform gets its own subdomain
-  // <agent-id>.<platform-label>.<base-hostname> mapped to the platform's
-  // Service port. Routing is entirely subdomain-based: the whole host maps to
+  // teams) to the agent's Service. Each HTTP platform gets its own host
+  // <agent-id>.<platform-label>.<base-hostname> (or, with flattenHosts,
+  // <agent-id>-<platform-label>.<base-hostname>) mapped to the platform's
+  // Service port. Routing is entirely host-based: the whole host maps to
   // the platform's Service port, so no subpath rules are needed.
   let ingress: Ingress | undefined;
   if (servicePorts.length > 0 && config.agentIngressBaseHostname !== undefined) {
@@ -273,7 +277,8 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
       // emitted, which covers both plain HTTP and load-balancer-terminated TLS
       // (the LB handles the cert; the ingress receives plain HTTP). The secret
       // must cover every emitted host (e.g. a wildcard cert per platform
-      // label, *.hooks.<base> / *.api.<base> / *.teams.<base>).
+      // label, *.hooks.<base> / *.api.<base> / *.teams.<base>, or — with
+      // flattenHosts — a single wildcard *.<base>).
       ...(config.agentIngressTlsSecretName !== undefined && {
         tls: [
           {
@@ -352,10 +357,10 @@ export function mapHermesConfig(config: HermesConfig | undefined): Agent["config
 // the platform is available (its Service port exists), null otherwise.
 //
 // When the operator configures agentIngressBaseHostname, ingress hosts are
-// deterministic — <agent-id>.<platform-label>.<base> per enabled platform,
-// authored by agentToHermesAgent — so URLs are constructed directly from
-// config + the CR's Service ports. Subdomain-routed, so no port appears in
-// the URL.
+// deterministic — <agent-id>.<platform-label>.<base> (or, with flattenHosts,
+// <agent-id>-<platform-label>.<base>) per enabled platform, authored by
+// agentToHermesAgent — so URLs are constructed directly from config + the
+// CR's Service ports. Host-routed, so no port appears in the URL.
 //
 // When no base hostname is configured, platforms fall back to the in-cluster
 // Service DNS at

@@ -67,15 +67,18 @@ draft agent `config.yaml` blocks from natural-language prompts.
 ### Per-agent ingress
 
 When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, Hermeum emits an
-`Ingress` per agent that routes each enabled HTTP platform on its own
-subdomain `<agent-id>.<platform-label>.<base hostname>` (api-server →
-`api`, webhook → `hooks`, teams → `teams`), with each subdomain mapped
+`Ingress` per agent that routes each enabled HTTP platform on its own host
+`<agent-id>.<platform-label>.<base hostname>` (api-server → `api`, webhook
+→ `hooks`, teams → `teams`) — or, with
+`HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS=true`,
+`<agent-id>-<platform-label>.<base hostname>` — with each host mapped
 wholesale to the platform's Service port. When it is unset, **no ingress is
 generated**.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` | — | Base hostname for per-agent ingresses; each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams). Unset = no ingress generated. |
+| `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` | — | Base hostname for per-agent ingresses; each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams) — or `<agent-id>-<platform-label>.<base>` with `HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS=true`. Unset = no ingress generated. |
+| `HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS` | `false` | Flatten agent ingress hosts to a single DNS level: `<agent-id>-<platform-label>.<base>` instead of `<agent-id>.<platform-label>.<base>`. One wildcard record/cert `*.<base>` then covers every agent and platform. |
 | `HERMEUM_AGENT_INGRESS_SCHEME` | `http` | Public URL scheme advertised for agent ingresses. **Display-only** — it does not drive the emitted `tls` block; TLS is governed by `HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME`. |
 | `HERMEUM_AGENT_INGRESS_CLASS_NAME` | — | Ingress controller class name set on generated ingresses (`spec.ingressClassName`). Omitted from the CR when unset. |
 | `HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME` | — | TLS secret name for controller-terminated TLS. When set, the ingress emits a `tls` block with this secret; when unset, no `tls` block is emitted (covers plain HTTP and load-balancer-terminated TLS). |

@@ -48,6 +48,7 @@
           "properties": {
             "scheme": { "type": "string", "enum": ["http", "https"] },
             "baseHostname": { "type": "string" },
+            "flattenHosts": { "type": "boolean" },
             "className": { "type": "string" },
             "tlsSecretName": { "type": "string" }
           }

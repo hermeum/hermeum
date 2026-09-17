@@ -122,6 +122,10 @@ spec:
             - name: HERMEUM_AGENT_INGRESS_BASE_HOSTNAME
               value: {{ .Values.config.agentIngress.baseHostname | quote }}
             {{- end }}
+            {{- if .Values.config.agentIngress.flattenHosts }}
+            - name: HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS
+              value: "true"
+            {{- end }}
             {{- if .Values.config.agentIngress.className }}
             - name: HERMEUM_AGENT_INGRESS_CLASS_NAME
               value: {{ .Values.config.agentIngress.className | quote }}

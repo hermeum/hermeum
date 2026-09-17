@@ -74,9 +74,19 @@ export const ConfigSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Base hostname for per-agent ingresses; each HTTP platform gets its own subdomain " +
+      "Base hostname for per-agent ingresses; each HTTP platform gets its own host " +
         "<agent-id>.<platform-label>.<base> (api-server → api, webhook → hooks, teams → teams) " +
+        "or, with agentIngressFlattenHosts, <agent-id>-<platform-label>.<base> " +
         "(HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). When unset, no ingress is generated."
+    ),
+  agentIngressFlattenHosts: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Flatten agent ingress hosts to a single DNS level (HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS). " +
+        "Instead of <agent-id>.<platform-label>.<base>, hosts become " +
+        "<agent-id>-<platform-label>.<base> (api-server → api, webhook → hooks, teams → teams), " +
+        "so a single wildcard record/cert *. <base> covers every agent and platform."
     ),
   agentIngressClassName: z
     .string()
@@ -172,6 +182,7 @@ export const config = ConfigSchema.parse({
   logLevel: process.env.HERMEUM_LOG_LEVEL,
   agentIngressScheme: process.env.HERMEUM_AGENT_INGRESS_SCHEME,
   agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
+  agentIngressFlattenHosts: process.env.HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS === "true",
   agentIngressClassName: process.env.HERMEUM_AGENT_INGRESS_CLASS_NAME,
   agentIngressTlsSecretName: process.env.HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME,
   port: process.env.HERMEUM_PORT
