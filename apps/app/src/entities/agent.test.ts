@@ -86,6 +86,80 @@ describe("AgentInputSchema webhook secret validation", () => {
   });
 });
 
+describe("AgentInputSchema webhook route toolsets", () => {
+  it("accepts a valid toolsets list on a route", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: {
+                routes: {
+                  "oom-emergency": { toolsets: ["terminal", "file", "code_execution", "web"] },
+                },
+              },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a route without toolsets", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: { routes: { "github-pr": {} } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects camelCase toolset names not accepted upstream", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: { routes: { "oom-emergency": { toolsets: ["codeExecution"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown toolset names", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: { routes: { "oom-emergency": { toolsets: ["not_a_toolset"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("AgentInputSchema webhook env-vs-config precedence", () => {
   it("prefers config.platforms.webhook.enabled over WEBHOOK_ENABLED env var", () => {
     const input = {

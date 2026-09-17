@@ -13,6 +13,7 @@ export {
   WebhookDeliverSchema,
   DeliverExtraSchema,
   WebhookRouteSchema,
+  WebhookRouteToolsetSchema,
   WebhookSchema,
   type WebhookDeliver,
   type DeliverExtra,

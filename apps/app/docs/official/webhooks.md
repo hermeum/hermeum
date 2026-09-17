@@ -1,7 +1,7 @@
 ---
 name: webhooks
 category: platforms
-description: Webhook platform configuration (`platforms.webhook`) — secret references, routes, delivery targets, prompt templates, and env vars.
+description: Webhook platform configuration (`platforms.webhook`) — secret references, routes, delivery targets, prompt templates, per-route toolsets, and env vars.
 ---
 
 # Webhook configuration (`platforms.webhook`)
@@ -35,6 +35,7 @@ and routes responses back to a configured target platform.
 | `secret` | No | HMAC secret for this route, as an env var reference (e.g. `secret: ${GITHUB_WEBHOOK_SECRET}`). Falls back to the global `platforms.webhook.secret` when omitted. |
 | `prompt` | No | Template string with dot-notation payload access (e.g. `{pull_request.title}`). If omitted, the full JSON payload is dumped into the prompt. See [Prompt templates](#prompt-templates). |
 | `skills` | No | List of skill names to load for the agent run. |
+| `toolsets` | No | List of toolset keys (e.g. `["terminal", "file", "web"]`) that **replaces** the platform-level webhook toolset for runs triggered by this route only. Manual config edit only — not settable via `hermes webhook subscribe`, so agent-created subscriptions cannot self-grant elevated tools. See [Per-route toolsets](#per-route-toolsets). |
 | `deliver` | No | Where to send the response (default `log`). See [Delivery targets](#delivery-targets). |
 | `deliver_extra` | No | Additional delivery config — keys depend on `deliver` type (e.g. `repo`, `pr_number`, `chat_id`). Values support the same `{dot.notation}` templates as `prompt`. |
 | `deliver_only` | No | If `true`, skip the agent entirely — the rendered `prompt` template becomes the literal message that gets delivered. Zero LLM cost, sub-second delivery. Requires `deliver` to be a real target (not `log`). |
@@ -92,6 +93,37 @@ If no `prompt` template is configured for a route, the entire payload is
 dumped as indented JSON (truncated at 4000 characters).
 
 The same dot-notation templates work in `deliver_extra` values.
+
+## Per-route toolsets
+
+Webhook agent runs default to a deliberately constrained toolset
+(`web_search`, `web_extract`, `vision_analyze`, `clarify`) because webhook
+payloads can carry untrusted third-party content — a public PR title or
+issue comment should never be able to prompt-inject its way into your
+terminal.
+
+For **trusted** routes — a localhost monitoring daemon pushing system
+alerts, an internal CI system — grant the wider toolset that the route's
+task requires, on that route only, without widening every other webhook
+route:
+
+```yaml
+platforms:
+  webhook:
+    enabled: true
+    secret: ${WEBHOOK_SECRET}
+    extra:
+      routes:
+        oom-emergency:
+          secret: ${MONITOR_WEBHOOK_SECRET}
+          prompt: "Memory emergency: {detail}. Diagnose with ps/free/py-spy and report."
+          toolsets: ["terminal", "file", "code_execution", "web"]
+          deliver: "telegram"
+env:
+  - name: MONITOR_WEBHOOK_SECRET
+    value: monitor-secret-here
+    sensitive: true
+```
 
 ## Secret references
 
@@ -157,8 +189,9 @@ config:
               URL: {pull_request.html_url}
               Diff URL: {pull_request.diff_url}
               Action: {action}
-            skills: [github-code-review]
-            deliver: github_comment
+              skills: [github-code-review]
+              toolsets: [web, vision, clarify]
+              deliver: github_comment
             deliver_extra:
               repo: "{repository.full_name}"
               pr_number: "{number}"
@@ -175,3 +208,10 @@ The HMAC secret is set in config as a `${WEBHOOK_SECRET}` reference and the
 actual value is provided via the `WEBHOOK_SECRET` env entry (sensitive). The
 `GH_TOKEN` env entry is required for `github_comment` delivery so the `gh`
 CLI can authenticate when running inside the agent container.
+
+The `toolsets: [web, vision, clarify]` line is optional here — it matches the
+webhook default exactly, so this route gets the safe subset either way. It is
+included to show the pattern: routes only handling untrusted third-party
+payloads (public PRs) stay at the default, while routes with a task that
+needs more capability use a wider list (see
+[Per-route toolsets](#per-route-toolsets)).
