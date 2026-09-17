@@ -11,13 +11,16 @@ import { FileAdaptor } from "./adaptors/file";
 import { TelemetryAdaptor } from "./adaptors/telemetry";
 import { Runtime } from "./adaptors/runtime";
 import { SkillIndexAdaptor } from "./adaptors/skill-index";
+import { MockRuntime } from "./adaptors/mocks/runtime";
 
 // Core base class for use cases backed by the file, runtime, skill index, and
 // telemetry adaptors; mixins like HermeumConfigLoadable build on the injected
 // adaptors.
 export class BaseUseCase {
   constructor(
-    readonly runtime: Runtime = new KubernetesClient(),
+    readonly runtime: Runtime = config.mockRuntime
+      ? new MockRuntime()
+      : new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),
     readonly logger: TelemetryAdaptor = telemetry
