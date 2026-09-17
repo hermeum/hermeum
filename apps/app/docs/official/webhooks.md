@@ -1,7 +1,7 @@
 ---
 name: webhooks
 category: platforms
-description: Webhook platform configuration (`platforms.webhook`) — secret references, routes, delivery targets, prompt templates, per-route toolsets, and env vars.
+description: Webhook platform configuration (`platforms.webhook`) — secret references, routes, payload filters, delivery targets, prompt templates, per-route toolsets, and env vars.
 ---
 
 # Webhook configuration (`platforms.webhook`)
@@ -34,11 +34,56 @@ and routes responses back to a configured target platform.
 | `events` | No | List of event types to accept (e.g. `["pull_request"]`). If empty, all events are accepted. Event type is read from `X-GitHub-Event`, `X-GitLab-Event`, or `event_type` in the payload. |
 | `secret` | No | HMAC secret for this route, as an env var reference (e.g. `secret: ${GITHUB_WEBHOOK_SECRET}`). Falls back to the global `platforms.webhook.secret` when omitted. |
 | `prompt` | No | Template string with dot-notation payload access (e.g. `{pull_request.title}`). If omitted, the full JSON payload is dumped into the prompt. See [Prompt templates](#prompt-templates). |
+| `filters` | No | Declarative payload filters for this route (a list, or a single filter object). See [Payload filters](#payload-filters). |
 | `skills` | No | List of skill names to load for the agent run. |
 | `toolsets` | No | List of toolset keys (e.g. `["terminal", "file", "web"]`) that **replaces** the platform-level webhook toolset for runs triggered by this route only. Manual config edit only — not settable via `hermes webhook subscribe`, so agent-created subscriptions cannot self-grant elevated tools. See [Per-route toolsets](#per-route-toolsets). |
 | `deliver` | No | Where to send the response (default `log`). See [Delivery targets](#delivery-targets). |
 | `deliver_extra` | No | Additional delivery config — keys depend on `deliver` type (e.g. `repo`, `pr_number`, `chat_id`). Values support the same `{dot.notation}` templates as `prompt`. |
 | `deliver_only` | No | If `true`, skip the agent entirely — the rendered `prompt` template becomes the literal message that gets delivered. Zero LLM cost, sub-second delivery. Requires `deliver` to be a real target (not `log`). |
+
+## Payload filters
+
+Use `filters` when a provider sends a broad event stream but only some
+payloads should wake the agent or trigger `deliver_only` delivery. Filters
+run after signature validation, body parsing, and `events`, but before
+prompt rendering, idempotency, agent dispatch, or direct delivery.
+Non-matches return `{"status":"ignored","reason":"filter"}` with HTTP 200.
+
+A route's `filters` is a list of filter objects (all must match) or a
+single filter object. Supported operators:
+
+- `exists: true|false`
+- `missing: true`
+- `equals` / `not_equals`
+- `contains` for strings, lists, and dict keys
+- `in` for inline lists
+- `in_file` for JSON arrays, JSON objects (keys are used), or
+  newline-delimited text files
+- `regex`
+- `all`, `any`, and `not` groups
+
+Field paths use dot notation. `payload.foo` reads from a top-level
+`payload` object when one exists, or from the root webhook body for flat
+payloads. `event` / `event_type` match the resolved event type, and
+`headers.<Name>` reads request headers.
+
+```yaml
+platforms:
+  webhook:
+    extra:
+      routes:
+        todoist:
+          events: ["item:updated"]
+          filters:
+            - field: "payload.labels"
+              contains: "hermes"
+            - any:
+                - field: "payload.priority"
+                  equals: 4
+                - field: "payload.project_id"
+                  in_file: "~/.hermes/data/todoist/watchlist.json"
+          prompt: "Todoist task changed: {payload.content}"
+```
 
 ## Delivery targets
 

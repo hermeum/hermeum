@@ -14,10 +14,12 @@ export {
   DeliverExtraSchema,
   WebhookRouteSchema,
   WebhookRouteToolsetSchema,
+  WebhookFilterSchema,
   WebhookSchema,
   type WebhookDeliver,
   type DeliverExtra,
   type WebhookRoute,
+  type WebhookFilter,
   type Webhook,
 } from "./webhook";
 export { TeamsSchema, type Teams } from "./teams";
