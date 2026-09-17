@@ -22,3 +22,6 @@ config.yaml
 
 # Helm chart dependency artifacts (regenerated via helm dependency build)
 charts/hermeum/charts/
+
+# Local Helm values for local testing
+charts/hermeum/values-local.yaml
