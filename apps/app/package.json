@@ -70,7 +70,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9.0.0",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.19.3",
