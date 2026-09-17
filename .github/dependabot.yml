@@ -8,10 +8,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -23,10 +24,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -38,10 +40,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -53,10 +56,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -68,10 +72,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -83,10 +88,11 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
@@ -106,8 +112,9 @@ updates:
     commit-message:
       prefix: "chore(ci)"
     groups:
-      minor-and-patch:
+      all-updates:
         update-types:
+          - major
           - minor
           - patch
 
