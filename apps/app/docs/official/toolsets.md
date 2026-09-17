@@ -1,6 +1,6 @@
 ---
 name: toolsets
-category: tools
+category: reference
 description: Toolsets reference — named bundles of tools controlling what the agent can do; core and platform toolsets for the `toolsets` config field.
 ---
 
