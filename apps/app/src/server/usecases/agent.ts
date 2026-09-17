@@ -17,13 +17,13 @@ export type ListAgentsFilter = z.infer<typeof ListAgentsFilterSchema>;
 export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUseCase)) {
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
     const agents = await this.runtime.listHermesAgents(input);
-    this.logger.info("listed hermes agents", { count: agents.length, filter: input });
+    this.logger.debug("listed hermes agents", { count: agents.length, filter: input });
     return agents;
   }
 
   async getHermesAgent(ctx: Context, id: string): Promise<Agent | null> {
     const agent = await this.runtime.getHermesAgent(id);
-    this.logger.info("got hermes agent", { id, found: agent !== null });
+    this.logger.debug("got hermes agent", { id, found: agent !== null });
     return agent;
   }
 
@@ -140,7 +140,14 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     // the first (only) candidate as-is for backwards compatibility.
     const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
     if (incomingObject === undefined) return candidates[0] ?? null;
-    return this.selectPatch(candidates, incomingObject);
+    const patch = this.selectPatch(candidates, incomingObject);
+    if (patch.length > 0) {
+      this.logger.info("mutating webhook: patching agent", {
+        agentId: agent.id,
+        ops: patch.length,
+      });
+    }
+    return patch;
   }
 
   /**
