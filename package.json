@@ -15,7 +15,7 @@
   "devDependencies": {
     "prettier": "^3.5.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "typescript": "^6.0.3"
   },
   "pnpm": {
     "overrides": {
