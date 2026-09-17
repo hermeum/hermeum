@@ -2,7 +2,7 @@ apiVersion: v2
 name: hermeum
 description: Hermeum — control plane for HermesAgent custom resources.
 type: application
-version: 0.1.4
+version: 0.1.5
 appVersion: "0.1.0"
 home: https://github.com/hermeum/hermeum
 sources:

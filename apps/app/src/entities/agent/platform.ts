@@ -118,7 +118,8 @@ export interface PlatformAvailability {
   /**
    * Base endpoint URL for this platform, when available.
    * For ingress endpoints the URL carries no port — each HTTP platform gets
-   * its own subdomain (`<agent-id>.<platform-label>.<base hostname>`).
+   * its own host (`<agent-id>.<platform-label>.<base hostname>`, or
+   * `<agent-id>-<platform-label>.<base hostname>` when hosts are flattened).
    * For internal (`*.svc.cluster.local`) endpoints the platform's Service
    * port is embedded. Absent when the platform has no inbound HTTP surface
    * (e.g. Slack Socket Mode) or when the platform's entry in
@@ -128,10 +129,11 @@ export interface PlatformAvailability {
 }
 
 /**
- * Ingress subdomain labels per HTTP platform.
- * Each platform is exposed on its own subdomain
- * `<agent-id>.<label>.<base hostname>` mapped wholesale to the platform's
- * Service port (routing is subdomain-based; the whole host is the backend's
+ * Ingress host labels per HTTP platform.
+ * Each platform is exposed on its own host
+ * `<agent-id>.<label>.<base hostname>` — or, when hosts are flattened,
+ * `<agent-id>-<label>.<base hostname>` — mapped wholesale to the platform's
+ * Service port (routing is host-based; the whole host is the backend's
  * root). Slack/Discord are gateway-relayed and have no inbound HTTP surface.
  */
 export const PLATFORM_INGRESS_LABELS: Partial<Record<PlatformId, string>> = {

@@ -492,6 +492,7 @@ describe("agentToHermesAgent ingress wiring", () => {
   const ENV_VARS = [
     "HERMEUM_AGENT_INGRESS_SCHEME",
     "HERMEUM_AGENT_INGRESS_BASE_HOSTNAME",
+    "HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS",
     "HERMEUM_AGENT_INGRESS_CLASS_NAME",
     "HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME",
   ];
@@ -809,12 +810,102 @@ describe("agentToHermesAgent ingress wiring", () => {
       teams: null,
     });
   });
+
+  it("emits flattened hosts when HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS is true", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "true");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({
+        config: {
+          platforms: {
+            teams: {
+              enabled: true,
+              extra: {
+                client_id: "cid",
+                client_secret: "${TEAMS_CLIENT_SECRET}",
+                tenant_id: "tid",
+              },
+            },
+          },
+        },
+        env: [
+          { name: "API_SERVER_ENABLED", value: "true" },
+          { name: "WEBHOOK_ENABLED", value: "true" },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+        ],
+      })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts).toEqual([
+      {
+        host: "agent-1-hooks.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8644 }],
+      },
+      {
+        host: "agent-1-teams.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 3978 }],
+      },
+      {
+        host: "agent-1-api.agents.example.com",
+        paths: [{ path: "/", pathType: "Prefix", port: 8642 }],
+      },
+    ]);
+  });
+
+  it("omits networking.ingress in flat mode when no base hostname is configured", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "true");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress).toBeUndefined();
+  });
+
+  it("keeps multi-level hosts when HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS is not true", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "false");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress?.hosts?.[0]?.host).toBe(
+      "agent-1.api.agents.example.com"
+    );
+  });
+
+  it("emits flattened hosts with tls and className when both are configured", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "true");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME", "agent-tls");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_CLASS_NAME", "nginx");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
+    );
+    expect(hermesAgent.spec.networking?.ingress).toMatchObject({
+      enabled: true,
+      className: "nginx",
+      hosts: [
+        {
+          host: "agent-1-api.agents.example.com",
+          paths: [{ path: "/", pathType: "Prefix", port: 8642 }],
+        },
+      ],
+      tls: [
+        {
+          hosts: ["agent-1-api.agents.example.com"],
+          secretName: "agent-tls",
+        },
+      ],
+    });
+  });
 });
 
 describe("buildAgentEndpoints", () => {
   const ENV_VARS = [
     "HERMEUM_AGENT_INGRESS_SCHEME",
     "HERMEUM_AGENT_INGRESS_BASE_HOSTNAME",
+    "HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS",
   ];
   const ORIGINAL: Record<string, string | undefined> = {};
 
@@ -946,6 +1037,39 @@ describe("buildAgentEndpoints", () => {
       "api-server": "http://agent-1.api.agents.example.com",
       webhook: null,
       teams: "http://agent-1.teams.agents.example.com",
+    });
+  });
+
+  it("constructs flattened URLs when HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS is true", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "true");
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(
+        makeHermesAgentWithServicePorts([
+          { name: "api-server", port: 8642 },
+          { name: "webhook", port: 8644 },
+          { name: "teams", port: 3978 },
+        ])
+      )
+    ).toEqual({
+      "api-server": "http://agent-1-api.agents.example.com",
+      webhook: "http://agent-1-hooks.agents.example.com",
+      teams: "http://agent-1-teams.agents.example.com",
+    });
+  });
+
+  it("honours agentIngressScheme with flattened hosts", async () => {
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_BASE_HOSTNAME", "agents.example.com");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS", "true");
+    vi.stubEnv("HERMEUM_AGENT_INGRESS_SCHEME", "https");
+    const { buildAgentEndpoints } = await importFresh();
+    expect(
+      buildAgentEndpoints(makeHermesAgentWithServicePorts([{ name: "teams", port: 3978 }]))
+    ).toEqual({
+      "api-server": null,
+      webhook: null,
+      teams: "https://agent-1-teams.agents.example.com",
     });
   });
 });
