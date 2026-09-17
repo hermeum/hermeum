@@ -23,6 +23,13 @@ export const ConfigSchema = z.object({
     .string()
     .default("hermeum")
     .describe("Kubernetes namespace where HermesAgent CRs are reconciled (HERMEUM_KUBERNETES_NAMESPACE)."),
+  mockRuntime: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Replace the Kubernetes Runtime adaptor with an in-memory mock (HERMEUM_MOCK_RUNTIME). " +
+        "Enables running the app and e2e tests without a Kubernetes cluster."
+    ),
   smtpUrl: z
     .url()
     .optional()
@@ -154,6 +161,7 @@ export const config = ConfigSchema.parse({
   databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
+  mockRuntime: process.env.HERMEUM_MOCK_RUNTIME === "true",
   smtpUrl: process.env.HERMEUM_SMTP_URL,
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
