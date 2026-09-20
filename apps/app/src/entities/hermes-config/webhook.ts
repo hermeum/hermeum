@@ -49,41 +49,21 @@ export const DeliverExtraSchema = z
 
 export type DeliverExtra = z.infer<typeof DeliverExtraSchema>;
 
-// Toolset keys accepted in a route's `toolsets` list — the snake_case names
-// Hermes' toolset validation resolves (hermes_cli/tools_config.py
-// CONFIGURABLE_TOOLSETS, minus config-only `stt`). Upstream drops unknown
-// names and platform-restricted toolsets (discord, discord_admin) rather
-// than erroring; some keys (homeassistant, spotify, yuanbao, computer_use)
-// cannot work in Hermeum but are accepted to mirror upstream.
+// Toolset keys accepted in a route's `toolsets` list — plain strings, not
+// an enum: the valid universe (toolsets.py TOOLSETS + composites like
+// `coding`/`debugging`/`safe` + check_fn-gated entries like `kanban` +
+// platform bundles like `hermes-cli` (hyphens) + plugin-provided toolsets)
+// drifts every upstream release and cannot be statically enumerated.
+// Upstream does not validate either — the adapter
+// (gateway/platforms/webhook.py toolsets_for_source) passes the list
+// through and unknown names are silently dropped at resolution time.
 export const WebhookRouteToolsetSchema = z
-  .enum([
-    "web",
-    "browser",
-    "terminal",
-    "file",
-    "code_execution",
-    "vision",
-    "video",
-    "image_gen",
-    "video_gen",
-    "x_search",
-    "tts",
-    "skills",
-    "todo",
-    "memory",
-    "context_engine",
-    "session_search",
-    "clarify",
-    "delegation",
-    "cronjob",
-    "homeassistant",
-    "spotify",
-    "discord",
-    "discord_admin",
-    "yuanbao",
-    "computer_use",
-  ])
-  .describe("A toolset key enabled for runs triggered by this route.");
+  .string()
+  .regex(
+    /^[a-z][a-z0-9_-]*$/,
+    "lowercase toolset key — snake_case for core toolsets (`terminal`), hyphenated for platform toolsets (`hermes-cli`)."
+  )
+  .describe("A toolset key enabled for runs triggered by this route, e.g. `web`, `terminal`, `file`, `code_execution`.");
 
 export type WebhookRouteToolset = z.infer<typeof WebhookRouteToolsetSchema>;
 
