@@ -77,6 +77,13 @@ Run from the repo root via pnpm filter, or from this directory directly.
 - **Tests (watch):** `pnpm --filter @hermeum/app test:watch`
 - **Dev server:** `pnpm --filter @hermeum/app dev`
 
+### E2E tests (UI)
+
+To exercise the app UI end-to-end without a Kubernetes cluster:
+
+1. Start the dev server with the mock runtime: `HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`. This replaces the Kubernetes Runtime adaptor with the in-memory `MockRuntime` (`src/server/usecases/adaptors/mocks/runtime.ts`), so agents and shared env sets created through the UI are stored in memory.
+2. Sign-in uses email OTP. When no `HERMEUM_SMTP_URL` is set (or in development), the verification code is not emailed — it is printed to the server console as `[OTP] <email>: <code>` (`src/server/routers/better-auth/auth.ts`). Read the code from the dev-server terminal and enter it in the UI.
+
 ### Conventions
 
 - It follows clean architecture. Entities and use cases must not depend on any infrastructure or framework — dependencies point inward toward the domain. Drawing the dependency graph: `frameworks/drivers → interface adapters → use cases → entities`, with each layer only depending on the layer(s) to its left. Inject infrastructures (persistence, file adaptors, etc.) behind interfaces (`Runtime`, `FileAdaptor`) at the use-case boundary rather than importing concrete adaptors directly.
