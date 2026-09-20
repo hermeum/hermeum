@@ -142,7 +142,7 @@ describe("AgentInputSchema webhook route toolsets", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects unknown toolset names", () => {
+  it("accepts unknown toolset names — upstream drops them silently, never errors", () => {
     const result = AgentInputSchema.safeParse(
       makeInput({
         config: {
@@ -156,7 +156,41 @@ describe("AgentInputSchema webhook route toolsets", () => {
         },
       })
     );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects toolset names that are not lowercase keys", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: { routes: { "oom-emergency": { toolsets: ["with space"] } } },
+            },
+          },
+        },
+      })
+    );
     expect(result.success).toBe(false);
+  });
+
+  it("accepts platform toolset keys with hyphens", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              enabled: true,
+              secret: "${WEBHOOK_SECRET}",
+              extra: { routes: { "oom-emergency": { toolsets: ["hermes-cli"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
   });
 });
 
