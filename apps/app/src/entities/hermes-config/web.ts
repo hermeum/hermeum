@@ -3,19 +3,21 @@ import { z } from "zod";
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search
 // Full field semantics: docs/official/web-search.md
 //
-// Skipped on purpose: web.extract_char_limit,
+// Skipped on purpose: web.extract_char_limit, web.extract_timeout,
 // web.keyless_fallback, and web.keyless_rescue are validated by looseObject
 // pass-through, not typed here. The "nous" backend (managed Tool Gateway) is
 // also omitted — it requires Nous Portal OAuth, which is not supported in
 // container mode; it still passes through via looseObject if written by hand.
+// The "openai-native" backend declares OpenAI's provider-executed web_search
+// tool on the Codex Responses endpoint and is likewise omitted (OAuth-gated).
 export const WebSearchBackendSchema = z
-  .enum(["firecrawl", "searxng", "brave-free", "ddgs", "keenable", "exa", "parallel", "xai"])
+  .enum(["firecrawl", "searxng", "brave-free", "ddgs", "tavily", "perplexity", "keenable", "exa", "parallel", "xai"])
   .describe("Web search backend.");
 
 export type WebSearchBackend = z.infer<typeof WebSearchBackendSchema>;
 
 export const WebExtractBackendSchema = z
-  .enum(["firecrawl", "keenable", "exa", "parallel"])
+  .enum(["firecrawl", "tavily", "perplexity", "keenable", "exa", "parallel"])
   .describe("Web extract backend. Search-only backends are not allowed here.");
 
 export type WebExtractBackend = z.infer<typeof WebExtractBackendSchema>;

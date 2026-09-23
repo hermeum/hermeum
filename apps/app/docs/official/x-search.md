@@ -8,9 +8,9 @@ description: X (Twitter) search configuration (`config.x_search`) — xAI Respon
 
 Configures the `x_search` tool, which lets the agent search X (Twitter)
 posts, profiles, and threads. It is backed by xAI's built-in `x_search`
-tool on the Responses API (`https://api.x.ai/v1/responses`) — Grok
-runs the search server-side and returns a synthesized answer with
-citations to the originating posts.
+tool on the Responses API (`https://api.x.ai/v1/responses`) — the
+backend returns a synthesized answer with cited posts rather than raw
+post lists.
 
 **Use `x_search` instead of `web_search`** when you specifically want
 current discussion, reactions, or claims **on X**. For general web

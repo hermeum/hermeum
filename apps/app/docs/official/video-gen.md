@@ -1,39 +1,27 @@
 ---
 name: video-gen
 category: tools
-description: Video generation configuration (`config.video_gen`) — provider plugins (xAI, FAL, DeepInfra), model families, and FAL_KEY / XAI_API_KEY env vars.
+description: Video generation configuration (`config.video_gen`) — provider selection (xAI, FAL, OpenRouter, DeepInfra), model family, and FAL_KEY / XAI_API_KEY env vars.
 ---
 
 # Video generation configuration (`config.video_gen`)
 
 Configures the `video_generate` tool, which lets the agent generate video
 from a text prompt (text-to-video) or from a prompt plus a source image
-(image-to-video). Every backend is a provider plugin; the active provider
-is picked by `video_gen.provider` in `config.yaml`.
+(image-to-video). The active provider is picked by `video_gen.provider`
+in `config.yaml`.
 
-This app documents the **xAI** and **FAL** providers. DeepInfra (bundled
-as a built-in provider) and user-installed plugins are
+This app documents the **xAI**, **FAL**, and **OpenRouter** providers.
+DeepInfra (bundled as a built-in provider) and user-installed plugins are
 also supported and pass through unchanged; only xAI and FAL are covered
 here.
 
 The toolset auto-enables when **either** `FAL_KEY` **or** `XAI_API_KEY`
 is set. Without one of them, the `video_generate` tool does not register.
 
-## Unified surface (one tool, two modalities)
-
-The `video_generate` tool exposes two modalities through one parameter:
-
-- **Text-to-video** — call with `prompt` only. The provider routes to
-  its text-to-video endpoint.
-- **Image-to-video** — call with `prompt` + `image_url`. The provider
-  routes to its image-to-video endpoint.
-
-The provider picks the right endpoint internally based on whether
-`image_url` was passed; the agent never thinks about endpoints.
-
 ## Fields
 
-- `provider` — active video-gen provider plugin id. Documented here:
+- `provider` — active video-gen provider id. Documented here:
   `xai`, `fal`. Other bundled providers (e.g. `deepinfra`) and
   user-installed plugins are also accepted. Default `fal` when
   `FAL_KEY` is set, otherwise `xai` when `XAI_API_KEY` is set.
@@ -44,6 +32,13 @@ The provider picks the right endpoint internally based on whether
   image-to-video endpoint behind one user-facing name; the provider's
   `generate()` routes within the family. Omit to use the provider's
   `default_model()`.
+
+The model is **user configuration only** — the `video_generate` tool
+has no `model` parameter, so the backend and model are never an agent
+choice. Resolution order: `<PROVIDER>_VIDEO_MODEL` env var →
+`video_gen.<provider>.model` in `config.yaml` → `video_gen.model`
+(when it is one of the provider's IDs) → the provider's
+`default_model()`.
 
 ## Environment variables
 

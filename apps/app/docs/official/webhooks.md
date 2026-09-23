@@ -6,9 +6,9 @@ description: Webhook platform configuration (`platforms.webhook`) — routes, pa
 
 # Webhook configuration (`platforms.webhook`)
 
-Configures the webhook adapter, which runs an HTTP server that accepts POST
-requests, validates HMAC signatures, transforms payloads into agent prompts,
-and routes responses back to a configured target platform.
+Configures the webhook platform — an HTTP endpoint that accepts POST
+requests (HMAC-validated), turns payloads into agent prompts via named
+routes, and delivers responses to a target platform.
 
 ## Fields
 
@@ -42,6 +42,8 @@ and routes responses back to a configured target platform.
 | `deliver` | No | Where to send the response (default `log`). See [Delivery targets](#delivery-targets). |
 | `deliver_extra` | No | Additional delivery config — keys depend on `deliver` type (e.g. `repo`, `pr_number`, `chat_id`). Values support the same `{dot.notation}` templates as `prompt`. |
 | `deliver_only` | No | If `true`, skip the agent entirely — the rendered `prompt` template becomes the literal message that gets delivered. Zero LLM cost, sub-second delivery. Requires `deliver` to be a real target (not `log`). |
+| `cron_job` | No | Fire an existing cron job (by ID or name) on each event instead of starting a fresh webhook agent session. The rendered `prompt` becomes transient per-run context; the job's own prompt, skills, model, and delivery settings apply. Mutually exclusive with `deliver_only`. See [Event-Triggered Cron Jobs](#event-triggered-cron-jobs). |
+| `coalesce` | No | Debounce rapid distinct events on the same logical entity into one agent run. Block with a required `key` (payload field or template identifying the entity, e.g. `pull_request.number`), optional `window_seconds` (quiet window, default 30) and `max_wait_seconds` (dispatch cap, default 300). See [Event Coalescing](#event-coalescing). Mutually exclusive with `deliver_only` and `cron_job`. |
 
 ## Payload filters
 
@@ -68,6 +70,64 @@ Field paths use dot notation. `payload.foo` reads from a top-level
 `payload` object when one exists, or from the root webhook body for flat
 payloads. `event` / `event_type` match the resolved event type, and
 `headers.<Name>` reads request headers.
+
+### Event Coalescing {#event-coalescing}
+
+`coalesce` debounces rapid distinct events on the same logical entity
+(five rapid pushes to one PR, a flapping alert) into **one** agent run
+per entity, instead of one run per event:
+
+```yaml
+platforms:
+  webhook:
+    extra:
+      routes:
+        github-pr:
+          events: ["pull_request"]
+          coalesce:
+            key: "{repository.full_name}#{pull_request.number}"
+            window_seconds: 30      # quiet window (default 30)
+            max_wait_seconds: 300   # dispatch cap (default 300)
+          prompt: "Review PR #{pull_request.number}: {pull_request.title}"
+          deliver: "github_comment"
+          deliver_extra:
+            repo: "{repository.full_name}"
+            pr_number: "{pull_request.number}"
+```
+
+A bare dotted field or a full template both work as `key`; each new
+event replaces the pending one, and the group dispatches one run using
+the latest event's templates when `window_seconds` pass. Events whose
+`key` does not resolve dispatch immediately instead. Coalesced requests
+return HTTP 202; pending groups are flushed on adapter disconnect, not
+dropped. `coalesce` is agent-mode only — combining it with
+`deliver_only` or `cron_job` is rejected at startup.
+
+### Event-Triggered Cron Jobs {#event-triggered-cron-jobs}
+
+`cron_job` fires an **existing cron job** (by ID or name) whenever an
+event arrives, instead of starting a fresh webhook agent session:
+
+```yaml
+platforms:
+  webhook:
+    extra:
+      routes:
+        pr-feedback:
+          events: ["pull_request_review"]
+          cron_job: "pr-review-sweeper"
+          prompt: |
+            PR #{number} in {repository.full_name} received new review feedback
+            from {review.user.login}: {review.body}
+```
+
+The route's `prompt` template is rendered from the payload and injected
+into the job as transient per-run context; the job's own prompt, skills,
+model, and delivery settings apply. `cron_job` is mutually exclusive
+with `deliver_only` (and `coalesce`); the route-level `deliver`,
+`deliver_extra`, and `skills` fields are ignored on `cron_job` routes.
+Paused/disabled jobs are not fired; the POST returns `202 Accepted`
+immediately.
 
 ```yaml
 platforms:
@@ -186,6 +246,12 @@ Hermeum does not author.
 | `WEBHOOK_ENABLED` | Enable the webhook platform adapter. Required for `WEBHOOK_SECRET`/`WEBHOOK_PORT` to take effect. | `false` |
 | `WEBHOOK_PORT` | HTTP server port for receiving webhooks. | `8644` |
 | `WEBHOOK_SECRET` | Global HMAC secret used for signature validation on all routes. Mark the env entry `sensitive: true`. | _(none)_ |
+
+Adapter settings (`port`, `host`, `secret`, `routes`) may also be written
+directly under `platforms.webhook:` — both spellings reach the adapter; a
+value nested under `extra:` wins if the same key appears in both places.
+Signature schemes: GitHub, GitLab, Standard Webhooks, and the generic
+V2 / legacy V1 forms described upstream.
 
 The app reads `WEBHOOK_ENABLED` / `WEBHOOK_PORT` to drive the agent's
 Kubernetes container and Service port mappings, mirroring the
