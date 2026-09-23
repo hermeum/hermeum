@@ -93,7 +93,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
             "(e.g. credentials, ambiguous intent) — never guess " +
             "on those. For decisions with a sensible, documented default, " +
             "apply the default instead of asking; the user can override it " +
-            "later. Batch up to 3 related questions into a single call. " +
+            "later. Batch up to 5 related questions into a single call. " +
             "For each question, offer up to 3 concise choices when the " +
             "plausible answers are enumerable (omit them for free-form " +
             "questions). The user answers every question and explicitly " +
@@ -115,7 +115,7 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
                 })
               )
               .min(1)
-              .max(3)
+              .max(5)
               .describe("Questions to ask; batch all pending questions into one call."),
           }),
           // No `execute`: the client collects the answers behind an explicit
