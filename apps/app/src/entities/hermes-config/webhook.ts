@@ -182,6 +182,45 @@ export const WebhookRouteSchema = z
       .boolean()
       .optional()
       .describe("Skip the agent and deliver the rendered prompt as a literal message."),
+    cron_job: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Fire an existing cron job (by ID or name) on each event instead of " +
+          "starting a fresh webhook agent session. The rendered prompt becomes " +
+          "transient per-run context; the job's own settings apply. Mutually " +
+          "exclusive with deliver_only (and coalesce); deliver/deliver_extra/" +
+          "skills are ignored on cron_job routes."
+      ),
+    coalesce: z
+      .looseObject({
+        key: z
+          .string()
+          .min(1)
+          .describe(
+            "Payload field or template identifying the logical entity, " +
+              "e.g. `pull_request.number` or `{repository.full_name}#{pull_request.number}`."
+          ),
+        window_seconds: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Quiet window in seconds (default 30)."),
+        max_wait_seconds: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Total buffering cap from the group's first event (default 300)."),
+      })
+      .optional()
+      .describe(
+        "Debounce rapid distinct events on the same logical entity into one " +
+          "agent run. Mutually exclusive with deliver_only and cron_job; " +
+          "coalesced requests return HTTP 202."
+      ),
   })
   .describe("A named webhook route.");
 

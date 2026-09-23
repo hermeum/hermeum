@@ -47,8 +47,26 @@ override `config.yaml` when both are set.
   (default `true`), `replied_user` (default `true`).
 
 Additional knobs (`history_backfill`, `history_backfill_limit`,
-`voice_fx`, `missed_message_backfill`, etc.) pass through unchanged
-via `looseObject`; see the official guide for their semantics.
+`voice_fx`, `missed_message_backfill` — now with a lifetime
+`max_attempts` re-dispatch cap per message, etc.) pass through unchanged
+via `looseObject`.
+
+Newer upstream keys also pass through untyped:
+
+- `free_response_auto_thread` (`false`) — when `true`, free-response
+  channels also auto-create a thread per top-level message while staying
+  mention-free. Requires `auto_thread: true`; `no_thread_channels` still
+  wins. `DISCORD_FREE_RESPONSE_AUTO_THREAD` wins over the config key.
+- `bots_require_inline_mention` (`true` as of this release) — bot
+  handoffs under `allow_bots: mentions|all` now require a literal
+  `<@BOT_ID>` mention; reply metadata alone no longer starts a handoff.
+  Set `false` only for trusted relays relying on reply pings.
+- `websocket_event_max_silence_seconds` (default `14400`) — new Gateway
+  liveness dimension: how long since the last parsed Gateway event.
+  Other liveness knobs: any knob at `0` (or an unparseable value)
+  disables the whole WebSocket liveness probe with a startup warning;
+  this one at `0` opts out of that check only.
+See the official guide for the semantics of untyped knobs.
 
 ## Environment variables
 

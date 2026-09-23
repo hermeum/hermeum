@@ -1,7 +1,7 @@
 ---
 name: video-gen
 category: tools
-description: Video generation configuration (`config.video_gen`) — provider plugins (xAI, FAL, DeepInfra), model families, and FAL_KEY / XAI_API_KEY env vars.
+description: Video generation configuration (`config.video_gen`) — provider plugins (xAI, FAL, OpenRouter, DeepInfra), model families, and FAL_KEY / XAI_API_KEY env vars.
 ---
 
 # Video generation configuration (`config.video_gen`)
@@ -11,8 +11,8 @@ from a text prompt (text-to-video) or from a prompt plus a source image
 (image-to-video). Every backend is a provider plugin; the active provider
 is picked by `video_gen.provider` in `config.yaml`.
 
-This app documents the **xAI** and **FAL** providers. DeepInfra (bundled
-as a built-in provider) and user-installed plugins are
+This app documents the **xAI**, **FAL**, and **OpenRouter** providers.
+DeepInfra (bundled as a built-in provider) and user-installed plugins are
 also supported and pass through unchanged; only xAI and FAL are covered
 here.
 
@@ -44,6 +44,13 @@ The provider picks the right endpoint internally based on whether
   image-to-video endpoint behind one user-facing name; the provider's
   `generate()` routes within the family. Omit to use the provider's
   `default_model()`.
+
+The model is **user configuration only** — the agent-facing
+`video_generate` tool deliberately has no `model` parameter, so the LLM
+cannot switch backends or billing tiers on its own. Resolution order:
+`<PROVIDER>_VIDEO_MODEL` env var → `video_gen.<provider>.model` in
+`config.yaml` → `video_gen.model` (when it is one of the provider's IDs)
+→ the provider's `default_model()`.
 
 ## Environment variables
 

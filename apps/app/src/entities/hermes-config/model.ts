@@ -38,7 +38,6 @@ export const ModelProviderSchema = z
     "tencent-tokenplan",
     "opencode-zen",
     "opencode-go",
-    "opencode-free",
     "commandcode",
     "deepseek",
     "huggingface",

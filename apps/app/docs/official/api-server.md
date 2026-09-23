@@ -33,10 +33,23 @@ upstream block):
   only if a browser must call Hermes directly.
 - `model_name` — model name advertised on `/v1/models`. Defaults to the
   profile name.
-- `max_concurrent_runs` — concurrent-run cap across the
-  OpenAI-compatible and Runs endpoints (default `10`; `0` disables the
-  limit — new run-starting requests get HTTP 429 when the cap is
-  reached).
+- `max_concurrent_runs` — concurrent-run cap across the endpoints that
+  start a run directly: the OpenAI-compatible endpoints, the Runs
+  endpoints, and the session-chat endpoints (`POST
+  /api/sessions/{id}/chat` and its `/stream` variant). Cron-triggered
+  runs (`POST /api/jobs/{id}/run`, `POST /api/cron/fire`) go through the
+  cron scheduler and are governed by cron's own limits, not this cap
+  (default `10`; `0` disables the limit — new run-starting requests get
+  HTTP 429 when the cap is reached).
+- `history_tool_output_max_chars` — cap each tool output and each string
+  tool-call argument in the **stored** `/v1/responses` history at this
+  many characters; anything longer is cut to the head plus a
+  `...[N more chars]` marker (default `0` = store verbatim). User and
+  assistant text is never touched, and the `response.completed` payload
+  and incremental SSE events are unaffected. Because the stored history
+  is what the model sees on the next chained turn, enabling the cap also
+  trims what the model is replayed — leave it at `0` if your workflow
+  needs complete tool outputs across turns.
 
 ## Secrets
 

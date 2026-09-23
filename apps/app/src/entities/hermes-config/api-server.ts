@@ -36,8 +36,22 @@ export const ApiServerSchema = z
       .int()
       .optional()
       .describe(
-        "Concurrent-run cap across the OpenAI-compatible and Runs endpoints " +
-          "(default 10; 0 disables the limit)."
+        "Concurrent-run cap across the endpoints that start a run directly: " +
+          "OpenAI-compatible, Runs, and session-chat endpoints (default 10; " +
+          "0 disables the limit). Cron-triggered runs go through the cron " +
+          "scheduler's own limits, not this cap."
+      ),
+    history_tool_output_max_chars: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe(
+        "Cap each tool output and string tool-call argument in the stored " +
+          "/v1/responses history at this many characters (default 0 = store " +
+          "verbatim). The stored history is what chained turns replay, so " +
+          "this also trims what the model sees; leave at 0 when complete " +
+          "tool outputs are needed across turns."
       ),
   })
   .optional()

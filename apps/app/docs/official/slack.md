@@ -106,6 +106,14 @@ per-message-rendering settings live under its `extra:` sub-map.
   thread per delivery) or `"in_channel"` (delivers flat into the channel
   timeline). Pair `in_channel` with `reply_in_thread: false` (and
   `require_mention: false`) so a plain channel reply continues the job.
+- `platforms.slack.extra.api_human_users` — Slack user IDs whose
+  Web-API (user-token) posts count as human. Such posts carry the
+  posting `app_id` and no `client_msg_id`, so by default they are
+  dropped as app traffic; allowlist your own front-end's users here
+  instead of `allow_bots: "all"`. There is deliberately no app-ID
+  variant: a modern bot token posts with the same `user` + `app_id`
+  shape. Env mirror: `SLACK_API_HUMAN_USERS` (comma-separated).
+  Passes through via `looseObject`.
 
 ## Per-Channel Prompts
 
@@ -155,7 +163,7 @@ slack:
 | `SLACK_FREE_RESPONSE_CHANNELS` | Comma-separated channel IDs where the bot responds without `@mention` (env mirror of `slack.free_response_channels`). | _(none)_ |
 | `SLACK_REQUIRE_MENTION` | Env mirror of `slack.require_mention`. | `true` |
 | `SLACK_STRICT_MENTION` | Env mirror of `slack.strict_mention`. | `false` |
-| `SLACK_ALLOW_BOTS` | Env mirror of `slack.allow_bots`. | `false` |
+| `SLACK_ALLOW_BOTS` | Env mirror of `slack.allow_bots`. When both are set, the env var takes precedence (the same env-over-YAML rule as every other setting); unknown values are treated as `none`. | `false` |
 | `SLACK_REACTIONS` | Env mirror of `slack.reactions`. | `true` |
 
 `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are credentials — set them via
