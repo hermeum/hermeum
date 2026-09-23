@@ -1,10 +1,18 @@
 ---
-name: approvals
+name: security
 category: core
 description: Dangerous command approval (`approvals` and top-level `command_allowlist`) — approval modes, headless/unattended policies, timeout, deny rules, and the permanent allowlist.
 ---
 
-# Dangerous command approval (`approvals`)
+# Security
+
+Mirrors the upstream
+[Security](https://hermes-agent.nousresearch.com/docs/user-guide/security)
+page. Covers the dangerous-command approval surface — the `approvals:` block
+and the top-level `command_allowlist` — the only security layers exposed via
+`config.yaml` fields.
+
+## Dangerous command approval (`approvals`)
 
 Before executing any terminal command, the agent checks it against a curated
 list of dangerous patterns. If a match is found, the approval policy decides
@@ -12,7 +20,7 @@ what happens — prompt the user, auto-approve, or deny. All of it is configured
 via the top-level `approvals:` block in `config.yaml`; no env vars are
 involved.
 
-## Fields
+### Fields
 
 | Field | Default | What it controls |
 |---|---|---|
@@ -24,7 +32,7 @@ involved.
 | `mcp_reload_confirm` | `true` | Whether `/reload-mcp` asks before rebuilding the MCP tool set. Rebuilding invalidates the provider prompt cache (tool schemas live in the system prompt), so the next message re-sends full input tokens. |
 | `destructive_slash_confirm` | `true` | Whether destructive session slash commands (`/clear`, `/new`, `/reset`, `/undo`) prompt before discarding conversation state. |
 
-## Approval modes
+### Approval modes
 
 | Mode | Behavior |
 |------|----------|
@@ -45,7 +53,7 @@ config-level equivalent is `mode: off`. Even under YOLO or `mode: off`,
 `approvals.deny` rules and the hardline blocklist still apply (see below).
 :::
 
-## Deny rules (`approvals.deny`)
+### Deny rules (`approvals.deny`)
 
 `deny` is a list of fnmatch glob patterns that block matching terminal
 commands unconditionally — **before** `--yolo`, `/yolo`, and `mode: off` are
@@ -60,7 +68,7 @@ approvals:
     - "dd if=* of=/dev/*"
 ```
 
-## Hardline blocklist
+### Hardline blocklist
 
 Some commands are so catastrophic that the agent refuses to run them
 **regardless** of `--yolo`, `mode: off`, headless `approve` modes, or
@@ -80,7 +88,7 @@ If the blocklist trips, the tool call returns an explanatory error and
 nothing runs. A legitimate workflow that needs one of these commands (e.g. a
 wipe-and-reinstall pipeline) must run it outside the agent.
 
-## What triggers approval
+### What triggers approval
 
 | Pattern | Description |
 |---------|-------------|
@@ -124,7 +132,7 @@ because the container itself is the security boundary. Destructive commands
 inside a container can't harm the host.
 :::
 
-## Permanent allowlist (`command_allowlist`)
+### Permanent allowlist (`command_allowlist`)
 
 `command_allowlist` is a top-level key (not under `approvals:`) listing
 dangerous command patterns that are silently approved in all future sessions.
