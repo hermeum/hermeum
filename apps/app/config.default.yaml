@@ -1,7 +1,7 @@
 templates:
   - id: support-agent
     name: Team Support Agent
-    description: Answers teammates’ internal questions using the team’s shared knowledge in Notion and Slack, clearly distinguishing documented facts from assumptions and escalating gaps to the appropriate team owner.
+    description: Answers teammates’ internal questions from the team’s Notion and Slack knowledge, escalating gaps to the team owner.
     agentInput:
       name: Team Support Agent
       description: Answers teammates’ internal questions using the team’s shared knowledge in Notion and Slack, clearly distinguishing documented facts from assumptions and escalating gaps to the appropriate team owner.
@@ -81,6 +81,9 @@ templates:
         - openai/skills/skills/.curated/sentry
       env:
         - name: OPENAI_API_KEY
+          value: <fill-me>
+          sensitive: true
+        - name: SENTRY_AUTH_TOKEN
           value: <fill-me>
           sensitive: true
         - name: WEBHOOK_ENABLED
