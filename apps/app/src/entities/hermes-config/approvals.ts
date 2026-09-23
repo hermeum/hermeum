@@ -13,20 +13,13 @@ import { z } from "zod";
 // equivalent is mode: "off".
 export const ApprovalsModeSchema = z
   .enum(["smart", "manual", "off"])
-  .describe(
-    "Approval policy for dangerous shell commands: smart (auxiliary LLM " +
-      "assesses risk), manual (always prompt), off (all checks disabled — " +
-      "equivalent to --yolo; trusted environments only)."
-  );
+  .describe("Approval policy for dangerous shell commands.");
 
 export type ApprovalsMode = z.infer<typeof ApprovalsModeSchema>;
 
-// What headless/unattended sessions do when they hit a dangerous command:
-// deny blocks the command instantly (fail-closed, agent must find another
-// path); approve auto-approves everything in that context.
 export const HeadlessModeSchema = z
   .enum(["deny", "approve"])
-  .describe("Headless dangerous-command policy: deny (block, default) or approve (auto-approve).");
+  .describe("Headless dangerous-command policy.");
 
 export type HeadlessMode = z.infer<typeof HeadlessModeSchema>;
 
@@ -37,43 +30,29 @@ export const ApprovalsSchema = z
       .number()
       .int()
       .optional()
-      .describe(
-        "Seconds to wait for an approval reply before failing closed (deny). " +
-          "Default 300."
-      ),
+      .describe("Seconds to wait for an approval reply before failing closed (deny)."),
     cron_mode: HeadlessModeSchema.optional().describe(
-      "What cron jobs do headlessly on a dangerous command (default deny)."
+      "What cron jobs do headlessly on a dangerous command."
     ),
     single_query_mode: HeadlessModeSchema.optional().describe(
-      "What one-shot single-query sessions do on a dangerous command " +
-        "(default deny). Mirrors cron_mode."
+      "What one-shot single-query sessions do on a dangerous command."
     ),
     unattended_mode: HeadlessModeSchema.optional().describe(
-      "What unattended programmatic platforms (webhook, msgraph_webhook, " +
-        "api_server) do on a dangerous command (default deny). Mirrors " +
-        "cron_mode."
+      "What unattended programmatic platforms (webhook, msgraph_webhook, api_server) do on a dangerous command."
     ),
     deny: z
       .array(z.string())
       .optional()
-      .describe(
-        "fnmatch glob patterns blocking matching terminal commands " +
-          "unconditionally — applied before --yolo and mode: off. " +
-          "Case-insensitive; always quote patterns in YAML."
-      ),
+      .describe("Glob patterns blocking matching terminal commands unconditionally, before --yolo and mode: off."),
     mcp_reload_confirm: z
       .boolean()
       .optional()
-      .describe(
-        "Whether /reload-mcp asks before invalidating the MCP tool cache " +
-          "(default true)."
-      ),
+      .describe("Whether /reload-mcp asks before invalidating the MCP tool cache."),
     destructive_slash_confirm: z
       .boolean()
       .optional()
       .describe(
-        "Whether destructive session slash commands (/clear, /new, /reset, " +
-          "/undo) prompt before discarding state (default true)."
+        "Whether destructive session slash commands (/clear, /new, /reset, /undo) prompt before discarding state."
       ),
   })
   .optional()
@@ -82,14 +61,10 @@ export const ApprovalsSchema = z
 export type Approvals = z.infer<typeof ApprovalsSchema>;
 
 // Top-level key (not under approvals:) — patterns permanently allowed via
-// upstream's "always" approval choice; loaded at startup and silently
-// approved in all future sessions.
+// upstream's "always" approval choice.
 export const CommandAllowlistSchema = z
   .array(z.string())
   .optional()
-  .describe(
-    "Permanently allowed dangerous command patterns, silently approved in " +
-      "all future sessions."
-  );
+  .describe("Permanently allowed dangerous command patterns.");
 
 export type CommandAllowlist = z.infer<typeof CommandAllowlistSchema>;
