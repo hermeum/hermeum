@@ -81,8 +81,9 @@ Run from the repo root via pnpm filter, or from this directory directly.
 
 To exercise the app UI end-to-end without a Kubernetes cluster:
 
-1. Start the dev server with the mock runtime: `HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`. This replaces the Kubernetes Runtime adaptor with the in-memory `MockRuntime` (`src/server/usecases/adaptors/mocks/runtime.ts`), so agents and shared env sets created through the UI are stored in memory.
-2. Sign-in uses email OTP. When no `HERMEUM_SMTP_URL` is set (or in development), the verification code is not emailed — it is printed to the server console as `[OTP] <email>: <code>` (`src/server/routers/better-auth/auth.ts`). Read the code from the dev-server terminal and enter it in the UI.
+1. Run database migrations to create the SQLite database: `pnpm --filter @hermeum/app drizzle:migrate`. Skip this if `apps/app/sqlite.db` already exists (set up during local development — see `CONTRIBUTING.md`).
+2. Start the dev server with the mock runtime: `HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`. This replaces the Kubernetes Runtime adaptor with the in-memory `MockRuntime` (`src/server/usecases/adaptors/mocks/runtime.ts`), so agents and shared env sets created through the UI are stored in memory.
+3. Sign-in uses email OTP. When no `HERMEUM_SMTP_URL` is set (or in development), the verification code is not emailed — it is printed to the server console as `[OTP] <email>: <code>` (`src/server/routers/better-auth/auth.ts`). Read the code from the dev-server terminal and enter it in the UI.
 
 ### Conventions
 
