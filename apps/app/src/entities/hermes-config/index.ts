@@ -9,6 +9,16 @@
 
 export { ModelProviderSchema, ModelSchema, type ModelProvider, type Model } from "./model";
 export {
+  ApprovalsModeSchema,
+  HeadlessModeSchema,
+  ApprovalsSchema,
+  CommandAllowlistSchema,
+  type ApprovalsMode,
+  type HeadlessMode,
+  type Approvals,
+  type CommandAllowlist,
+} from "./approvals";
+export {
   WebhookDeliverSchema,
   DeliverExtraSchema,
   WebhookRouteSchema,
@@ -40,6 +50,7 @@ export { VideoGenSchema, type VideoGen } from "./video-gen";
 
 import { z } from "zod";
 import { ModelSchema } from "./model";
+import { ApprovalsSchema, CommandAllowlistSchema } from "./approvals";
 import { WebhookSchema } from "./webhook";
 import { TeamsSchema } from "./teams";
 import { ApiServerSchema } from "./api-server";
@@ -80,6 +91,8 @@ export type Gateway = z.infer<typeof GatewaySchema>;
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema,
+    approvals: ApprovalsSchema,
+    command_allowlist: CommandAllowlistSchema,
     platforms: PlatformsSchema,
     gateway: GatewaySchema,
     slack: SlackSchema,
