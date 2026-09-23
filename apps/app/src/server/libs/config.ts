@@ -44,7 +44,7 @@ export const ConfigSchema = z.object({
     .describe("Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY)."),
   hermesImageTag: z
     .string()
-    .default("v2026.8.31")
+    .default("v2026.9.21")
     .describe("Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG)."),
   openaiModel: z
     .string()
