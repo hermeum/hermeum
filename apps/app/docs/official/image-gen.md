@@ -7,8 +7,8 @@ description: Image generation configuration (`config.image_gen`) — FAL.ai mode
 # Image generation configuration (`config.image_gen`)
 
 Configures the `image_generate` tool, which lets the agent generate images
-from text prompts (and edit existing images on edit-capable models). It is
-backed by FAL.ai or other provider plugins.
+from text prompts (and edit existing images on edit-capable models). The
+active provider is picked by `image_gen.provider` in `config.yaml`.
 
 The toolset auto-enables when `FAL_KEY` is set. Without it, the
 `image_generate` tool does not register.

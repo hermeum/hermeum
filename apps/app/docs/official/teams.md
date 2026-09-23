@@ -6,11 +6,10 @@ description: Microsoft Teams bot configuration.
 
 # Microsoft Teams configuration
 
-Exposes hermes-agent as a Microsoft Teams bot. Teams delivers messages by
-calling a public HTTPS webhook at `/api/messages`, so the agent needs a
-publicly reachable endpoint — either a dev tunnel (local dev) or a real
-domain (production). Unlike Slack's Socket Mode, Teams is an HTTP-webhook
-platform.
+Exposes the agent as a Microsoft Teams bot. Teams delivers messages by
+calling a public HTTPS webhook at `/api/messages`, so the deployment
+needs a publicly reachable endpoint — either a dev tunnel (local dev) or
+a real domain (production).
 
 **You must configure Microsoft Teams on the Azure/Teams side before this
 bot will work** — bot registration, messaging endpoint, and app
