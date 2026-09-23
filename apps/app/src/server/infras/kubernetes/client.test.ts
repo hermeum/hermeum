@@ -145,14 +145,14 @@ describe("agentToHermesAgent config.webhook no longer populated", () => {
     const hermesAgent = agentToHermesAgent(
       makeAgent({
         config: {
-          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 8644 } } },
+          platforms: { webhook: { enabled: true, extra: { port: 8644 } } },
         },
       })
     );
     expect(hermesAgent.spec.hermes?.config?.webhook).toBeUndefined();
     // The raw config still passes through unchanged.
     expect(hermesAgent.spec.hermes?.config?.raw).toEqual({
-      platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 8644 } } },
+      platforms: { webhook: { enabled: true, extra: { port: 8644 } } },
     });
   });
 
@@ -196,8 +196,9 @@ describe("agentToHermesAgent webhook networking wiring", () => {
   it("uses config.platforms.webhook.extra.port when WEBHOOK_PORT env var is absent", () => {
     const hermesAgent = agentToHermesAgent(
       makeAgent({
+        env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         config: {
-          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+          platforms: { webhook: { extra: { port: 9000 } } },
         },
       })
     );
@@ -212,7 +213,7 @@ describe("agentToHermesAgent webhook networking wiring", () => {
   it("falls back to the default 8644 port when neither WEBHOOK_PORT nor extra.port is set", () => {
     const hermesAgent = agentToHermesAgent(
       makeAgent({
-        config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+        env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
       })
     );
     expect(hermesAgent.spec.hermes?.ports).toEqual([
@@ -228,7 +229,7 @@ describe("agentToHermesAgent webhook networking wiring", () => {
           { name: "WEBHOOK_PORT", value: "9001" },
         ],
         config: {
-          platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+          platforms: { webhook: { extra: { port: 9000 } } },
         },
       })
     );
@@ -590,7 +591,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
               },
             },
@@ -618,7 +618,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
               },
             },
@@ -654,7 +653,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
               },
             },
@@ -694,7 +692,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
                 port: 4000,
               },
@@ -722,7 +719,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
               },
             },
@@ -823,7 +819,6 @@ describe("agentToHermesAgent ingress wiring", () => {
               enabled: true,
               extra: {
                 client_id: "cid",
-                client_secret: "${TEAMS_CLIENT_SECRET}",
                 tenant_id: "tid",
               },
             },
