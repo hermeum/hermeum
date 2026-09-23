@@ -110,6 +110,20 @@ describe("agentToHermesAgent workspace.dotEnv wiring", () => {
   });
 });
 
+describe("agentToHermesAgent hermes env wiring", () => {
+  it("always sets HERMES_WRITE_SAFE_ROOT as a container env default", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.env).toEqual([{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }]);
+  });
+
+  it("sets it even when the agent env defines the same var", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ env: [{ name: "HERMES_WRITE_SAFE_ROOT", value: "/custom" }] })
+    );
+    expect(hermesAgent.spec.hermes?.env).toEqual([{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }]);
+  });
+});
+
 describe("agentToHermesAgent packages wiring", () => {
   it("nests pip and npm install lists under the CR shape", () => {
     const hermesAgent = agentToHermesAgent(
