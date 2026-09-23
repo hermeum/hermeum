@@ -9,14 +9,9 @@ import { z } from "zod";
 //
 // Skipped on purpose: the route field script and the secret fields
 // (platforms.webhook.secret, routes.<name>.secret) are not typed here.
-// script is an operator-level concern; secrets are env-only (the reserved
-// WEBHOOK_SECRET env entry) because hermes-agent does not expand ${VAR}
-// references under platforms: on the gateway config-load path and drops
-// WEBHOOK_SECRET when the platform is enabled via config.yaml only — see
-// upstream issues
-// https://github.com/NousResearch/hermes-agent/issues/119733 and
-// https://github.com/NousResearch/hermes-agent/issues/119763. Both pass
-// through via looseObject.
+// script is an operator-level concern; secrets are env-only by Hermeum
+// policy (the reserved, sensitive WEBHOOK_SECRET env entry) and are never
+// written into config.yaml. Both pass through via looseObject.
 export const WebhookDeliverSchema = z
   .enum([
     "log",

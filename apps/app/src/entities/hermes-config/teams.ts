@@ -4,11 +4,9 @@ import { z } from "zod";
 // Full field semantics: docs/official/teams.md
 // Behavioral settings and non-secret credentials (client_id, tenant_id)
 // live here as plain config strings; Teams reads them env-first, so the
-// literal config values work. client_secret is env-only (the sensitive
-// TEAMS_CLIENT_SECRET env entry) and is not typed: hermes-agent does not
-// expand ${VAR} references under platforms: on the gateway config-load path
-// (upstream issue
-// https://github.com/NousResearch/hermes-agent/issues/119733).
+// literal config values work. client_secret is env-only by Hermeum policy
+// (the reserved, sensitive TEAMS_CLIENT_SECRET env entry) and is not
+// typed — it is never written into config.yaml.
 export const TeamsSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the Teams bot is enabled."),

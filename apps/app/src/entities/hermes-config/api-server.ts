@@ -8,10 +8,9 @@ import { z } from "zod";
 // these config values when both are set.
 //
 // Only non-secret settings are typed here — key (the bearer token) is
-// env-only (API_SERVER_KEY, sensitive) and must not be written into
-// config.yaml: hermes-agent does not expand ${VAR} references under
-// gateway:/platforms: on the gateway config-load path (upstream issue
-// https://github.com/NousResearch/hermes-agent/issues/119733).
+// env-only by Hermeum policy (the reserved, sensitive API_SERVER_KEY env
+// entry) and is never written into config.yaml; it passes through via
+// looseObject.
 export const ApiServerSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the API server is enabled."),

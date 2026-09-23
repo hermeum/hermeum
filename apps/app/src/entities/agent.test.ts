@@ -410,8 +410,8 @@ describe("isWebhookEnabled", () => {
   });
 
   it("returns false when config.platforms.webhook.enabled is true (env-only enablement)", () => {
-    // hermes-agent drops WEBHOOK_SECRET unless WEBHOOK_ENABLED is also
-    // truthy (upstream issue #119763) — config no longer counts as enablement.
+    // Webhook enablement is env-only (#119763: config-enablement drops
+    // WEBHOOK_SECRET) — config does not count as enablement.
     expect(
       isWebhookEnabled({
         config: { platforms: { webhook: { enabled: true } } },
@@ -510,8 +510,7 @@ describe("AgentInputSchema teams reserved env var validation", () => {
   it("passes a config client_secret through unvalidated (looseObject policy)", () => {
     // platforms.teams.extra.client_secret is intentionally untyped — it
     // passes through, but never counts as the reserved TEAMS_CLIENT_SECRET
-    // env entry (hermes-agent does not expand ${VAR} under platforms: —
-    // upstream issue #119733).
+    // env entry (the secret is env-only by policy).
     const passthrough = AgentInputObjectSchema.safeParse({
       config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
     });
@@ -620,9 +619,8 @@ describe("isTeamsEnabled", () => {
 
   it("does not count a config client_secret toward enablement (env-only secret)", () => {
     // The secret must come from the TEAMS_CLIENT_SECRET env entry — a
-    // config value (literal or ${VAR} reference) never counts, because
-    // hermes-agent does not expand ${VAR} under platforms: (upstream
-    // issue #119733).
+    // config value (literal or ${VAR} reference) never counts (the secret
+    // is env-only by policy).
     expect(
       isTeamsEnabled({
         config: {
@@ -1450,9 +1448,8 @@ describe("derivePlatformAvailability", () => {
     });
 
     it("is unavailable when enabled via config only (env-only enablement)", () => {
-      // config.platforms.webhook.enabled no longer enables the webhook —
-      // hermes-agent drops WEBHOOK_SECRET without WEBHOOK_ENABLED
-      // (upstream issue #119763).
+      // Webhook enablement is env-only (#119763: config-enablement drops
+      // WEBHOOK_SECRET) — config.platforms.webhook.enabled does not count.
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({

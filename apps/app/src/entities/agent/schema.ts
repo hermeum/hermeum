@@ -296,14 +296,10 @@ export const AgentInputObjectSchema = z.object({
     .describe("Ids of app-managed shared env sets."),
 });
 
-// Platform secrets use reserved env vars (WEBHOOK_SECRET, API_SERVER_KEY,
-// TEAMS_CLIENT_SECRET), each marked sensitive: true, rather than ${VAR}
-// references in config.yaml — hermes-agent does not expand ${VAR} under
-// platforms:/gateway: on the gateway config-load path and drops
-// WEBHOOK_SECRET when webhook is enabled via config.yaml only (upstream
-// issues #119733, #119763). Revisit on a hermes-agent upgrade once those
-// are fixed; until then the enabled platform must carry its reserved
-// secret env entry.
+// Standing policy: platform secrets use reserved env vars (WEBHOOK_SECRET,
+// API_SERVER_KEY, TEAMS_CLIENT_SECRET), each marked sensitive: true — never
+// ${VAR} references in config.yaml. An enabled platform must carry its
+// reserved secret env entry; the checks below enforce the pairing.
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
   const requireSensitiveEnv = (name: string, enabledPath: string) => {
     const hasVar = data.env?.some((v) => v.name === name && v.sensitive === true);

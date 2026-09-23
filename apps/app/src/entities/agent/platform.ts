@@ -5,9 +5,8 @@ import type { Agent, AgentInput } from "./schema";
 // (API_SERVER_ENABLED / API_SERVER_PORT). Environment variables take
 // precedence over the config values when both are set (upstream behavior);
 // the config block acts as a fallback when the env var is absent. The
-// bearer token is env-only (API_SERVER_KEY, sensitive) — hermes-agent does
-// not expand ${VAR} references on the gateway config-load path (upstream
-// issue #119733). See docs/official/api-server.md.
+// bearer token is env-only by Hermeum policy (API_SERVER_KEY, sensitive).
+// See docs/official/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
 export function isApiServerEnabled(input: AgentInput): boolean {
@@ -32,10 +31,13 @@ export function getApiServerPort(input: AgentInput): number {
 // Webhook enablement is env-only (WEBHOOK_ENABLED=true): hermes-agent
 // drops WEBHOOK_SECRET/WEBHOOK_PORT unless WEBHOOK_ENABLED is also truthy,
 // even when the platform is enabled via config.yaml
-// (platforms.webhook.enabled) — upstream issue #119763. Until that is
-// fixed, config.platforms.webhook carries only routes and other
-// non-secret settings; enabling the platform (and the reserved
-// WEBHOOK_SECRET env entry) stays on the env-var path.
+// (platforms.webhook.enabled) — upstream issue
+// https://github.com/NousResearch/hermes-agent/issues/119763. Until a
+// hermes-agent release carries the fix, config.platforms.webhook carries
+// only routes and other non-secret settings; enabling the platform (and
+// the reserved WEBHOOK_SECRET env entry) stays on the env-var path. Once
+// fixed upstream, restore config-path enablement (platforms.webhook.enabled
+// wins, WEBHOOK_ENABLED env fallback) with the secret staying env-side.
 const WEBHOOK_DEFAULT_PORT = 8644;
 
 export function isWebhookEnabled(input: AgentInput): boolean {
@@ -58,15 +60,13 @@ export function getWebhookPort(input: AgentInput): number {
 }
 
 // Teams is an HTTP webhook platform (like webhook / api-server). The
-// client secret is env-only (the sensitive TEAMS_CLIENT_SECRET env entry)
-// — hermes-agent does not expand ${VAR} references under platforms: on the
-// gateway config-load path (upstream issue #119733). client_id and
-// tenant_id are non-secret and accepted from either source: config
-// (platforms.teams.extra) or their TEAMS_* env vars (Teams reads
-// env-first, so literal config values work). An explicit `enabled` flag
-// overrides the credentials-presence detection (set false to disable
-// while keeping creds); when `enabled` is absent, Teams is on when all
-// three credentials are set.
+// client secret is env-only by Hermeum policy (the sensitive
+// TEAMS_CLIENT_SECRET env entry). client_id and tenant_id are non-secret
+// and accepted from either source: config (platforms.teams.extra) or
+// their TEAMS_* env vars (Teams reads env-first, so literal config values
+// work). An explicit `enabled` flag overrides the credentials-presence
+// detection (set false to disable while keeping creds); when `enabled`
+// is absent, Teams is on when all three credentials are set.
 const TEAMS_DEFAULT_PORT = 3978;
 
 function hasAllTeamsCredentials(input: AgentInput): boolean {
