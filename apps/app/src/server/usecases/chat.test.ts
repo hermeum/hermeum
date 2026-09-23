@@ -228,7 +228,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     // substitute for sensible defaults.
     expect(tools.clarify!.description).toContain("can't be sensibly inferred");
     expect(tools.clarify!.description).toContain("never guess");
-    expect(tools.clarify!.description).toContain("up to 3 related questions");
+    expect(tools.clarify!.description).toContain("up to 5 related questions");
     expect(tools.clarify!.description).toContain("confirms");
     expect(tools.clarify!.description).toContain("skip");
   });
@@ -337,7 +337,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     // The batching and confirmation rules live in the description so the
     // model sees them alongside the tool definition.
     expect(tools.clarify!.description).toContain("never guess");
-    expect(tools.clarify!.description).toContain("up to 3 related questions");
+    expect(tools.clarify!.description).toContain("up to 5 related questions");
     expect(tools.clarify!.description).toContain("confirms");
     expect(tools.clarify!.description).toContain("skip");
   });
@@ -353,7 +353,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("accepts up to 3 clarify questions, each with up to 3 choices", async () => {
+  it("accepts up to 5 clarify questions, each with up to 3 choices", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -363,12 +363,14 @@ describe("ChatUseCase.getAgentConfigContext", () => {
         { question: "Q1?", choices: ["A", "B", "C"] },
         { question: "Q2?", choices: ["A", "B"] },
         { question: "Q3?" },
+        { question: "Q4?", choices: ["A"] },
+        { question: "Q5?" },
       ],
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects more than 3 clarify questions in one call", async () => {
+  it("rejects more than 5 clarify questions in one call", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
@@ -379,6 +381,8 @@ describe("ChatUseCase.getAgentConfigContext", () => {
         { question: "Q2?" },
         { question: "Q3?" },
         { question: "Q4?" },
+        { question: "Q5?" },
+        { question: "Q6?" },
       ],
     });
     expect(parsed.success).toBe(false);
