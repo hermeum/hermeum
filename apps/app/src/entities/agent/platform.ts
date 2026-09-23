@@ -28,16 +28,10 @@ export function getApiServerPort(input: AgentInput): number {
   return API_SERVER_DEFAULT_PORT;
 }
 
-// Webhook enablement is env-only (WEBHOOK_ENABLED=true): hermes-agent
-// drops WEBHOOK_SECRET/WEBHOOK_PORT unless WEBHOOK_ENABLED is also truthy,
-// even when the platform is enabled via config.yaml
-// (platforms.webhook.enabled) — upstream issue
-// https://github.com/NousResearch/hermes-agent/issues/119763. Until a
-// hermes-agent release carries the fix, config.platforms.webhook carries
-// only routes and other non-secret settings; enabling the platform (and
-// the reserved WEBHOOK_SECRET env entry) stays on the env-var path. Once
-// fixed upstream, restore config-path enablement (platforms.webhook.enabled
-// wins, WEBHOOK_ENABLED env fallback) with the secret staying env-side.
+// Webhook enablement is env-only (WEBHOOK_ENABLED=true);
+// config.platforms.webhook carries only routes and other non-secret
+// settings. Enabling the platform (and the reserved WEBHOOK_SECRET env
+// entry) stays on the env-var path.
 const WEBHOOK_DEFAULT_PORT = 8644;
 
 export function isWebhookEnabled(input: AgentInput): boolean {

@@ -410,8 +410,7 @@ describe("isWebhookEnabled", () => {
   });
 
   it("returns false when config.platforms.webhook.enabled is true (env-only enablement)", () => {
-    // Webhook enablement is env-only (#119763: config-enablement drops
-    // WEBHOOK_SECRET) — config does not count as enablement.
+    // Webhook enablement is env-only — config does not count as enablement.
     expect(
       isWebhookEnabled({
         config: { platforms: { webhook: { enabled: true } } },
@@ -1448,8 +1447,8 @@ describe("derivePlatformAvailability", () => {
     });
 
     it("is unavailable when enabled via config only (env-only enablement)", () => {
-      // Webhook enablement is env-only (#119763: config-enablement drops
-      // WEBHOOK_SECRET) — config.platforms.webhook.enabled does not count.
+      // Webhook enablement is env-only — config.platforms.webhook.enabled
+      // does not count.
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
