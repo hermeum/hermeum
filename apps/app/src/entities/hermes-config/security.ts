@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/security#dangerous-command-approval
-// Full field semantics: docs/official/approvals.md
+// Full field semantics: docs/official/security.md
 //
 // Mirrors the upstream top-level `approvals:` block plus the top-level
 // `command_allowlist` (permanent allowlist) in config.yaml.

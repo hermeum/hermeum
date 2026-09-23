@@ -17,7 +17,7 @@ export {
   type HeadlessMode,
   type Approvals,
   type CommandAllowlist,
-} from "./approvals";
+} from "./security";
 export {
   WebhookDeliverSchema,
   DeliverExtraSchema,
@@ -50,7 +50,7 @@ export { VideoGenSchema, type VideoGen } from "./video-gen";
 
 import { z } from "zod";
 import { ModelSchema } from "./model";
-import { ApprovalsSchema, CommandAllowlistSchema } from "./approvals";
+import { ApprovalsSchema, CommandAllowlistSchema } from "./security";
 import { WebhookSchema } from "./webhook";
 import { TeamsSchema } from "./teams";
 import { ApiServerSchema } from "./api-server";
