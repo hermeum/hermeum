@@ -6,9 +6,9 @@ description: Discord platform configuration (`discord`) — mention gating, auto
 
 # Discord configuration (`config.discord`)
 
-Configures the Discord gateway adapter, which connects to Discord via
-the Gateway WebSocket and relays messages between server channels/DMs
-and the Hermes agent. Requires the `DISCORD_BOT_TOKEN` env var.
+Configures the Discord bot — mention gating, auto-threading, channel
+allow/ignore lists, and per-channel prompts. Requires the
+`DISCORD_BOT_TOKEN` env var.
 
 **You must configure Discord on the Discord side before this gateway
 will work** — application creation, bot token, privileged gateway

@@ -6,9 +6,9 @@ description: Webhook platform configuration (`platforms.webhook`) — routes, pa
 
 # Webhook configuration (`platforms.webhook`)
 
-Configures the webhook adapter, which runs an HTTP server that accepts POST
-requests, validates HMAC signatures, transforms payloads into agent prompts,
-and routes responses back to a configured target platform.
+Configures the webhook platform — an HTTP endpoint that accepts POST
+requests (HMAC-validated), turns payloads into agent prompts via named
+routes, and delivers responses to a target platform.
 
 ## Fields
 

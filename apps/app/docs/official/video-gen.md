@@ -19,18 +19,6 @@ here.
 The toolset auto-enables when **either** `FAL_KEY` **or** `XAI_API_KEY`
 is set. Without one of them, the `video_generate` tool does not register.
 
-## Unified surface (one tool, two modalities)
-
-The `video_generate` tool exposes two modalities through one parameter:
-
-- **Text-to-video** — call with `prompt` only. The provider routes to
-  its text-to-video endpoint.
-- **Image-to-video** — call with `prompt` + `image_url`. The provider
-  routes to its image-to-video endpoint.
-
-The provider picks the right endpoint internally based on whether
-`image_url` was passed; the agent never thinks about endpoints.
-
 ## Fields
 
 - `provider` — active video-gen provider plugin id. Documented here:
@@ -45,12 +33,12 @@ The provider picks the right endpoint internally based on whether
   `generate()` routes within the family. Omit to use the provider's
   `default_model()`.
 
-The model is **user configuration only** — the agent-facing
-`video_generate` tool deliberately has no `model` parameter, so the LLM
-cannot switch backends or billing tiers on its own. Resolution order:
-`<PROVIDER>_VIDEO_MODEL` env var → `video_gen.<provider>.model` in
-`config.yaml` → `video_gen.model` (when it is one of the provider's IDs)
-→ the provider's `default_model()`.
+The model is **user configuration only** — the `video_generate` tool
+has no `model` parameter, so the backend and model are never an agent
+choice. Resolution order: `<PROVIDER>_VIDEO_MODEL` env var →
+`video_gen.<provider>.model` in `config.yaml` → `video_gen.model`
+(when it is one of the provider's IDs) → the provider's
+`default_model()`.
 
 ## Environment variables
 

@@ -6,10 +6,8 @@ description: API server configuration (`gateway.api_server`) — OpenAI-compatib
 
 # API server configuration
 
-Exposes hermes-agent as an OpenAI-compatible HTTP endpoint. Any frontend that
-speaks the OpenAI format — Open WebUI, LobeChat, LibreChat, NextChat, ChatBox,
-and hundreds more — can connect and use the agent as a backend with its full
-toolset (terminal, file operations, web search, memory, skills).
+Exposes the agent as an OpenAI-compatible HTTP endpoint for any
+OpenAI-format frontend.
 
 ## Configuration
 

@@ -6,10 +6,9 @@ description: Slack platform configuration (`slack` and `platforms.slack`) — ch
 
 # Slack configuration
 
-Configures the Slack gateway adapter, which connects to Slack via
-`slack-bolt` in Socket Mode (WebSocket — no public HTTP endpoint required)
-and relays messages between Slack channels/DMs and the Hermes agent.
-Requires `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, and `SLACK_ALLOWED_USERS`
+Configures the Slack bot — channel allowlist, mention gating,
+per-channel prompts, and per-channel skill bindings. Requires
+`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, and `SLACK_ALLOWED_USERS`
 env vars (see [Environment variables](#environment-variables)); without
 `SLACK_ALLOWED_USERS` the gateway denies all messages by default.
 
