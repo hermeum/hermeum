@@ -1,7 +1,7 @@
 ---
 name: webhooks
 category: platforms
-description: Webhook platform configuration (`platforms.webhook`) — secret references, routes, payload filters, delivery targets, prompt templates, per-route toolsets, and env vars.
+description: Webhook platform configuration (`platforms.webhook`) — routes, payload filters, delivery targets, prompt templates, per-route toolsets, and env vars.
 ---
 
 # Webhook configuration (`platforms.webhook`)
@@ -12,12 +12,14 @@ and routes responses back to a configured target platform.
 
 ## Fields
 
-- `enabled` — enable the webhook platform adapter (bool).
-- `secret` — global HMAC secret used for signature validation on all routes
-  (required). Set it as an env var reference, e.g. `secret: ${WEBHOOK_SECRET}`;
-  the actual value lives in the sensitive `WEBHOOK_SECRET` env entry and
-  hermes substitutes it at config load. See
-  [Secret references](#secret-references).
+- `enabled` — whether the webhook platform adapter is enabled. The
+  adapter (and the `WEBHOOK_SECRET` env var) only takes effect when
+  `WEBHOOK_ENABLED=true` is also set — see
+  [Environment variables](#environment-variables).
+- `secret` — global HMAC secret used for signature validation on all
+  routes. Env-only: set the `WEBHOOK_SECRET` env entry (sensitive) instead
+  of writing it into `config.yaml`. See
+  [Secrets](#secrets).
 - `extra.port` — HTTP server port for receiving webhooks (default `8644`).
 - `extra.rate_limit` — per-route rate limit in requests per minute
   (default `30`).
@@ -32,7 +34,7 @@ and routes responses back to a configured target platform.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `events` | No | List of event types to accept (e.g. `["pull_request"]`). If empty, all events are accepted. Event type is read from `X-GitHub-Event`, `X-GitLab-Event`, or `event_type` in the payload. |
-| `secret` | No | HMAC secret for this route, as an env var reference (e.g. `secret: ${GITHUB_WEBHOOK_SECRET}`). Falls back to the global `platforms.webhook.secret` when omitted. |
+| `secret` | No | HMAC secret for this route, falling back to the global `WEBHOOK_SECRET` env var when omitted. Env-only — do not write secrets into `config.yaml`. |
 | `prompt` | No | Template string with dot-notation payload access (e.g. `{pull_request.title}`). If omitted, the full JSON payload is dumped into the prompt. See [Prompt templates](#prompt-templates). |
 | `filters` | No | Declarative payload filters for this route (a list, or a single filter object). See [Payload filters](#payload-filters). |
 | `skills` | No | List of skill names to load for the agent run. |
@@ -155,45 +157,35 @@ route:
 ```yaml
 platforms:
   webhook:
-    enabled: true
-    secret: ${WEBHOOK_SECRET}
     extra:
       routes:
         oom-emergency:
-          secret: ${MONITOR_WEBHOOK_SECRET}
           prompt: "Memory emergency: {detail}. Diagnose with ps/free/py-spy and report."
           toolsets: ["terminal", "file", "code_execution", "web"]
           deliver: "telegram"
 env:
-  - name: MONITOR_WEBHOOK_SECRET
+  - name: WEBHOOK_ENABLED
+    value: "true"
+  - name: WEBHOOK_SECRET
     value: monitor-secret-here
     sensitive: true
 ```
 
-## Secret references
+## Secrets
 
-The HMAC secret is required in `config.yaml` as an env var reference, not as
-a literal value. Hermes supports env var substitution in `config.yaml`:
-`${VAR_NAME}` is replaced with the value of the env var at config load; an
-unresolved reference is kept verbatim and logged as a warning.
-
-```yaml
-platforms:
-  webhook:
-    secret: ${WEBHOOK_SECRET}
-```
-
-The referenced env entry (`WEBHOOK_SECRET` here) carries the actual secret
-value and must be marked `sensitive: true` — never write the literal secret
-into `config.yaml`. 
+The HMAC secret is **env-only**: set it as the `WEBHOOK_SECRET` env entry
+(marked `sensitive: true`) — never write the literal secret into
+`config.yaml`. A per-route secret can be set as its own env var and
+referenced by the route only via the operator-level config surface, which
+Hermeum does not author.
 
 ## Environment variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `WEBHOOK_ENABLED` | Enable the webhook platform adapter. | `false` |
+| `WEBHOOK_ENABLED` | Enable the webhook platform adapter. Required for `WEBHOOK_SECRET`/`WEBHOOK_PORT` to take effect. | `false` |
 | `WEBHOOK_PORT` | HTTP server port for receiving webhooks. | `8644` |
-| `WEBHOOK_SECRET` | Global HMAC secret used for signature validation on all routes. | _(none)_ |
+| `WEBHOOK_SECRET` | Global HMAC secret used for signature validation on all routes. Mark the env entry `sensitive: true`. | _(none)_ |
 
 The app reads `WEBHOOK_ENABLED` / `WEBHOOK_PORT` to drive the agent's
 Kubernetes container and Service port mappings, mirroring the
@@ -201,15 +193,12 @@ Kubernetes container and Service port mappings, mirroring the
 flows to the agent through its env Secret/ConfigMap alongside other
 sensitive env vars — no separate `secretRef` is wired into the CR.
 
-### Configuration preferred over env vars
+### Env-var enablement only
 
-Webhook can be configured through either `config.platforms.webhook`
-(`enabled`, `extra.port`) **or** env vars (`WEBHOOK_ENABLED`,
-`WEBHOOK_PORT`). The `config.yaml` fields are preferred and take
-precedence over the env vars when both are set; the env vars act as a
-fallback for deployments that don't set `config.yaml`. Hermeum prefers
-authoring through `config.yaml` — the secret is always set there as an
-env var reference (see [Secret references](#secret-references)).
+Webhook behavioral settings that live in `config.yaml` (`extra.port`,
+`extra.routes`) are preferred there, but **enabling the platform is
+env-only** (`WEBHOOK_ENABLED=true`) — config enablement is not surfaced.
+`extra.port` still takes precedence over `WEBHOOK_PORT` when both are set.
 
 ## Example
 
@@ -219,8 +208,6 @@ env var reference (see [Secret references](#secret-references)).
 config:
   platforms:
     webhook:
-      enabled: true
-      secret: ${WEBHOOK_SECRET}
       extra:
         port: 8644
         routes:
@@ -241,6 +228,8 @@ config:
               repo: "{repository.full_name}"
               pr_number: "{number}"
 env:
+  - name: WEBHOOK_ENABLED
+    value: "true"
   - name: WEBHOOK_SECRET
     value: wh-secret-here
     sensitive: true
@@ -249,10 +238,11 @@ env:
     sensitive: true
 ```
 
-The HMAC secret is set in config as a `${WEBHOOK_SECRET}` reference and the
-actual value is provided via the `WEBHOOK_SECRET` env entry (sensitive). The
-`GH_TOKEN` env entry is required for `github_comment` delivery so the `gh`
-CLI can authenticate when running inside the agent container.
+The webhook is enabled via the `WEBHOOK_ENABLED` env entry, and the HMAC
+secret flows through the sensitive `WEBHOOK_SECRET` env entry — secrets
+never go into `config.yaml` (see [Secrets](#secrets)). The `GH_TOKEN` env
+entry is required for `github_comment` delivery so the `gh` CLI can
+authenticate when running inside the agent container.
 
 The `toolsets: [web, vision, clarify]` line is optional here — it matches the
 webhook default exactly, so this route gets the safe subset either way. It is

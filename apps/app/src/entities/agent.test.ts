@@ -7,82 +7,76 @@ import { SkillIdentifierSchema } from "./skill";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
-    config: {
-      platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } },
-    },
+    env: [
+      { name: "WEBHOOK_ENABLED", value: "true" },
+      { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+    ],
     ...overrides,
   };
 }
 
-describe("AgentInputSchema webhook secret validation", () => {
-  it("accepts a webhook block without a secret reference", () => {
-    const result = AgentInputSchema.safeParse({
-      config: { platforms: { webhook: { enabled: true } } },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects a literal secret value in config", () => {
-    const result = AgentInputSchema.safeParse(
-      makeInput({ config: { platforms: { webhook: { enabled: true, secret: "shh" } } } })
-    );
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts a ${WEBHOOK_SECRET} reference without validating the env var", () => {
+describe("AgentInputSchema webhook reserved env var validation", () => {
+  it("accepts a webhook block without a config secret (secrets are env-only)", () => {
     const result = AgentInputSchema.safeParse(makeInput());
     expect(result.success).toBe(true);
   });
 
-  it("rejects a malformed secret reference", () => {
-    const result = AgentInputSchema.safeParse(
-      makeInput({ config: { platforms: { webhook: { enabled: true, secret: "$WEBHOOK_SECRET" } } } })
-    );
+  it("fails when webhook is enabled without the WEBHOOK_SECRET env entry", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+    });
     expect(result.success).toBe(false);
   });
 
-  it("succeeds when webhook is disabled once the secret reference is present", () => {
+  it("fails when the WEBHOOK_SECRET env entry is not marked sensitive", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { webhook: { enabled: false, secret: "${WEBHOOK_SECRET}" } } },
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh" },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes a config secret through unvalidated (looseObject policy)", () => {
+    // config.platforms.webhook.secret is intentionally untyped — it passes
+    // through, but never counts as the reserved WEBHOOK_SECRET env entry.
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { platforms: { webhook: { secret: "shh" } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+      config: { platforms: { webhook: { secret: "shh" } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when webhook is disabled once the secret env entry is present", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "false" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
     });
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when webhook config is omitted entirely", () => {
+  it("succeeds when webhook config/env is omitted entirely", () => {
     const result = AgentInputSchema.safeParse({});
     expect(result.success).toBe(true);
   });
 
-  it("validates the optional per-route secret as a reference", () => {
-    const valid = AgentInputSchema.safeParse(
-      makeInput({
-        config: {
-          platforms: {
-            webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
-              extra: { routes: { "github-pr": { secret: "${GITHUB_WEBHOOK_SECRET}" } } },
-            },
-          },
-        },
-      })
-    );
-    expect(valid.success).toBe(true);
-
-    const literal = AgentInputSchema.safeParse(
-      makeInput({
-        config: {
-          platforms: {
-            webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
-              extra: { routes: { "github-pr": { secret: "shh" } } },
-            },
-          },
-        },
-      })
-    );
-    expect(literal.success).toBe(false);
+  it("does not require WEBHOOK_SECRET when webhook is enabled via config only", () => {
+    // config.platforms.webhook.enabled no longer enables the webhook
+    // (env-only enablement), so the reserved env var is not required.
+    const input = {
+      config: { platforms: { webhook: { enabled: true } } },
+    };
+    const result = AgentInputSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    expect(isWebhookEnabled(input as never)).toBe(false);
   });
 });
 
@@ -93,8 +87,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: {
                 routes: {
                   "oom-emergency": { toolsets: ["terminal", "file", "code_execution", "web"] },
@@ -114,8 +106,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: { routes: { "github-pr": {} } },
             },
           },
@@ -131,8 +121,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: { routes: { "oom-emergency": { toolsets: ["codeExecution"] } } },
             },
           },
@@ -148,8 +136,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: { routes: { "oom-emergency": { toolsets: ["not_a_toolset"] } } },
             },
           },
@@ -165,8 +151,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: { routes: { "oom-emergency": { toolsets: ["with space"] } } },
             },
           },
@@ -182,8 +166,6 @@ describe("AgentInputSchema webhook route toolsets", () => {
         config: {
           platforms: {
             webhook: {
-              enabled: true,
-              secret: "${WEBHOOK_SECRET}",
               extra: { routes: { "oom-emergency": { toolsets: ["hermes-cli"] } } },
             },
           },
@@ -194,24 +176,22 @@ describe("AgentInputSchema webhook route toolsets", () => {
   });
 });
 
-describe("AgentInputSchema webhook env-vs-config precedence", () => {
-  it("prefers config.platforms.webhook.enabled over WEBHOOK_ENABLED env var", () => {
-    const input = {
-      env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
-      config: {
-        platforms: { webhook: { enabled: false, secret: "${WEBHOOK_SECRET}" } },
-      },
-    };
-    const result = AgentInputSchema.safeParse(input);
+describe("AgentInputSchema webhook env-only enablement", () => {
+  it("requires WEBHOOK_ENABLED=true on the env path", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+    });
     expect(result.success).toBe(true);
-    expect(isWebhookEnabled(input as never)).toBe(false);
   });
 
   it("prefers config.platforms.webhook.extra.port over WEBHOOK_PORT env var", () => {
     const input = {
       env: [{ name: "WEBHOOK_PORT", value: "9001" }],
       config: {
-        platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+        platforms: { webhook: { extra: { port: 9000 } } },
       },
     };
     const result = AgentInputSchema.safeParse(input);
@@ -224,52 +204,78 @@ describe("AgentInputSchema webhook env-vs-config precedence", () => {
       env: [
         { name: "WEBHOOK_ENABLED", value: "true" },
         { name: "WEBHOOK_PORT", value: "9000" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
       ],
     });
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when only the config path is used", () => {
+  it("does not require WEBHOOK_SECRET for config-only webhook settings (routes, port)", () => {
     const result = AgentInputSchema.safeParse({
       config: {
-        platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+        platforms: { webhook: { enabled: true, extra: { port: 9000 } } },
       },
     });
     expect(result.success).toBe(true);
   });
 });
 
-describe("AgentInputSchema api server key validation", () => {
-  it("accepts an api_server block without a key reference", () => {
+describe("AgentInputSchema api server reserved env var validation", () => {
+  it("fails when the api server is enabled without the API_SERVER_KEY env entry", () => {
     const result = AgentInputSchema.safeParse({
       config: { gateway: { api_server: { enabled: true } } },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects a literal key value in config", () => {
-    const result = AgentInputSchema.safeParse({
-      config: { gateway: { api_server: { enabled: true, key: "shh" } } },
     });
     expect(result.success).toBe(false);
   });
 
-  it("accepts a ${API_SERVER_KEY} reference without validating the env var", () => {
+  it("passes a config key through unvalidated (looseObject policy)", () => {
+    // gateway.api_server.key is intentionally untyped — it passes through,
+    // but never counts as the reserved API_SERVER_KEY env entry.
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true, key: "shh" } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true, key: "shh" } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when the api server is enabled with the key env entry", () => {
     const result = AgentInputSchema.safeParse({
-      config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}" } } },
+      config: { gateway: { api_server: { enabled: true } } },
+      env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
     });
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when the api server is disabled once the key reference is present", () => {
+  it("succeeds when the api server is disabled once the key env entry is present", () => {
     const result = AgentInputSchema.safeParse({
-      config: { gateway: { api_server: { enabled: false, key: "${API_SERVER_KEY}" } } },
+      config: { gateway: { api_server: { enabled: false } } },
     });
     expect(result.success).toBe(true);
   });
 
   it("succeeds when the api server config is omitted entirely", () => {
-    const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] });
+    const result = AgentInputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("fails when enabled via API_SERVER_ENABLED env without the key env entry", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when enabled via API_SERVER_ENABLED env with the key env entry", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "API_SERVER_ENABLED", value: "true" },
+        { name: "API_SERVER_KEY", value: "shh", sensitive: true },
+      ],
+    });
     expect(result.success).toBe(true);
   });
 });
@@ -300,7 +306,7 @@ describe("isApiServerEnabled", () => {
   it("returns true when config.gateway.api_server.enabled is true", () => {
     expect(
       isApiServerEnabled({
-        config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}" } } },
+        config: { gateway: { api_server: { enabled: true } } },
       })
     ).toBe(true);
   });
@@ -308,12 +314,12 @@ describe("isApiServerEnabled", () => {
   it("returns false when config.gateway.api_server.enabled is false or absent", () => {
     expect(
       isApiServerEnabled({
-        config: { gateway: { api_server: { enabled: false, key: "${API_SERVER_KEY}" } } },
+        config: { gateway: { api_server: { enabled: false } } },
       })
     ).toBe(false);
     expect(
       isApiServerEnabled({
-        config: { gateway: { api_server: { key: "${API_SERVER_KEY}" } } },
+        config: { gateway: { api_server: {} } },
       })
     ).toBe(false);
   });
@@ -322,13 +328,13 @@ describe("isApiServerEnabled", () => {
     expect(
       isApiServerEnabled({
         env: [{ name: "API_SERVER_ENABLED", value: "true" }],
-        config: { gateway: { api_server: { enabled: false, key: "${API_SERVER_KEY}" } } },
+        config: { gateway: { api_server: { enabled: false } } },
       })
     ).toBe(true);
     expect(
       isApiServerEnabled({
         env: [{ name: "API_SERVER_ENABLED", value: "false" }],
-        config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}" } } },
+        config: { gateway: { api_server: { enabled: true } } },
       })
     ).toBe(false);
   });
@@ -356,7 +362,7 @@ describe("getApiServerPort", () => {
   it("uses config.gateway.api_server.port when the env var is absent", () => {
     expect(
       getApiServerPort({
-        config: { gateway: { api_server: { key: "${API_SERVER_KEY}", port: 9000 } } },
+        config: { gateway: { api_server: { port: 9000 } } },
       })
     ).toBe(9000);
   });
@@ -364,12 +370,12 @@ describe("getApiServerPort", () => {
   it("falls back to 8642 when config.gateway.api_server.port is not positive", () => {
     expect(
       getApiServerPort({
-        config: { gateway: { api_server: { key: "${API_SERVER_KEY}", port: 0 } } },
+        config: { gateway: { api_server: { port: 0 } } },
       })
     ).toBe(8642);
     expect(
       getApiServerPort({
-        config: { gateway: { api_server: { key: "${API_SERVER_KEY}", port: -1 } } },
+        config: { gateway: { api_server: { port: -1 } } },
       })
     ).toBe(8642);
   });
@@ -379,7 +385,7 @@ describe("getApiServerPort", () => {
       getApiServerPort({
         env: [{ name: "API_SERVER_PORT", value: "9001" }],
         config: {
-          gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}", port: 9000 } },
+          gateway: { api_server: { enabled: true, port: 9000 } },
         },
       })
     ).toBe(9001);
@@ -403,41 +409,42 @@ describe("isWebhookEnabled", () => {
     }
   });
 
-  it("returns true when config.platforms.webhook.enabled is true", () => {
+  it("returns false when config.platforms.webhook.enabled is true (env-only enablement)", () => {
+    // Webhook enablement is env-only — config does not count as enablement.
     expect(
       isWebhookEnabled({
-        config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+        config: { platforms: { webhook: { enabled: true } } },
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("returns false when config.platforms.webhook.enabled is false or absent", () => {
     expect(
       isWebhookEnabled({
-        config: { platforms: { webhook: { enabled: false, secret: "${WEBHOOK_SECRET}" } } },
+        config: { platforms: { webhook: { enabled: false } } },
       })
     ).toBe(false);
     expect(
       isWebhookEnabled({
-        config: { platforms: { webhook: { secret: "${WEBHOOK_SECRET}" } } },
+        config: { platforms: { webhook: { secret: "shh" } } },
       })
     ).toBe(false);
     expect(isWebhookEnabled({})).toBe(false);
   });
 
-  it("prefers config.platforms.webhook.enabled over the WEBHOOK_ENABLED env var", () => {
+  it("is driven solely by the WEBHOOK_ENABLED env var", () => {
     expect(
       isWebhookEnabled({
         env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
-        config: { platforms: { webhook: { enabled: false, secret: "${WEBHOOK_SECRET}" } } },
+        config: { platforms: { webhook: { enabled: false } } },
       })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isWebhookEnabled({
         env: [{ name: "WEBHOOK_ENABLED", value: "false" }],
-        config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+        config: { platforms: { webhook: { enabled: true } } },
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -464,7 +471,7 @@ describe("getWebhookPort", () => {
     expect(
       getWebhookPort({
         config: {
-          platforms: { webhook: { secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+          platforms: { webhook: { extra: { port: 9000 } } },
         },
       })
     ).toBe(9000);
@@ -475,54 +482,68 @@ describe("getWebhookPort", () => {
       getWebhookPort({
         env: [{ name: "WEBHOOK_PORT", value: "9001" }],
         config: {
-          platforms: { webhook: { secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } } },
+          platforms: { webhook: { extra: { port: 9000 } } },
         },
       })
     ).toBe(9000);
   });
 });
 
-describe("AgentInputSchema teams secret validation", () => {
+describe("AgentInputSchema teams reserved env var validation", () => {
   const teamsConfig = {
     enabled: true,
     extra: {
       client_id: "cid",
-      client_secret: "${TEAMS_CLIENT_SECRET}",
       tenant_id: "tid",
     },
   };
+  const teamsSecretEnv = [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }];
 
-  it("accepts a teams extra block without a client_secret reference", () => {
+  it("fails when teams is enabled without the TEAMS_CLIENT_SECRET env entry", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: { enabled: true, extra: { port: 3978 } } } },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts a teams block that omits extra entirely", () => {
-    const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: { enabled: true } } },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects a literal client_secret value in config", () => {
-    const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
+      config: { platforms: { teams: teamsConfig } },
     });
     expect(result.success).toBe(false);
   });
 
-  it("accepts a ${TEAMS_CLIENT_SECRET} reference without validating the env var", () => {
+  it("passes a config client_secret through unvalidated (looseObject policy)", () => {
+    // platforms.teams.extra.client_secret is intentionally untyped — it
+    // passes through, but never counts as the reserved TEAMS_CLIENT_SECRET
+    // env entry (the secret is env-only by policy).
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when teams is enabled with the secret env entry", () => {
     const result = AgentInputSchema.safeParse({
       config: { platforms: { teams: teamsConfig } },
+      env: teamsSecretEnv,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when all credentials come from env vars", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "TEAMS_CLIENT_ID", value: "cid" },
+        { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+        { name: "TEAMS_TENANT_ID", value: "tid" },
+      ],
     });
     expect(result.success).toBe(true);
   });
 
   it("accepts client_id and tenant_id as regular config strings", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: teamsConfig } },
+      config: { platforms: { teams: { enabled: true, extra: { client_id: "cid", tenant_id: "tid" } } } },
+      env: teamsSecretEnv,
     });
     expect(result.success).toBe(true);
   });
@@ -536,7 +557,6 @@ describe("AgentInputSchema teams secret validation", () => {
 describe("isTeamsEnabled", () => {
   const teamsExtra = {
     client_id: "cid",
-    client_secret: "${TEAMS_CLIENT_SECRET}",
     tenant_id: "tid",
   };
   const teamsSecretEnv = [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }];
@@ -564,7 +584,7 @@ describe("isTeamsEnabled", () => {
       isTeamsEnabled({
         config: {
           platforms: {
-            teams: { extra: { ...teamsExtra, client_secret: undefined } },
+            teams: { extra: { ...teamsExtra } },
           },
         },
         env: teamsSecretEnv,
@@ -576,7 +596,9 @@ describe("isTeamsEnabled", () => {
     expect(
       isTeamsEnabled({
         config: {
-          platforms: { teams: { extra: { ...teamsExtra, client_id: undefined } } },
+          platforms: {
+            teams: { extra: { ...teamsExtra, client_id: undefined } },
+          },
         },
         env: teamsSecretEnv,
       })
@@ -585,13 +607,27 @@ describe("isTeamsEnabled", () => {
       isTeamsEnabled({
         config: {
           platforms: {
-            teams: { extra: { ...teamsExtra, client_secret: undefined } },
+            teams: { extra: { ...teamsExtra } },
           },
         },
         env: [],
       })
     ).toBe(false);
     expect(isTeamsEnabled({})).toBe(false);
+  });
+
+  it("does not count a config client_secret toward enablement (env-only secret)", () => {
+    // The secret must come from the TEAMS_CLIENT_SECRET env entry — a
+    // config value never counts (the secret is env-only by policy).
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: {
+            teams: { extra: { ...teamsExtra, client_secret: "sec" } },
+          },
+        },
+      })
+    ).toBe(false);
   });
 
   it("accepts config or env TEAMS_CLIENT_ID as the missing-credential fallback", () => {
@@ -669,7 +705,7 @@ describe("getTeamsPort", () => {
     expect(
       getTeamsPort({
         config: {
-          platforms: { teams: { extra: { client_secret: "${TEAMS_CLIENT_SECRET}", port: 4000 } } },
+          platforms: { teams: { extra: { port: 4000 } } },
         },
       })
     ).toBe(4000);
@@ -680,7 +716,7 @@ describe("getTeamsPort", () => {
       getTeamsPort({
         env: [{ name: "TEAMS_PORT", value: "4001" }],
         config: {
-          platforms: { teams: { extra: { client_secret: "${TEAMS_CLIENT_SECRET}", port: 4000 } } },
+          platforms: { teams: { extra: { port: 4000 } } },
         },
       })
     ).toBe(4000);
@@ -884,7 +920,7 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
       soul: "# PR Reviewer\nBe thorough and kind.",
       config: {
         model: { provider: "anthropic", default: "claude-sonnet-5" },
-        platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } },
+        platforms: { webhook: { enabled: true } },
       },
       skills: ["npm:@hermeum/github-review"],
       env: [{ name: "WEBHOOK_SECRET", value: "<fill-me>", sensitive: true }],
@@ -1295,7 +1331,7 @@ describe("derivePlatformAvailability", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}" } } },
+          config: { gateway: { api_server: { enabled: true } } },
           env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
         })
       );
@@ -1306,7 +1342,7 @@ describe("derivePlatformAvailability", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}", port: 9000 } } },
+          config: { gateway: { api_server: { enabled: true, port: 9000 } } },
         })
       );
       expect(result.status).toBe("available");
@@ -1316,7 +1352,7 @@ describe("derivePlatformAvailability", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          config: { gateway: { api_server: { enabled: true, key: "${API_SERVER_KEY}", port: 9000 } } },
+          config: { gateway: { api_server: { enabled: true, port: 9000 } } },
           env: [{ name: "API_SERVER_PORT", value: "9001" }],
         })
       );
@@ -1327,7 +1363,7 @@ describe("derivePlatformAvailability", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          config: { gateway: { api_server: { enabled: false, key: "${API_SERVER_KEY}" } } },
+          config: { gateway: { api_server: { enabled: false } } },
           env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
@@ -1409,23 +1445,26 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("WEBHOOK_ENABLED");
     });
 
-    it("is available when enabled via config", () => {
+    it("is unavailable when enabled via config only (env-only enablement)", () => {
+      // Webhook enablement is env-only — config.platforms.webhook.enabled
+      // does not count.
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+          config: { platforms: { webhook: { enabled: true } } },
         })
       );
-      expect(result.status).toBe("available");
+      expect(result.status).toBe("unavailable");
     });
 
     it("is available when the port comes from config.platforms.webhook.extra.port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
           config: {
             platforms: {
-              webhook: { enabled: true, secret: "${WEBHOOK_SECRET}", extra: { port: 9000 } },
+              webhook: { extra: { port: 9000 } },
             },
           },
         })
@@ -1451,7 +1490,7 @@ describe("derivePlatformAvailability", () => {
         PlatformId.Webhook,
         makeAgent({
           endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
-          config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
       expect(result.endpoint).toBe("https://a1.hooks.example.com");
@@ -1466,7 +1505,7 @@ describe("derivePlatformAvailability", () => {
             webhook: "http://a1.hermeum.svc.cluster.local:8644",
             teams: null,
           },
-          config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
       expect(result.endpoint).toBe("http://a1.hermeum.svc.cluster.local:8644");
@@ -1476,21 +1515,21 @@ describe("derivePlatformAvailability", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          config: { platforms: { webhook: { enabled: true, secret: "${WEBHOOK_SECRET}" } } },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
       expect(result.endpoint).toBeUndefined();
     });
 
-    it("is unavailable via config even when the WEBHOOK_ENABLED env var is set", () => {
+    it("is driven solely by the WEBHOOK_ENABLED env var, not config", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          config: { platforms: { webhook: { enabled: false, secret: "${WEBHOOK_SECRET}" } } },
+          config: { platforms: { webhook: { enabled: false } } },
           env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
-      expect(result.status).toBe("unavailable");
+      expect(result.status).toBe("available");
     });
   });
 
@@ -1646,7 +1685,6 @@ describe("derivePlatformAvailability", () => {
       enabled: true,
       extra: {
         client_id: "cid",
-        client_secret: "${TEAMS_CLIENT_SECRET}",
         tenant_id: "tid",
       },
     };

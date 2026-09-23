@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { SecretRefSchema } from "./shared";
-
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
 // Full field semantics: docs/official/api-server.md
 //
@@ -9,13 +7,13 @@ import { SecretRefSchema } from "./shared";
 // fields, no `extra:` nesting). Environment variables take precedence over
 // these config values when both are set.
 //
-// key (the bearer token) is typed as a ${VAR} reference — the actual value
-// lives in the sensitive API_SERVER_KEY env entry and hermes substitutes it
-// at config load. Literal secrets are rejected.
+// Only non-secret settings are typed here — key (the bearer token) is
+// env-only by Hermeum policy (the reserved, sensitive API_SERVER_KEY env
+// entry) and is never written into config.yaml; it passes through via
+// looseObject.
 export const ApiServerSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the API server is enabled."),
-    key: SecretRefSchema.optional().describe("Bearer token for auth, as an env var reference."),
     port: z
       .number()
       .int()

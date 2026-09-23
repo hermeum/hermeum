@@ -1,12 +1,11 @@
 import type { Agent, AgentInput } from "./schema";
 
 // API server settings can be configured via config.yaml
-// (config.gateway.api_server.enabled / port / key) or via env vars
+// (config.gateway.api_server.enabled / port) or via env vars
 // (API_SERVER_ENABLED / API_SERVER_PORT). Environment variables take
 // precedence over the config values when both are set (upstream behavior);
-// the config block acts as a fallback when the env var is absent. The bearer
-// token is set in config as a ${API_SERVER_KEY} reference; the actual value
-// lives in the sensitive API_SERVER_KEY env entry.
+// the config block acts as a fallback when the env var is absent. The
+// bearer token is env-only by Hermeum policy (API_SERVER_KEY, sensitive).
 // See docs/official/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
@@ -29,16 +28,13 @@ export function getApiServerPort(input: AgentInput): number {
   return API_SERVER_DEFAULT_PORT;
 }
 
-// Webhook settings can be configured via config.yaml
-// (config.platforms.webhook.enabled / extra.port) or via env vars
-// (WEBHOOK_ENABLED / WEBHOOK_PORT). config.yaml is preferred and takes
-// precedence over the env vars; the env vars act as a fallback when the
-// corresponding config field is absent.
+// Webhook enablement is env-only (WEBHOOK_ENABLED=true);
+// config.platforms.webhook carries only routes and other non-secret
+// settings. Enabling the platform (and the reserved WEBHOOK_SECRET env
+// entry) stays on the env-var path.
 const WEBHOOK_DEFAULT_PORT = 8644;
 
 export function isWebhookEnabled(input: AgentInput): boolean {
-  const configEnabled = input.config?.platforms?.webhook?.enabled;
-  if (configEnabled !== undefined) return configEnabled;
   return (
     input.env?.some(
       (v) => v.name === "WEBHOOK_ENABLED" && v.value.toLowerCase() === "true",
@@ -57,24 +53,23 @@ export function getWebhookPort(input: AgentInput): number {
   return WEBHOOK_DEFAULT_PORT;
 }
 
-// Teams is an HTTP webhook platform (like webhook / api-server). The client
-// secret is set in config as a ${TEAMS_CLIENT_SECRET} reference (actual value
-// in the sensitive TEAMS_CLIENT_SECRET env entry); client_id and tenant_id
-// are plain-text config values. Each credential is also accepted from its
-// TEAMS_* env var, so the pure env-var path still auto-enables. An explicit
-// `enabled` flag overrides the credentials-presence detection (set false to
-// disable while keeping creds); when `enabled` is absent, Teams is on when
-// all three credentials are set.
+// Teams is an HTTP webhook platform (like webhook / api-server). The
+// client secret is env-only by Hermeum policy (the sensitive
+// TEAMS_CLIENT_SECRET env entry). client_id and tenant_id are non-secret
+// and accepted from either source: config (platforms.teams.extra) or
+// their TEAMS_* env vars (Teams reads env-first, so literal config values
+// work). An explicit `enabled` flag overrides the credentials-presence
+// detection (set false to disable while keeping creds); when `enabled`
+// is absent, Teams is on when all three credentials are set.
 const TEAMS_DEFAULT_PORT = 3978;
 
 function hasAllTeamsCredentials(input: AgentInput): boolean {
   const extra = input.config?.platforms?.teams?.extra;
   const hasEnv = (name: string) =>
     input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false;
-  const hasClientSecret = (extra?.client_secret !== undefined && extra.client_secret.trim() !== "") || hasEnv("TEAMS_CLIENT_SECRET");
   return (
     ((extra?.client_id !== undefined && extra.client_id.trim() !== "") || hasEnv("TEAMS_CLIENT_ID")) &&
-    hasClientSecret &&
+    hasEnv("TEAMS_CLIENT_SECRET") &&
     ((extra?.tenant_id !== undefined && extra.tenant_id.trim() !== "") || hasEnv("TEAMS_TENANT_ID"))
   );
 }
@@ -215,7 +210,7 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       if (!isWebhookEnabled(agent)) {
         return {
           status: "unavailable",
-          reason: "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled).",
+          reason: "Set WEBHOOK_ENABLED=true (and the WEBHOOK_SECRET env entry).",
         };
       }
       return { status: "available", ...(endpoint && { endpoint }) };
@@ -264,7 +259,7 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
         if (!(extra?.client_id?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_ID" && v.value.trim() !== ""))) {
           missing.push("client_id");
         }
-        if (!(extra?.client_secret?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_SECRET" && v.value.trim() !== ""))) {
+        if (!env.some((v) => v.name === "TEAMS_CLIENT_SECRET" && v.value.trim() !== "")) {
           missing.push("client_secret");
         }
         if (!(extra?.tenant_id?.trim() || env.some((v) => v.name === "TEAMS_TENANT_ID" && v.value.trim() !== ""))) {
@@ -274,7 +269,8 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
           status: "unavailable",
           reason:
             `Missing credential${missing.length > 1 ? "s" : ""}: ${missing.join(", ")} ` +
-            "(config.platforms.teams.extra or the matching TEAMS_* env var).",
+            "(client_id/tenant_id via config.platforms.teams.extra or the matching " +
+            "TEAMS_* env var; client_secret via the TEAMS_CLIENT_SECRET env var).",
         };
       }
       return { status: "available", ...(endpoint && { endpoint }) };

@@ -24,33 +24,23 @@ done; without it, the webhook will receive no messages.
 
 Both configuration paths are supported: env vars (`TEAMS_CLIENT_ID`,
 `TEAMS_CLIENT_SECRET`, `TEAMS_TENANT_ID`) and
-`platforms.teams.extra` in `config.yaml` — Hermeum prefers the config
-path. `client_secret` is set as an env var reference
-(`client_secret: ${TEAMS_CLIENT_SECRET}`) — hermes substitutes it from the
-sensitive `TEAMS_CLIENT_SECRET` env entry at config load. An explicit
+`platforms.teams.extra` in `config.yaml`. Non-secret credentials
+(`client_id`, `tenant_id`) may come from either source (Teams reads them
+env-first, so literal config values work); the `client_secret` is
+**env-only** — set it as the `TEAMS_CLIENT_SECRET` env entry (sensitive),
+never in `config.yaml` (see [Secrets](#secrets)). An explicit
 `enabled: false` disables the bot while keeping credentials in place.
 
-### Secret references
+### Secrets
 
-Hermes supports env var substitution in `config.yaml`: `${VAR_NAME}` is
-replaced with the value of the env var at config load; an unresolved
-reference is kept verbatim and logged as a warning.
-
-```yaml
-platforms:
-  teams:
-    extra:
-      client_secret: ${TEAMS_CLIENT_SECRET}
-```
-
-The referenced env entry (`TEAMS_CLIENT_SECRET` here) carries the actual
-secret value and must be marked `sensitive: true` — never write the literal
-secret into `config.yaml`. 
+The Azure AD client secret is **env-only**: set it as the
+`TEAMS_CLIENT_SECRET` env entry (marked `sensitive: true`) — never write
+the literal secret into `config.yaml`.
 
 ### config.yaml
 
-The `platforms.teams.extra` block carries the credentials, including the
-`client_secret` reference:
+The `platforms.teams.extra` block carries the non-secret credentials and
+behavioral settings:
 
 ```yaml
 platforms:
@@ -58,7 +48,6 @@ platforms:
     enabled: true
     extra:
       client_id: 00000000-0000-0000-0000-000000000000
-      client_secret: ${TEAMS_CLIENT_SECRET}
       tenant_id: 00000000-0000-0000-0000-000000000000
       port: 3978
 ```
@@ -70,7 +59,7 @@ platforms:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TEAMS_CLIENT_ID` | _(required in config or env)_ | Azure AD App (client) ID. |
-| `TEAMS_CLIENT_SECRET` | _(required)_ | Azure AD client secret. Referenced from `platforms.teams.extra.client_secret` via `${TEAMS_CLIENT_SECRET}` substitution; the literal value lives here, marked `sensitive: true`. |
+| `TEAMS_CLIENT_SECRET` | _(required)_ | Azure AD client secret. Env-only — set it as a sensitive env entry; never in `config.yaml`. |
 | `TEAMS_TENANT_ID` | _(required in config or env)_ | Azure AD tenant ID. |
 | `TEAMS_PORT` | `3978` | Webhook server port. |
 | `TEAMS_ALLOWED_USERS` | _(recommended)_ | Comma-separated AAD object IDs allowed to use the bot. |
@@ -80,8 +69,8 @@ platforms:
 
 ### Enabling the Teams bot
 
-Credentials are set in config; the client secret value comes from the
-sensitive env entry:
+Non-secret credentials are set in config; the client secret value comes
+from the sensitive env entry:
 
 ```yaml
 platforms:
@@ -89,7 +78,6 @@ platforms:
     enabled: true
     extra:
       client_id: 00000000-0000-0000-0000-000000000000
-      client_secret: ${TEAMS_CLIENT_SECRET}
       tenant_id: 00000000-0000-0000-0000-000000000000
 env:
   - name: TEAMS_CLIENT_SECRET
@@ -101,7 +89,7 @@ env:
 
 Alternatively, all three credentials can come from env vars (`TEAMS_CLIENT_ID`,
 `TEAMS_CLIENT_SECRET`, `TEAMS_TENANT_ID`) — Teams auto-enables when they are
-all present, but Hermeum prefers the config path.
+all present.
 
 When `enabled` is omitted, Teams is auto-enabled once all three
 credentials are present — so the `platforms.teams` block above is optional

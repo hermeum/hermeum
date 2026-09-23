@@ -7,7 +7,6 @@
 // `readDocument` tool to look up the semantics of any config field you are not
 // fully sure about before writing it into the draft.
 
-export { SecretRefSchema, type SecretRef } from "./shared";
 export { ModelProviderSchema, ModelSchema, type ModelProvider, type Model } from "./model";
 export {
   WebhookDeliverSchema,

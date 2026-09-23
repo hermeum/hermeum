@@ -1,17 +1,17 @@
 import { z } from "zod";
 
-import { SecretRefSchema } from "./shared";
-
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks
 // Full field semantics: docs/official/webhooks.md
 //
-// Adapter settings (secret, port, ...) are valid directly under
-// platforms.webhook: as well as under extra: (upstream: both spellings reach
-// the adapter; a value nested under extra: wins if the same key appears in
-// both). secret is optional — Hermeum surfaces it as a ${VAR} reference.
+// Adapter settings (port, ...) are valid directly under platforms.webhook:
+// as well as under extra: (upstream: both spellings reach the adapter; a
+// value nested under extra: wins if the same key appears in both).
 //
-// Skipped on purpose: the route field script is not typed here — it is an
-// operator-level concern and passes through via looseObject.
+// Skipped on purpose: the route field script and the secret fields
+// (platforms.webhook.secret, routes.<name>.secret) are not typed here.
+// script is an operator-level concern; secrets are env-only by Hermeum
+// policy (the reserved, sensitive WEBHOOK_SECRET env entry) and are never
+// written into config.yaml. Both pass through via looseObject.
 export const WebhookDeliverSchema = z
   .enum([
     "log",
@@ -153,10 +153,6 @@ export const WebhookFilterSchema: z.ZodType<WebhookFilter> = z.lazy(() =>
 export const WebhookRouteSchema = z
   .looseObject({
     events: z.array(z.string()).optional().describe("Event types this route accepts."),
-    secret: SecretRefSchema.optional().describe(
-      "HMAC secret for this route. Falls back to the global " +
-        "platforms.webhook.secret when omitted."
-    ),
     prompt: z
       .string()
       .optional()
@@ -194,10 +190,6 @@ export type WebhookRoute = z.infer<typeof WebhookRouteSchema>;
 export const WebhookSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the webhook server is enabled."),
-    secret: SecretRefSchema.describe(
-      "Global HMAC secret used for signature validation on all routes " +
-        "(per-route secret overrides it)."
-    ).optional(),
     extra: z
       .looseObject({
         port: z.number().int().optional().describe("Webhook server port."),

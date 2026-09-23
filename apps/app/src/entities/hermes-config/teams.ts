@@ -1,21 +1,18 @@
 import { z } from "zod";
 
-import { SecretRefSchema } from "./shared";
-
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams
 // Full field semantics: docs/official/teams.md
-// Behavioral settings and credentials live here. client_secret is typed as
-// a ${VAR} reference (actual value in the sensitive TEAMS_CLIENT_SECRET env
-// entry, substituted by hermes at config load).
+// Behavioral settings and non-secret credentials (client_id, tenant_id)
+// live here as plain config strings; Teams reads them env-first, so the
+// literal config values work. client_secret is env-only by Hermeum policy
+// (the reserved, sensitive TEAMS_CLIENT_SECRET env entry) and is not
+// typed — it is never written into config.yaml.
 export const TeamsSchema = z
   .looseObject({
     enabled: z.boolean().optional().describe("Whether the Teams bot is enabled."),
     extra: z
       .looseObject({
         client_id: z.string().optional().describe("Azure AD App (client) ID."),
-        client_secret: SecretRefSchema.optional().describe(
-          "Azure AD client secret, as an env var reference."
-        ),
         tenant_id: z.string().optional().describe("Azure AD tenant ID."),
         port: z
           .number()
@@ -28,8 +25,9 @@ export const TeamsSchema = z
   })
   .optional()
   .describe(
-    "Microsoft Teams platform configuration. client_secret is set as a " +
-      "${TEAMS_CLIENT_SECRET} reference; the secret value lives in the sensitive env entry."
+    "Microsoft Teams platform configuration. client_secret is env-only " +
+      "(TEAMS_CLIENT_SECRET, sensitive); client_id/tenant_id may come from " +
+      "config here or from the matching TEAMS_* env var."
   );
 
 export type Teams = z.infer<typeof TeamsSchema>;

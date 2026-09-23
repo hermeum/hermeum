@@ -140,6 +140,8 @@ templates:
         - name: OPENAI_API_KEY
           value: <fill-me>
           sensitive: true
+        - name: WEBHOOK_ENABLED
+          value: "true"
         - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
