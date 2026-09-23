@@ -297,9 +297,9 @@ export const AgentInputObjectSchema = z.object({
 });
 
 // Standing policy: platform secrets use reserved env vars (WEBHOOK_SECRET,
-// API_SERVER_KEY, TEAMS_CLIENT_SECRET), each marked sensitive: true — never
-// ${VAR} references in config.yaml. An enabled platform must carry its
-// reserved secret env entry; the checks below enforce the pairing.
+// API_SERVER_KEY, TEAMS_CLIENT_SECRET), each marked sensitive: true. An
+// enabled platform must carry its reserved secret env entry; the checks
+// below enforce the pairing.
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
   const requireSensitiveEnv = (name: string, enabledPath: string) => {
     const hasVar = data.env?.some((v) => v.name === name && v.sensitive === true);

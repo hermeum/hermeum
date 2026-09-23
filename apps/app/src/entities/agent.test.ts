@@ -618,8 +618,7 @@ describe("isTeamsEnabled", () => {
 
   it("does not count a config client_secret toward enablement (env-only secret)", () => {
     // The secret must come from the TEAMS_CLIENT_SECRET env entry — a
-    // config value (literal or ${VAR} reference) never counts (the secret
-    // is env-only by policy).
+    // config value never counts (the secret is env-only by policy).
     expect(
       isTeamsEnabled({
         config: {
