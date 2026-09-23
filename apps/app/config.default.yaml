@@ -203,12 +203,129 @@ templates:
           sensitive: true
       sharedEnvSets: []
 agentTypes:
+  small:
+    description: >-
+      Low resource footprint — for lightweight, single-purpose agents with
+      modest traffic. Persists the agent workspace on a 5Gi volume.
+    mutatingWebhookJsonPatch: &smallPatch
+      # Both sidecars enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 500Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 5Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      # Searxng only.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 500Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 5Gi
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      # Camofox only.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 500Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 5Gi
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      # Neither sidecar enabled (unconditional fallback).
+      - - op: add
+          path: /spec/hermes/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 500Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+        - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence:
+              enabled: true
+              size: 5Gi
   medium:
     description: >-
       Standard performance — handles everyday workloads reliably, including
       browsing and web search. A good fit for most agents. Persists the agent
       workspace on a 10Gi volume.
-    mutatingWebhookJsonPatch: &mediumPatch
+    mutatingWebhookJsonPatch:
       # Both sidecars enabled.
       - - op: test
           path: /spec/searxng/enabled
@@ -324,9 +441,9 @@ agentTypes:
   default:
     description: >-
       Fallback for agents without an explicit type — same resources as
-      medium. The reserved `default` key applies to typeless agents via the
+      small. The reserved `default` key applies to typeless agents via the
       mutating webhook and is hidden from the agent-type picker.
-    mutatingWebhookJsonPatch: *mediumPatch
+    mutatingWebhookJsonPatch: *smallPatch
   large:
     description: >-
       High performance — extra capacity for demanding tasks, such as very long

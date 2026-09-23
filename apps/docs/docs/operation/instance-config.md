@@ -103,7 +103,7 @@ templates can reference it.
 
 :::note
 The bundled `config.default.yaml` defines `default` with the same patch as
-`medium`, so out of the box every agent gets the standard resources whether
+`small`, so out of the box every agent gets the small resources whether
 or not a type was chosen.
 :::
 
