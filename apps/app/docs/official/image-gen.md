@@ -17,15 +17,11 @@ The toolset auto-enables when `FAL_KEY` is set. Without it, the
 
 - `provider` — the single selection key for the image-gen backend.
   A vendor name (`fal`, `openai`, `xai`, `krea`, `openrouter`, ...) goes
-  direct with your own key. New upstream providers also exist: `meta-ai`
-  (Meta Model API, `muse-image-1.0`, reuses `MODEL_API_KEY` /
-  `META_API_KEY` / `META_MODEL_API_KEY`) and an `openai` extension for
-  GPT Image 2.5 Flare/Sunburst plus custom OpenAI-compatible endpoints
-  via `image_gen.openai.base_url` / `key_env`. The stored selection
-  always wins: `provider: fal` without `FAL_KEY` errors rather than
-  silently rerouting. Default `fal` when `FAL_KEY` is set. Upstream also
-  accepts `nous` (the managed Tool Gateway), but Hermeum does not surface
-  it — it requires Nous Portal OAuth, which is not supported in container
+  direct with your own key. The stored selection always wins:
+  `provider: fal` without `FAL_KEY` errors rather than silently
+  rerouting. Default `fal` when `FAL_KEY` is set. Upstream also accepts
+  `nous` (the managed Tool Gateway), but Hermeum does not surface it —
+  it requires Nous Portal OAuth, which is not supported in container
   mode.
 - `model` — FAL.ai model id. Default
   `fal-ai/flux-2/klein/9b`. Eleven models are supported out of the box;
@@ -39,10 +35,10 @@ The toolset auto-enables when `FAL_KEY` is set. Without it, the
   `fal-ai/krea/v2/{medium,large}/text-to-image` (illustration / photorealism).
   With `provider: openrouter`, the picker lists OpenRouter's entire live
   image catalog instead. Edit-capable FAL models now also include the
-  GPT Image 2.5 Flare/Sunburst entries (`openai/gpt-image-2.5/flare/...`,
-  `openai/gpt-image-2.5/sunburst/...`, up to 16 reference images,
-  quality pinned to `medium`); the reference cap for FAL editing is up
-  to 16 per model.
+  GPT Image 2.5 Flare/Sunburst entries (up to 16 reference images).
+  Additional pass-through knobs (`image_gen.openai.base_url` /
+  `key_env` for custom OpenAI-compatible endpoints, the `meta-ai`
+  provider, ...) are validated by `looseObject`, not typed here.
 - `max_parallel_requests` — concurrent images per tool-call batch
   (default `4`). Hermes clamps it to at least one and to the global
   tool-worker limit, so image providers receive bounded parallel requests

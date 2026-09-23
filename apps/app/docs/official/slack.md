@@ -107,13 +107,10 @@ per-message-rendering settings live under its `extra:` sub-map.
   timeline). Pair `in_channel` with `reply_in_thread: false` (and
   `require_mention: false`) so a plain channel reply continues the job.
 - `platforms.slack.extra.api_human_users` — Slack user IDs whose
-  Web-API (user-token) posts count as human. Such posts carry the
-  posting `app_id` and no `client_msg_id`, so by default they are
-  dropped as app traffic; allowlist your own front-end's users here
-  instead of `allow_bots: "all"`. There is deliberately no app-ID
-  variant: a modern bot token posts with the same `user` + `app_id`
-  shape. Env mirror: `SLACK_API_HUMAN_USERS` (comma-separated).
-  Passes through via `looseObject`.
+  Web-API (user-token) posts count as human instead of being dropped as
+  bot traffic; allowlist your own front-end's users here instead of
+  `allow_bots: "all"`. Env mirror: `SLACK_API_HUMAN_USERS`. Passes
+  through via `looseObject`.
 
 ## Per-Channel Prompts
 

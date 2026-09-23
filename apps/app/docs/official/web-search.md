@@ -73,12 +73,9 @@ explicitly with `web.backend: "xai"`.
 
 DDGS (DuckDuckGo) needs no env var — it is always available as a
 search-only backend via `web.backend: "ddgs"` (uses the `ddgs` Python
-package, lazy-installed on first use).
-
-Each provider dispatch is also bounded by a wall-clock timeout:
-`web.extract_timeout` in `config.yaml` (default `120` seconds; `0`
-disables it) — a backend that keeps the response open without finishing
-returns per-URL timeout errors instead of stalling the tool call.
+package, lazy-installed on first use). Extract calls are also bounded by
+`web.extract_timeout` (default `120` seconds; `0` disables) — passes
+through via `looseObject`.
 
 ## Example
 
