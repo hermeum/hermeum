@@ -2,7 +2,7 @@ import type { Config } from "@docusaurus/types";
 
 const config: Config = {
   title: "Hermeum",
-  tagline: "Documentation for the Hermeum project",
+  tagline: "Hermes agents that run your team while you sleep.",
   favicon: "img/favicon.png",
 
   url: "https://docs.hermeum.app",
