@@ -27,7 +27,7 @@ it from its `.env` file.
 
 2. Send the agent a message:
 
-   > install `gh` command at /opt/data/.local/bin and sign in with a token stored at .env file.
+   > install `gh` command at /opt/data/.local/bin and sign in with the token stored in the .env file using `gh auth login --with-token`.
 
 The agent reads `GITHUB_TOKEN` from the `.env` file and authenticates the `gh` CLI with
 `gh auth login --with-token`. From then on, it can read commits, pull requests, and
