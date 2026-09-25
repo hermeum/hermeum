@@ -323,6 +323,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     hermes.crons = agent.crons;
   }
   hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
+  hermes.env = [{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }];
 
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
