@@ -30,6 +30,8 @@ replicaCount: 1
 # installed cluster-wide and this chart should only manage the hermeum app.
 operator:
   enabled: true
+  rbac:
+    namespaced: true
   # Values under this key are passed through to the hermes-agent-operator chart.
   # See its values.yaml for the available knobs.
 
