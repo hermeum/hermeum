@@ -41,18 +41,31 @@ reasons, so the CLI can't pick it up automatically — the agent has to read it 
 
 ## Authorize an agent with X
 
-Agents can work with X through the [`xurl`](https://github.com/karthink/xurl) CLI. Since
-X uses OAuth, the agent can't store a static token up front — instead it runs a headless
-OAuth flow and hands the browser step to you.
+Agents can work with X through the [`xurl`](https://github.com/xdevplatform/xurl) CLI.
+Since X uses OAuth, there is no static token to store up front — instead the agent
+registers your X developer app and then runs a headless OAuth flow, handing the browser
+step to you.
 
-1. Send the agent a message:
+1. Create an app in the [X developer portal](https://developer.x.com/en/portal/dashboard),
+   set its redirect URI to `http://localhost:8080/callback`, and copy the Client ID and
+   Client Secret.
 
-   > install `xurl` and sign in to X with `xurl auth oauth2 --headless`.
+2. In the agent's **Env** section, add both values with **sensitive** toggled on:
 
-2. The agent runs `xurl auth oauth2 --headless` and replies with an authorization URL.
-   Open that URL in your browser and approve the access request.
+   | Name | Value | Sensitive |
+   |------|-------|-----------|
+   | `XURL_CLIENT_ID` | `...` | yes |
+   | `XURL_CLIENT_SECRET` | `...` | yes |
 
-3. After you approve, the browser redirects to a `localhost` URL. Copy the full
+3. Send the agent a message:
+
+   > install `xurl`, register an app with the client credentials stored in the .env file using `xurl auth apps add`, and sign in to X with `xurl auth oauth2 --headless`.
+
+4. The agent reads `XURL_CLIENT_ID` and `XURL_CLIENT_SECRET` from the `.env` file,
+   registers the app, and replies with an authorization URL. Open that URL in your
+   browser and approve the access request.
+
+5. After you approve, the browser redirects to a `localhost` URL. Copy the full
    redirected URL from the browser's address bar and paste it back to the agent.
 
 The agent completes the OAuth exchange with the redirected URL and saves the resulting
