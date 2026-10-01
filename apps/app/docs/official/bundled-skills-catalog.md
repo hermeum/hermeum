@@ -103,7 +103,7 @@ skills that support Linux are listed — Hermeum agents run in Linux containers.
 
 | Name | Path | Description | Env vars |
 |------|------|-------------|----------|
-| xurl | `skills/social-media/xurl` | X/Twitter via xurl CLI: raw post search, posting, DM, media. | — (xurl CLI auth config) |
+| xurl | `skills/social-media/xurl` | X/Twitter via xurl CLI: raw post search, posting, DM, media. | `XURL_CLIENT_ID`, `XURL_CLIENT_SECRET` (X developer app credentials for OAuth 2.0) |
 
 ## Software development
 
