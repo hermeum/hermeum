@@ -285,30 +285,23 @@ Env vars, when needed, are read from `${HERMES_HOME}/.env`.
 |------|------|-------------|----------|
 | yuanbao | `optional-skills/yuanbao/yuanbao` | Yuanbao groups: @mention users, query info/members. | — |
 
-## Installing an optional skill
+## Example
 
-CLI install copies the skill into `~/.hermes/skills/` and activates it:
+### Installing an optional skill via agent config
 
-```bash
-hermes skills install official/research/duckduckgo-search
-```
+List the skill's identifier in the agent's `skills` array — identifiers are
+`official/<category>/<name>`; installing copies the skill into
+`~/.hermes/skills/` and activates it. Provide any env vars the skill needs
+(see the catalog above) via the agent's `env` array, with credentials marked
+`sensitive: true`.
 
-The identifier also goes into an agent's `skills` array when configuring an
-agent with the skill pre-installed (see below).
-
-### Installing via agent config
-
-When defining an agent, list the skill's identifier in the agent's `skills`
-array and provide any env vars the skill needs (see the catalog above) via
-the agent's `env` array. Mark credential values `sensitive: true`.
-
-Example — an agent with the optional `shopify` skill installed:
+Example — an agent with the optional `shopify` skill:
 
 ```yaml
 name: Shopify helper
 description: Answers product questions and tracks orders via Shopify.
 skills:
-  - official/productivity/shopify   # identifier = official/<category>/<name>
+  - official/productivity/shopify
 env:
   - name: SHOPIFY_ACCESS_TOKEN
     value: "<fill-me>"
