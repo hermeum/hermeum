@@ -16,7 +16,8 @@ Every skill below ships with hermes-agent under
 via `hermes skills install <identifier>` copies the skill into
 `~/.hermes/skills/` and activates it; identifiers are
 `official/<category>/<name>` (the same identifiers the skill index serves).
-Env vars, when needed, are read from `${HERMES_HOME}/.env`.
+Env vars, when needed, are read from `${HERMES_HOME}/.env`. All listed
+skills support Linux — Hermeum agents run in Linux containers.
 
 ## Autonomous AI agents
 

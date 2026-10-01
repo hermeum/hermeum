@@ -7,23 +7,17 @@ description: Bundled skills catalog — the skills installed by default with her
 <!-- Mirrors vendor/hermes-agent skills (bundled set) at the pinned submodule
      version; the pointer implies the version. Source of truth:
      vendor/hermes-agent/website/docs/user-guide/skills/bundled/
-     (auto-generated from each skill's SKILL.md). -->
+     (auto-generated from each skill's SKILL.md). Skipped on purpose: the four
+     macOS-only Apple skills (apple-notes, apple-reminders, findmy, imessage)
+     — Hermeum agents run in Linux containers. -->
 
 # Bundled skills catalog
 
 Every skill below ships with hermes-agent and is installed by default under
 `${HERMES_HOME:-~/.hermes}/skills/<category>/<name>`. Skills activate when the
 running task matches their description; no install step is needed. Env vars a
-skill needs are read from `${HERMES_HOME}/.env` when the skill loads.
-
-## Apple (macOS)
-
-| Name | Path | Description | Env vars |
-|------|------|-------------|----------|
-| apple-notes | `skills/apple/apple-notes` | Manage Apple Notes via memo CLI: create, search, edit. | — |
-| apple-reminders | `skills/apple/apple-reminders` | Apple Reminders via remindctl: add, list, complete. | — |
-| findmy | `skills/apple/findmy` | Track Apple devices/AirTags via FindMy.app on macOS. | — |
-| imessage | `skills/apple/imessage` | Send and receive iMessages/SMS via the imsg CLI on macOS. | — |
+skill needs are read from `${HERMES_HOME}/.env` when the skill loads. Only
+skills that support Linux are listed — Hermeum agents run in Linux containers.
 
 ## Autonomous AI agents
 
