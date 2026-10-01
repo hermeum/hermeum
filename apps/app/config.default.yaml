@@ -17,7 +17,7 @@ templates:
       config:
         model:
           provider: openai-api
-          default: gpt-5.6-sol
+          default: gpt-6.1-sol
         slack:
           reactions: true
           require_mention: true
@@ -112,7 +112,7 @@ templates:
       config:
         model:
           provider: openai-api
-          default: gpt-5.6-sol
+          default: gpt-6.1-sol
         platforms:
           webhook:
             enabled: true

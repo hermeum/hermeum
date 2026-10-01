@@ -49,7 +49,7 @@ export const ConfigSchema = z.object({
   openaiModel: z
     .string()
     .min(1)
-    .default("gpt-5.6-sol")
+    .default("gpt-6.1-sol")
     .describe("OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL)."),
   openaiBaseUrl: z
     .url()
