@@ -133,3 +133,21 @@ skill needs are read from `${HERMES_HOME}/.env` when the skill loads.
 | Name | Path | Description | Env vars |
 |------|------|-------------|----------|
 | blocked-page-recovery | `skills/web/blocked-page-recovery` | Use when a fetch fails: 403/429, paywall, WAF, bot wall. | `JINA_API_KEY` (optional, enables Jina Reader fallback) |
+
+## Example
+
+A cron job running a bundled skill: bundled skills need no `skills` entry —
+they are already installed — so the cron's prompt just references the task
+and the skill activates when its description matches. List the skill name in
+the cron's `skills` array only to pin it explicitly.
+
+```yaml
+name: price-watch-cron
+schedule: "0 9 * * *"
+prompt: |
+  Check current prices for the products on the watch list and report
+  any that dropped below target.
+deliver: email
+skills:
+  - product-price-monitor    # bundled skills load without this; pin to be explicit
+```
