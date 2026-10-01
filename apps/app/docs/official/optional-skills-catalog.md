@@ -287,15 +287,7 @@ Env vars, when needed, are read from `${HERMES_HOME}/.env`.
 
 ## Example
 
-### Installing an optional skill via agent config
-
-List the skill's identifier in the agent's `skills` array — identifiers are
-`official/<category>/<name>`; installing copies the skill into
-`~/.hermes/skills/` and activates it. Provide any env vars the skill needs
-(see the catalog above) via the agent's `env` array, with credentials marked
-`sensitive: true`.
-
-Example — an agent with the optional `shopify` skill:
+An agent with the optional `shopify` skill:
 
 ```yaml
 name: Shopify helper
