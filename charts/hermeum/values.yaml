@@ -139,6 +139,25 @@ secrets:
   # openai-api-key.
   existingSecret: ""
 
+# ── Extra env / envFrom (app container only) ────────────────────────────────
+# Escape hatch for env vars not surfaced via config/secrets (e.g. HTTP_PROXY,
+# NODE_OPTIONS). Rendered verbatim into the app container's env list, AFTER
+# the chart-managed entries — Kubernetes resolves duplicate names last-wins,
+# so these can also override chart-managed values. The migrate initContainer
+# does not receive them.
+#
+# Example:
+#   env:
+#     - name: HTTP_PROXY
+#       value: http://proxy.example.com:8080
+#     - name: HERMEUM_LOG_LEVEL
+#       value: debug
+#   envFrom:
+#     - secretRef:
+#         name: my-extra-secrets
+env: []
+envFrom: []
+
 # ── agentConfig override (ConfigMap mounted at config.configPath) ───────
 # Full contents of config.yaml. When empty, the image's bundled
 # config.default.yaml is used as-is.

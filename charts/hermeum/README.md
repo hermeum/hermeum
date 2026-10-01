@@ -173,6 +173,8 @@ helm show values charts/hermeum
 | `secrets.databaseUrl`                | `"file:/var/lib/hermeum/db.sqlite"` | `HERMEUM_DATABASE_URL`. Override for postgres. |
 | `secrets.existingSecret`             | `""`                             | Use an existing Secret instead of templating one. |
 | `agentConfig`                        | `{}`                             | Full `config.yaml` content (mounted as a ConfigMap). |
+| `env`                                | `[]`                             | Extra env vars appended to the app container (rendered verbatim, after the chart-managed entries — last-wins override). |
+| `envFrom`                            | `[]`                             | Extra `envFrom` sources (ConfigMap/Secret refs) for the app container. |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
 | `config.agentIngress.baseHostname`   | `""`                             | Per-agent ingress base hostname — each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams), or `<agent-id>-<platform-label>.<base>` when `flattenHosts` is set. Unset = no agent ingress. |
