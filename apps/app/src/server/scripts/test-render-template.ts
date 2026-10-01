@@ -5,8 +5,8 @@
  * Loads the Hermeum config (HERMEUM_CONFIG_PATH, default ./config.yaml),
  * instantiates the template, synthesizes an Agent (random id/userId), builds
  * the pre-webhook CR via agentToHermesAgent, applies the mutating webhook
- * JSON patch declared under the agent's type (first-match-wins against the
- * CR), and prints the resulting CR as YAML to stdout.
+ * JSON patch declared under the agent's type (all candidates whose `test` ops
+ * pass are combined against the CR), and prints the resulting CR as YAML.
  *
  * Placeholders like {{agentId}} / {{userId}} are left verbatim — the real
  * webhook does not substitute them either.
@@ -71,9 +71,10 @@ const agent = { ...agentInput, id: randomUUID(), userId: randomUUID() };
 // Pre-webhook CR exactly as the reconciler would receive it.
 const cr = agentToHermesAgent(agent);
 
-// Apply the mutating webhook patch declared for the agent's type. The patch
-// candidates' `test` ops are evaluated against `cr` (first-match-wins); a
-// template without a `type` yields null (no mutation).
+// Apply the mutating webhook patch declared for the agent's type. Candidates'
+// `test` ops are evaluated sequentially against the CR (as mutated by earlier
+// matched candidates) and all matches are combined; a template without a
+// `type` yields null (no mutation).
 const patch = await agentUseCase.getmutatingWebhookJsonPatch(agent, cr);
 let postWebhookCr = cr;
 if (patch !== null && patch.length > 0) {

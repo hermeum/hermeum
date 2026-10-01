@@ -145,8 +145,10 @@ secrets:
 #
 # The mutating webhook for HermesAgent is driven by
 # `agentTypes.<type>.mutatingWebhookJsonPatch` — populate this to apply
-# JSON-Patch mutations to matching HermesAgent CRs on CREATE/UPDATE. Agents
-# without a `type` fall back to the reserved `agentTypes.default` entry.
+# JSON-Patch mutations to matching HermesAgent CRs on CREATE/UPDATE. Multiple
+# candidates (array of arrays) are combined: every candidate whose `test` ops
+# pass contributes to the returned patch. Agents without a `type` fall back
+# to the reserved `agentTypes.default` entry.
 #
 # Example:
 #   agentConfig:

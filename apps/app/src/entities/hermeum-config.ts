@@ -13,12 +13,13 @@ export const JsonPatchOpSchema = z.object({
 export type JsonPatchOp = z.infer<typeof JsonPatchOpSchema>;
 
 /**
- * A JSON Patch is an array of ops. The `test` op acts as a precondition: when
- * a patch begins with `test` ops, the webhook selects it only if all tests
- * pass against the incoming object (first-match-wins), otherwise falls through
- * to the next candidate (no-match = no mutation). A single flat array is the
+ * A JSON Patch is an array of ops. The `test` op acts as a precondition: every
+ * candidate whose `test` ops pass contributes its ops to the combined patch
+ * returned to the apiserver (candidates are evaluated in declaration order,
+ * each against the object as mutated by the previously matched candidates).
+ * A candidate with no `test` ops is unconditional. A single flat array is the
  * legacy shape (one unconditional candidate); an array of arrays declares
- * multiple candidates evaluated in order.
+ * multiple independent candidates.
  */
 const JsonPatchArraySchema = z.array(JsonPatchOpSchema);
 

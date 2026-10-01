@@ -34,9 +34,11 @@ webhook:
    instance config — a list of candidate patches. When the agent has **no**
    `type`, Hermeum looks up the reserved `default` type instead (see
    [Instance config](../instance-config#the-reserved-default-type)).
-3. If candidates begin with `test` ops, evaluates each candidate's `test`
-   ops against the incoming object and returns the **first** one whose tests
-   all pass (first-match-wins). If none match, no patch is returned.
+3. Evaluates each candidate's `test` ops (if any) against the object —
+   sequentially, each candidate against the object **as mutated by the
+   previously matched candidates** — and **combines every matching
+   candidate** into a single patch. Candidates with no `test` ops are
+   unconditional and always match. If none match, no patch is returned.
 4. Returns that JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902))
    as the admission response's `patch`.
 
@@ -54,7 +56,7 @@ Patches live in the instance config under
 custom `config.yaml` via `HERMEUM_CONFIG_PATH`).
 
 The field accepts either a flat array (one candidate, the simplest form) or
-an array of arrays (multiple candidates evaluated in order). A single flat
+an array of arrays (multiple independent candidates). A single flat
 array is the most common case:
 
 ```yaml
@@ -76,13 +78,17 @@ the resource requests and limits into `spec.hermes.resources`.
 
 A candidate patch can begin with [`test`](https://datatracker.ietf.org/doc/html/rfc6902#section-4.6)
 ops to act as a precondition. Hermeum evaluates each candidate's `test` ops
-against the incoming `HermesAgent` object and selects the **first** candidate
-whose tests all pass. `test` ops that fail cause Hermeum to skip to the next
-candidate — they do **not** reject the admission (unlike a flat array of
-`test` ops, where a failing `test` would reject the whole request).
+against the object and **combines every candidate whose tests all pass** into
+a single patch. `test` ops that fail cause Hermeum to skip that candidate —
+they do **not** reject the admission (unlike a flat array of `test` ops, where
+a failing `test` would reject the whole request).
 
-To express conditional mutation, provide multiple candidates as an array of
-arrays:
+Every candidate contributes independently, so candidates express composable
+fragments rather than mutually exclusive branches: an unconditional base
+candidate plus one `test`-gated candidate per optional feature. Candidates are
+evaluated in declaration order, each against the object **as mutated by the
+previously matched candidates** — a later candidate can assert values an
+earlier candidate's ops just wrote.
 
 ```yaml
 agentTypes:
@@ -92,77 +98,54 @@ agentTypes:
       Applies proportional resources to the searxng and camofox sidecars
       when they are enabled.
     mutatingWebhookJsonPatch:
-      # Both sidecars enabled — patch all three.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests: { cpu: "2", memory: 1Gi }
-            limits:   { cpu: "4", memory: 2Gi }
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests: { cpu: 500m, memory: 512Mi }
-            limits:   { cpu: "1", memory: 1Gi }
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests: { cpu: "1", memory: 1Gi }
-            limits:   { cpu: "2", memory: 2Gi }
-      # Searxng only.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests: { cpu: "2", memory: 1Gi }
-            limits:   { cpu: "4", memory: 2Gi }
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests: { cpu: 500m, memory: 512Mi }
-            limits:   { cpu: "1", memory: 1Gi }
-      # Camofox only.
-      - - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests: { cpu: "2", memory: 1Gi }
-            limits:   { cpu: "4", memory: 2Gi }
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests: { cpu: "1", memory: 1Gi }
-            limits:   { cpu: "2", memory: 2Gi }
-      # Neither sidecar enabled (unconditional fallback).
+      # Base resources (unconditional).
       - - op: add
           path: /spec/hermes/resources
           value:
             requests: { cpu: "2", memory: 1Gi }
             limits:   { cpu: "4", memory: 2Gi }
+      - - op: add
+          path: /spec/hermes/storage
+          value:
+            persistence: { enabled: true, size: 10Gi }
+      # Searxng enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits:   { cpu: "1", memory: 1Gi }
+      # Camofox enabled.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests: { cpu: "1", memory: 1Gi }
+            limits:   { cpu: "2", memory: 2Gi }
 ```
 
-In this example, Hermeum returns the first candidate whose `test` ops match
-the incoming object. The last candidate has no `test` ops, so it always
-matches — acting as a default/fallback that applies the hermes container
-resources even when neither sidecar is enabled. JSON-Patch `add` requires the
-parent path to exist, so the searxng/camofox resource patches are gated on
-`/spec/searxng/enabled` and `/spec/camofox/enabled` (the operator only
-emits those objects when the agent opts into the sidecar). If no candidate
-matches (and there is no unconditional fallback), the webhook returns no
-patch (no-op).
+In this example, Hermeum always patches the hermes container resources and
+storage, and additionally patches each sidecar's resources when its
+`enabled` flag is set. JSON-Patch `add` requires the parent path to exist, so
+the sidecar resource patches are gated on `/spec/searxng/enabled` and
+`/spec/camofox/enabled` (the operator only emits those objects when the agent
+opts into the sidecar). If no candidate matches, the webhook returns no patch
+(no-op).
 
-The selected candidate — **including its `test` ops** — is returned to
+The combined patch — **including its `test` ops** — is returned to
 Kubernetes, which re-applies the full patch atomically. This gives defense in
-depth: the `test` ops are re-asserted by the kube-apiserver at apply time.
+depth: the `test` ops are re-asserted by the kube-apiserver at apply time, in
+the same order they were verified here.
+
+:::note
+A candidate whose `test` ops pass but whose mutation ops cannot apply to the
+object (e.g. an `add` whose parent path does not exist) is **skipped** —
+emitting it would reject the whole admission patch at apply time.
+:::
 
 
 ## Certificates

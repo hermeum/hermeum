@@ -208,103 +208,7 @@ agentTypes:
       Low resource footprint — for lightweight, single-purpose agents with
       modest traffic. Persists the agent workspace on a 5Gi volume.
     mutatingWebhookJsonPatch: &smallPatch
-      # Both sidecars enabled.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 500Mi
-            limits:
-              cpu: "2"
-              memory: 1Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 5Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: 250m
-              memory: 256Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: 500m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-      # Searxng only.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 500Mi
-            limits:
-              cpu: "2"
-              memory: 1Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 5Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: 250m
-              memory: 256Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-      # Camofox only.
-      - - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 500Mi
-            limits:
-              cpu: "2"
-              memory: 1Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 5Gi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: 500m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-      # Neither sidecar enabled (unconditional fallback).
+      # Base resources (unconditional).
       - - op: add
           path: /spec/hermes/resources
           value:
@@ -320,109 +224,39 @@ agentTypes:
             persistence:
               enabled: true
               size: 5Gi
+      # Searxng enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      # Camofox enabled.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
   medium:
     description: >-
       Standard performance — handles everyday workloads reliably, including
       browsing and web search. A good fit for most agents. Persists the agent
       workspace on a 10Gi volume.
     mutatingWebhookJsonPatch:
-      # Both sidecars enabled.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "2"
-              memory: 1Gi
-            limits:
-              cpu: "4"
-              memory: 2Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 10Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: 500m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 1Gi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-      # Searxng only.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "2"
-              memory: 1Gi
-            limits:
-              cpu: "4"
-              memory: 2Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 10Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: 500m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-      # Camofox only.
-      - - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "2"
-              memory: 1Gi
-            limits:
-              cpu: "4"
-              memory: 2Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 10Gi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 1Gi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-      # Neither sidecar enabled (unconditional fallback).
+      # Base resources (unconditional).
       - - op: add
           path: /spec/hermes/resources
           value:
@@ -438,6 +272,32 @@ agentTypes:
             persistence:
               enabled: true
               size: 10Gi
+      # Searxng enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      # Camofox enabled.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
   default:
     description: >-
       Fallback for agents without an explicit type — same resources as
@@ -450,103 +310,7 @@ agentTypes:
       conversations, heavy document analysis, or many concurrent users.
       Persists the agent workspace on a 20Gi volume.
     mutatingWebhookJsonPatch:
-      # Both sidecars enabled.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "4"
-              memory: 2Gi
-            limits:
-              cpu: "8"
-              memory: 4Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 20Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 1Gi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: "2"
-              memory: 2Gi
-            limits:
-              cpu: "4"
-              memory: 4Gi
-      # Searxng only.
-      - - op: test
-          path: /spec/searxng/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "4"
-              memory: 2Gi
-            limits:
-              cpu: "8"
-              memory: 4Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 20Gi
-        - op: add
-          path: /spec/searxng/resources
-          value:
-            requests:
-              cpu: "1"
-              memory: 1Gi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-      # Camofox only.
-      - - op: test
-          path: /spec/camofox/enabled
-          value: true
-        - op: add
-          path: /spec/hermes/resources
-          value:
-            requests:
-              cpu: "4"
-              memory: 2Gi
-            limits:
-              cpu: "8"
-              memory: 4Gi
-        - op: add
-          path: /spec/hermes/storage
-          value:
-            persistence:
-              enabled: true
-              size: 20Gi
-        - op: add
-          path: /spec/camofox/resources
-          value:
-            requests:
-              cpu: "2"
-              memory: 2Gi
-            limits:
-              cpu: "4"
-              memory: 4Gi
-      # Neither sidecar enabled (unconditional fallback).
+      # Base resources (unconditional).
       - - op: add
           path: /spec/hermes/resources
           value:
@@ -562,3 +326,29 @@ agentTypes:
             persistence:
               enabled: true
               size: 20Gi
+      # Searxng enabled.
+      - - op: test
+          path: /spec/searxng/enabled
+          value: true
+        - op: add
+          path: /spec/searxng/resources
+          value:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      # Camofox enabled.
+      - - op: test
+          path: /spec/camofox/enabled
+          value: true
+        - op: add
+          path: /spec/camofox/resources
+          value:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
