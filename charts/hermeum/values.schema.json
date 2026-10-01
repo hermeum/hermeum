@@ -81,6 +81,8 @@
       ]
     },
     "agentConfig": { "type": "object" },
+    "env": { "type": "array" },
+    "envFrom": { "type": "array" },
     "webhook": {
       "type": "object",
       "properties": {
