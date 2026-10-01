@@ -110,9 +110,11 @@ When `webhook.enabled` (default `true`), the chart ships:
 The webhook returns a JSON-Patch drawn from
 `agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch` — so it is a
 no-op until the operator populates `agentConfig` with at least one
-`agentTypes` entry whose `mutatingWebhookJsonPatch` is non-empty. Agents
-without a `type` fall back to the reserved `agentTypes.default` entry; the
-bundled `config.default.yaml` defines one (mirroring the `small` patch).
+`agentTypes` entry whose `mutatingWebhookJsonPatch` is non-empty. Multiple
+candidates (array of arrays) are combined: every candidate whose `test` ops
+pass contributes to the returned patch. Agents without a `type` fall back to
+the reserved `agentTypes.default` entry; the bundled `config.default.yaml`
+defines one (mirroring the `small` patch).
 
 ### Operator-supplied cert
 

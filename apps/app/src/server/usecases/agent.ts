@@ -135,12 +135,15 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     const agentType = agentTypes?.[agent.type ?? DEFAULT_AGENT_TYPE_KEY];
     if (!agentType) return null;
     // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
-    // transform. When an incoming object is provided, select the first
-    // candidate whose `test` ops pass (first-match-wins); without one, return
-    // the first (only) candidate as-is for backwards compatibility.
+    // transform. When an incoming object is provided, every candidate whose
+    // `test` ops pass contributes its ops to the combined patch. Without one,
+    // return all candidates concatenated — a backwards-compatibility path only
+    // reachable from tests/scripts; webhookRouter always passes the object.
     const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
-    if (incomingObject === undefined) return candidates[0] ?? null;
-    const patch = this.selectPatch(candidates, incomingObject);
+    const patch =
+      incomingObject === undefined
+        ? candidates.flat()
+        : this.combinePatches(candidates, incomingObject);
     if (patch.length > 0) {
       this.logger.info("mutating webhook: patching agent", {
         agentId: agent.id,
@@ -151,31 +154,48 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
   }
 
   /**
-   * Evaluate the `test` ops in a candidate patch against a document.
-   * A candidate with no `test` ops always matches (unconditional).
+   * Combine every matching candidate into a single patch, in declaration
+   * order. A candidate with no `test` ops always matches (unconditional).
    *
-   * Uses `fast-json-patch`'s `applyPatch` with only the `test` ops. `test`
-   * ops do not mutate the document, so applying them to the original is safe.
-   * If any `test` fails, `applyPatch` throws `TEST_OPERATION_FAILED`, which we
-   * catch and treat as a non-match.
+   * Candidates are evaluated sequentially: each candidate's ops are applied
+   * to a sandbox copy of the object *as mutated by the previously accepted
+   * candidates*. A candidate is accepted (appended to the combined patch)
+   * only if its whole sequence applies cleanly, including its `test` ops;
+   * the sandbox is committed to the working copy only then. This matters for
+   * atomicity: `applyPatch` mutates per-op and throws mid-sequence, so
+   * applying a partially-failed candidate to the working copy would leak
+   * "ghost" values that later candidates' `test` ops could assert — the
+   * emitted patch would then fail at kube-apiserver apply time and reject
+   * the whole admission.
+   *
+   * Returns the combined patch, or an empty array when no candidate matches
+   * (no-op / admit unchanged).
    */
-  private candidateMatches(candidate: JsonPatchOp[], doc: unknown): boolean {
-    const testOps = candidate.filter((op) => op.op === "test");
-    if (testOps.length === 0) return true;
-    try {
-      applyPatch(doc, testOps, true);
-      return true;
-    } catch {
-      return false;
+  private combinePatches(candidates: JsonPatchOp[][], doc: unknown): JsonPatchOp[] {
+    let working = structuredClone(doc);
+    const combined: JsonPatchOp[] = [];
+    for (const candidate of candidates) {
+      const sandbox = structuredClone(working);
+      const testOps = candidate.filter((op) => op.op === "test");
+      if (testOps.length > 0) {
+        try {
+          applyPatch(sandbox, testOps as unknown as fastJsonPatch.Operation[], true);
+        } catch {
+          continue;
+        }
+      }
+      try {
+        applyPatch(sandbox, candidate as unknown as fastJsonPatch.Operation[], true);
+      } catch (error) {
+        this.logger.warn("mutating webhook: candidate patch failed to apply, skipping", {
+          ops: candidate.length,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        continue;
+      }
+      working = sandbox;
+      combined.push(...candidate);
     }
-  }
-
-  /**
-   * Select the first candidate whose `test` ops all pass against the document
-   * (first-match-wins). Returns the matched candidate, or an empty array when
-   * no candidate matches (no-op / admit unchanged).
-   */
-  private selectPatch(candidates: JsonPatchOp[][], doc: unknown): JsonPatchOp[] {
-    return candidates.find((c) => this.candidateMatches(c, doc)) ?? [];
+    return combined;
   }
 }
