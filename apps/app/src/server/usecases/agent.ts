@@ -136,8 +136,9 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     if (!agentType) return null;
     // mutatingWebhookJsonPatch is normalized to JsonPatchOp[][] by the schema
     // transform. When an incoming object is provided, every candidate whose
-    // `test` ops pass contributes its ops to the combined patch; without one,
-    // return all candidates concatenated (backwards compatibility).
+    // `test` ops pass contributes its ops to the combined patch. Without one,
+    // return all candidates concatenated — a backwards-compatibility path only
+    // reachable from tests/scripts; webhookRouter always passes the object.
     const candidates = agentType.mutatingWebhookJsonPatch as unknown as JsonPatchOp[][];
     const patch =
       incomingObject === undefined
@@ -156,32 +157,35 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
    * Combine every matching candidate into a single patch, in declaration
    * order. A candidate with no `test` ops always matches (unconditional).
    *
-   * Candidates are evaluated sequentially: each candidate's `test` ops are
-   * asserted against a working copy of the object *as mutated by the
-   * previously matched candidates*. On a match, the candidate's ops (including
-   * its `test` ops) are appended to the combined patch and applied to the
-   * working copy, so the kube-apiserver re-applies the exact sequence that was
-   * verified here. A candidate whose tests pass but whose mutation ops fail to
-   * apply (e.g. `add` to a missing parent) is skipped — emitting it would
-   * reject the whole admission patch at apply time.
+   * Candidates are evaluated sequentially: each candidate's ops are applied
+   * to a sandbox copy of the object *as mutated by the previously accepted
+   * candidates*. A candidate is accepted (appended to the combined patch)
+   * only if its whole sequence applies cleanly, including its `test` ops;
+   * the sandbox is committed to the working copy only then. This matters for
+   * atomicity: `applyPatch` mutates per-op and throws mid-sequence, so
+   * applying a partially-failed candidate to the working copy would leak
+   * "ghost" values that later candidates' `test` ops could assert — the
+   * emitted patch would then fail at kube-apiserver apply time and reject
+   * the whole admission.
    *
    * Returns the combined patch, or an empty array when no candidate matches
    * (no-op / admit unchanged).
    */
   private combinePatches(candidates: JsonPatchOp[][], doc: unknown): JsonPatchOp[] {
-    const working = structuredClone(doc);
+    let working = structuredClone(doc);
     const combined: JsonPatchOp[] = [];
     for (const candidate of candidates) {
+      const sandbox = structuredClone(working);
       const testOps = candidate.filter((op) => op.op === "test");
       if (testOps.length > 0) {
         try {
-          applyPatch(working, testOps as unknown as fastJsonPatch.Operation[], true);
+          applyPatch(sandbox, testOps as unknown as fastJsonPatch.Operation[], true);
         } catch {
           continue;
         }
       }
       try {
-        applyPatch(working, candidate as unknown as fastJsonPatch.Operation[], true);
+        applyPatch(sandbox, candidate as unknown as fastJsonPatch.Operation[], true);
       } catch (error) {
         this.logger.warn("mutating webhook: candidate patch failed to apply, skipping", {
           ops: candidate.length,
@@ -189,6 +193,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
         });
         continue;
       }
+      working = sandbox;
       combined.push(...candidate);
     }
     return combined;

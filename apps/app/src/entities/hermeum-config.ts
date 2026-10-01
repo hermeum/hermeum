@@ -16,10 +16,11 @@ export type JsonPatchOp = z.infer<typeof JsonPatchOpSchema>;
  * A JSON Patch is an array of ops. The `test` op acts as a precondition: every
  * candidate whose `test` ops pass contributes its ops to the combined patch
  * returned to the apiserver (candidates are evaluated in declaration order,
- * each against the object as mutated by the previously matched candidates).
- * A candidate with no `test` ops is unconditional. A single flat array is the
- * legacy shape (one unconditional candidate); an array of arrays declares
- * multiple independent candidates.
+ * each against the object as mutated by the previously *accepted* candidates).
+ * A candidate with no `test` ops is unconditional. A candidate whose ops
+ * cannot apply cleanly is skipped entirely — its partial effects are
+ * discarded. A single flat array is the legacy shape (one unconditional
+ * candidate); an array of arrays declares multiple independent candidates.
  */
 const JsonPatchArraySchema = z.array(JsonPatchOpSchema);
 

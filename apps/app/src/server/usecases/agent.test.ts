@@ -349,6 +349,35 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     expect(result).toEqual(candidates[1]);
   });
 
+  it("does not leak partially-applied candidate ops into later candidates' evaluation", async () => {
+    // The second candidate applies `add /a=1` before failing at
+    // `add /nosuch/child`. Its committed ghost value must not satisfy the
+    // third candidate's `test /a==1` — otherwise the emitted patch would
+    // re-assert a test the apiserver cannot satisfy (the second candidate
+    // was skipped), rejecting the entire admission patch.
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/a", value: 1 },
+        { op: "add", path: "/b", value: 2 },
+        { op: "add", path: "/nosuch/child", value: 3 },
+      ],
+      [
+        { op: "test", path: "/b", value: 2 },
+        { op: "add", path: "/leaked", value: 99 },
+      ],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: "t" }),
+      { spec: {} },
+    );
+    expect(result).toEqual(candidates[0]);
+  });
+
   it("does not mutate the incoming object while combining", async () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "add", path: "/spec/model", value: "claude" }],
