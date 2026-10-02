@@ -1,8 +1,17 @@
 version: 2
 updates:
   # Root workspace (pnpm)
+  # typescript-eslint does not support TS 7.x yet (the native compiler rewrite);
+  # eslint 10 also requires compatible tooling. Track these upgrades manually
+  # until typescript-eslint ships TS 7 support
+  # (https://github.com/typescript-eslint/typescript-eslint/issues/10940).
   - package-ecosystem: npm
     directory: /
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
@@ -19,6 +28,11 @@ updates:
   # apps/app
   - package-ecosystem: npm
     directory: /apps/app
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
@@ -35,6 +49,11 @@ updates:
   # apps/docs
   - package-ecosystem: npm
     directory: /apps/docs
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
@@ -51,6 +70,11 @@ updates:
   # packages/components
   - package-ecosystem: npm
     directory: /packages/components
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
@@ -67,6 +91,11 @@ updates:
   # packages/eslint-config
   - package-ecosystem: npm
     directory: /packages/eslint-config
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
@@ -83,6 +112,11 @@ updates:
   # packages/typescript-config
   - package-ecosystem: npm
     directory: /packages/typescript-config
+    ignore:
+      - dependency-name: typescript
+        versions: ["7.x"]
+      - dependency-name: eslint
+        versions: ["10.x"]
     schedule:
       interval: weekly
     commit-message:
