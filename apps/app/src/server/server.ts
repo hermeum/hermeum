@@ -48,7 +48,7 @@ export const createServer = async (
 ): Promise<CreateServerResult> => {
   const app = express();
 
-  app.all("/auth/*", toNodeHandler(auth));
+  app.all("/auth/*splat", toNodeHandler(auth));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
   app.use("/chat", aiSdkRouter);
@@ -73,7 +73,7 @@ export const createServer = async (
 
     app.use(viteServer.middlewares);
 
-    app.get("*", async (req, res, next) => {
+    app.get("/{*splat}", async (req, res, next) => {
       try {
         let html = fs.readFileSync(path.resolve(root, "index.html"), "utf-8");
         html = await viteServer.transformIndexHtml(req.url, html);
@@ -85,7 +85,7 @@ export const createServer = async (
   } else {
     app.use(express.static(path.resolve(__dirname, "../client")));
 
-    app.get("*", (_req, res) => {
+    app.get("/{*splat}", (_req, res) => {
       res.sendFile(path.resolve(__dirname, "../client", "index.html"));
     });
   }
