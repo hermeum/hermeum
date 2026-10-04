@@ -45,12 +45,21 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
         searchSkills: tool({
           description:
             "Search the Hermes Skills Index for an installable agent skill " +
-            "by name, keyword, or capability. Call this proactively to " +
+            "by name, keyword, or capability. The search matches keywords " +
+            "literally — it does not understand phrases — so pass a SINGLE " +
+            "keyword per call (e.g. \"github\", \"review\"), never a phrase " +
+            "or word list; when the goal spans several aspects, run one " +
+            "call per keyword. Call this proactively to " +
             "suggest skills the user's goal would benefit from, even when " +
             "they didn't ask for one. Pass an empty query to list " +
             "featured skills.",
           inputSchema: z.object({
-            query: z.string().describe("Search query (skill name, capability, or keyword)."),
+            query: z
+              .string()
+              .describe(
+                "Single search keyword (skill name, tag, or capability word)." +
+                  " Not a phrase — use separate calls for further keywords."
+              ),
             limit: z
               .number()
               .int()
