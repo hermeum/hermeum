@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
@@ -36,7 +36,7 @@ function EditAgentPage() {
   const navigate = useNavigate();
   const [editorValue, setEditorValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [seeded, setSeeded] = useState(false);
+  const [seededAgent, setSeededAgent] = useState<unknown>(undefined);
 
   const { data: agent, isPending, error } = useQuery(
     trpc.agent.get.queryOptions({ id })
@@ -44,13 +44,12 @@ function EditAgentPage() {
 
   // Seed the editor with the existing agent's config once it loads. The draft
   // is what the chat LLM reads/writes, so editing starts from the persisted
-  // definition rather than a blank slate.
-  useEffect(() => {
-    if (agent && !seeded) {
-      setEditorValue(agentToYaml(agent));
-      setSeeded(true);
-    }
-  }, [agent, seeded]);
+  // definition rather than a blank slate. Adjusting state during render on
+  // agent identity change avoids an effect-triggered cascading render.
+  if (agent && agent !== seededAgent) {
+    setSeededAgent(agent);
+    setEditorValue(agentToYaml(agent));
+  }
 
   const { mutate: updateAgent, isPending: isUpdating } = useMutation(
     trpc.agent.update.mutationOptions({

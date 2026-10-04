@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import type { UIDataTypes, UIMessage } from "ai";
@@ -319,9 +319,12 @@ export function AgentConfigChat({
   const [input, setInput] = useState("");
 
   // Latest-ref so the onToolCall closure (captured once by the Chat
-  // instance) never applies updates through a stale callback.
+  // instance) never applies updates through a stale callback. The ref sync
+  // runs in an effect so callbacksRef is stable to read inside the closure.
   const callbacksRef = useRef({ getConfig, onConfigUpdate });
-  callbacksRef.current = { getConfig, onConfigUpdate };
+  useEffect(() => {
+    callbacksRef.current = { getConfig, onConfigUpdate };
+  });
 
   // Config-writing tool call counters (replaceAgentConfig or patchAgentConfig)
   // for the current auto-resubmit loop, reset when the user sends a new
