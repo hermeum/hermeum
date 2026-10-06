@@ -2,9 +2,11 @@ import { z } from "zod";
 
 // Agent-session telemetry vocabulary — the events hermes-agent emits to the
 // Hermeum control plane (plugin protocol ingestion) and the trajectory UI
-// renders. Modeled on the upstream langfuse observability plugin's post-call
-// hook surface:
-// https://github.com/NousResearch/hermes-agent/blob/main/plugins/observability/langfuse/__init__.py
+// renders. Mirrors the upstream langfuse observability plugin's post-call
+// hook surface; kept in lockstep with the pinned hermes-agent submodule —
+// reference: vendor/hermes-agent/plugins/observability/langfuse/README.md
+// (plus __init__.py for the hook payloads). The submodule pointer implies
+// the version; do not mention it here.
 //
 // Post-only by design: every event is a completed record (input, output,
 // duration, usage arrive together). Pre-call events are deliberately omitted —
