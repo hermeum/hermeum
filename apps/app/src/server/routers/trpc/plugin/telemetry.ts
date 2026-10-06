@@ -1,13 +1,9 @@
-import { initTRPC } from "@trpc/server";
 import { z } from "zod";
+import { t } from "./shared.js";
 
 // SPIKE (issue #147 step 1): minimal, throwaway schema for validating the
 // tRPC -> OpenAPI -> Python client pipeline. The real agent-session event
 // vocabulary, persistence, and token auth are deliberately deferred.
-//
-// Standalone initTRPC instance: no SuperJSON transformer (plain JSON wire
-// format so non-TS clients can serialize/deserialize) and no Better Auth
-// context (the production telemetry API authenticates per-agent tokens).
 
 const AgentSessionEventSchema = z.object({
   eventId: z.string().uuid().describe("Client-generated unique event id."),
@@ -37,8 +33,6 @@ class InMemoryAgentSessionEventStore {
 }
 
 export const agentSessionEventStore = new InMemoryAgentSessionEventStore();
-
-const t = initTRPC.create();
 
 export const agentSessionRouter = t.router({
   health: t.procedure.output(z.object({ ok: z.boolean() })).query(() => ({ ok: true })),

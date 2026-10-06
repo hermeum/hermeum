@@ -2,20 +2,20 @@
   "openapi": "3.1.1",
   "jsonSchemaDialect": "https://spec.openapis.org/oas/3.1/dialect/base",
   "info": {
-    "title": "Hermeum Agent Session Telemetry",
+    "title": "Hermeum Agent Plugin API",
     "version": "0.1.0"
   },
   "servers": [
     {
-      "url": "http://localhost:3000/telemetry/trpc"
+      "url": "http://localhost:3000/plugin/trpc"
     }
   ],
   "paths": {
-    "/health": {
+    "/agentSession.health": {
       "get": {
-        "operationId": "health",
+        "operationId": "agentSession.health",
         "tags": [
-          "health"
+          "agentSession"
         ],
         "responses": {
           "200": {
@@ -59,11 +59,11 @@
         }
       }
     },
-    "/agentSessionEvents": {
+    "/agentSession.agentSessionEvents": {
       "post": {
-        "operationId": "agentSessionEvents",
+        "operationId": "agentSession.agentSessionEvents",
         "tags": [
-          "agentSessionEvents"
+          "agentSession"
         ],
         "responses": {
           "200": {
