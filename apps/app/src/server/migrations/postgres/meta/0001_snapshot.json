@@ -1,5 +1,5 @@
 {
-  "id": "d8c1853d-a6a5-4f7f-be61-d53b03f31547",
+  "id": "6851c7c9-6f32-46b7-97e0-e6c2c6f2ad3e",
   "prevId": "ecb8c80b-1137-4dd2-9f70-1a575e729c44",
   "version": "7",
   "dialect": "postgresql",
@@ -359,8 +359,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_session_event": {
-      "name": "agent_session_event",
+    "public.agent_session_events": {
+      "name": "agent_session_events",
       "schema": "",
       "columns": {
         "id": {
@@ -414,8 +414,8 @@
         }
       },
       "indexes": {
-        "agent_session_event_agent_session_idx": {
-          "name": "agent_session_event_agent_session_idx",
+        "agent_session_events_agent_session_idx": {
+          "name": "agent_session_events_agent_session_idx",
           "columns": [
             {
               "expression": "agent_id",

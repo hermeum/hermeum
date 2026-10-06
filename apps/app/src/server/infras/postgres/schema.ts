@@ -6,8 +6,8 @@ import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 // fields are promoted to columns. `agentId` is filled later when per-agent
 // token authentication lands — agents live in the Kubernetes Runtime, so
 // there is no foreign key.
-export const agentSessionEvent = pgTable(
-  "agent_session_event",
+export const agentSessionEvents = pgTable(
+  "agent_session_events",
   {
     id: text("id").primaryKey(),
     agentId: text("agent_id"),
@@ -19,7 +19,7 @@ export const agentSessionEvent = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("agent_session_event_agent_session_idx").on(
+    index("agent_session_events_agent_session_idx").on(
       table.agentId,
       table.sessionId,
       table.timestamp

@@ -9,7 +9,7 @@ import {
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
-import { agentSessionEvent } from "./schema.js";
+import { agentSessionEvents } from "./schema.js";
 import {
   AppendAgentSessionEventsInput,
   Database,
@@ -44,22 +44,22 @@ export class PostgresDatabase implements Database {
       payload: event,
     }));
     if (rows.length === 0) return 0;
-    await this.db.insert(agentSessionEvent).values(rows);
+    await this.db.insert(agentSessionEvents).values(rows);
     return rows.length;
   }
 
   async listAgentSessions(agentId: string): Promise<AgentSessionSummary[]> {
     const rows = await this.db
       .select({
-        sessionId: agentSessionEvent.sessionId,
-        firstEventAt: sql<Date>`min(${agentSessionEvent.timestamp})`,
-        lastEventAt: sql<Date>`max(${agentSessionEvent.timestamp})`,
+        sessionId: agentSessionEvents.sessionId,
+        firstEventAt: sql<Date>`min(${agentSessionEvents.timestamp})`,
+        lastEventAt: sql<Date>`max(${agentSessionEvents.timestamp})`,
         eventCount: sql<number>`count(*)`,
       })
-      .from(agentSessionEvent)
-      .where(eq(agentSessionEvent.agentId, agentId))
-      .groupBy(agentSessionEvent.sessionId)
-      .orderBy(desc(sql`max(${agentSessionEvent.timestamp})`));
+      .from(agentSessionEvents)
+      .where(eq(agentSessionEvents.agentId, agentId))
+      .groupBy(agentSessionEvents.sessionId)
+      .orderBy(desc(sql`max(${agentSessionEvents.timestamp})`));
     return rows.map((row) => ({
       sessionId: row.sessionId,
       firstEventAt: row.firstEventAt.toISOString(),
@@ -70,15 +70,15 @@ export class PostgresDatabase implements Database {
 
   async getAgentSessionEvents(agentId: string, sessionId: string): Promise<AgentSessionEvent[]> {
     const rows = await this.db
-      .select({ payload: agentSessionEvent.payload })
-      .from(agentSessionEvent)
+      .select({ payload: agentSessionEvents.payload })
+      .from(agentSessionEvents)
       .where(
         and(
-          eq(agentSessionEvent.agentId, agentId),
-          eq(agentSessionEvent.sessionId, sessionId)
+          eq(agentSessionEvents.agentId, agentId),
+          eq(agentSessionEvents.sessionId, sessionId)
         )
       )
-      .orderBy(asc(agentSessionEvent.timestamp));
+      .orderBy(asc(agentSessionEvents.timestamp));
     // Stored payloads are data at rest — one persisted under an older schema
     // must not 500 the trajectory UI read, so invalid rows are skipped.
     const events: AgentSessionEvent[] = [];
