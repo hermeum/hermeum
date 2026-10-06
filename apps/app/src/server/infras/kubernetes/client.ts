@@ -310,9 +310,14 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.skills !== undefined) {
     hermes.skills = agent.skills.map((identifier) => ({ identifier }));
   }
-  if (agent.plugins !== undefined) {
-    hermes.plugins = agent.plugins.map((identifier) => ({ identifier }));
-  }
+  // Every agent installs the hermeum telemetry plugin (deduped if the user
+  // already listed it) and posts to the app's plugin-protocol endpoint.
+  hermes.plugins = [
+    ...(agent.plugins ?? []).map((identifier) => ({ identifier })),
+    ...(agent.plugins?.includes(config.hermesPluginIdentifier)
+      ? []
+      : [{ identifier: config.hermesPluginIdentifier, enable: true as const }]),
+  ];
   if (agent.packages !== undefined) {
     hermes.packages = {
       ...(agent.packages.pip !== undefined && { pip: { install: agent.packages.pip } }),
@@ -323,7 +328,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     hermes.crons = agent.crons;
   }
   hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
-  hermes.env = [{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }];
+  hermes.env = [
+    { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
+    { name: "HERMEUM_TELEMETRY_URL", value: config.telemetryEndpointUrl },
+  ];
 
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
@@ -400,7 +408,12 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     ),
     soul: raw.spec.hermes?.workspace?.files?.["SOUL.md"],
     skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
-    plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
+    // The auto-installed hermeum plugin is a platform detail, not user config
+    // — filter it out so the UI plugin list stays user-owned (agentToHermesAgent
+    // re-injects it when building the CR).
+    plugins: raw.spec.hermes?.plugins
+      ?.map((p) => p.identifier)
+      .filter((identifier) => identifier !== config.hermesPluginIdentifier),
     packages: raw.spec.hermes?.packages && {
       ...(raw.spec.hermes.packages.pip?.install !== undefined && {
         pip: raw.spec.hermes.packages.pip.install,

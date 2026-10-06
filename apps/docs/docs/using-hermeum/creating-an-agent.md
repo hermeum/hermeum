@@ -125,6 +125,13 @@ agent, in the `<owner>/<repo>` format. See the
 [built-in plugins guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/built-in-plugins)
 for what's available out of the box.
 
+:::note
+Hermeum also auto-installs its own telemetry plugin (`hermeum/hermeum/plugin/hermeum`)
+on every agent, reporting agent-session trajectories back to the Hermeum app. It is a
+platform detail — it does not appear in your plugin list and doesn't count toward
+the 20-plugin limit.
+:::
+
 ## Packages
 
 Packages are Python (`pip`) and JavaScript (`npm`) libraries you pre-install so the
