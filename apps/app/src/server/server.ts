@@ -9,6 +9,7 @@ import express from "express";
 import { toNodeHandler } from "better-auth/node";
 
 import { config } from "./libs/config";
+import { telemetry } from "./infras/posthog";
 import { trpcMiddleware } from "@/server/routers/trpc/resources/index.js";
 import { agentSessionRouter } from "@/server/routers/trpc/telemetry.js";
 import { webhookRouter } from "./routers/webhook";
@@ -49,7 +50,7 @@ export const createServer = async (
 ): Promise<CreateServerResult> => {
   const app = express();
 
-  app.all("/auth/*", toNodeHandler(auth));
+  app.all("/auth/*splat", toNodeHandler(auth));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
   app.use("/telemetry/trpc", createExpressMiddleware({ router: agentSessionRouter }));
@@ -75,7 +76,7 @@ export const createServer = async (
 
     app.use(viteServer.middlewares);
 
-    app.get("*", async (req, res, next) => {
+    app.get("/{*splat}", async (req, res, next) => {
       try {
         let html = fs.readFileSync(path.resolve(root, "index.html"), "utf-8");
         html = await viteServer.transformIndexHtml(req.url, html);
@@ -87,7 +88,7 @@ export const createServer = async (
   } else {
     app.use(express.static(path.resolve(__dirname, "../client")));
 
-    app.get("*", (_req, res) => {
+    app.get("/{*splat}", (_req, res) => {
       res.sendFile(path.resolve(__dirname, "../client", "index.html"));
     });
   }
@@ -122,9 +123,25 @@ export const createServer = async (
     webServer,
     webhookServer,
   };
+}
+
+const shutdownTelemetry = async () => {
+  try {
+    await telemetry.shutdown();
+  } catch (e) {
+    console.warn("Failed to flush telemetry on shutdown:", e);
+  }
 };
 
 if (!isTest) {
+  telemetry.heartbeat();
+
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+      void shutdownTelemetry().finally(() => process.exit(0));
+    });
+  }
+
   createServer()
     .then(({ webServer, webhookServer }) => {
       webServer.listen(port, () => {

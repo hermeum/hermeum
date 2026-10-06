@@ -32,12 +32,17 @@ The API server exposes the agent as an **OpenAI-compatible HTTP endpoint**. Any 
 that speaks the OpenAI format can connect and use the agent as a backend with its full
 toolset.
 
+**Required config:**
+
+| Field | Description |
+|-------|-------------|
+| `gateway.api_server.enabled` | Set to `true` to enable (or set `API_SERVER_ENABLED=true`). |
+
 **Required env vars:**
 
 | Variable | Description |
 |----------|-------------|
-| `API_SERVER_ENABLED` | Set to `true` to enable. |
-| `API_SERVER_KEY` | Bearer token for auth. |
+| `API_SERVER_KEY` | Bearer token for auth. Sensitive. |
 
 For the full configuration reference, see the
 [API server guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server).
@@ -48,19 +53,15 @@ The webhook platform runs an HTTP server that accepts **HMAC-signed webhooks**,
 transforms payloads into agent prompts, and routes responses to a delivery target
 (Slack, Discord, GitHub comments, and more).
 
-**Required config:**
-
-| Field | Description |
-|-------|-------------|
-| `platforms.webhook.enabled` | Set to `true` to enable. |
-
 **Required env vars:**
 
 | Variable | Description |
 |----------|-------------|
-| `WEBHOOK_SECRET` | HMAC secret used to validate incoming webhooks. |
+| `WEBHOOK_ENABLED` | Set to `true` to enable the webhook platform. |
+| `WEBHOOK_SECRET` | Global HMAC secret for signature validation. Sensitive. |
 
-For the full route and delivery-target reference, see the
+Routes and other behavioral settings live in `platforms.webhook` in the agent's
+config. For the full route and delivery-target reference, see the
 [webhook configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks).
 
 ## Slack
@@ -97,11 +98,17 @@ The agent acts as a **Microsoft Teams bot**, receiving messages via an HTTPS web
 to register the bot in Azure first; follow the official
 [Teams setup guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams).
 
+**Required config:**
+
+| Field | Description |
+|-------|-------------|
+| `platforms.teams.enabled` | Set to `true` to enable. |
+| `platforms.teams.extra.client_id` | Azure AD App (client) ID. |
+| `platforms.teams.extra.tenant_id` | Azure AD tenant ID. |
+
 **Required env vars:**
 
 | Variable | Description |
 |----------|-------------|
-| `TEAMS_CLIENT_ID` | Azure AD App (client) ID. |
 | `TEAMS_CLIENT_SECRET` | Azure AD client secret. Sensitive. |
-| `TEAMS_TENANT_ID` | Azure AD tenant ID. |
 

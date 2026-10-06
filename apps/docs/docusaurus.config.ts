@@ -2,7 +2,7 @@ import type { Config } from "@docusaurus/types";
 
 const config: Config = {
   title: "Hermeum",
-  tagline: "Documentation for the Hermeum project",
+  tagline: "A platform creating fully autonomous Hermes agents for your team",
   favicon: "img/favicon.png",
 
   url: "https://docs.hermeum.app",
@@ -54,6 +54,14 @@ const config: Config = {
           position: "right",
           className: "header-github-link",
           "aria-label": "GitHub repository",
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        {
+          href: "https://discord.gg/ZW44yyCAHP",
+          position: "right",
+          className: "header-discord-link",
+          "aria-label": "Discord community",
           target: "_blank",
           rel: "noopener noreferrer",
         },

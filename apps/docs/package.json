@@ -1,9 +1,9 @@
 {
   "name": "@hermeum/docs",
-  "version": "0.0.1",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
-    "dev": "docusaurus start --port 3001",
+    "dev": "docusaurus start --port 3001 --no-open",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
     "typecheck": "tsc --noEmit",
@@ -17,12 +17,12 @@
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@docusaurus/types": "^3.10.2",
     "@hermeum/typescript-config": "workspace:*",
-    "typescript": "^5.8.2"
+    "typescript": "^6.0.3"
   }
 }

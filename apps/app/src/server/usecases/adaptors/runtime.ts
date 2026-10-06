@@ -18,8 +18,6 @@ export interface Runtime {
   patchHermesAgent: (input: PatchAgentInput) => Promise<Agent>;
   archiveHermesAgent: (id: string) => Promise<Agent>;
 
-  getGatewayToken: (agentId: string) => Promise<string | null>;
-
   listSharedEnvSets: (params?: ListSharedEnvSetsFilter) => Promise<SharedEnvSet[]>;
   getSharedEnvSet: (id: string) => Promise<SharedEnvSet | null>;
   createSharedEnvSet: (input: CreateSharedEnvSetInput) => Promise<SharedEnvSet>;

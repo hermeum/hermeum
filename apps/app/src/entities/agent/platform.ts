@@ -5,9 +5,8 @@ import type { Agent, AgentInput } from "./schema";
 // (API_SERVER_ENABLED / API_SERVER_PORT). Environment variables take
 // precedence over the config values when both are set (upstream behavior);
 // the config block acts as a fallback when the env var is absent. The
-// bearer token (API_SERVER_KEY) is env-only — Hermeum does not surface it
-// in config.yaml.
-// See docs/hermes-config/api-server.md.
+// bearer token is env-only by Hermeum policy (API_SERVER_KEY, sensitive).
+// See docs/official/api-server.md.
 const API_SERVER_DEFAULT_PORT = 8642;
 
 export function isApiServerEnabled(input: AgentInput): boolean {
@@ -29,16 +28,13 @@ export function getApiServerPort(input: AgentInput): number {
   return API_SERVER_DEFAULT_PORT;
 }
 
-// Webhook settings can be configured via config.yaml
-// (config.platforms.webhook.enabled / extra.port) or via env vars
-// (WEBHOOK_ENABLED / WEBHOOK_PORT). config.yaml is preferred and takes
-// precedence over the env vars; the env vars act as a fallback when the
-// corresponding config field is absent.
+// Webhook enablement is env-only (WEBHOOK_ENABLED=true);
+// config.platforms.webhook carries only routes and other non-secret
+// settings. Enabling the platform (and the reserved WEBHOOK_SECRET env
+// entry) stays on the env-var path.
 const WEBHOOK_DEFAULT_PORT = 8644;
 
 export function isWebhookEnabled(input: AgentInput): boolean {
-  const configEnabled = input.config?.platforms?.webhook?.enabled;
-  if (configEnabled !== undefined) return configEnabled;
   return (
     input.env?.some(
       (v) => v.name === "WEBHOOK_ENABLED" && v.value.toLowerCase() === "true",
@@ -57,17 +53,24 @@ export function getWebhookPort(input: AgentInput): number {
   return WEBHOOK_DEFAULT_PORT;
 }
 
-// Teams is an HTTP webhook platform (like webhook / api-server). Credentials
-// (client_id, client_secret, tenant_id) are env-only (TEAMS_*) — they must not
-// be written into config.yaml. An explicit `enabled` flag overrides the
-// credentials-presence detection (set false to disable while keeping creds);
-// when `enabled` is absent, Teams is on when all three TEAMS_* env vars are set.
+// Teams is an HTTP webhook platform (like webhook / api-server). The
+// client secret is env-only by Hermeum policy (the sensitive
+// TEAMS_CLIENT_SECRET env entry). client_id and tenant_id are non-secret
+// and accepted from either source: config (platforms.teams.extra) or
+// their TEAMS_* env vars (Teams reads env-first, so literal config values
+// work). An explicit `enabled` flag overrides the credentials-presence
+// detection (set false to disable while keeping creds); when `enabled`
+// is absent, Teams is on when all three credentials are set.
 const TEAMS_DEFAULT_PORT = 3978;
-const TEAMS_REQUIRED_ENV_VARS = ["TEAMS_CLIENT_ID", "TEAMS_CLIENT_SECRET", "TEAMS_TENANT_ID"];
 
 function hasAllTeamsCredentials(input: AgentInput): boolean {
-  return TEAMS_REQUIRED_ENV_VARS.every(
-    (name) => input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false,
+  const extra = input.config?.platforms?.teams?.extra;
+  const hasEnv = (name: string) =>
+    input.env?.some((v) => v.name === name && v.value.trim() !== "") ?? false;
+  return (
+    ((extra?.client_id !== undefined && extra.client_id.trim() !== "") || hasEnv("TEAMS_CLIENT_ID")) &&
+    hasEnv("TEAMS_CLIENT_SECRET") &&
+    ((extra?.tenant_id !== undefined && extra.tenant_id.trim() !== "") || hasEnv("TEAMS_TENANT_ID"))
   );
 }
 
@@ -105,36 +108,33 @@ export interface PlatformAvailability {
   status: "available" | "unavailable";
   /** Short explanation shown when status is not "available". */
   reason?: string;
-  /** Listening port for HTTP platforms (api-server, webhook). */
-  port?: number;
   /** Home channel for chat platforms (slack only), if configured. */
   home?: string;
   /**
-   * Fully-qualified endpoint URLs for this platform (base + subpath).
-   * For ingress endpoints the base carries no port (routing is by path).
-   * For internal (`*.svc.cluster.local`) endpoints the per-platform port is
-   * inserted before the subpath. Absent when the platform has no inbound HTTP
-   * surface (e.g. Slack Socket Mode) or when `agent.endpoint` is null.
+   * Base endpoint URL for this platform, when available.
+   * For ingress endpoints the URL carries no port — each HTTP platform gets
+   * its own host (`<agent-id>.<platform-label>.<base hostname>`, or
+   * `<agent-id>-<platform-label>.<base hostname>` when hosts are flattened).
+   * For internal (`*.svc.cluster.local`) endpoints the platform's Service
+   * port is embedded. Absent when the platform has no inbound HTTP surface
+   * (e.g. Slack Socket Mode) or when the platform's entry in
+   * `agent.endpoints` is null.
    */
-  endpoints?: string[];
+  endpoint?: string;
 }
 
 /**
- * Ingress subpaths per platform, ordered by display priority.
- * `/health` is intentionally excluded — it is an infra health probe, not a
- * messaging endpoint users interact with. Single source of truth for both
- * the UI (`derivePlatformAvailability`) and the ingress builder
- * (`server/infras/kubernetes/client.ts`).
+ * Ingress host labels per HTTP platform.
+ * Each platform is exposed on its own host
+ * `<agent-id>.<label>.<base hostname>` — or, when hosts are flattened,
+ * `<agent-id>-<label>.<base hostname>` — mapped wholesale to the platform's
+ * Service port (routing is host-based; the whole host is the backend's
+ * root). Slack/Discord are gateway-relayed and have no inbound HTTP surface.
  */
-export const PLATFORM_INGRESS_SUBPATHS: Partial<Record<PlatformId, string[]>> = {
-  // /v1 is the main OpenAI-compatible path; /api is the generic alias.
-  [PlatformId.ApiServer]: ["/v1", "/api"],
-  [PlatformId.Webhook]: ["/webhooks"],
-  // Teams Bot Framework posts inbound messages to /api/messages.
-  // Must be emitted before the api-server /api prefix in the ingress so
-  // the longest-prefix match routes to the Teams port (3978), not 8642.
-  [PlatformId.Teams]: ["/api/messages"],
-  // Slack uses Socket Mode — no inbound HTTP subpath.
+export const PLATFORM_INGRESS_LABELS: Partial<Record<PlatformId, string>> = {
+  [PlatformId.ApiServer]: "api",
+  [PlatformId.Webhook]: "hooks",
+  [PlatformId.Teams]: "teams",
 };
 
 interface PlatformMeta {
@@ -186,7 +186,15 @@ const SLACK_REQUIRED_ENV_VARS = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_AL
 
 export function derivePlatformAvailability(id: PlatformId, agent: Agent): PlatformAvailability {
   const env = agent.env ?? [];
-  const subpaths = PLATFORM_INGRESS_SUBPATHS[id];
+  // Full-qualified endpoint URL per platform, authored by buildAgentEndpoints
+  // — null when the platform has no inbound HTTP surface. Only the HTTP
+  // platforms (api-server / webhook / teams) carry keys in the map.
+  const endpoint: string | undefined =
+    id === PlatformId.ApiServer ||
+    id === PlatformId.Webhook ||
+    id === PlatformId.Teams
+      ? (agent.endpoints?.[id] ?? undefined)
+      : undefined;
 
   switch (id) {
     case PlatformId.ApiServer: {
@@ -196,26 +204,16 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
           reason: "Set API_SERVER_ENABLED=true (or config.gateway.api_server.enabled).",
         };
       }
-      const port = getApiServerPort(agent);
-      return {
-        status: "available",
-        port,
-        ...endpointsFor(agent.endpoint, subpaths, port),
-      };
+      return { status: "available", ...(endpoint && { endpoint }) };
     }
     case PlatformId.Webhook: {
       if (!isWebhookEnabled(agent)) {
         return {
           status: "unavailable",
-          reason: "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled).",
+          reason: "Set WEBHOOK_ENABLED=true (and the WEBHOOK_SECRET env entry).",
         };
       }
-      const port = getWebhookPort(agent);
-      return {
-        status: "available",
-        port,
-        ...endpointsFor(agent.endpoint, subpaths, port),
-      };
+      return { status: "available", ...(endpoint && { endpoint }) };
     }
     case PlatformId.Slack: {
       const isSet = (name: string) =>
@@ -256,42 +254,26 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
         if (enabledFlag === false) {
           return { status: "unavailable", reason: "Disabled by config.platforms.teams.enabled." };
         }
-        const missing = TEAMS_REQUIRED_ENV_VARS.filter(
-          (name) => !env.some((v) => v.name === name && v.value.trim() !== ""),
-        );
+        const extra = agent.config?.platforms?.teams?.extra;
+        const missing: string[] = [];
+        if (!(extra?.client_id?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_ID" && v.value.trim() !== ""))) {
+          missing.push("client_id");
+        }
+        if (!env.some((v) => v.name === "TEAMS_CLIENT_SECRET" && v.value.trim() !== "")) {
+          missing.push("client_secret");
+        }
+        if (!(extra?.tenant_id?.trim() || env.some((v) => v.name === "TEAMS_TENANT_ID" && v.value.trim() !== ""))) {
+          missing.push("tenant_id");
+        }
         return {
           status: "unavailable",
-          reason: `Missing env var${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`,
+          reason:
+            `Missing credential${missing.length > 1 ? "s" : ""}: ${missing.join(", ")} ` +
+            "(client_id/tenant_id via config.platforms.teams.extra or the matching " +
+            "TEAMS_* env var; client_secret via the TEAMS_CLIENT_SECRET env var).",
         };
       }
-      const port = getTeamsPort(agent);
-      return {
-        status: "available",
-        port,
-        ...endpointsFor(agent.endpoint, subpaths, port),
-      };
+      return { status: "available", ...(endpoint && { endpoint }) };
     }
   }
-}
-
-/**
- * Spread helper: returns `{ endpoints }` when both a base endpoint and at
- * least one subpath are present, otherwise `{}` (so the field stays absent).
- *
- * Internal endpoints (base containing `.svc.cluster.local`) need the
- * per-platform port inserted before the subpath, since each platform listens
- * on its own port. Ingress endpoints route by path on a single host, so no
- * port is inserted.
- */
-function endpointsFor(
-  endpoint: string | null | undefined,
-  subpaths: readonly string[] | undefined,
-  port: number | undefined,
-): { endpoints?: string[] } {
-  if (!endpoint || !subpaths || subpaths.length === 0) return {};
-  if (endpoint.includes(".svc.cluster.local")) {
-    if (port === undefined) return {};
-    return { endpoints: subpaths.map((p) => `${endpoint}:${port}${p}`) };
-  }
-  return { endpoints: subpaths.map((p) => `${endpoint}${p}`) };
 }

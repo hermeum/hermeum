@@ -25,7 +25,7 @@ import {
 import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { Button } from "@hermeum/components/ui/button";
 import { EditInstanceDialog } from "./-components/edit-agent-dialog";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import {
   Accordion,
@@ -139,7 +139,7 @@ function ToolsetsSection({ agent }: { agent: Agent }) {
 }
 
 function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
-  const { status, reason, home, endpoints } = derivePlatformAvailability(id, agent);
+  const { status, reason, home, endpoint } = derivePlatformAvailability(id, agent);
   const label = getPlatformLabel(id);
   const description = getPlatformDescription(id);
   return (
@@ -160,14 +160,13 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
       <TooltipContent className="max-w-sm">
         <div className="flex flex-col gap-0.5">
           <span>{description}</span>
-          {endpoints !== undefined && endpoints.length > 0 && (
-            <div className="mt-1 flex flex-col gap-1">
-              {endpoints.map((url) => (
-                <div key={url} className="group flex min-w-0 items-center gap-1">
-                  <span className="min-w-0 break-all font-mono">{url}</span>
-                  <CopyButton text={url} className="shrink-0 opacity-0 group-hover:opacity-100" />
-                </div>
-              ))}
+          {endpoint !== undefined && (
+            <div className="group flex min-w-0 items-center gap-1">
+              <span className="min-w-0 break-all font-mono">{endpoint}</span>
+              <CopyButton
+                text={endpoint}
+                className="shrink-0 opacity-0 group-hover:opacity-100"
+              />
             </div>
           )}
           {home !== undefined && <span>Home channel: {home}</span>}
@@ -179,6 +178,81 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
         </div>
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function CronsSection({ agent }: { agent: Agent }) {
+  const crons = agent.crons ?? [];
+  return (
+    <div className="py-8 flex flex-col gap-3">
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-bold">Crons</p>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Crons info" />
+            }
+          />
+          <TooltipContent>
+            <div className="max-w-xs">
+              Scheduled jobs that trigger this agent on a timer.
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      {crons.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No cron jobs configured.</p>
+      ) : (
+        <TooltipProvider>
+          <Accordion multiple className="w-full border rounded-md px-4">
+            {crons.map((cron) => (
+              <AccordionItem key={cron.name} value={cron.name}>
+                <AccordionTrigger className="items-center hover:no-underline">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium hover:underline">{cron.name}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
+                    >
+                      {cron.schedule}
+                    </Button>
+                    {cron.deliver && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal"
+                      >
+                        → {cron.deliver}
+                      </Button>
+                    )}
+                    {cron.repeat !== undefined && (
+                      <span className="text-xs text-muted-foreground">×{cron.repeat}</span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-3 pb-2">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Prompt</p>
+                      <pre className="rounded bg-muted p-3 text-xs overflow-y-auto max-h-64 whitespace-pre-wrap break-words">
+                        {cron.prompt}
+                      </pre>
+                    </div>
+                    {cron.skills && cron.skills.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Skills</p>
+                        <ButtonList items={cron.skills} max={10} />
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </TooltipProvider>
+      )}
+    </div>
   );
 }
 
@@ -348,26 +422,31 @@ function AgentDetailPage() {
         <TabsContent value="agent">
           <div className="flex flex-col divide-y">
             {/* soul */}
-            {agent.soul && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Soul</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Soul</p>
+              {agent.soul ? (
                 <pre className="rounded bg-muted p-3 text-xs overflow-y-auto max-h-64 whitespace-pre-wrap break-words">
                   {agent.soul}
                 </pre>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
+              )}
+            </div>
 
             {/* config */}
-            {agent.config && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Configuration</p>
-                <CodeEditor
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Configuration</p>
+              {agent.config ? (
+                <AgentConfigEditor
                   value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
                   readOnly
                   maxHeight="300px"
+                  foldable
                 />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
+              )}
+            </div>
 
             {/* toolsets */}
             <ToolsetsSection agent={agent} />
@@ -377,40 +456,52 @@ function AgentDetailPage() {
 
 
             {/* skills */}
-            {agent.skills && agent.skills.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Skills</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Skills</p>
+              {agent.skills && agent.skills.length > 0 ? (
                 <ButtonList items={agent.skills} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No skills configured.</p>
+              )}
+            </div>
 
             {/* plugins */}
-            {agent.plugins && agent.plugins.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Plugins</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Plugins</p>
+              {agent.plugins && agent.plugins.length > 0 ? (
                 <ButtonList items={agent.plugins} max={10} />
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No plugins configured.</p>
+              )}
+            </div>
 
             {/* packages */}
-            {agent.packages?.pip && agent.packages.pip.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Python Packages</p>
-                <ButtonList items={agent.packages.pip} max={10} />
-              </div>
-            )}
-
-            {agent.packages?.npm && agent.packages.npm.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">NPM Packages</p>
-                <ButtonList items={agent.packages.npm} max={10} />
-              </div>
-            )}
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Packages</p>
+              {((agent.packages?.pip?.length ?? 0) > 0 || (agent.packages?.npm?.length ?? 0) > 0) ? (
+                <div className="flex flex-col gap-3">
+                  {agent.packages?.pip && agent.packages.pip.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Python</p>
+                      <ButtonList items={agent.packages.pip} max={10} />
+                    </div>
+                  )}
+                  {agent.packages?.npm && agent.packages.npm.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">NPM</p>
+                      <ButtonList items={agent.packages.npm} max={10} />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No packages configured.</p>
+              )}
+            </div>
 
             {/* env */}
-            {agent.env && agent.env.length > 0 && (
-              <div className="py-8 flex flex-col gap-3">
-                <p className="text-sm font-bold">Env Vars</p>
+            <div className="py-8 flex flex-col gap-3">
+              <p className="text-sm font-bold">Env Vars</p>
+              {agent.env && agent.env.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {agent.env.map((v) => (
                     <Button
@@ -423,8 +514,13 @@ function AgentDetailPage() {
                     </Button>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">No environment variables set.</p>
+              )}
+            </div>
+
+            {/* crons */}
+            <CronsSection agent={agent} />
 
             {/* shared env sets */}
             <div className="py-8 flex flex-col gap-3">

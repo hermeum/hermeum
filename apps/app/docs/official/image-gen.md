@@ -7,8 +7,8 @@ description: Image generation configuration (`config.image_gen`) — FAL.ai mode
 # Image generation configuration (`config.image_gen`)
 
 Configures the `image_generate` tool, which lets the agent generate images
-from text prompts (and edit existing images on edit-capable models). It is
-backed by FAL.ai or other provider plugins.
+from text prompts (and edit existing images on edit-capable models). The
+active provider is picked by `image_gen.provider` in `config.yaml`.
 
 The toolset auto-enables when `FAL_KEY` is set. Without it, the
 `image_generate` tool does not register.
@@ -34,7 +34,11 @@ The toolset auto-enables when `FAL_KEY` is set. Without it, the
   `fal-ai/qwen-image` (LLM-based, complex text),
   `fal-ai/krea/v2/{medium,large}/text-to-image` (illustration / photorealism).
   With `provider: openrouter`, the picker lists OpenRouter's entire live
-  image catalog instead.
+  image catalog instead. Edit-capable FAL models now also include the
+  GPT Image 2.5 Flare/Sunburst entries (up to 16 reference images).
+  Additional pass-through knobs (`image_gen.openai.base_url` /
+  `key_env` for custom OpenAI-compatible endpoints, the `meta-ai`
+  provider, ...) are validated by `looseObject`, not typed here.
 - `max_parallel_requests` — concurrent images per tool-call batch
   (default `4`). Hermes clamps it to at least one and to the global
   tool-worker limit, so image providers receive bounded parallel requests

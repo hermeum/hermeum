@@ -6,9 +6,9 @@ description: Discord platform configuration (`discord`) — mention gating, auto
 
 # Discord configuration (`config.discord`)
 
-Configures the Discord gateway adapter, which connects to Discord via
-the Gateway WebSocket and relays messages between server channels/DMs
-and the Hermes agent. Requires the `DISCORD_BOT_TOKEN` env var.
+Configures the Discord bot — mention gating, auto-threading, channel
+allow/ignore lists, and per-channel prompts. Requires the
+`DISCORD_BOT_TOKEN` env var.
 
 **You must configure Discord on the Discord side before this gateway
 will work** — application creation, bot token, privileged gateway
@@ -46,9 +46,15 @@ override `config.yaml` when both are set.
   `everyone` (default `false`), `roles` (default `false`), `users`
   (default `true`), `replied_user` (default `true`).
 
-Additional knobs (`history_backfill`, `history_backfill_limit`,
-`voice_fx`, `missed_message_backfill`, etc.) pass through unchanged
-via `looseObject`; see the official guide for their semantics.
+Additional knobs (`history_backfill` — now with a lifetime
+`max_attempts` re-dispatch cap per message, `history_backfill_limit`,
+`voice_fx`, `missed_message_backfill`, `free_response_auto_thread`
+(`false`; requires `auto_thread`), `bots_require_inline_mention`
+(`true`; bot handoffs require a literal `@mention`),
+`websocket_event_max_silence_seconds` (`14400`; `0` opts out of the
+event-silence check only), and the other websocket liveness knobs) pass
+through unchanged via `looseObject`; see the official guide for their
+semantics.
 
 ## Environment variables
 

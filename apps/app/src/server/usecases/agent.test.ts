@@ -2,16 +2,18 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
-vi.mock("../infras/console-logger", () => ({
-  ConsoleLogger: vi.fn().mockImplementation(() => ({
+vi.mock("../infras/posthog", () => ({
+  telemetry: {
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-  })),
+    heartbeat: vi.fn(),
+    shutdown: vi.fn(),
+  },
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs" },
 }));
 
 import { stringify } from "yaml";
@@ -86,13 +88,52 @@ function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
 }
 
 describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
-  it("returns null when agent.type is undefined", async () => {
+  it("returns null when agent.type is undefined and no default type is configured", async () => {
     const useCase = new AgentUseCase(
       makeRuntime(),
       makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } })
     );
     const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
     expect(result).toBeNull();
+  });
+
+  it("falls back to the default agent type when agent.type is undefined", async () => {
+    const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({
+        "some-type": { mutatingWebhookJsonPatch: [] },
+        default: { mutatingWebhookJsonPatch: patch },
+      })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }));
+    expect(result).toEqual(patch);
+  });
+
+  it("does not fall back to the default agent type when a set type is unknown", async () => {
+    const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ default: { mutatingWebhookJsonPatch: patch } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "unknown-type" }));
+    expect(result).toBeNull();
+  });
+
+  it("evaluates the default type's candidates against the incoming object", async () => {
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
+      [{ op: "add", path: "/b", value: 2 }],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ default: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: undefined }),
+      { spec: { model: "claude" } },
+    );
+    expect(result).toEqual(candidates[1]);
   });
 
   it("returns null when config.agentTypes is undefined", async () => {
@@ -185,7 +226,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     expect(result![1]!.value).toBe("{{agentId}}");
   });
 
-  it("returns the first candidate when no incomingObject is given (backwards compat)", async () => {
+  it("returns all candidates concatenated when no incomingObject is given (backwards compat)", async () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "test", path: "/spec/model", value: "x" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "add", path: "/b", value: 2 }],
@@ -195,10 +236,10 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }));
-    expect(result).toEqual(candidates[0]);
+    expect(result).toEqual(candidates.flat());
   });
 
-  it("selects the first candidate whose test ops pass (first-match-wins)", async () => {
+  it("skips candidates whose test ops fail (non-matching)", async () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "test", path: "/spec/model", value: "claude" }, { op: "add", path: "/b", value: 2 }],
@@ -232,7 +273,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     expect(result).toEqual([]);
   });
 
-  it("matches a candidate with no test ops (unconditional fallback)", async () => {
+  it("matches a candidate with no test ops (unconditional)", async () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "add", path: "/b", value: 2 }],
@@ -247,6 +288,107 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       incoming,
     );
     expect(result).toEqual(candidates[1]);
+  });
+
+  it("combines every matching candidate in declaration order", async () => {
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "test", path: "/spec/searxng/enabled", value: true }, { op: "add", path: "/a", value: 1 }],
+      [{ op: "add", path: "/b", value: 2 }],
+      [{ op: "test", path: "/spec/camofox/enabled", value: true }, { op: "add", path: "/c", value: 3 }],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const incoming = { spec: { searxng: { enabled: true }, camofox: { enabled: true } } };
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: "t" }),
+      incoming,
+    );
+    expect(result).toEqual(candidates.flat());
+  });
+
+  it("evaluates candidates sequentially against the doc as mutated by earlier matches", async () => {
+    // The second candidate's `test` asserts a value that only exists after the
+    // first candidate's `add` has been applied to the working copy.
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "add", path: "/spec/model", value: "claude" }],
+      [
+        { op: "test", path: "/spec/model", value: "claude" },
+        { op: "add", path: "/matched", value: true },
+      ],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/skipped", value: true },
+      ],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: "t" }),
+      { spec: {} },
+    );
+    expect(result).toEqual([candidates[0], candidates[1]].flat());
+  });
+
+  it("skips a candidate whose tests pass but whose mutation ops cannot apply", async () => {
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "add", path: "/missing-parent/child", value: 1 }],
+      [{ op: "add", path: "/valid", value: 2 }],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: "t" }),
+      {},
+    );
+    expect(result).toEqual(candidates[1]);
+  });
+
+  it("does not leak partially-applied candidate ops into later candidates' evaluation", async () => {
+    // The second candidate applies `add /a=1` before failing at
+    // `add /nosuch/child`. Its committed ghost value must not satisfy the
+    // third candidate's `test /a==1` — otherwise the emitted patch would
+    // re-assert a test the apiserver cannot satisfy (the second candidate
+    // was skipped), rejecting the entire admission patch.
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/a", value: 1 },
+        { op: "add", path: "/b", value: 2 },
+        { op: "add", path: "/nosuch/child", value: 3 },
+      ],
+      [
+        { op: "test", path: "/b", value: 2 },
+        { op: "add", path: "/leaked", value: 99 },
+      ],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const result = await useCase.getmutatingWebhookJsonPatch(
+      makeAgent({ type: "t" }),
+      { spec: {} },
+    );
+    expect(result).toEqual(candidates[0]);
+  });
+
+  it("does not mutate the incoming object while combining", async () => {
+    const candidates: JsonPatchOp[][] = [
+      [{ op: "add", path: "/spec/model", value: "claude" }],
+    ];
+    const useCase = new AgentUseCase(
+      makeRuntime(),
+      makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
+    );
+    const incoming = { spec: {} };
+    await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
+    expect(incoming).toEqual({ spec: {} });
   });
 
   it("preserves test ops in the returned patch for K8s atomic re-assertion", async () => {

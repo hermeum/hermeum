@@ -16,7 +16,7 @@ import { useTRPC } from "@/router";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput, Template } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { AgentEditorMobileTabs } from "./-components/agent-editor-mobile-tabs";
 import { AgentPickerBar } from "./-components/agent-picker-bar";
 
@@ -78,10 +78,14 @@ function NewAgentPage() {
     handleConfigUpdate(template.agentInput);
   }
 
-  // Merge a user-managed-field patch (agent type / skills) into the current
-  // draft. No-op when editing hasn't started — pickers appear once a draft
-  // exists.
-  function handlePickerChange(patch: { type?: string | undefined; skills?: string[] | undefined }) {
+  // Merge a user-managed-field patch (agent type / skills / shared env sets)
+  // into the current draft. No-op when editing hasn't started — pickers
+  // appear once a draft exists.
+  function handlePickerChange(patch: {
+    type?: string | undefined;
+    skills?: string[] | undefined;
+    sharedEnvSets?: string[] | undefined;
+  }) {
     const current = getConfig();
     if (current === undefined) return;
     handleConfigUpdate({ ...current, ...patch });
@@ -144,8 +148,8 @@ function NewAgentPage() {
       const { template } = view;
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1">
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -154,20 +158,22 @@ function NewAgentPage() {
               >
                 <ArrowLeft />
               </Button>
-              <p className="min-w-0 truncate text-sm font-medium">
-                {template.name}
-                <span className="text-muted-foreground"> · Template</span>
-              </p>
             </div>
             <Button size="sm" onClick={() => handleUseTemplate(template)}>
               Use template
             </Button>
           </div>
           <div className="min-h-0 flex-1">
-            <CodeEditor
+            <AgentConfigEditor
               value={stringify(template.agentInput, YAML_OPTIONS).trim()}
               readOnly
               height="100%"
+              title={
+                <span className="min-w-0 truncate">
+                  {template.name}
+                  <span className="text-muted-foreground"> · Template</span>
+                </span>
+              }
             />
           </div>
         </div>
@@ -176,14 +182,14 @@ function NewAgentPage() {
 
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <p className="shrink-0 text-sm font-medium">Agent config</p>
         <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
         <div className="min-h-0 flex-1">
-          <CodeEditor
+          <AgentConfigEditor
             value={editorValue}
             onChange={setEditorValue}
             invalid={!!validationError}
             height="100%"
+            title="Agent config"
           />
         </div>
         {validationError && (

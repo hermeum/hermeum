@@ -30,7 +30,7 @@ others fall back to the defaults listed here.
 | `HERMEUM_DATABASE_DIALECT` | `sqlite` | Database backend dialect. One of `sqlite`, `postgres`. Must match the scheme of `HERMEUM_DATABASE_URL`. |
 | `HERMEUM_KUBERNETES_NAMESPACE` | `hermeum` | Kubernetes namespace where `HermesAgent` custom resources are reconciled. Hermeum must have RBAC to read/write this namespace. |
 | `HERMEUM_CONFIG_PATH` | `./config.yaml` | Path to the Hermeum instance config file. See [Instance config](../instance-config) for the schema. |
-| `HERMEUM_HERMES_DOCS_PATH` | `./docs/hermes-config` | Path to the hermes-config docs directory used by the docs file adaptor. |
+| `HERMEUM_HERMES_DOCS_PATH` | `./docs` | Path to the hermes docs directory, scanned recursively by the docs file adaptor. |
 | `HERMEUM_LOG_LEVEL` | `info` | Log verbosity. One of `debug`, `info`, `warn`, `error`. |
 
 ### Agent image
@@ -40,7 +40,7 @@ The container image emitted into every `HermesAgent` CR's `spec.image`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `HERMEUM_HERMES_IMAGE_REPOSITORY` | `nousresearch/hermes-agent` | Container image repository for the Hermes agent. Omit the registry host for Docker Hub, or include it (e.g. `ghcr.io/hermeum/hermes-agent`) for other registries. |
-| `HERMEUM_HERMES_IMAGE_TAG` | `v2026.8.31` | Container image tag for the Hermes agent. Pin to a specific release for reproducible agent pods. |
+| `HERMEUM_HERMES_IMAGE_TAG` | `v2026.9.21` | Container image tag for the Hermes agent. Pin to a specific release for reproducible agent pods. |
 
 ### Auth
 
@@ -60,20 +60,25 @@ draft agent `config.yaml` blocks from natural-language prompts.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_OPENAI_MODEL` | `gpt-5.5` | Model id passed to the completion call. Must be a model the configured endpoint serves. |
+| `HERMEUM_OPENAI_MODEL` | `gpt-6.1-sol` | Model id passed to the completion call. Must be a model the configured endpoint serves. |
 | `HERMEUM_OPENAI_BASE_URL` | — | Override the OpenAI API base URL. Point this at any OpenAI-compatible gateway (vLLM, Ollama, Azure OpenAI, etc.). When unset, the OpenAI default is used. |
 | `HERMEUM_OPENAI_API_KEY` | — | API key for the OpenAI-compatible endpoint. Required when targeting the hosted OpenAI API; may be unused for local gateways. |
 
 ### Per-agent ingress
 
 When `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` is set, Hermeum emits an
-`Ingress` per agent at `<agent-id>.<base hostname>`, routing to the agent's
-enabled HTTP platforms (api-server `/v1`, `/api`; webhook `/webhooks`; teams
-`/api/messages`). When it is unset, **no ingress is generated**.
+`Ingress` per agent that routes each enabled HTTP platform on its own host
+`<agent-id>.<platform-label>.<base hostname>` (api-server → `api`, webhook
+→ `hooks`, teams → `teams`) — or, with
+`HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS=true`,
+`<agent-id>-<platform-label>.<base hostname>` — with each host mapped
+wholesale to the platform's Service port. When it is unset, **no ingress is
+generated**.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` | — | Base hostname for per-agent ingresses (`<agent-id>.<base>`). Unset = no ingress generated. |
+| `HERMEUM_AGENT_INGRESS_BASE_HOSTNAME` | — | Base hostname for per-agent ingresses; each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams) — or `<agent-id>-<platform-label>.<base>` with `HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS=true`. Unset = no ingress generated. |
+| `HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS` | `false` | Flatten agent ingress hosts to a single DNS level: `<agent-id>-<platform-label>.<base>` instead of `<agent-id>.<platform-label>.<base>`. One wildcard record/cert `*.<base>` then covers every agent and platform. |
 | `HERMEUM_AGENT_INGRESS_SCHEME` | `http` | Public URL scheme advertised for agent ingresses. **Display-only** — it does not drive the emitted `tls` block; TLS is governed by `HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME`. |
 | `HERMEUM_AGENT_INGRESS_CLASS_NAME` | — | Ingress controller class name set on generated ingresses (`spec.ingressClassName`). Omitted from the CR when unset. |
 | `HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME` | — | TLS secret name for controller-terminated TLS. When set, the ingress emits a `tls` block with this secret; when unset, no `tls` block is emitted (covers plain HTTP and load-balancer-terminated TLS). |
@@ -105,6 +110,26 @@ otherwise the webhook is not served.
 
 See [Mutating webhook](../mutating-webhook) for how the webhook is wired into
 the cluster and how its `caBundle` gets populated.
+
+### Telemetry
+
+Hermeum's telemetry adaptor logs to the console and reports a lightweight
+deployment heartbeat (`deployment.heartbeat` event) to a Hermeum-owned PostHog
+project so the team can count running self-hosted servers and track version
+adoption. The heartbeat is captured as a PostHog event on startup and then
+hourly, and carries only anonymous deployment-level properties: the deployment
+id, `hosting`, the app version, and the database dialect. The heartbeat is
+always reported and is not governed by the log-mirroring toggle below.
+
+Optionally, console log messages can also be mirrored to PostHog Logs via the
+official PostHog OpenTelemetry (OTLP) integration.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HERMEUM_POSTHOG_API_KEY` | Hermeum's project token | PostHog project API key (`phc_...`), baked in as the default so heartbeats work out of the box. The token is public by design — override to report to a different PostHog project. |
+| `HERMEUM_POSTHOG_HOST` | `https://us.i.posthog.com` | PostHog ingestion host. |
+| `HERMEUM_DEPLOYMENT_ID` | — | Stable identifier for this deployment, used as the heartbeat's distinct id. When unset, a random id is generated per process boot — set this (e.g. to the Helm release name) for accurate server counts across restarts. |
+| `HERMEUM_TELEMETRY_DISABLED` | `false` | Set to `true` to disable log mirroring to PostHog Logs. Console output is always enabled; the deployment heartbeat event is not affected. |
 
 ## RBAC notes
 

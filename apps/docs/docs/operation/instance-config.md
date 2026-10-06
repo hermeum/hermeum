@@ -85,15 +85,36 @@ agent's `type` field references. Each type has:
 | Field                     | Required | Description                                                                  |
 |---------------------------|----------|------------------------------------------------------------------------------|
 | `description`             | no       | Human-readable description; surfaced to the AI config generator so it can pick the right type. |
-| `mutatingWebhookJsonPatch`| yes      | A JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902)) applied to the `HermesAgent` CR on `CREATE`/`UPDATE`. Accepts a flat `op` array (one candidate) or an array of arrays (multiple candidates; first match wins). |
+| `mutatingWebhookJsonPatch`| yes      | A JSON-Patch ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902)) applied to the `HermesAgent` CR on `CREATE`/`UPDATE`. Accepts a flat `op` array (one candidate) or an array of arrays (multiple candidates; all matches are combined). |
+
+### The reserved `default` type
+
+The key `default` is reserved: when an agent is created **without** a
+`type`, the mutating webhook falls back to
+`agentTypes.default.mutatingWebhookJsonPatch` — so typeless agents receive
+that patch. If `default` is not configured, typeless agents get no patch, as
+before. An agent whose `type` is set but unknown does **not** fall back; the
+webhook stays a no-op for it.
+
+`default` is hidden from the agent-type picker and from the AI config
+generator's type list — the fallback applies automatically. It remains a
+valid type key otherwise: agents can be given `type: default` explicitly, and
+templates can reference it.
+
+:::note
+The bundled `config.default.yaml` defines `default` with the same patch as
+`small`, so out of the box every agent gets the small resources whether
+or not a type was chosen.
+:::
 
 When Hermeum receives an admission review, it looks up
 `agentTypes[agent.type].mutatingWebhookJsonPatch` and returns it as the
 patch. If multiple candidates are provided, Hermeum evaluates each
 candidate's [`test`](https://datatracker.ietf.org/doc/html/rfc6902#section-4.6)
-ops against the incoming object and returns the first one whose tests pass
-(first-match-wins); no match means no patch (no-op). The webhook is a no-op
-until at least one type has a non-empty patch. See
+ops against the incoming object (sequentially, each against the object as
+mutated by previously matched candidates) and combines every candidate whose
+tests pass into the returned patch; no match means no patch (no-op). The
+webhook is a no-op until at least one type has a non-empty patch. See
 [Mutating webhook](../mutating-webhook) for the certificate options, the
 end-to-end flow, and precondition examples.
 

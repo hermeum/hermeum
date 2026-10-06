@@ -10,8 +10,8 @@ export const ConfigSchema = z.object({
     .describe("Path to the hermeum config file (HERMEUM_CONFIG_PATH)."),
   hermesDocsPath: z
     .string()
-    .default("./docs/hermes-config")
-    .describe("Path to the hermes-config docs directory (HERMEUM_HERMES_DOCS_PATH)."),
+    .default("./docs")
+    .describe("Path to the hermes docs directory (HERMEUM_HERMES_DOCS_PATH)."),
   databaseDialect: z
     .enum(["postgres", "sqlite"])
     .default("sqlite")
@@ -23,6 +23,13 @@ export const ConfigSchema = z.object({
     .string()
     .default("hermeum")
     .describe("Kubernetes namespace where HermesAgent CRs are reconciled (HERMEUM_KUBERNETES_NAMESPACE)."),
+  mockRuntime: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Replace the Kubernetes Runtime adaptor with an in-memory mock (HERMEUM_MOCK_RUNTIME). " +
+        "Enables running the app and e2e tests without a Kubernetes cluster."
+    ),
   smtpUrl: z
     .url()
     .optional()
@@ -37,12 +44,12 @@ export const ConfigSchema = z.object({
     .describe("Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY)."),
   hermesImageTag: z
     .string()
-    .default("v2026.8.31")
+    .default("v2026.9.21")
     .describe("Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG)."),
   openaiModel: z
     .string()
     .min(1)
-    .default("gpt-5.5")
+    .default("gpt-6.1-sol")
     .describe("OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL)."),
   openaiBaseUrl: z
     .url()
@@ -67,8 +74,19 @@ export const ConfigSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Base hostname for per-agent ingresses (<agent-id>.<base>) (HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). " +
-        "When unset, no ingress is generated."
+      "Base hostname for per-agent ingresses; each HTTP platform gets its own host " +
+        "<agent-id>.<platform-label>.<base> (api-server → api, webhook → hooks, teams → teams) " +
+        "or, with agentIngressFlattenHosts, <agent-id>-<platform-label>.<base> " +
+        "(HERMEUM_AGENT_INGRESS_BASE_HOSTNAME). When unset, no ingress is generated."
+    ),
+  agentIngressFlattenHosts: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Flatten agent ingress hosts to a single DNS level (HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS). " +
+        "Instead of <agent-id>.<platform-label>.<base>, hosts become " +
+        "<agent-id>-<platform-label>.<base> (api-server → api, webhook → hooks, teams → teams), " +
+        "so a single wildcard record/cert *. <base> covers every agent and platform."
     ),
   agentIngressClassName: z
     .string()
@@ -120,6 +138,31 @@ export const ConfigSchema = z.object({
     .max(65535)
     .default(8443)
     .describe("HTTPS port for the mutating admission webhook (HERMEUM_WEBHOOK_PORT). Only used when HERMEUM_WEBHOOK_TLS_CERT_FILE and HERMEUM_WEBHOOK_TLS_KEY_FILE are set."),
+  deploymentId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Stable identifier for this Hermeum deployment, used as the PostHog distinct id in deployment heartbeats (HERMEUM_DEPLOYMENT_ID). " +
+        "When unset, a random id is generated per process boot."
+    ),
+  posthogApiKey: z
+    .string()
+    .min(1)
+    .default("phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo")
+    .describe(
+      "PostHog project API key used for deployment telemetry (HERMEUM_POSTHOG_API_KEY). " +
+        "Defaults to the Hermeum project token — a public, client-safe credential; override to report to a different PostHog project."
+    ),
+  posthogHost: z
+    .string()
+    .min(1)
+    .default("https://us.i.posthog.com")
+    .describe("PostHog ingestion host (HERMEUM_POSTHOG_HOST)."),
+  telemetryDisabled: z
+    .boolean()
+    .default(false)
+    .describe("Disable all deployment telemetry heartbeats (HERMEUM_TELEMETRY_DISABLED)."),
 });
 
 export const config = ConfigSchema.parse({
@@ -128,6 +171,7 @@ export const config = ConfigSchema.parse({
   databaseDialect: process.env.HERMEUM_DATABASE_DIALECT,
   databaseUrl: process.env.HERMEUM_DATABASE_URL,
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
+  mockRuntime: process.env.HERMEUM_MOCK_RUNTIME === "true",
   smtpUrl: process.env.HERMEUM_SMTP_URL,
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
@@ -138,6 +182,7 @@ export const config = ConfigSchema.parse({
   logLevel: process.env.HERMEUM_LOG_LEVEL,
   agentIngressScheme: process.env.HERMEUM_AGENT_INGRESS_SCHEME,
   agentIngressBaseHostname: process.env.HERMEUM_AGENT_INGRESS_BASE_HOSTNAME,
+  agentIngressFlattenHosts: process.env.HERMEUM_AGENT_INGRESS_FLATTEN_HOSTS === "true",
   agentIngressClassName: process.env.HERMEUM_AGENT_INGRESS_CLASS_NAME,
   agentIngressTlsSecretName: process.env.HERMEUM_AGENT_INGRESS_TLS_SECRET_NAME,
   port: process.env.HERMEUM_PORT
@@ -151,4 +196,8 @@ export const config = ConfigSchema.parse({
   webhookPort: process.env.HERMEUM_WEBHOOK_PORT
     ? parseInt(process.env.HERMEUM_WEBHOOK_PORT, 10)
     : undefined,
+  deploymentId: process.env.HERMEUM_DEPLOYMENT_ID,
+  posthogApiKey: process.env.HERMEUM_POSTHOG_API_KEY ?? "phc_ksbM9GxZUtBMvctJN3aPTBjAmgtfEv24o89jFnGjwcPo",
+  posthogHost: process.env.HERMEUM_POSTHOG_HOST,
+  telemetryDisabled: process.env.HERMEUM_TELEMETRY_DISABLED === "true",
 });

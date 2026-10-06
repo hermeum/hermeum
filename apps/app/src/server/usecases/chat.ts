@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AgentInput, AgentInputObjectSchema, tool, ToolSet } from "@/entities";
+import { AgentInput, AgentInputObjectSchema, AgentPatchSchema, tool, ToolSet, DEFAULT_AGENT_TYPE_KEY } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { BaseUseCase, HermeumConfigLoadable } from "./mixin";
@@ -8,9 +8,10 @@ import type { File } from "./adaptors/file";
 
 const DOCS_PATH = config.hermesDocsPath;
 
-// Document names come from the LLM; only simple slugs are accepted so a
-// crafted name can't traverse outside DOCS_PATH.
-const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+// Document names come from the LLM; only slash-separated simple slugs are
+// accepted so a crafted name can't traverse outside DOCS_PATH. Each segment
+// must start with an alphanumeric character, which rules out "." and "..".
+const DOCUMENT_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*(\/[a-zA-Z0-9][a-zA-Z0-9._-]*)*$/;
 
 // Label used for the trailing block that groups docs with no `category`
 // frontmatter field.
@@ -26,7 +27,8 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // Everything the chat route needs for an agent-config conversation turn:
   // the system prompt, a context block describing the current draft, and the
   // tool set the model uses to read docs/shared env sets, list agent types,
-  // search skills, and apply config changes. The available documents and
+  // search skills, clarify ambiguous requirements with the user, and apply
+  // config changes. The available documents and
   // shared env sets are embedded in their respective tool descriptions (not
   // the system prompt) so the model sees them right at the tool definition.
   async getAgentConfigContext(currentConfig?: AgentInput): Promise<AgentConfigContext> {
@@ -43,10 +45,21 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
         searchSkills: tool({
           description:
             "Search the Hermes Skills Index for an installable agent skill " +
-            "by name, keyword, or capability. Pass an empty query to list " +
+            "by name, keyword, or capability. The search matches keywords " +
+            "literally — it does not understand phrases — so pass a SINGLE " +
+            "keyword per call (e.g. \"github\", \"review\"), never a phrase " +
+            "or word list; when the goal spans several aspects, run one " +
+            "call per keyword. Call this proactively to " +
+            "suggest skills the user's goal would benefit from, even when " +
+            "they didn't ask for one. Pass an empty query to list " +
             "featured skills.",
           inputSchema: z.object({
-            query: z.string().describe("Search query (skill name, capability, or keyword)."),
+            query: z
+              .string()
+              .describe(
+                "Single search keyword (skill name, tag, or capability word)." +
+                  " Not a phrase — use separate calls for further keywords."
+              ),
             limit: z
               .number()
               .int()
@@ -69,14 +82,67 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
           // No `execute`: the client returns the latest editor draft and
           // reports it back.
         }),
-        updateAgentConfig: tool({
+        replaceAgentConfig: tool({
           description:
             "Replace the agent config draft with a full updated definition. " +
             "Always pass the COMPLETE config, keeping every field not affected " +
-            "by the requested change unchanged.",
+            "by the requested change unchanged. Apply each user request in a " +
+            "single call — do not iterate with successive updates. If unsure " +
+            "about a section's shape, call readDocument for that section " +
+            "before the call. For small changes to an existing draft, prefer " +
+            "patchAgentConfig instead.",
           inputSchema: AgentInputObjectSchema,
           // No `execute`: the client applies the config to its editor and
           // reports the result back.
+        }),
+        clarify: tool({
+          description:
+            "Ask the user to clarify when a decision materially shapes the " +
+            "agent and can't be sensibly inferred from their goal " +
+            "(e.g. credentials, ambiguous intent) — never guess " +
+            "on those. For decisions with a sensible, documented default, " +
+            "apply the default instead of asking; the user can override it " +
+            "later. Batch up to 5 related questions into a single call. " +
+            "For each question, offer up to 3 concise choices when the " +
+            "plausible answers are enumerable (omit them for free-form " +
+            "questions). The user answers every question and explicitly " +
+            "confirms the collected answers before they are returned; they " +
+            "can also skip or type a custom answer instead of picking a choice.",
+          inputSchema: z.object({
+            questions: z
+              .array(
+                z.object({
+                  question: z.string().min(1).describe("One question, phrased so it stands alone."),
+                  choices: z
+                    .array(z.string().min(1))
+                    .min(1)
+                    .max(3)
+                    .optional()
+                    .describe(
+                      "Up to 3 concise answer options for this question; omit for free-form."
+                    ),
+                })
+              )
+              .min(1)
+              .max(5)
+              .describe("Questions to ask; batch all pending questions into one call."),
+          }),
+          // No `execute`: the client collects the answers behind an explicit
+          // user confirmation step and reports them back.
+        }),
+        patchAgentConfig: tool({
+          description:
+            "Apply a partial update to the current agent config draft. Send " +
+            "ONLY the part being changed: plain objects merge recursively " +
+            "(e.g. { config: { web: { port: 8900 } } } changes just that " +
+            "port); set a field to null to delete it at any depth; arrays " +
+            "and scalars replace the whole current value, so always send a " +
+            "COMPLETE array. Fields you omit are left untouched. Prefer this " +
+            "over replaceAgentConfig for small edits to an existing draft; " +
+            "use replaceAgentConfig to create a draft or rewrite most of it.",
+          inputSchema: AgentPatchSchema,
+          // No `execute`: the client merges the patch onto its editor draft,
+          // validates the merged result, and reports the outcome back.
         }),
       },
     };
@@ -93,10 +159,16 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
     return tool({
       description:
         "Read one or more Hermes agent configuration documents by name. " +
-        "Pass every document you need in a single call to minimize " +
-        "round-trips.\n\n" + docList,
+        "Read the relevant sections before drafting a config section for " +
+        "the first time, so the defaults you choose proactively are " +
+        "grounded in the documentation. Names may be nested paths " +
+        "(e.g. examples/github-issue). Pass every document you need in a " +
+        "single call to minimize round-trips.\n\n" + docList,
       inputSchema: z.object({
-        names: z.array(z.string()).min(1).describe("Document names from the list above."),
+        names: z
+          .array(z.string())
+          .min(1)
+          .describe("Document names from the list above; nested names use slashes (e.g. examples/github-issue)."),
       }),
       execute: async ({ names }) => {
         const documents = await Promise.all(
@@ -160,11 +232,15 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
   // empty array when no agent types are configured.
   private async buildListAgentTypesTool(): Promise<ToolSet[string]> {
     const { agentTypes } = await this.loadHermeumConfig();
+    // The reserved `default` type is the typeless fallback for the webhook —
+    // not offered as an explicit choice to the model.
     const entries = agentTypes
-      ? Object.entries(agentTypes).map(([key, t]) => ({
-          key,
-          ...(t.description !== undefined ? { description: t.description } : {}),
-        }))
+      ? Object.entries(agentTypes)
+          .filter(([key]) => key !== DEFAULT_AGENT_TYPE_KEY)
+          .map(([key, t]) => ({
+            key,
+            ...(t.description !== undefined ? { description: t.description } : {}),
+          }))
       : [];
     return tool({
       description:
@@ -249,18 +325,32 @@ export class ChatUseCase extends HermeumConfigLoadable(BaseUseCase) {
 
 // Behavioral rules for the agent-config chat. Tool-specific guidance (when to
 // call `readDocument`, `readSharedEnvSet`, `readAgentConfig`,
-// `updateAgentConfig`, and the available doc/shared-env-set lists) lives in
-// the tool `description` fields, not here, so the model sees each tool's usage
-// rules alongside its definition.
+// `replaceAgentConfig`, `patchAgentConfig`, `clarify`, and the available
+// doc/shared-env-set
+// lists) lives in the tool `description` fields, not here, so the model sees
+// each tool's usage rules alongside its definition.
 export const AGENT_CONFIG_CHAT_SYSTEM_PROMPT = `\
 You help a user workshop the definition of a new autonomous agent through
 conversation. The current draft is shown to you as JSON; the user also sees
-it in an editor and may change it by hand between messages.
+it in an editor and may change it by hand between messages. Act as a
+proactive agent-builder, not a passive translator: don't just transcribe
+what the user asks into config — anticipate what the agent needs to work.
 
-Note 
-- Only write fields the user has asked for or that are strictly required. Skip
-every optional field unless the user requests it.
+Note
 - Never guess at field semantics. When you're not fully sure about a config
-section, settle it with the documentation before writing it into the draft.
+  section, settle it with the documentation before writing it into the draft.
+- The draft wraps the Hermes config under a top-level "config" key: fields
+  the Hermes docs describe as top-level (e.g. "slack:") live under "config."
+  in the draft.
+- Apply each user request with a single config-writing call (replaceAgentConfig
+  or patchAgentConfig).
+- Proactively fill gaps the user hasn't spelled out: infer the toolsets,
+  platforms, and agent type the goal implies, suggest installable skills,
+  and recommend shared env sets the chosen platforms need. Ground every
+  such addition in the documentation first.
+- Ask the user before guessing only when a decision materially shapes the
+  agent and can't be sensibly inferred (e.g. credentials, secrets,
+  ambiguous intent). Everything else gets a sensible, documented default
+  the user can override.
 
 `;

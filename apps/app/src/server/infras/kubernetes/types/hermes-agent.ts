@@ -186,6 +186,7 @@ export interface Hermes {
   crons?: HermesCron[] | undefined;
   bundles?: HermesBundle[] | undefined;
   envFrom?: k8s.V1EnvFromSource[] | undefined;
+  env?: k8s.V1EnvVar[] | undefined;
   resources?: k8s.V1ResourceRequirements | undefined;
   probes?: Probes | undefined;
   ports?: k8s.V1ContainerPort[] | undefined;

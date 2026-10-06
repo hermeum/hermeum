@@ -6,10 +6,8 @@ description: API server configuration (`gateway.api_server`) — OpenAI-compatib
 
 # API server configuration
 
-Exposes hermes-agent as an OpenAI-compatible HTTP endpoint. Any frontend that
-speaks the OpenAI format — Open WebUI, LobeChat, LibreChat, NextChat, ChatBox,
-and hundreds more — can connect and use the agent as a backend with its full
-toolset (terminal, file operations, web search, memory, skills).
+Exposes the agent as an OpenAI-compatible HTTP endpoint for any
+OpenAI-format frontend.
 
 ## Configuration
 
@@ -17,12 +15,13 @@ The API server can be configured through either `config.gateway.api_server`
 (`enabled`, `port`) **or** env vars (`API_SERVER_ENABLED`,
 `API_SERVER_PORT`). Environment variables take precedence over the
 `config.yaml` values when both are set; the config block acts as a
-fallback for deployments that prefer `config.yaml`.
+fallback for deployments that prefer `config.yaml`. The bearer token is
+env-only (`API_SERVER_KEY`, sensitive) — see [Secrets](#secrets).
 
 ### config.yaml
 
-Only non-secret settings live under `config.gateway.api_server` (flat
-fields, matching the upstream block):
+Settings live under `config.gateway.api_server` (flat fields, matching the
+upstream block):
 
 - `enabled` — whether the API server is enabled (bool).
 - `port` — HTTP server port (default `8642`).
@@ -32,17 +31,29 @@ fields, matching the upstream block):
   only if a browser must call Hermes directly.
 - `model_name` — model name advertised on `/v1/models`. Defaults to the
   profile name.
-- `max_concurrent_runs` — concurrent-run cap across the
-  OpenAI-compatible and Runs endpoints (default `10`; `0` disables the
-  limit — new run-starting requests get HTTP 429 when the cap is
-  reached).
+- `max_concurrent_runs` — concurrent-run cap across the endpoints that
+  start a run directly: the OpenAI-compatible endpoints, the Runs
+  endpoints, and the session-chat endpoints (`POST
+  /api/sessions/{id}/chat` and its `/stream` variant). Cron-triggered
+  runs (`POST /api/jobs/{id}/run`, `POST /api/cron/fire`) go through the
+  cron scheduler and are governed by cron's own limits, not this cap
+  (default `10`; `0` disables the limit — new run-starting requests get
+  HTTP 429 when the cap is reached).
+- `history_tool_output_max_chars` — cap each tool output and each string
+  tool-call argument in the **stored** `/v1/responses` history at this
+  many characters; anything longer is cut to the head plus a
+  `...[N more chars]` marker (default `0` = store verbatim). User and
+  assistant text is never touched, and the `response.completed` payload
+  and incremental SSE events are unaffected. Because the stored history
+  is what the model sees on the next chained turn, enabling the cap also
+  trims what the model is replayed — leave it at `0` if your workflow
+  needs complete tool outputs across turns.
 
-The bearer token is **not** surfaced by Hermeum in `config.yaml` — it
-lives in the `API_SERVER_KEY` environment variable (see
-[Environment variables](#environment-variables)) to avoid exposing
-credentials in plain text. Upstream also accepts a `key:` field in the
-config block; Hermeum does not write it, though a hand-written value
-passes through unchanged.
+## Secrets
+
+The bearer token is **env-only**: set it as the `API_SERVER_KEY` env entry
+(marked `sensitive: true`) — never write the literal token into
+`config.yaml`.
 
 ## Environment variables
 
@@ -51,7 +62,7 @@ passes through unchanged.
 | `API_SERVER_ENABLED` | `false` | Enable the API server. Takes precedence over `gateway.api_server.enabled`. |
 | `API_SERVER_PORT` | `8642` | HTTP server port. Takes precedence over `gateway.api_server.port`. |
 | `API_SERVER_HOST` | `127.0.0.1` | Bind address. Defaults to localhost only; set to `0.0.0.0` to expose on a LAN. |
-| `API_SERVER_KEY` | _(required)_ | Bearer token for auth. Required for every deployment, including loopback. Set via env var, not `config.yaml`, to avoid exposing credentials in plain text. |
+| `API_SERVER_KEY` | _(required)_ | Bearer token for auth. Required for every deployment, including loopback. Set it as a sensitive env entry. |
 | `API_SERVER_CORS_ORIGINS` | _(none)_ | Comma-separated allowed browser origins. Required only if a browser must call Hermes directly. |
 | `API_SERVER_MODEL_NAME` | _(profile name)_ | Model name advertised on `/v1/models`. Defaults to the profile name, or `hermes-agent` for the default profile. |
 
@@ -72,6 +83,10 @@ config:
       cors_origins: http://localhost:3000
       model_name: my-hermes
       max_concurrent_runs: 10
+env:
+  - name: API_SERVER_KEY
+    value: change-me-local-dev
+    sensitive: true
 ```
 
 ### Enabling the API server with an auth key
@@ -90,4 +105,6 @@ env:
 
 The `gateway.api_server` block is optional — omitting it and setting
 `API_SERVER_ENABLED=true` + `API_SERVER_PORT` via env vars works the
-same way. When both are set, the env vars win.
+same way. When both are set, the env vars win. The bearer token is
+required for every deployment: set it as the sensitive `API_SERVER_KEY`
+env entry — never in `config.yaml` (see [Secrets](#secrets)).

@@ -4,9 +4,9 @@
   <img src="logo.png" alt="Hermeum logo" width="600" />
 </p>
 
-Hermeum is a platform for creating **tailored AI agents** for your team. Every
-agent is built on top of the open-source
-[Hermes agent](https://hermes-agent.nousresearch.com/docs), so it inherits
+Hermeum is a platform for creating **fully autonomous Hermes agents** that work
+on your team's behalf. Built on the open-source
+[Hermes agent](https://hermes-agent.nousresearch.com/docs), every agent inherits
 powerful built-in capabilities, while Hermeum gives you a simple way to shape,
 run, and manage it.
 
@@ -70,6 +70,11 @@ Full documentation is published at [here](https://docs.hermeum.app).
 | [Mutating admission webhook](https://docs.hermeum.app/operation/mutating-webhook/)     | Admission webhook behavior and TLS options.             |
 | [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/)           | Ingress gateway and per-agent TLS.                      |
 
+
+## Community
+
+Join the [Hermeum Discord](https://discord.gg/ZW44yyCAHP) to ask questions,
+share what you're building, and talk to the team.
 
 ## Contributing
 

@@ -2,20 +2,33 @@
 //
 // Only well-known fields are typed here (see the per-field modules below); any
 // additional fields pass through unchanged via looseObject. Full field
-// semantics live in docs/hermes-config/ and are surfaced to the LLM via the
+// semantics live in docs/official/ and are surfaced to the LLM via the
 // readDocument tool, so .describe() texts are kept minimal — use the
 // `readDocument` tool to look up the semantics of any config field you are not
 // fully sure about before writing it into the draft.
 
 export { ModelProviderSchema, ModelSchema, type ModelProvider, type Model } from "./model";
 export {
+  ApprovalsModeSchema,
+  HeadlessModeSchema,
+  ApprovalsSchema,
+  CommandAllowlistSchema,
+  type ApprovalsMode,
+  type HeadlessMode,
+  type Approvals,
+  type CommandAllowlist,
+} from "./security";
+export {
   WebhookDeliverSchema,
   DeliverExtraSchema,
   WebhookRouteSchema,
+  WebhookRouteToolsetSchema,
+  WebhookFilterSchema,
   WebhookSchema,
   type WebhookDeliver,
   type DeliverExtra,
   type WebhookRoute,
+  type WebhookFilter,
   type Webhook,
 } from "./webhook";
 export { TeamsSchema, type Teams } from "./teams";
@@ -37,6 +50,7 @@ export { VideoGenSchema, type VideoGen } from "./video-gen";
 
 import { z } from "zod";
 import { ModelSchema } from "./model";
+import { ApprovalsSchema, CommandAllowlistSchema } from "./security";
 import { WebhookSchema } from "./webhook";
 import { TeamsSchema } from "./teams";
 import { ApiServerSchema } from "./api-server";
@@ -77,6 +91,8 @@ export type Gateway = z.infer<typeof GatewaySchema>;
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema,
+    approvals: ApprovalsSchema,
+    command_allowlist: CommandAllowlistSchema,
     platforms: PlatformsSchema,
     gateway: GatewaySchema,
     slack: SlackSchema,

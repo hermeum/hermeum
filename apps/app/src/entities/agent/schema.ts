@@ -8,7 +8,7 @@ import {
   SkillIdentifier,
 } from "../skill";
 
-import { isApiServerEnabled, isTeamsEnabled, isWebhookEnabled } from "./platform";
+import { PlatformId, isApiServerEnabled, isTeamsEnabled, isWebhookEnabled } from "./platform";
 
 export const ENV_SECRET_SENTINEL = "<secret>";
 
@@ -296,6 +296,10 @@ export const AgentInputObjectSchema = z.object({
     .describe("Ids of app-managed shared env sets."),
 });
 
+// Standing policy: platform secrets use reserved env vars (WEBHOOK_SECRET,
+// API_SERVER_KEY, TEAMS_CLIENT_SECRET), each marked sensitive: true. An
+// enabled platform must carry its reserved secret env entry; the checks
+// below enforce the pairing.
 export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) => {
   const requireSensitiveEnv = (name: string, enabledPath: string) => {
     const hasVar = data.env?.some((v) => v.name === name && v.sensitive === true);
@@ -308,15 +312,14 @@ export const AgentInputSchema = AgentInputObjectSchema.superRefine((data, ctx) =
     }
   };
   if (isWebhookEnabled(data)) {
-    requireSensitiveEnv("WEBHOOK_SECRET", "webhook enabled (env var or config)");
+    requireSensitiveEnv("WEBHOOK_SECRET", "webhook enabled");
   }
   if (isApiServerEnabled(data)) {
-    requireSensitiveEnv("API_SERVER_KEY", "api server enabled (env var or config)");
+    requireSensitiveEnv("API_SERVER_KEY", "api server enabled");
   }
   if (isTeamsEnabled(data)) {
-    requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled (env var or config)");
+    requireSensitiveEnv("TEAMS_CLIENT_SECRET", "teams enabled");
   }
-
   data.env?.forEach((v, i) => {
     if (v.value === ENV_PLACEHOLDER_SENTINEL) {
       ctx.addIssue({
@@ -342,6 +345,15 @@ export const AgentPhaseSchema = z.enum([
 ]);
 export type AgentPhase = z.infer<typeof AgentPhaseSchema>;
 
+// Endpoint URL or null per HTTP platform. Every key is always present —
+// platforms without an ingress/Service surface null rather than a missing key.
+export const AgentEndpointsSchema = z.object({
+  [PlatformId.ApiServer]: z.url().nullable(),
+  [PlatformId.Webhook]: z.url().nullable(),
+  [PlatformId.Teams]: z.url().nullable(),
+});
+export type AgentEndpoints = z.infer<typeof AgentEndpointsSchema>;
+
 export const AgentSchema = AgentInputObjectSchema.extend({
   id: z.string().min(1),
   userId: z.string().min(1),
@@ -349,8 +361,10 @@ export const AgentSchema = AgentInputObjectSchema.extend({
   archived: z.boolean().optional(),
   phase: AgentPhaseSchema.optional(),
   reason: z.string().optional(),
-  // Public base URL of the agent's ingress. Output-only; null when no ingress.
-  endpoint: z.string().url().nullable().optional(),
+  // Per-platform base endpoint URLs, one entry per HTTP platform
+  // (PlatformId). Output-only. Keys are fixed by PlatformId — every field is
+  // always present; platforms without an ingress/Service surface null.
+  endpoints: AgentEndpointsSchema.optional(),
   createdAt: z.date().optional(),
 }).readonly();
 

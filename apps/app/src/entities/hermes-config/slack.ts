@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack
-// Full field semantics: docs/hermes-config/slack.md
+// Full field semantics: docs/official/slack.md
 // Only the essential fields are validated here; the rest pass through via
 // looseObject so users can configure whatever the Hermes agent supports.
 //
@@ -9,12 +9,13 @@ import { z } from "zod";
 // slack.ignore_other_user_mentions, slack.thread_require_mention,
 // slack.reaction_triggers, and the new platforms.slack.extra.* knobs
 // (unfurl_links, unfurl_media, feedback_buttons, native_task_cards,
-// suggested_prompts, assistant_thread_titles, allow_bots) and
-// platforms.slack.typing_status_text are not typed here — they pass through
-// via looseObject. unauthorized_dm_behavior stays pinned to "ignore":
-// Hermeum deployments deny-by-default rather than upstream's "pair" prompt.
+// suggested_prompts, assistant_thread_titles, allow_bots,
+// api_human_users) and platforms.slack.typing_status_text are not typed
+// here — they pass through via looseObject. unauthorized_dm_behavior
+// stays pinned to "ignore": Hermeum deployments deny-by-default rather
+// than upstream's "pair" prompt.
 export const ChannelSkillBindingSchema = z
-  .object({
+  .looseObject({
     id: z.string().describe("Slack channel/DM ID the binding matches."),
     skills: z
       .array(z.string())

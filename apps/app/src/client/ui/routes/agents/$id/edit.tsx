@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
@@ -15,7 +15,7 @@ import { useTRPC } from "@/router";
 import { AgentInputObjectSchema, AgentInputSchema } from "@/entities";
 import type { AgentInput } from "@/entities";
 import { AgentConfigChat } from "@/client/ui/components/agent-config-chat";
-import { CodeEditor } from "@/client/ui/components/code-editor";
+import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { AgentEditorMobileTabs } from "../-components/agent-editor-mobile-tabs";
 import { AgentPickerBar } from "../-components/agent-picker-bar";
 
@@ -36,7 +36,7 @@ function EditAgentPage() {
   const navigate = useNavigate();
   const [editorValue, setEditorValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [seeded, setSeeded] = useState(false);
+  const [seededAgent, setSeededAgent] = useState<unknown>(undefined);
 
   const { data: agent, isPending, error } = useQuery(
     trpc.agent.get.queryOptions({ id })
@@ -44,13 +44,12 @@ function EditAgentPage() {
 
   // Seed the editor with the existing agent's config once it loads. The draft
   // is what the chat LLM reads/writes, so editing starts from the persisted
-  // definition rather than a blank slate.
-  useEffect(() => {
-    if (agent && !seeded) {
-      setEditorValue(agentToYaml(agent));
-      setSeeded(true);
-    }
-  }, [agent, seeded]);
+  // definition rather than a blank slate. Adjusting state during render on
+  // agent identity change avoids an effect-triggered cascading render.
+  if (agent && agent !== seededAgent) {
+    setSeededAgent(agent);
+    setEditorValue(agentToYaml(agent));
+  }
 
   const { mutate: updateAgent, isPending: isUpdating } = useMutation(
     trpc.agent.update.mutationOptions({
@@ -82,9 +81,13 @@ function EditAgentPage() {
     setValidationError(null);
   }
 
-  // Merge a user-managed-field patch (agent type / skills) into the current
-  // draft.
-  function handlePickerChange(patch: { type?: string | undefined; skills?: string[] | undefined }) {
+  // Merge a user-managed-field patch (agent type / skills / shared env sets)
+  // into the current draft.
+  function handlePickerChange(patch: {
+    type?: string | undefined;
+    skills?: string[] | undefined;
+    sharedEnvSets?: string[] | undefined;
+  }) {
     const current = getConfig();
     if (current === undefined) return;
     handleConfigUpdate({ ...current, ...patch });
@@ -125,14 +128,15 @@ function EditAgentPage() {
 
   const configPane: ReactNode = (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <p className="shrink-0 text-sm font-medium">Agent config</p>
       <AgentPickerBar config={getConfig()} onChange={handlePickerChange} />
       <div className="min-h-0 flex-1">
-        <CodeEditor
+        <AgentConfigEditor
           value={editorValue}
           onChange={setEditorValue}
           invalid={!!validationError}
           height="100%"
+          title="Agent config"
+          originalValue={agentToYaml(agent)}
         />
       </div>
       {validationError && (

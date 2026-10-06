@@ -1,88 +1,198 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
-import { AgentInputObjectSchema, AgentInputSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent } from "./agent";
+import { AgentInputObjectSchema, AgentInputSchema, isApiServerEnabled, getApiServerPort, isWebhookEnabled, getWebhookPort, isTeamsEnabled, getTeamsPort, ToolsetId, deriveToolsetAvailability, PlatformId, derivePlatformAvailability, type Agent, type AgentInput } from "./agent";
+import { AgentPatchSchema, applyAgentPatch, type AgentPatch } from "./agent/patch";
 import { SkillIdentifierSchema } from "./skill";
 
 function makeInput(overrides: Record<string, unknown> = {}) {
   return {
-    config: { platforms: { webhook: { enabled: true } } },
+    env: [
+      { name: "WEBHOOK_ENABLED", value: "true" },
+      { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+    ],
     ...overrides,
   };
 }
 
-describe("AgentInputSchema webhook secret validation", () => {
-  it("fails when webhook is enabled via config and env is missing", () => {
+describe("AgentInputSchema webhook reserved env var validation", () => {
+  it("accepts a webhook block without a config secret (secrets are env-only)", () => {
     const result = AgentInputSchema.safeParse(makeInput());
-    expect(result.success).toBe(false);
-  });
-
-  it("fails when webhook is enabled via config and env lacks a sensitive WEBHOOK_SECRET", () => {
-    const result = AgentInputSchema.safeParse(
-      makeInput({ env: [{ name: "WEBHOOK_SECRET", value: "shh" }] })
-    );
-    expect(result.success).toBe(false);
-  });
-
-  it("succeeds when webhook is enabled via config and env has a sensitive WEBHOOK_SECRET", () => {
-    const result = AgentInputSchema.safeParse(
-      makeInput({ env: [{ name: "WEBHOOK_SECRET", value: "shh", sensitive: true }] })
-    );
     expect(result.success).toBe(true);
   });
 
-  it("fails when webhook is enabled via WEBHOOK_ENABLED env var and WEBHOOK_SECRET is missing", () => {
+  it("fails when webhook is enabled without the WEBHOOK_SECRET env entry", () => {
     const result = AgentInputSchema.safeParse({
       env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
     });
     expect(result.success).toBe(false);
   });
 
-  it("succeeds when webhook is enabled via WEBHOOK_ENABLED env var and WEBHOOK_SECRET is sensitive", () => {
+  it("fails when the WEBHOOK_SECRET env entry is not marked sensitive", () => {
     const result = AgentInputSchema.safeParse({
       env: [
         { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh" },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes a config secret through unvalidated (looseObject policy)", () => {
+    // config.platforms.webhook.secret is intentionally untyped — it passes
+    // through, but never counts as the reserved WEBHOOK_SECRET env entry.
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { platforms: { webhook: { secret: "shh" } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+      config: { platforms: { webhook: { secret: "shh" } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when webhook is disabled once the secret env entry is present", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "false" },
         { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
       ],
     });
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when webhook is disabled regardless of env", () => {
-    const result = AgentInputSchema.safeParse({
-      config: { platforms: { webhook: { enabled: false } } },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("succeeds when webhook config is omitted entirely", () => {
+  it("succeeds when webhook config/env is omitted entirely", () => {
     const result = AgentInputSchema.safeParse({});
     expect(result.success).toBe(true);
   });
-});
 
-describe("AgentInputSchema webhook env-vs-config precedence", () => {
-  it("prefers config.platforms.webhook.enabled over WEBHOOK_ENABLED env var", () => {
+  it("does not require WEBHOOK_SECRET when webhook is enabled via config only", () => {
+    // config.platforms.webhook.enabled no longer enables the webhook
+    // (env-only enablement), so the reserved env var is not required.
     const input = {
-      env: [
-        { name: "WEBHOOK_ENABLED", value: "true" },
-        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
-      ],
-      config: { platforms: { webhook: { enabled: false } } },
+      config: { platforms: { webhook: { enabled: true } } },
     };
     const result = AgentInputSchema.safeParse(input);
     expect(result.success).toBe(true);
     expect(isWebhookEnabled(input as never)).toBe(false);
   });
+});
+
+describe("AgentInputSchema webhook route toolsets", () => {
+  it("accepts a valid toolsets list on a route", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: {
+                routes: {
+                  "oom-emergency": { toolsets: ["terminal", "file", "code_execution", "web"] },
+                },
+              },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a route without toolsets", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: { routes: { "github-pr": {} } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects camelCase toolset names not accepted upstream", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: { routes: { "oom-emergency": { toolsets: ["codeExecution"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts unknown toolset names — upstream drops them silently, never errors", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: { routes: { "oom-emergency": { toolsets: ["not_a_toolset"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects toolset names that are not lowercase keys", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: { routes: { "oom-emergency": { toolsets: ["with space"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts platform toolset keys with hyphens", () => {
+    const result = AgentInputSchema.safeParse(
+      makeInput({
+        config: {
+          platforms: {
+            webhook: {
+              extra: { routes: { "oom-emergency": { toolsets: ["hermes-cli"] } } },
+            },
+          },
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("AgentInputSchema webhook env-only enablement", () => {
+  it("requires WEBHOOK_ENABLED=true on the env path", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [
+        { name: "WEBHOOK_ENABLED", value: "true" },
+        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
 
   it("prefers config.platforms.webhook.extra.port over WEBHOOK_PORT env var", () => {
     const input = {
-      env: [
-        { name: "WEBHOOK_ENABLED", value: "true" },
-        { name: "WEBHOOK_PORT", value: "9001" },
-        { name: "WEBHOOK_SECRET", value: "shh", sensitive: true },
-      ],
-      config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
+      env: [{ name: "WEBHOOK_PORT", value: "9001" }],
+      config: {
+        platforms: { webhook: { extra: { port: 9000 } } },
+      },
     };
     const result = AgentInputSchema.safeParse(input);
     expect(result.success).toBe(true);
@@ -100,61 +210,39 @@ describe("AgentInputSchema webhook env-vs-config precedence", () => {
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when only the config path is used", () => {
+  it("does not require WEBHOOK_SECRET for config-only webhook settings (routes, port)", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } },
-      env: [{ name: "WEBHOOK_SECRET", value: "shh", sensitive: true }],
+      config: {
+        platforms: { webhook: { enabled: true, extra: { port: 9000 } } },
+      },
     });
     expect(result.success).toBe(true);
   });
 });
 
-describe("AgentInputSchema api server key validation", () => {
-  function makeApiServerInput(overrides: Record<string, unknown> = {}) {
-    return {
-      env: [{ name: "API_SERVER_ENABLED", value: "true" }],
-      ...overrides,
-    };
-  }
-
-  it("fails when the api server is enabled and env is missing", () => {
-    const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] });
-    expect(result.success).toBe(false);
-  });
-
-  it("fails when the api server is enabled and env lacks a sensitive API_SERVER_KEY", () => {
-    const result = AgentInputSchema.safeParse(
-      makeApiServerInput({ env: [
-        { name: "API_SERVER_ENABLED", value: "true" },
-        { name: "API_SERVER_KEY", value: "shh" },
-      ] })
-    );
-    expect(result.success).toBe(false);
-  });
-
-  it("succeeds when the api server is enabled and env has a sensitive API_SERVER_KEY", () => {
-    const result = AgentInputSchema.safeParse(
-      makeApiServerInput({ env: [
-        { name: "API_SERVER_ENABLED", value: "true" },
-        { name: "API_SERVER_KEY", value: "shh", sensitive: true },
-      ] })
-    );
-    expect(result.success).toBe(true);
-  });
-
-  it("succeeds when the api server is disabled regardless of env", () => {
-    const result = AgentInputSchema.safeParse({ env: [{ name: "API_SERVER_ENABLED", value: "false" }] });
-    expect(result.success).toBe(true);
-  });
-
-  it("fails when the api server is enabled via config and API_SERVER_KEY is missing", () => {
+describe("AgentInputSchema api server reserved env var validation", () => {
+  it("fails when the api server is enabled without the API_SERVER_KEY env entry", () => {
     const result = AgentInputSchema.safeParse({
       config: { gateway: { api_server: { enabled: true } } },
     });
     expect(result.success).toBe(false);
   });
 
-  it("succeeds when the api server is enabled via config and env has a sensitive API_SERVER_KEY", () => {
+  it("passes a config key through unvalidated (looseObject policy)", () => {
+    // gateway.api_server.key is intentionally untyped — it passes through,
+    // but never counts as the reserved API_SERVER_KEY env entry.
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true, key: "shh" } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      config: { gateway: { api_server: { enabled: true, key: "shh" } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when the api server is enabled with the key env entry", () => {
     const result = AgentInputSchema.safeParse({
       config: { gateway: { api_server: { enabled: true } } },
       env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
@@ -162,9 +250,27 @@ describe("AgentInputSchema api server key validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("succeeds when config disables the api server while the env var enables it", () => {
+  it("succeeds when the api server is disabled once the key env entry is present", () => {
     const result = AgentInputSchema.safeParse({
       config: { gateway: { api_server: { enabled: false } } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds when the api server config is omitted entirely", () => {
+    const result = AgentInputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("fails when enabled via API_SERVER_ENABLED env without the key env entry", () => {
+    const result = AgentInputSchema.safeParse({
+      env: [{ name: "API_SERVER_ENABLED", value: "true" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds when enabled via API_SERVER_ENABLED env with the key env entry", () => {
+    const result = AgentInputSchema.safeParse({
       env: [
         { name: "API_SERVER_ENABLED", value: "true" },
         { name: "API_SERVER_KEY", value: "shh", sensitive: true },
@@ -199,15 +305,23 @@ describe("isApiServerEnabled", () => {
 
   it("returns true when config.gateway.api_server.enabled is true", () => {
     expect(
-      isApiServerEnabled({ config: { gateway: { api_server: { enabled: true } } } })
+      isApiServerEnabled({
+        config: { gateway: { api_server: { enabled: true } } },
+      })
     ).toBe(true);
   });
 
   it("returns false when config.gateway.api_server.enabled is false or absent", () => {
     expect(
-      isApiServerEnabled({ config: { gateway: { api_server: { enabled: false } } } })
+      isApiServerEnabled({
+        config: { gateway: { api_server: { enabled: false } } },
+      })
     ).toBe(false);
-    expect(isApiServerEnabled({ config: { gateway: { api_server: {} } } })).toBe(false);
+    expect(
+      isApiServerEnabled({
+        config: { gateway: { api_server: {} } },
+      })
+    ).toBe(false);
   });
 
   it("prefers the API_SERVER_ENABLED env var over config.gateway.api_server.enabled", () => {
@@ -247,16 +361,22 @@ describe("getApiServerPort", () => {
 
   it("uses config.gateway.api_server.port when the env var is absent", () => {
     expect(
-      getApiServerPort({ config: { gateway: { api_server: { port: 9000 } } } })
+      getApiServerPort({
+        config: { gateway: { api_server: { port: 9000 } } },
+      })
     ).toBe(9000);
   });
 
   it("falls back to 8642 when config.gateway.api_server.port is not positive", () => {
     expect(
-      getApiServerPort({ config: { gateway: { api_server: { port: 0 } } } })
+      getApiServerPort({
+        config: { gateway: { api_server: { port: 0 } } },
+      })
     ).toBe(8642);
     expect(
-      getApiServerPort({ config: { gateway: { api_server: { port: -1 } } } })
+      getApiServerPort({
+        config: { gateway: { api_server: { port: -1 } } },
+      })
     ).toBe(8642);
   });
 
@@ -264,7 +384,9 @@ describe("getApiServerPort", () => {
     expect(
       getApiServerPort({
         env: [{ name: "API_SERVER_PORT", value: "9001" }],
-        config: { gateway: { api_server: { enabled: true, port: 9000 } } },
+        config: {
+          gateway: { api_server: { enabled: true, port: 9000 } },
+        },
       })
     ).toBe(9001);
   });
@@ -287,33 +409,42 @@ describe("isWebhookEnabled", () => {
     }
   });
 
-  it("returns true when config.platforms.webhook.enabled is true", () => {
+  it("returns false when config.platforms.webhook.enabled is true (env-only enablement)", () => {
+    // Webhook enablement is env-only — config does not count as enablement.
     expect(
-      isWebhookEnabled({ config: { platforms: { webhook: { enabled: true } } } })
-    ).toBe(true);
+      isWebhookEnabled({
+        config: { platforms: { webhook: { enabled: true } } },
+      })
+    ).toBe(false);
   });
 
   it("returns false when config.platforms.webhook.enabled is false or absent", () => {
     expect(
-      isWebhookEnabled({ config: { platforms: { webhook: { enabled: false } } } })
-    ).toBe(false);
-    expect(isWebhookEnabled({ config: { platforms: { webhook: {} } } })).toBe(false);
-    expect(isWebhookEnabled({})).toBe(false);
-  });
-
-  it("prefers config.platforms.webhook.enabled over the WEBHOOK_ENABLED env var", () => {
-    expect(
       isWebhookEnabled({
-        env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         config: { platforms: { webhook: { enabled: false } } },
       })
     ).toBe(false);
     expect(
       isWebhookEnabled({
+        config: { platforms: { webhook: { secret: "shh" } } },
+      })
+    ).toBe(false);
+    expect(isWebhookEnabled({})).toBe(false);
+  });
+
+  it("is driven solely by the WEBHOOK_ENABLED env var", () => {
+    expect(
+      isWebhookEnabled({
+        env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+        config: { platforms: { webhook: { enabled: false } } },
+      })
+    ).toBe(true);
+    expect(
+      isWebhookEnabled({
         env: [{ name: "WEBHOOK_ENABLED", value: "false" }],
         config: { platforms: { webhook: { enabled: true } } },
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -338,7 +469,11 @@ describe("getWebhookPort", () => {
 
   it("returns the config.platforms.webhook.extra.port when WEBHOOK_PORT env var is absent", () => {
     expect(
-      getWebhookPort({ config: { platforms: { webhook: { extra: { port: 9000 } } } } })
+      getWebhookPort({
+        config: {
+          platforms: { webhook: { extra: { port: 9000 } } },
+        },
+      })
     ).toBe(9000);
   });
 
@@ -346,50 +481,69 @@ describe("getWebhookPort", () => {
     expect(
       getWebhookPort({
         env: [{ name: "WEBHOOK_PORT", value: "9001" }],
-        config: { platforms: { webhook: { extra: { port: 9000 } } } },
+        config: {
+          platforms: { webhook: { extra: { port: 9000 } } },
+        },
       })
     ).toBe(9000);
   });
 });
 
-describe("AgentInputSchema teams secret validation", () => {
-  const teamsCredsEnv = [
-    { name: "TEAMS_CLIENT_ID", value: "cid" },
-    { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-    { name: "TEAMS_TENANT_ID", value: "tid" },
-  ];
+describe("AgentInputSchema teams reserved env var validation", () => {
+  const teamsConfig = {
+    enabled: true,
+    extra: {
+      client_id: "cid",
+      tenant_id: "tid",
+    },
+  };
+  const teamsSecretEnv = [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }];
 
-  it("fails when teams is enabled via creds and env lacks sensitive TEAMS_CLIENT_SECRET", () => {
+  it("fails when teams is enabled without the TEAMS_CLIENT_SECRET env entry", () => {
     const result = AgentInputSchema.safeParse({
-      env: [
-        { name: "TEAMS_CLIENT_ID", value: "cid" },
-        { name: "TEAMS_CLIENT_SECRET", value: "sec" },
-        { name: "TEAMS_TENANT_ID", value: "tid" },
-      ],
+      config: { platforms: { teams: teamsConfig } },
     });
     expect(result.success).toBe(false);
   });
 
-  it("succeeds when teams is enabled and TEAMS_CLIENT_SECRET is sensitive", () => {
-    const result = AgentInputSchema.safeParse({ env: teamsCredsEnv });
+  it("passes a config client_secret through unvalidated (looseObject policy)", () => {
+    // platforms.teams.extra.client_secret is intentionally untyped — it
+    // passes through, but never counts as the reserved TEAMS_CLIENT_SECRET
+    // env entry (the secret is env-only by policy).
+    const passthrough = AgentInputObjectSchema.safeParse({
+      config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
+    });
+    expect(passthrough.success).toBe(true);
+
+    const missingEnv = AgentInputSchema.safeParse({
+      config: { platforms: { teams: { enabled: true, extra: { client_secret: "sec" } } } },
+    });
+    expect(missingEnv.success).toBe(false);
+  });
+
+  it("succeeds when teams is enabled with the secret env entry", () => {
+    const result = AgentInputSchema.safeParse({
+      config: { platforms: { teams: teamsConfig } },
+      env: teamsSecretEnv,
+    });
     expect(result.success).toBe(true);
   });
 
-  it("fails when teams is enabled via config flag and TEAMS_CLIENT_SECRET is missing", () => {
+  it("succeeds when all credentials come from env vars", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: { enabled: true } } },
       env: [
         { name: "TEAMS_CLIENT_ID", value: "cid" },
+        { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
         { name: "TEAMS_TENANT_ID", value: "tid" },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it("succeeds when teams is explicitly disabled regardless of env", () => {
+  it("accepts client_id and tenant_id as regular config strings", () => {
     const result = AgentInputSchema.safeParse({
-      config: { platforms: { teams: { enabled: false } } },
-      env: teamsCredsEnv,
+      config: { platforms: { teams: { enabled: true, extra: { client_id: "cid", tenant_id: "tid" } } } },
+      env: teamsSecretEnv,
     });
     expect(result.success).toBe(true);
   });
@@ -401,32 +555,100 @@ describe("AgentInputSchema teams secret validation", () => {
 });
 
 describe("isTeamsEnabled", () => {
-  const teamsCredsEnv = [
-    { name: "TEAMS_CLIENT_ID", value: "cid" },
-    { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-    { name: "TEAMS_TENANT_ID", value: "tid" },
-  ];
+  const teamsExtra = {
+    client_id: "cid",
+    tenant_id: "tid",
+  };
+  const teamsSecretEnv = [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }];
 
-  it("is enabled when all three credentials are in env", () => {
-    expect(isTeamsEnabled({ env: teamsCredsEnv })).toBe(true);
-  });
-
-  it("is disabled when any credential is missing from env", () => {
-    expect(isTeamsEnabled({ env: teamsCredsEnv.slice(0, 2) })).toBe(false);
+  it("is enabled when all three credentials are set (config + secret env)", () => {
     expect(
-      isTeamsEnabled({ env: [{ name: "TEAMS_CLIENT_ID", value: "cid" }] })
-    ).toBe(false);
-    expect(isTeamsEnabled({})).toBe(false);
+      isTeamsEnabled({ config: { platforms: { teams: { extra: teamsExtra } } }, env: teamsSecretEnv })
+    ).toBe(true);
   });
 
-  it("treats the <secret> sentinel for sensitive TEAMS_CLIENT_SECRET as set", () => {
+  it("is enabled when all three credentials come from env vars only", () => {
     expect(
       isTeamsEnabled({
         env: [
           { name: "TEAMS_CLIENT_ID", value: "cid" },
-          { name: "TEAMS_CLIENT_SECRET", value: "<secret>", sensitive: true },
+          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
           { name: "TEAMS_TENANT_ID", value: "tid" },
         ],
+      })
+    ).toBe(true);
+  });
+
+  it("accepts mixed sources (config client_id/tenant_id, env secret)", () => {
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: {
+            teams: { extra: { ...teamsExtra } },
+          },
+        },
+        env: teamsSecretEnv,
+      })
+    ).toBe(true);
+  });
+
+  it("is disabled when any credential is missing", () => {
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: {
+            teams: { extra: { ...teamsExtra, client_id: undefined } },
+          },
+        },
+        env: teamsSecretEnv,
+      })
+    ).toBe(false);
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: {
+            teams: { extra: { ...teamsExtra } },
+          },
+        },
+        env: [],
+      })
+    ).toBe(false);
+    expect(isTeamsEnabled({})).toBe(false);
+  });
+
+  it("does not count a config client_secret toward enablement (env-only secret)", () => {
+    // The secret must come from the TEAMS_CLIENT_SECRET env entry — a
+    // config value never counts (the secret is env-only by policy).
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: {
+            teams: { extra: { ...teamsExtra, client_secret: "sec" } },
+          },
+        },
+      })
+    ).toBe(false);
+  });
+
+  it("accepts config or env TEAMS_CLIENT_ID as the missing-credential fallback", () => {
+    expect(
+      isTeamsEnabled({
+        config: {
+          platforms: { teams: { extra: { ...teamsExtra, client_id: undefined } } },
+        },
+        env: [
+          ...teamsSecretEnv,
+          { name: "TEAMS_CLIENT_ID", value: "cid" },
+        ],
+      })
+    ).toBe(true);
+  });
+
+  it("treats the <secret> sentinel for the TEAMS_CLIENT_SECRET env var as set", () => {
+    expect(
+      isTeamsEnabled({
+        config: { platforms: { teams: { extra: teamsExtra } } },
+        env: [{ name: "TEAMS_CLIENT_SECRET", value: "<secret>", sensitive: true }],
       })
     ).toBe(true);
   });
@@ -434,8 +656,8 @@ describe("isTeamsEnabled", () => {
   it("prefers config.platforms.teams.enabled=false over present credentials", () => {
     expect(
       isTeamsEnabled({
-        env: teamsCredsEnv,
-        config: { platforms: { teams: { enabled: false } } },
+        env: teamsSecretEnv,
+        config: { platforms: { teams: { enabled: false, extra: teamsExtra } } },
       })
     ).toBe(false);
   });
@@ -443,7 +665,7 @@ describe("isTeamsEnabled", () => {
   it("prefers config.platforms.teams.enabled=true over missing credentials", () => {
     expect(
       isTeamsEnabled({
-        config: { platforms: { teams: { enabled: true } } },
+        config: { platforms: { teams: { enabled: true, extra: teamsExtra } } },
       })
     ).toBe(true);
   });
@@ -451,11 +673,10 @@ describe("isTeamsEnabled", () => {
   it("ignores whitespace-only credential values", () => {
     expect(
       isTeamsEnabled({
-        env: [
-          { name: "TEAMS_CLIENT_ID", value: "  " },
-          { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-          { name: "TEAMS_TENANT_ID", value: "tid" },
-        ],
+        config: {
+          platforms: { teams: { extra: { ...teamsExtra, client_id: "  " } } },
+        },
+        env: teamsSecretEnv,
       })
     ).toBe(false);
   });
@@ -482,7 +703,11 @@ describe("getTeamsPort", () => {
 
   it("returns config.platforms.teams.extra.port when TEAMS_PORT env var is absent", () => {
     expect(
-      getTeamsPort({ config: { platforms: { teams: { extra: { port: 4000 } } } } })
+      getTeamsPort({
+        config: {
+          platforms: { teams: { extra: { port: 4000 } } },
+        },
+      })
     ).toBe(4000);
   });
 
@@ -490,7 +715,9 @@ describe("getTeamsPort", () => {
     expect(
       getTeamsPort({
         env: [{ name: "TEAMS_PORT", value: "4001" }],
-        config: { platforms: { teams: { extra: { port: 4000 } } } },
+        config: {
+          platforms: { teams: { extra: { port: 4000 } } },
+        },
       })
     ).toBe(4000);
   });
@@ -708,6 +935,147 @@ describe("AgentInputObjectSchema as LLM structured-output schema", () => {
 
   it("is convertible to JSON Schema for the AI SDK", () => {
     expect(() => z.toJSONSchema(AgentInputObjectSchema)).not.toThrow();
+  });
+});
+
+describe("AgentPatchSchema envelope validation", () => {
+  it("accepts a top-level scalar patch", () => {
+    expect(AgentPatchSchema.safeParse({ name: "pr-reviewer" }).success).toBe(true);
+  });
+
+  it("accepts a nested config patch", () => {
+    const result = AgentPatchSchema.safeParse({
+      config: { web: { port: 8900 } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null values for deletion at any depth", () => {
+    const result = AgentPatchSchema.safeParse({
+      soul: null,
+      config: { slack: { channel_prompts: { "C123": null } } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts complete array replacements", () => {
+    const result = AgentPatchSchema.safeParse({
+      env: [{ name: "OPENAI_API_KEY", value: "<fill-me>", sensitive: true }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty patch", () => {
+    const result = AgentPatchSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unknown top-level field", () => {
+    const result = AgentPatchSchema.safeParse({ skils: ["typescript"] });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues[0]!.path).toEqual(["skils"]);
+    expect(result.error.issues[0]!.message).toContain("Unknown top-level field");
+  });
+
+  it("lets unknown nested keys pass through (looseObject policy)", () => {
+    const result = AgentPatchSchema.safeParse({
+      config: { someUntypedHermesField: { anything: true } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // Regression: an empty `looseObject({})` emitted "properties": {} to the
+  // model, which then had no visible keys to patch and sent `{}`. The patch
+  // schema must surface every top-level AgentInput field name in its JSON
+  // Schema, and the derivation keeps that list drift-proof.
+  it("exposes every AgentInputObjectSchema field name in its emitted JSON Schema", () => {
+    const jsonSchema = z.toJSONSchema(AgentPatchSchema);
+    const properties = (jsonSchema as { properties: Record<string, unknown> }).properties;
+    expect(Object.keys(properties).sort()).toEqual(
+      Object.keys(AgentInputObjectSchema.shape).sort()
+    );
+  });
+});
+
+describe("applyAgentPatch", () => {
+  const draft = {
+    name: "pr-reviewer",
+    soul: "You review PRs.",
+    env: [{ name: "GH_TOKEN", value: "x", sensitive: true }],
+    config: { web: { port: 8900, enabled: true }, model: { provider: "anthropic" } },
+  } as unknown as AgentInput;
+
+  it("replaces provided scalars and leaves others untouched", () => {
+    const merged = applyAgentPatch(draft, { name: "renamed" });
+    expect(merged).toEqual({ ...draft, name: "renamed" });
+  });
+
+  it("merges plain objects recursively", () => {
+    const merged = applyAgentPatch(draft, { config: { web: { port: 9000 } } });
+    expect(merged.config).toEqual({
+      web: { port: 9000, enabled: true },
+      model: { provider: "anthropic" },
+    });
+  });
+
+  it("deletes a key at any depth via null", () => {
+    const merged = applyAgentPatch(draft, { config: { web: { enabled: null } } });
+    expect(merged.config).toEqual({ web: { port: 8900 }, model: { provider: "anthropic" } });
+  });
+
+  it("deletes a top-level field via null", () => {
+    const merged = applyAgentPatch(draft, { soul: null });
+    expect(merged).not.toHaveProperty("soul");
+    expect(merged).toHaveProperty("name", "pr-reviewer");
+  });
+
+  it("replaces arrays wholesale", () => {
+    const merged = applyAgentPatch(draft, {
+      env: [{ name: "OTHER", value: "y", sensitive: false }],
+    });
+    expect(merged.env).toEqual([{ name: "OTHER", value: "y", sensitive: false }]);
+  });
+
+  it("replaces a non-object current value with a merged object when patching over a scalar", () => {
+    const merged = applyAgentPatch(draft, { description: "text", config: { web: { port: 1 } } });
+    // "description" absent in draft: merged in as-is.
+    expect(merged.description).toBe("text");
+    // A scalar current value is replaced by the patch object's merge result.
+    const overScalar = applyAgentPatch({ name: "x", soul: "text" } as AgentInput, {
+      soul: { bold: true },
+    });
+    expect(overScalar.soul).toEqual({ bold: true });
+  });
+
+  it("seeds a new draft when there is no current config", () => {
+    const merged = applyAgentPatch(undefined, { name: "first", config: { web: { port: 1 } } });
+    expect(merged).toEqual({ name: "first", config: { web: { port: 1 } } });
+  });
+
+  it("does not mutate its inputs", () => {
+    const draftCopy = structuredClone(draft);
+    const patch = { config: { web: { port: null } } } as unknown as AgentPatch;
+    applyAgentPatch(draft, patch);
+    expect(draft).toEqual(draftCopy);
+    expect(patch.config).toEqual({ web: { port: null } });
+  });
+
+  it("merged results pass AgentInputSchema and re-apply pinned defaults", () => {
+    // null-deleting a .default() field re-materializes the default when the
+    // merged result is validated — pinned policy (e.g. Slack
+    // unauthorized_dm_behavior: "ignore") is not weakened.
+    const withSlack = {
+      config: { slack: { unauthorized_dm_behavior: "pair", enabled: true } },
+    } as unknown as AgentInput;
+    const merged = applyAgentPatch(withSlack, {
+      config: { slack: { unauthorized_dm_behavior: null } },
+    });
+    const parsed = AgentInputSchema.safeParse(merged);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    const slack = (parsed.data.config as { slack?: { unauthorized_dm_behavior?: string } }).slack;
+    expect(slack?.unauthorized_dm_behavior).toBe("ignore");
   });
 });
 
@@ -951,12 +1319,12 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("API_SERVER_ENABLED");
     });
 
-    it("is available with the default port when enabled", () => {
+    it("is available when enabled", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
       );
-      expect(result).toEqual({ status: "available", port: 8642 });
+      expect(result.status).toBe("available");
     });
 
     it("is available when enabled via config.gateway.api_server", () => {
@@ -967,20 +1335,20 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "API_SERVER_KEY", value: "shh", sensitive: true }],
         })
       );
-      expect(result).toEqual({ status: "available", port: 8642 });
+      expect(result.status).toBe("available");
     });
 
-    it("uses config.gateway.api_server.port when the env var is absent", () => {
+    it("is available when the port comes from config.gateway.api_server.port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
           config: { gateway: { api_server: { enabled: true, port: 9000 } } },
         })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("prefers API_SERVER_PORT over config.gateway.api_server.port", () => {
+    it("is available when API_SERVER_PORT overrides the config port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
@@ -988,7 +1356,7 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "API_SERVER_PORT", value: "9001" }],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9001 });
+      expect(result.status).toBe("available");
     });
 
     it("is unavailable when config disables the api server but the env var enables it", () => {
@@ -1002,7 +1370,7 @@ describe("derivePlatformAvailability", () => {
       expect(result.status).toBe("available");
     });
 
-    it("uses API_SERVER_PORT when set", () => {
+    it("is available when API_SERVER_PORT is set", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
@@ -1012,65 +1380,61 @@ describe("derivePlatformAvailability", () => {
           ],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("derives endpoints with /v1 first then /api when agent.endpoint is set", () => {
+    it("surfaces the api-server endpoint when set", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "https://a1.example.com",
+          endpoints: {
+            "api-server": "https://a1.api.example.com",
+            webhook: null,
+            teams: null,
+          },
           env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "https://a1.example.com/v1",
-        "https://a1.example.com/api",
-      ]);
+      expect(result.endpoint).toBe("https://a1.api.example.com");
     });
 
-    it("inserts the per-platform port into internal (.svc.cluster.local) endpoints", () => {
+    it("ignores endpoints belonging to other platforms", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
           env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:8642/v1",
-        "http://a1.hermeum.svc.cluster.local:8642/api",
-      ]);
+      expect(result.endpoint).toBeUndefined();
     });
 
-    it("inserts a custom API_SERVER_PORT into internal endpoints", () => {
+    it("surfaces the internal endpoint with the embedded platform port", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
-          env: [
-            { name: "API_SERVER_ENABLED", value: "true" },
-            { name: "API_SERVER_PORT", value: "9000" },
-          ],
+          endpoints: {
+            "api-server": "http://a1.hermeum.svc.cluster.local:8642",
+            webhook: null,
+            teams: null,
+          },
+          env: [{ name: "API_SERVER_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:9000/v1",
-        "http://a1.hermeum.svc.cluster.local:9000/api",
-      ]);
+      expect(result.endpoint).toBe("http://a1.hermeum.svc.cluster.local:8642");
     });
 
-    it("omits endpoints when agent.endpoint is null", () => {
+    it("omits the endpoint when the endpoints map is null", () => {
       const result = derivePlatformAvailability(
         PlatformId.ApiServer,
         makeAgent({ env: [{ name: "API_SERVER_ENABLED", value: "true" }] })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
-    it("omits endpoints when unavailable", () => {
+    it("omits the endpoint when unavailable", () => {
       const result = derivePlatformAvailability(PlatformId.ApiServer, makeAgent());
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
   });
 
@@ -1081,23 +1445,34 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("WEBHOOK_ENABLED");
     });
 
-    it("is available with the default port when enabled via config", () => {
+    it("is unavailable when enabled via config only (env-only enablement)", () => {
+      // Webhook enablement is env-only — config.platforms.webhook.enabled
+      // does not count.
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
-        makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+        makeAgent({
+          config: { platforms: { webhook: { enabled: true } } },
+        })
       );
-      expect(result).toEqual({ status: "available", port: 8644 });
+      expect(result.status).toBe("unavailable");
     });
 
-    it("uses config.platforms.webhook.extra.port when set", () => {
+    it("is available when the port comes from config.platforms.webhook.extra.port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
-        makeAgent({ config: { platforms: { webhook: { enabled: true, extra: { port: 9000 } } } } })
+        makeAgent({
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+          config: {
+            platforms: {
+              webhook: { extra: { port: 9000 } },
+            },
+          },
+        })
       );
-      expect(result).toEqual({ status: "available", port: 9000 });
+      expect(result.status).toBe("available");
     });
 
-    it("is available via WEBHOOK_ENABLED env var and respects WEBHOOK_PORT", () => {
+    it("is available via WEBHOOK_ENABLED env var with WEBHOOK_PORT", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
@@ -1107,42 +1482,46 @@ describe("derivePlatformAvailability", () => {
           ],
         })
       );
-      expect(result).toEqual({ status: "available", port: 9001 });
+      expect(result.status).toBe("available");
     });
 
-    it("derives the /webhooks endpoint when agent.endpoint is set", () => {
+    it("surfaces the webhook endpoint when set", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          endpoint: "https://a1.example.com",
-          config: { platforms: { webhook: { enabled: true } } },
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual(["https://a1.example.com/webhooks"]);
+      expect(result.endpoint).toBe("https://a1.hooks.example.com");
     });
 
-    it("inserts the webhook port into internal (.svc.cluster.local) endpoints", () => {
+    it("surfaces the internal endpoint with the embedded webhook port", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
-          endpoint: "http://a1.hermeum.svc.cluster.local",
-          config: { platforms: { webhook: { enabled: true } } },
+          endpoints: {
+            "api-server": null,
+            webhook: "http://a1.hermeum.svc.cluster.local:8644",
+            teams: null,
+          },
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.hermeum.svc.cluster.local:8644/webhooks",
-      ]);
+      expect(result.endpoint).toBe("http://a1.hermeum.svc.cluster.local:8644");
     });
 
-    it("omits endpoints when agent.endpoint is null even when enabled", () => {
+    it("omits the endpoint when the endpoints map is null even when enabled", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
-        makeAgent({ config: { platforms: { webhook: { enabled: true } } } })
+        makeAgent({
+          env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
+        })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
-    it("is unavailable via config even when the WEBHOOK_ENABLED env var is set", () => {
+    it("is driven solely by the WEBHOOK_ENABLED env var, not config", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
@@ -1150,7 +1529,7 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
-      expect(result.status).toBe("unavailable");
+      expect(result.status).toBe("available");
     });
   });
 
@@ -1191,12 +1570,15 @@ describe("derivePlatformAvailability", () => {
       expect(result).toEqual({ status: "available" });
     });
 
-    it("never exposes endpoints — Slack uses Socket Mode", () => {
+    it("never exposes an endpoint — Slack uses Socket Mode", () => {
       const result = derivePlatformAvailability(
         PlatformId.Slack,
-        makeAgent({ endpoint: "https://a1.example.com", env: slackEnv })
+        makeAgent({
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
+          env: slackEnv,
+        })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
     it("treats the <secret> sentinel for sensitive tokens as set", () => {
@@ -1255,12 +1637,15 @@ describe("derivePlatformAvailability", () => {
       expect(result).toEqual({ status: "available" });
     });
 
-    it("never exposes endpoints — Discord uses the Gateway WebSocket", () => {
+    it("never exposes an endpoint — Discord uses the Gateway WebSocket", () => {
       const result = derivePlatformAvailability(
         PlatformId.Discord,
-        makeAgent({ endpoint: "https://a1.example.com", env: discordEnv })
+        makeAgent({
+          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
+          env: discordEnv,
+        })
       );
-      expect(result.endpoints).toBeUndefined();
+      expect(result.endpoint).toBeUndefined();
     });
 
     it("reports DISCORD_HOME_CHANNEL as home when set", () => {
@@ -1296,93 +1681,115 @@ describe("derivePlatformAvailability", () => {
   });
 
   describe("teams", () => {
-    const teamsCredsEnv = [
-      { name: "TEAMS_CLIENT_ID", value: "cid" },
-      { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
-      { name: "TEAMS_TENANT_ID", value: "tid" },
-    ];
+    const teamsConfig = {
+      enabled: true,
+      extra: {
+        client_id: "cid",
+        tenant_id: "tid",
+      },
+    };
+    const teamsSecretEnv = [{ name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true }];
 
     it("is unavailable when all credentials are missing", () => {
       const result = derivePlatformAvailability(PlatformId.Teams, makeAgent());
       expect(result.status).toBe("unavailable");
-      expect(result.reason).toContain("TEAMS_CLIENT_ID");
-      expect(result.reason).toContain("TEAMS_CLIENT_SECRET");
-      expect(result.reason).toContain("TEAMS_TENANT_ID");
+      expect(result.reason).toContain("client_id");
+      expect(result.reason).toContain("client_secret");
+      expect(result.reason).toContain("tenant_id");
+      expect(result.reason).toContain("TEAMS_");
     });
 
     it("names only the missing credentials when some are set", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
-        makeAgent({ env: [{ name: "TEAMS_CLIENT_ID", value: "cid" }] })
+        makeAgent({
+          config: {
+            platforms: {
+              teams: {
+                extra: { ...teamsConfig.extra, client_id: undefined },
+              },
+            },
+          },
+          env: teamsSecretEnv,
+        })
       );
       expect(result.status).toBe("unavailable");
-      expect(result.reason).not.toContain("TEAMS_CLIENT_ID");
-      expect(result.reason).toContain("TEAMS_CLIENT_SECRET");
-      expect(result.reason).toContain("TEAMS_TENANT_ID");
+      expect(result.reason).toContain("client_id");
+      expect(result.reason).not.toContain("tenant_id, ");
+      expect(result.reason).not.toContain(", client_secret");
+      expect(result.reason).not.toContain("client_secret,");
     });
 
     it("is unavailable when enabled:false is explicit (even with creds present)", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
-        makeAgent({ env: teamsCredsEnv, config: { platforms: { teams: { enabled: false } } } })
+        makeAgent({
+          env: teamsSecretEnv,
+          config: { platforms: { teams: { ...teamsConfig, enabled: false } } },
+        })
       );
       expect(result.status).toBe("unavailable");
       expect(result.reason).toContain("Disabled");
     });
 
-    it("is available with no home when all credentials are set via env", () => {
+    it("is available with no home when all credentials are set", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
-        makeAgent({ env: teamsCredsEnv })
+        makeAgent({ config: { platforms: { teams: teamsConfig } }, env: teamsSecretEnv })
       );
       expect(result.status).toBe("available");
-      expect(result.port).toBe(3978);
       expect(result.home).toBeUndefined();
     });
 
-    it("is available when enabled:true is set explicitly without env creds", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Teams,
-        makeAgent({ config: { platforms: { teams: { enabled: true } } } })
-      );
-      expect(result.status).toBe("available");
-      expect(result.port).toBe(3978);
-    });
-
-    it("reports endpoints on an ingress base URL (no port inserted)", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Teams,
-        makeAgent({ endpoint: "https://a1.example.com", env: teamsCredsEnv })
-      );
-      expect(result.status).toBe("available");
-      expect(result.endpoints).toEqual(["https://a1.example.com/api/messages"]);
-    });
-
-    it("inserts the port on internal .svc.cluster.local endpoints", () => {
+    it("is available when all credentials come from env vars only", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
         makeAgent({
-          endpoint: "http://a1.agents.svc.cluster.local",
-          env: teamsCredsEnv,
+          env: [
+            { name: "TEAMS_CLIENT_ID", value: "cid" },
+            { name: "TEAMS_CLIENT_SECRET", value: "sec", sensitive: true },
+            { name: "TEAMS_TENANT_ID", value: "tid" },
+          ],
         })
       );
-      expect(result.endpoints).toEqual([
-        "http://a1.agents.svc.cluster.local:3978/api/messages",
-      ]);
+      expect(result.status).toBe("available");
     });
 
-    it("respects a custom TEAMS_PORT env var in the endpoint URL", () => {
+    it("is available when enabled:true is set explicitly without credentials", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({ config: { platforms: { teams: teamsConfig } } })
+      );
+      expect(result.status).toBe("available");
+    });
+
+    it("surfaces the teams endpoint on the teams subdomain", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
         makeAgent({
-          endpoint: "http://a1.agents.svc.cluster.local",
-          env: [...teamsCredsEnv, { name: "TEAMS_PORT", value: "4000" }],
+          endpoints: { "api-server": null, webhook: null, teams: "https://a1.teams.example.com" },
+          config: { platforms: { teams: teamsConfig } },
+          env: teamsSecretEnv,
         })
       );
-      expect(result.port).toBe(4000);
-      expect(result.endpoints).toEqual([
-        "http://a1.agents.svc.cluster.local:4000/api/messages",
-      ]);
+      expect(result.status).toBe("available");
+      expect(result.endpoint).toBe("https://a1.teams.example.com");
+    });
+
+    it("surfaces the internal endpoint with the embedded teams port", () => {
+      const result = derivePlatformAvailability(
+        PlatformId.Teams,
+        makeAgent({
+          endpoints: {
+            "api-server": null,
+            webhook: null,
+            teams: "http://a1.agents.svc.cluster.local:3978",
+          },
+          config: { platforms: { teams: teamsConfig } },
+          env: teamsSecretEnv,
+        })
+      );
+      expect(result.endpoint).toBe("http://a1.agents.svc.cluster.local:3978");
     });
   });
 });

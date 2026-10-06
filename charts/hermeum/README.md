@@ -110,7 +110,11 @@ When `webhook.enabled` (default `true`), the chart ships:
 The webhook returns a JSON-Patch drawn from
 `agentConfig.agentTypes[agent.type].mutatingWebhookJsonPatch` — so it is a
 no-op until the operator populates `agentConfig` with at least one
-`agentTypes` entry whose `mutatingWebhookJsonPatch` is non-empty.
+`agentTypes` entry whose `mutatingWebhookJsonPatch` is non-empty. Multiple
+candidates (array of arrays) are combined: every candidate whose `test` ops
+pass contributes to the returned patch. Agents without a `type` fall back to
+the reserved `agentTypes.default` entry; the bundled `config.default.yaml`
+defines one (mirroring the `small` patch).
 
 ### Operator-supplied cert
 
@@ -171,8 +175,12 @@ helm show values charts/hermeum
 | `secrets.databaseUrl`                | `"file:/var/lib/hermeum/db.sqlite"` | `HERMEUM_DATABASE_URL`. Override for postgres. |
 | `secrets.existingSecret`             | `""`                             | Use an existing Secret instead of templating one. |
 | `agentConfig`                        | `{}`                             | Full `config.yaml` content (mounted as a ConfigMap). |
+| `env`                                | `[]`                             | Extra env vars appended to the app container (rendered verbatim, after the chart-managed entries — last-wins override). |
+| `envFrom`                            | `[]`                             | Extra `envFrom` sources (ConfigMap/Secret refs) for the app container. |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
+| `config.agentIngress.baseHostname`   | `""`                             | Per-agent ingress base hostname — each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams), or `<agent-id>-<platform-label>.<base>` when `flattenHosts` is set. Unset = no agent ingress. |
+| `config.agentIngress.flattenHosts`   | `false`                          | Flatten agent ingress hosts to a single DNS level: `<agent-id>-<platform-label>.<base>` — one `*.<base>` wildcard record/cert covers every agent and platform. |
 | `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |
 | `persistence.enabled`                | `true`                           | PVC for sqlite (ignored for postgres).       |
 

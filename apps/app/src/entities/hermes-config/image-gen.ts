@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/image-generation
-// Full field semantics: docs/hermes-config/image-gen.md
+// Full field semantics: docs/official/image-gen.md
 //
 // Skipped on purpose: provider value "nous" (managed Tool
 // Gateway) is omitted — it requires Nous Portal OAuth, which is not

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/browser
-// Full field semantics: docs/hermes-config/browser.md
+// Full field semantics: docs/official/browser.md
 //
 // Skipped on purpose: cloud_provider value "nous" (managed Tool Gateway) —
 // it requires Nous Portal OAuth, which is not supported in container mode;

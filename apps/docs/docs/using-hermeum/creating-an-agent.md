@@ -98,9 +98,7 @@ env:
     value: debug
 ```
 
-## Skills, plugins, and packages
-
-### Skills
+## Skills
 
 Skills add capabilities to an agent — for example, `github-code-review` to read diffs
 and review pull requests. You can install skills from community hubs, GitHub paths, or
@@ -120,12 +118,14 @@ skills:
   - https://sharethis.chat/SKILL.md
 ```
 
-### Plugins
+## Plugins
 
 Plugins extend the agent runtime itself. You can add up to 20 plugin identifiers per
-agent, in the `<owner>/<repo>` format.
+agent, in the `<owner>/<repo>` format. See the
+[built-in plugins guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/built-in-plugins)
+for what's available out of the box.
 
-### Packages
+## Packages
 
 Packages are Python (`pip`) and JavaScript (`npm`) libraries you pre-install so the
 agent or its skills can use them. You can add up to 50 of each. Install them with

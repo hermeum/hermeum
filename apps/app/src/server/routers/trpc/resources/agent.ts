@@ -49,10 +49,4 @@ export const agentRouter = t.router({
     .mutation(async ({ ctx, input }): Promise<Agent> => {
       return await usecase.resumeHermesAgent(ctx, input.id);
     }),
-
-  getGatewayToken: protectedProcedure
-    .input(z.object({ id: z.string().min(1) }))
-    .query(async ({ ctx, input }): Promise<string | null> => {
-      return await usecase.getGatewayToken(ctx, input.id);
-    }),
 });

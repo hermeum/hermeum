@@ -1,20 +1,23 @@
 import { describe, it, expect, vi } from "vitest";
+import { z } from "zod";
 import type { ToolExecutionOptions } from "@/entities";
 import { stringify } from "yaml";
 
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/hermes-skill-index", () => ({ HermesSkillIndex: vi.fn() }));
-vi.mock("../infras/console-logger", () => ({
-  ConsoleLogger: vi.fn().mockImplementation(() => ({
+vi.mock("../infras/posthog", () => ({
+  telemetry: {
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-  })),
+    heartbeat: vi.fn(),
+    shutdown: vi.fn(),
+  },
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./config.yaml", hermesDocsPath: "./docs/hermes-config" },
+  config: { configPath: "./config.yaml", hermesDocsPath: "./docs" },
 }));
 
 import { ChatUseCase, AGENT_CONFIG_CHAT_SYSTEM_PROMPT } from "./chat";
@@ -39,7 +42,6 @@ function makeRuntime(sets: SharedEnvSet[] = []): Runtime {
     createHermesAgent: vi.fn(),
     patchHermesAgent: vi.fn(),
     archiveHermesAgent: vi.fn(),
-    getGatewayToken: vi.fn(),
     createSharedEnvSet: vi.fn(),
     archiveSharedEnvSet: vi.fn(),
     patchSharedEnvSet: vi.fn(),
@@ -64,7 +66,7 @@ function makeFiles(
   agentTypes?: HermeumConfig["agentTypes"]
 ): FileAdaptor {
   const toFile = (name: string): File => ({
-    path: `./docs/hermes-config/${name}.md`,
+    path: `./docs/${name}.md`,
     name,
     content: docs[name]!.content,
     data: docs[name]!.data ?? {},
@@ -82,7 +84,7 @@ function makeFiles(
       }
       return (
         Object.keys(docs)
-          .filter((name) => path === `./docs/hermes-config/${name}.md`)
+          .filter((name) => path === `./docs/${name}.md`)
           .map(toFile)
           .at(0) ?? null
       );
@@ -123,6 +125,7 @@ describe("ChatUseCase.getAgentConfigContext", () => {
         {
           "pr-review": { description: "Reviews pull requests", mutatingWebhookJsonPatch: [] },
           plain: { mutatingWebhookJsonPatch: [] },
+          default: { description: "Fallback", mutatingWebhookJsonPatch: [] },
         }
       )
     );
@@ -136,6 +139,8 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(tools.listAgentTypes).toBeDefined();
     expect(tools.listAgentTypes?.execute).toBeDefined();
     const result = await tools.listAgentTypes!.execute!({}, callOptions);
+    // The reserved `default` type is hidden from the model — it applies
+    // automatically to typeless agents via the webhook.
     expect(result).toEqual({
       agentTypes: [
         { key: "pr-review", description: "Reviews pull requests" },
@@ -169,16 +174,97 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(prompt).toContain('"pr-reviewer"');
   });
 
-  it("exposes a client-side updateAgentConfig tool", async () => {
+  it("exposes a client-side replaceAgentConfig tool", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
     const { tools } = await useCase.getAgentConfigContext();
 
-    expect(tools.updateAgentConfig).toBeDefined();
-    expect(tools.updateAgentConfig!.inputSchema).toBeDefined();
+    expect(tools.replaceAgentConfig).toBeDefined();
+    expect(tools.replaceAgentConfig!.inputSchema).toBeDefined();
     // No execute: the tool runs on the client, which applies the config to
     // the editor and reports back.
-    expect(tools.updateAgentConfig!.execute).toBeUndefined();
+    expect(tools.replaceAgentConfig!.execute).toBeUndefined();
+    // The single-call rule lives in the tool description so the model sees
+    // it alongside the tool definition.
+    expect(tools.replaceAgentConfig!.description).toContain("single call");
+    expect(tools.replaceAgentConfig!.description).toContain("readDocument");
+    // Cross-reference: for small edits to an existing draft the model is
+    // steered toward patchAgentConfig instead.
+    expect(tools.replaceAgentConfig!.description).toContain("patchAgentConfig");
+  });
+
+  it("instructs the model about the config wrapper key and the single-update rule", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain('"config" key');
+    expect(instructions).toContain("config-writing call");
+  });
+
+  it("instructs the model to proactively fill gaps instead of only transcribing requests", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    // The passive "skip optional fields" rule is gone...
+    expect(instructions).not.toContain("Skip every optional field");
+    // ...replaced by proactive gap-filling grounded in the docs.
+    expect(instructions).toContain("proactive agent-builder");
+    expect(instructions).toContain("Proactively fill gaps");
+    // Clarify is reserved for decisions that can't be sensibly inferred;
+    // everything else gets a documented default.
+    expect(instructions).toContain("Ask the user before guessing");
+  });
+
+  it("steers the recommendation tools toward proactive use in their descriptions", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.searchSkills!.description).toContain("proactively");
+    expect(tools.readDocument!.description).toContain("proactively");
+    // clarify stays reserved for materially-shaping unknowns, not a
+    // substitute for sensible defaults.
+    expect(tools.clarify!.description).toContain("can't be sensibly inferred");
+    expect(tools.clarify!.description).toContain("never guess");
+    expect(tools.clarify!.description).toContain("up to 5 related questions");
+    expect(tools.clarify!.description).toContain("confirms");
+    expect(tools.clarify!.description).toContain("skip");
+  });
+
+  it("exposes a client-side patchAgentConfig tool with the merge rules in its description", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.patchAgentConfig).toBeDefined();
+    expect(tools.patchAgentConfig!.inputSchema).toBeDefined();
+    // No execute: the client merges the patch onto its editor draft,
+    // validates the merged result, and reports back.
+    expect(tools.patchAgentConfig!.execute).toBeUndefined();
+    // The merge semantics must be stated in prose (the patch schema is an
+    // untyped envelope): recursive object merge, null deletes, arrays and
+    // scalars replace wholesale, omitted fields stay untouched.
+    expect(tools.patchAgentConfig!.description).toContain("merge recursively");
+    expect(tools.patchAgentConfig!.description).toContain("null");
+    expect(tools.patchAgentConfig!.description).toContain("COMPLETE array");
+    expect(tools.patchAgentConfig!.description).toContain("replaceAgentConfig");
+  });
+
+  it("exposes the patchable top-level field names in the patchAgentConfig tool schema", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    // Regression guard: the schema the model sees must list the top-level
+    // fields — an empty-properties emission leaves the model nothing to
+    // patch, and it falls back to the full-config tool.
+    const jsonSchema = z.toJSONSchema(tools.patchAgentConfig!.inputSchema);
+    const properties = (jsonSchema as { properties: Record<string, unknown> }).properties;
+    expect(Object.keys(properties)).toContain("config");
+    expect(Object.keys(properties)).toContain("soul");
+    expect(Object.keys(properties)).toContain("env");
   });
 
   it("exposes a client-side readAgentConfig tool and instructs the model to use it when stale", async () => {
@@ -236,6 +322,89 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     await tools.searchSkills!.execute!({ query: "kubernetes" }, callOptions);
 
     expect(skillIndex.searchSkills).toHaveBeenCalledWith("kubernetes", 25);
+  });
+
+  it("exposes a client-side clarify tool with the confirmation semantics in its description", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    expect(tools.clarify).toBeDefined();
+    expect(tools.clarify!.inputSchema).toBeDefined();
+    // No execute: the client collects the answers behind an explicit user
+    // confirmation step (Submit/Skip) and reports them back.
+    expect(tools.clarify!.execute).toBeUndefined();
+    // The batching and confirmation rules live in the description so the
+    // model sees them alongside the tool definition.
+    expect(tools.clarify!.description).toContain("never guess");
+    expect(tools.clarify!.description).toContain("up to 5 related questions");
+    expect(tools.clarify!.description).toContain("confirms");
+    expect(tools.clarify!.description).toContain("skip");
+  });
+
+  it("accepts a single free-form clarify question with no choices", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "Which port should the web server listen on?" }],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts up to 5 clarify questions, each with up to 3 choices", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [
+        { question: "Q1?", choices: ["A", "B", "C"] },
+        { question: "Q2?", choices: ["A", "B"] },
+        { question: "Q3?" },
+        { question: "Q4?", choices: ["A"] },
+        { question: "Q5?" },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects more than 5 clarify questions in one call", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const parsed = tools.clarify!.inputSchema.safeParse({
+      questions: [
+        { question: "Q1?" },
+        { question: "Q2?" },
+        { question: "Q3?" },
+        { question: "Q4?" },
+        { question: "Q5?" },
+        { question: "Q6?" },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a clarify question with more than 3 choices or an empty question", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { tools } = await useCase.getAgentConfigContext();
+
+    const tooManyChoices = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "Q1?", choices: ["A", "B", "C", "D"] }],
+    });
+    expect(tooManyChoices.success).toBe(false);
+
+    const emptyQuestion = tools.clarify!.inputSchema.safeParse({
+      questions: [{ question: "", choices: ["A"] }],
+    });
+    expect(emptyQuestion.success).toBe(false);
+
+    const emptyQuestions = tools.clarify!.inputSchema.safeParse({ questions: [] });
+    expect(emptyQuestions.success).toBe(false);
   });
 
   it("embeds the available documents in the readDocument description with frontmatter descriptions", async () => {
@@ -346,18 +515,60 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     const { tools } = await useCase.getAgentConfigContext();
     vi.mocked(files.readFile).mockClear();
     const result = await tools.readDocument!.execute!(
-      { names: ["../secrets", "sub/model", ".hidden"] },
+      { names: ["../secrets", ".hidden", "examples/../model", "a//b", "examples/"] },
       callOptions
     );
 
     expect(result).toEqual({
       documents: [
         { name: "../secrets", error: expect.stringContaining("not found") },
-        { name: "sub/model", error: expect.stringContaining("not found") },
         { name: ".hidden", error: expect.stringContaining("not found") },
+        { name: "examples/../model", error: expect.stringContaining("not found") },
+        { name: "a//b", error: expect.stringContaining("not found") },
+        { name: "examples/", error: expect.stringContaining("not found") },
       ],
     });
     expect(files.readFile).not.toHaveBeenCalled();
+  });
+
+  it("reads nested documents by slash name", async () => {
+    const useCase = new ChatUseCase(
+      makeRuntime(),
+      makeFiles({
+        "examples/github-issue": { content: "# GitHub issue example" },
+        model: { content: "# Model doc" },
+      })
+    );
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const result = await tools.readDocument!.execute!(
+      { names: ["examples/github-issue", "model"] },
+      callOptions
+    );
+
+    expect(result).toEqual({
+      documents: [
+        { name: "examples/github-issue", content: "# GitHub issue example" },
+        { name: "model", content: "# Model doc" },
+      ],
+    });
+  });
+
+  it("lists nested documents with their slash names in the readDocument description", async () => {
+    const useCase = new ChatUseCase(
+      makeRuntime(),
+      makeFiles({
+        "examples/github-issue": {
+          content: "# GitHub issue example",
+          data: { category: "examples", description: "GitHub issue prompt" },
+        },
+      })
+    );
+
+    const { tools } = await useCase.getAgentConfigContext();
+    const description = tools.readDocument!.description ?? "";
+
+    expect(description).toContain("examples:\n- examples/github-issue: GitHub issue prompt");
   });
 
   it("emits the none sentinel in the readSharedEnvSet description when no sets exist", async () => {

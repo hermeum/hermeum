@@ -1,7 +1,10 @@
 export type File = {
-  /** Full path of the file, e.g. "docs/hermes-config/model.md". */
+  /** Full path of the file, e.g. "docs/official/model.md". */
   path: string;
-  /** Base file name without extension, e.g. "model". */
+  /**
+   * Name of the file relative to the listed directory, without extension
+   * (e.g. "model" or "examples/github-issue"). readFile keeps the basename.
+   */
   name: string;
   /** File body; for markdown, without the frontmatter block. */
   content: string;
@@ -10,7 +13,7 @@ export type File = {
 };
 
 export interface FileAdaptor {
-  /** Lists and loads every file directly inside the directory. Missing directory → []. */
+  /** Lists and loads every file under the directory, recursively. Missing directory → []. */
   listFiles(path: string): Promise<File[]>;
   /** Returns the file, or null if it does not exist. */
   readFile(path: string): Promise<File | null>;

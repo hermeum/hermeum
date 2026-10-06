@@ -1,4 +1,5 @@
 import * as fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import * as path from "node:path";
 
 import matter from "gray-matter";
@@ -17,10 +18,27 @@ export class LocalFiles implements FileAdaptor {
       throw err;
     }
 
-    const files = await Promise.all(
-      entries.filter((e) => e.isFile()).map((e) => this.readFile(path.join(dirPath, e.name)))
-    );
-    return files.filter((f) => f !== null);
+    const walk = async (prefix: string, dirents: Dirent[]): Promise<File[]> => {
+      const nested = await Promise.all(
+        dirents.map(async (e) => {
+          if (e.isFile()) {
+            const file = await this.readFile(path.join(dirPath, prefix + e.name));
+            const relativeName = prefix + path.basename(e.name, path.extname(e.name));
+            return file === null ? null : { ...file, name: relativeName };
+          }
+          if (e.isDirectory()) {
+            const children = await fs.readdir(path.join(dirPath, prefix + e.name), {
+              withFileTypes: true,
+            });
+            return walk(`${prefix}${e.name}/`, children);
+          }
+          return [];
+        })
+      );
+      return nested.flat().filter((f): f is File => f !== null);
+    };
+
+    return walk("", entries);
   }
 
   async readFile(filePath: string): Promise<File | null> {

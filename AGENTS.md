@@ -52,17 +52,17 @@ When upgrading `hermesImageTag` (the pinned hermes-agent release), update every 
 - `apps/docs/docs/operation/configuration-reference.md` — the `HERMEUM_HERMES_IMAGE_TAG` default.
 - `charts/hermeum/Chart.yaml` — bump the chart `version` patch (the chart is republished for the upgrade; `appVersion` tracks the Hermeum app release, not the agent image, and stays untouched).
 
-Then sync `apps/app/src/entities/hermes-config/` (Zod schemas) and `apps/app/docs/hermes-config/` (field-semantics docs) against the official docs at the new submodule pin. Both directories always reflect the pinned submodule version — never mention the version string in their comments or prose; the submodule pointer implies it.
+Then sync `apps/app/src/entities/hermes-config/` (Zod schemas) and `apps/app/docs/official/` (field-semantics docs) against the official docs at the new submodule pin. Both directories always reflect the pinned submodule version — never mention the version string in their comments or prose; the submodule pointer implies it.
 
 **Apply the standing Hermeum policy deltas instead of re-deciding them per upgrade.** When an upstream change touches one of these, keep Hermeum's behavior and record the omission in a header comment on the schema file ("Skipped on purpose: …") and/or an upstream-differs `:::note` in the doc — do not adopt the upstream shape:
 
 - **OAuth-gated providers are omitted.** `nous` (the managed Tool Gateway) is not surfaced anywhere — `web.backend`, `browser.cloud_provider`, `image_gen.provider` — because Nous Portal OAuth is not supported in container mode. Values still pass through via `looseObject` if hand-written.
-- **Credentials stay env-only.** Never document or type secret-bearing fields in `config.yaml` (e.g. Teams `client_id`/`client_secret`/`tenant_id`, API server `key`, webhook route `secret`) even when upstream accepts them in config; pair the config-path enablement with a `superRefine` requirement for the `sensitive: true` env var.
-- **Operator-level concerns are not exposed via agent configuration.** Webhook route `filters`/`script`/`toolsets` are not typed — they pass through unvalidated.
+- **Platform secrets use reserved env vars.** Behavioral settings go into `config.yaml` when hermes-agent offers a config surface; secret-bearing settings stay env-side as `sensitive: true` env entries — they are not typed in `hermes-config/` and must not be written into `config.yaml`.
+- **Operator-level concerns are not exposed via agent configuration.** Webhook route `script` is not typed — it passes through unvalidated. (`toolsets` and `filters` were promoted to typed fields; see `hermes-config/webhook.ts`.)
 - **Behavior pinned by Hermeum policy stays pinned.** e.g. Slack `unauthorized_dm_behavior` stays literal `"ignore"` (deny-by-default) rather than upstream's `"pair"` default; `browser.cloud_provider: local` is surfaced.
-- **Env-vs-config precedence is per platform, taken from the upstream doc** — don't assume one direction: api-server env vars win over config; webhook/teams config wins over env vars. Verify per platform and state the direction in the doc.
+- **Env-vs-config precedence is per platform, taken from the upstream doc** — don't assume one direction. Verify per platform and state the direction in the doc.
 
-Fields not worth validating are left out of the schemas (they pass through via `looseObject`) but must still be reflected in the docs when they change semantics — the docs track upstream, the schemas track only what Hermeum needs to enforce.
+Fields not worth validating are left out of the schemas (they pass through via `looseObject`) but must still be reflected in the docs when they change semantics — as a minimal one-line pointer (field name, default, one-sentence gist), not a full explanation. The docs track upstream, the schemas track only what Hermeum needs to enforce.
 
 ## `@hermeum/app` (`apps/app`)
 
@@ -77,13 +77,22 @@ Run from the repo root via pnpm filter, or from this directory directly.
 - **Tests (watch):** `pnpm --filter @hermeum/app test:watch`
 - **Dev server:** `pnpm --filter @hermeum/app dev`
 
+### E2E tests (UI)
+
+To exercise the app UI end-to-end without a Kubernetes cluster:
+
+1. Run database migrations to create the SQLite database: `pnpm --filter @hermeum/app drizzle:migrate`. Skip this if `apps/app/sqlite.db` already exists (set up during local development — see `CONTRIBUTING.md`).
+2. Start the dev server with the mock runtime: `HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`. This replaces the Kubernetes Runtime adaptor with the in-memory `MockRuntime` (`src/server/usecases/adaptors/mocks/runtime.ts`), so agents and shared env sets created through the UI are stored in memory.
+3. Sign-in uses email OTP. When no `HERMEUM_SMTP_URL` is set (or in development), the verification code is not emailed — it is printed to the server console as `[OTP] <email>: <code>` (`src/server/routers/better-auth/auth.ts`). Read the code from the dev-server terminal and enter it in the UI.
+
 ### Conventions
 
 - It follows clean architecture. Entities and use cases must not depend on any infrastructure or framework — dependencies point inward toward the domain. Drawing the dependency graph: `frameworks/drivers → interface adapters → use cases → entities`, with each layer only depending on the layer(s) to its left. Inject infrastructures (persistence, file adaptors, etc.) behind interfaces (`Runtime`, `FileAdaptor`) at the use-case boundary rather than importing concrete adaptors directly.
 
-- `src/entities/hermes-config/` (Zod schemas) and `docs/hermes-config/` (field-semantics docs) track the pinned hermes-agent version in the `vendor/hermes-agent` submodule. When the default version changes, verify against the official docs in the submodule and update both the schemas and the docs in lockstep — each schema file's header links the upstream page it mirrors.
+- `src/entities/hermes-config/` (Zod schemas) and `docs/official/` (field-semantics docs) track the pinned hermes-agent version in the `vendor/hermes-agent` submodule. When the default version changes, verify against the official docs in the submodule and update both the schemas and the docs in lockstep — each schema file's header links the upstream page it mirrors.
 - `src/entities/hermes-config/` extracts only the core fields from the official documents — not every field.
-- `docs/hermes-config/` extracts only the information Hermeum needs: description, configuration, env vars, and the like.
+- **Every object schema in `src/entities/hermes-config/` must use `z.looseObject`, never `z.object`** — including nested objects. New fields introduced by upstream version upgrades then pass through unvalidated instead of being silently stripped. Only promote a field to a typed entry when Hermeum needs to enforce it.
+- `docs/official/` describes the hermes-agent configuration surface — `config.yaml` fields and env vars only. Its audience is the config-generator chatbot (fed via `readDocument`), not end users: it is reference feed, not a manual. Do not explain how hermes-agent works (runtime behavior, adapter internals, message flow) — only what to configure and what a value does. Keep field entries lean — one line each, plus defaults. When a topic needs fuller explanation for correct use (e.g. `Payload filters`, `Per-route toolsets`), give it a dedicated short section (~10 lines) instead of inflating field bullets.
 - Field semantics for the chat agent live in tool input-schema `.describe()` texts (Zod), not in the system prompt — see the header comment on `AGENT_CONFIG_CHAT_SYSTEM_PROMPT` in `src/server/usecases/chat.ts`.
 - New chat tools follow the `readDocument` precedent: embed a lightweight list (names/ids + descriptions) in the system prompt up front via a `build*List()` method, and add a `read*` server-executed tool for fetching richer per-item detail on demand. Keep the prompt lean — batch lists into the prompt, batch detail calls into one tool invocation.
 - Route-scoped components live in a `-components/` folder next to the consuming route (e.g. `routes/agents/$id/-components/`). The TanStack Router plugin's `routeFileIgnorePrefix` defaults to `-`, so `-`-prefixed folders are skipped during route generation and aren't picked up as routes. Promote a component back to `src/client/ui/components/` the moment a second consumer appears — otherwise route-local duplicates accumulate.

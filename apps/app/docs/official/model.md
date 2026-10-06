@@ -15,7 +15,9 @@ platform default applies.
 - `provider` — the LLM provider that serves the model. OAuth-gated providers are
   **omitted** there — Hermeum does not support browser OAuth in container
   mode: `nous`, `openai-codex`, `copilot`, `copilot-acp`, `xai-oauth`,
-  `qwen-oauth`, `minimax-oauth`, and `vertex`. 
+  `qwen-oauth`, `minimax-oauth`, and `vertex`. Upstream retired
+  `opencode-free` (the keyless OpenCode tier) — it is no longer a valid
+  provider value.
 - `default` — default model identifier used for requests, e.g.
   `moonshotai/kimi-k2.5` or `gpt-5`. Upstream also accepts `model:` as
   an alias key for the same value — both work identically; Hermeum
@@ -44,20 +46,19 @@ var (per the official
 | `arcee`                | `ARCEEAI_API_KEY`             |                                                                                                                     |
 | `gmi`                  | `GMI_API_KEY`                 |                                                                                                                     |
 | `nebius-token-factory` | `NEBIUS_API_KEY`              | `NEBIUS_TOKEN_FACTORY_API_KEY` also accepted.                                                                       |
-| `actual`               | `ACTUAL_API_KEY`              | Hosted relay. For the local daemon set `ACTUAL_BASE_URL=http://127.0.0.1:8080` instead — no key needed on loopback. |
+| `actual`               | `ACTUAL_API_KEY`              | Hosted relay. For the local daemon set `model.base_url` in `config.yaml` (`http://127.0.0.1:8080`) — no key needed on loopback. The legacy `ACTUAL_BASE_URL` env var is a fallback only. |
 | `minimax`              | `MINIMAX_API_KEY`             | Global endpoint.                                                                                                    |
 | `minimax-cn`           | `MINIMAX_CN_API_KEY`          | China endpoint.                                                                                                     |
 | `xai`                  | `XAI_API_KEY`                 | Also used by `x_search`, TTS, and image gen.                                                                        |
 | `alibaba`              | `DASHSCOPE_API_KEY`           | Qwen Cloud (Alibaba DashScope).                                                                                     |
-| `alibaba-coding-plan`  | `ALIBABA_CODING_PLAN_API_KEY` | Falls back to `DASHSCOPE_API_KEY`. Separate billing SKU.                                                            |
-| `alibaba-token-plan`   | `ALIBABA_TOKEN_PLAN_API_KEY`  | Model Studio flat-token tier.                                                                                       |
+| `alibaba-coding-plan`  | `ALIBABA_CODING_PLAN_API_KEY` | Falls back to `DASHSCOPE_API_KEY`. Separate billing SKU. Mainland-China endpoint `alibaba-coding-plan-cn` uses `ALIBABA_CODING_PLAN_CN_API_KEY` (falls back to the shared keys). |
+| `alibaba-token-plan`   | `ALIBABA_TOKEN_PLAN_API_KEY`  | Model Studio flat-token tier. Mainland-China endpoint `alibaba-token-plan-cn` uses `ALIBABA_TOKEN_PLAN_CN_API_KEY` (falls back to the shared key). |
 | `kilocode`             | `KILOCODE_API_KEY`            |                                                                                                                     |
 | `xiaomi`               | `XIAOMI_API_KEY`              |                                                                                                                     |
 | `tencent-tokenhub`     | `TOKENHUB_API_KEY`            |                                                                                                                     |
 | `tencent-tokenplan`    | `TOKENPLAN_API_KEY`           | Anthropic Messages endpoint.                                                                                        |
 | `opencode-zen`         | `OPENCODE_ZEN_API_KEY`        |                                                                                                                     |
 | `opencode-go`          | `OPENCODE_GO_API_KEY`         |                                                                                                                     |
-| `opencode-free`        | _(none)_                      | Keyless — requests are sent anonymously.                                                                            |
 | `commandcode`          | `COMMANDCODE_API_KEY`         | Claude models via the `commandcode-anthropic` alias.                                                                |
 | `deepseek`             | `DEEPSEEK_API_KEY`            |                                                                                                                     |
 | `huggingface`          | `HF_TOKEN`                    | Token must have "Make calls to Inference Providers" enabled.                                                        |

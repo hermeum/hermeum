@@ -30,6 +30,18 @@ const entries: SkillIndexEntry[] = [
   makeEntry({ name: "web-search", description: "Search the web.", identifier: "skills.sh/web-search", tags: ["web"], extra: { provider: "openai" } }),
 ];
 
+const mixedTrustEntries: SkillIndexEntry[] = [
+  makeEntry({ name: "community-deploy", description: "Deploy things.", identifier: "skills-sh/foo/bar/community-deploy", trust_level: "community", tags: ["deploy"] }),
+  makeEntry({ name: "trusted-deploy", description: "Deploy trusted.", identifier: "anthropics/trusted-deploy", trust_level: "trusted", tags: ["deploy"] }),
+  makeEntry({ name: "builtin-deploy", description: "Deploy builtin.", identifier: "official/builtin-deploy", trust_level: "builtin", tags: ["deploy"] }),
+];
+
+const mixedEntries: SkillIndexEntry[] = [
+  { ...makeEntry({ name: "broken-name" }), name: null as unknown as string },
+  makeEntry({ name: "unknown-trust", trust_level: "mystery" }),
+  makeEntry({ name: "valid-community", identifier: "skills-sh/ok/valid-community", trust_level: "community", tags: [] }),
+];
+
 describe("HermesSkillIndex", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
@@ -48,9 +60,24 @@ describe("HermesSkillIndex", () => {
       const results = await adaptor.searchSkills("", 3);
 
       expect(results).toEqual([
-        { name: "kubernetes", identifier: "official/k8s/kubernetes", description: "Manage K8s clusters." },
-        { name: "kube-deploy", identifier: "github/openai/kube-deploy", description: "Deploy to kubernetes." },
-        { name: "git-pr-review", identifier: "github/openai/git-pr-review", description: "Review pull requests." },
+        {
+          name: "kubernetes",
+          identifier: "official/k8s/kubernetes",
+          description: "Manage K8s clusters.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
+        {
+          name: "kube-deploy",
+          identifier: "github/openai/kube-deploy",
+          description: "Deploy to kubernetes.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
+        {
+          name: "git-pr-review",
+          identifier: "github/openai/git-pr-review",
+          description: "Review pull requests.",
+          sourceUrl: "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review",
+        },
       ]);
     });
 
@@ -95,13 +122,120 @@ describe("HermesSkillIndex", () => {
       expect(results).toHaveLength(2);
     });
 
-    it("only returns name, identifier, and description", async () => {
+    it("only returns name, identifier, description, and sourceUrl", async () => {
       vi.mocked(fetch).mockResolvedValue(jsonResponse(entries));
       const adaptor = new HermesSkillIndex();
 
       const [first] = await adaptor.searchSkills("kubernetes", 1);
 
-      expect(Object.keys(first ?? {}).sort()).toEqual(["description", "identifier", "name"]);
+      expect(Object.keys(first ?? {}).sort()).toEqual([
+        "description",
+        "identifier",
+        "name",
+        "sourceUrl",
+      ]);
+    });
+  });
+
+  describe("sourceUrl derivation", () => {
+    it("prefers extra.detail_url when present", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([
+        makeEntry({
+          source: "skills.sh",
+          identifier: "skills-sh/anthropics/skills/algorithmic-art",
+          repo: "anthropics/skills",
+          path: "algorithmic-art",
+          extra: {
+            detail_url: "https://skills.sh/anthropics/skills/algorithmic-art",
+            repo_url: "https://github.com/anthropics/skills",
+          },
+        }),
+      ]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("algorithmic", 5);
+
+      expect(result?.sourceUrl).toBe("https://skills.sh/anthropics/skills/algorithmic-art");
+    });
+
+    it("builds a GitHub tree URL from repo + path", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([makeEntry()]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBe(
+        "https://github.com/openai/skills/tree/HEAD/skills/git-pr-review"
+      );
+    });
+
+    it("falls back to the bare repo URL when path is empty", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([
+        makeEntry({ source: "claude-marketplace", identifier: "anthropics/skills/", path: "" }),
+      ]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBe("https://github.com/openai/skills");
+    });
+
+    it("omits sourceUrl when neither detail_url nor repo is available", async () => {
+      const noSource = makeEntry();
+      delete noSource.repo;
+      delete noSource.path;
+      vi.mocked(fetch).mockResolvedValue(jsonResponse([noSource]));
+      const adaptor = new HermesSkillIndex();
+
+      const [result] = await adaptor.searchSkills("review", 5);
+
+      expect(result?.sourceUrl).toBeUndefined();
+    });
+
+    it("includes community skills", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 10);
+
+      expect(results.map((r) => r.identifier)).toContain("skills-sh/foo/bar/community-deploy");
+    });
+
+    it("ranks builtin and trusted skills ahead of community ones", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 10);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "official/builtin-deploy",
+        "anthropics/trusted-deploy",
+        "skills-sh/foo/bar/community-deploy",
+      ]);
+    });
+
+    it("drops entries with unknown trust levels, keeping the valid ones", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("", 100);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "openai/skills/skills/git-pr-review",
+        "skills-sh/ok/valid-community",
+      ]);
+    });
+
+    it("stops matching at the limit instead of scanning past it", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(mixedTrustEntries));
+      const adaptor = new HermesSkillIndex();
+
+      const results = await adaptor.searchSkills("deploy", 2);
+
+      expect(results.map((r) => r.identifier)).toEqual([
+        "official/builtin-deploy",
+        "anthropics/trusted-deploy",
+      ]);
     });
   });
 

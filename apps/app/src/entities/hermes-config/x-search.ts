@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // https://hermes-agent.nousresearch.com/docs/user-guide/features/x-search
-// Full field semantics: docs/hermes-config/x-search.md
+// Full field semantics: docs/official/x-search.md
 // NOTE: only the XAI_API_KEY credential path is supported here
 //
 // Skipped on purpose: x_search.reasoning_effort (Grok-specific

@@ -2,8 +2,8 @@ apiVersion: v2
 name: hermeum
 description: Hermeum — control plane for HermesAgent custom resources.
 type: application
-version: 0.1.2
-appVersion: "0.0.1"
+version: 0.2.3
+appVersion: "0.2.1"
 home: https://github.com/hermeum/hermeum
 sources:
   - https://github.com/hermeum/hermeum
@@ -19,6 +19,7 @@ keywords:
   - operator
 dependencies:
   - name: hermes-agent-operator
-    version: ">= 0.5.1"
+    alias: operator
+    version: ">= 0.5.3"
     repository: oci://ghcr.io/hermeum/charts
     condition: operator.enabled
