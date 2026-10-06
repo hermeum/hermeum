@@ -68,6 +68,10 @@ config:
   logLevel: info
   # Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN).
   allowedEmailDomain: ""
+  # From address for outgoing email, e.g. "Hermeum <no-reply@example.com>"
+  # (HERMEUM_SMTP_FROM). Set it together with secrets.smtpUrl — most SMTP
+  # providers reject or spam-filter messages without a From header.
+  smtpFrom: ""
 
   # ── Web server TLS (optional, HERMEUM_TLS_CERT_FILE / HERMEUM_TLS_KEY_FILE) ─
   # When both certFile and keyFile are set, the hermeum app serves the UI/trpc/

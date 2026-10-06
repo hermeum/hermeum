@@ -35,6 +35,7 @@
         "betterAuthUrl": { "type": "string" },
         "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "allowedEmailDomain": { "type": "string" },
+        "smtpFrom": { "type": "string" },
         "webTls": {
           "type": "object",
           "properties": {

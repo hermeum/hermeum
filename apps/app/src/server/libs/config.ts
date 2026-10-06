@@ -34,6 +34,14 @@ export const ConfigSchema = z.object({
     .url()
     .optional()
     .describe("SMTP server URL for outgoing email (HERMEUM_SMTP_URL)."),
+  smtpFrom: z
+    .string()
+    .optional()
+    .describe(
+      "From address for outgoing email, e.g. \"Hermeum <no-reply@example.com>\" (HERMEUM_SMTP_FROM). " +
+        "Required by most SMTP providers when HERMEUM_SMTP_URL is set; omitting it " +
+        "produces messages without a From header, which providers reject or spam-filter."
+    ),
   allowedEmailDomain: z
     .string()
     .optional()
@@ -173,6 +181,7 @@ export const config = ConfigSchema.parse({
   kubernetesNamespace: process.env.HERMEUM_KUBERNETES_NAMESPACE,
   mockRuntime: process.env.HERMEUM_MOCK_RUNTIME === "true",
   smtpUrl: process.env.HERMEUM_SMTP_URL,
+  smtpFrom: process.env.HERMEUM_SMTP_FROM,
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
