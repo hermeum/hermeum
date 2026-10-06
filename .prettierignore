@@ -6,3 +6,4 @@ dist
 pnpm-lock.yaml
 routeTree.gen.ts
 schema.ts
+openapi

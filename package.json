@@ -10,10 +10,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "turbo typecheck",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "openapi:generate": "tsx scripts/generate-telemetry-openapi.ts"
   },
   "devDependencies": {
+    "@trpc/openapi": "11.18.0-alpha",
     "prettier": "^3.5.0",
+    "tsx": "^4.19.3",
     "turbo": "^2.5.0",
     "typescript": "^5.8.2"
   },
