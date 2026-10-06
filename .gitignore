@@ -30,3 +30,6 @@ charts/hermeum/values-local.yaml
 .venv/
 __pycache__/
 openapitools.json
+
+# openapi-generator metadata (regeneration bookkeeping)
+plugin/hermeum/client/.openapi-generator/

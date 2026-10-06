@@ -17,21 +17,23 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing import Any, ClassVar, Dict, List
-from openapi_client.models.agent_session_agent_session_events_request_events_inner import AgentSessionAgentSessionEventsRequestEventsInner
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
+from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentSessionAgentSessionEventsRequest(BaseModel):
+class AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost(BaseModel):
     """
-    AgentSessionAgentSessionEventsRequest
+    AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost
     """ # noqa: E501
-    session_id: StrictStr = Field(alias="sessionId")
-    events: List[AgentSessionAgentSessionEventsRequestEventsInner]
+    total_usd: Optional[Union[StrictFloat, StrictInt]] = Field(alias="totalUsd")
+    input_usd: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="inputUsd")
+    output_usd: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="outputUsd")
+    cache_read_usd: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="cacheReadUsd")
+    cache_write_usd: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="cacheWriteUsd")
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["sessionId", "events"]
+    __properties: ClassVar[List[str]] = ["totalUsd", "inputUsd", "outputUsd", "cacheReadUsd", "cacheWriteUsd"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -51,7 +53,7 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a JSON string"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,22 +76,21 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in events (list)
-        _items = []
-        if self.events:
-            for _item_events in self.events:
-                _items.append(_item_events.to_dict() if _item_events is not None else None)
-            _dict['events'] = _items
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
                 _dict[_key] = _value
 
+        # set to None if total_usd (nullable) is None
+        # and model_fields_set contains the field
+        if self.total_usd is None and "total_usd" in self.model_fields_set:
+            _dict['totalUsd'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a dict"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost from a dict"""
         if obj is None:
             return None
 
@@ -97,8 +98,11 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "sessionId": obj.get("sessionId"),
-            "events": [AgentSessionAgentSessionEventsRequestEventsInner.from_dict(_item) for _item in obj["events"]] if obj.get("events") is not None else None
+            "totalUsd": obj.get("totalUsd"),
+            "inputUsd": obj.get("inputUsd"),
+            "outputUsd": obj.get("outputUsd"),
+            "cacheReadUsd": obj.get("cacheReadUsd"),
+            "cacheWriteUsd": obj.get("cacheWriteUsd")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

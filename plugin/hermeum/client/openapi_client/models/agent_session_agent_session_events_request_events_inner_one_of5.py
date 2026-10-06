@@ -17,21 +17,31 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing import Any, ClassVar, Dict, List
-from openapi_client.models.agent_session_agent_session_events_request_events_inner import AgentSessionAgentSessionEventsRequestEventsInner
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentSessionAgentSessionEventsRequest(BaseModel):
+class AgentSessionAgentSessionEventsRequestEventsInnerOneOf5(BaseModel):
     """
-    AgentSessionAgentSessionEventsRequest
+    AgentSessionAgentSessionEventsRequestEventsInnerOneOf5
     """ # noqa: E501
-    session_id: StrictStr = Field(alias="sessionId")
-    events: List[AgentSessionAgentSessionEventsRequestEventsInner]
+    event_id: StrictStr = Field(alias="eventId")
+    type: StrictStr
+    timestamp: StrictStr
+    turn_id: StrictStr = Field(alias="turnId")
+    child_session_id: StrictStr = Field(alias="childSessionId")
+    parent_turn_id: Optional[StrictStr] = Field(default=None, alias="parentTurnId")
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["sessionId", "events"]
+    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "turnId", "childSessionId", "parentTurnId"]
+
+    @field_validator('type')
+    def type_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in set(['subagent_started']):
+            raise ValueError("must be one of enum values ('subagent_started')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -51,7 +61,7 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a JSON string"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf5 from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,12 +84,6 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in events (list)
-        _items = []
-        if self.events:
-            for _item_events in self.events:
-                _items.append(_item_events.to_dict() if _item_events is not None else None)
-            _dict['events'] = _items
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
@@ -89,7 +93,7 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a dict"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf5 from a dict"""
         if obj is None:
             return None
 
@@ -97,8 +101,12 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "sessionId": obj.get("sessionId"),
-            "events": [AgentSessionAgentSessionEventsRequestEventsInner.from_dict(_item) for _item in obj["events"]] if obj.get("events") is not None else None
+            "eventId": obj.get("eventId"),
+            "type": obj.get("type"),
+            "timestamp": obj.get("timestamp"),
+            "turnId": obj.get("turnId"),
+            "childSessionId": obj.get("childSessionId"),
+            "parentTurnId": obj.get("parentTurnId")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():
