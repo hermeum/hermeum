@@ -97,6 +97,30 @@ To exercise the app UI end-to-end without a Kubernetes cluster:
 - New chat tools follow the `readDocument` precedent: embed a lightweight list (names/ids + descriptions) in the system prompt up front via a `build*List()` method, and add a `read*` server-executed tool for fetching richer per-item detail on demand. Keep the prompt lean — batch lists into the prompt, batch detail calls into one tool invocation.
 - Route-scoped components live in a `-components/` folder next to the consuming route (e.g. `routes/agents/$id/-components/`). The TanStack Router plugin's `routeFileIgnorePrefix` defaults to `-`, so `-`-prefixed folders are skipped during route generation and aren't picked up as routes. Promote a component back to `src/client/ui/components/` the moment a second consumer appears — otherwise route-local duplicates accumulate.
 
+### Agent-session telemetry schema → Python client lockstep
+
+`src/entities/telemetry.ts` is the single source of truth for the agent-session
+event vocabulary. It fans out into generated artifacts — when it changes, regenerate
+all of them in the same commit:
+
+1. `pnpm openapi:generate` — refreshes `openapi/plugin.json` from the Zod schemas.
+2. Regenerate the vendored Python client (also documented in `plugin/hermeum/README.md`):
+   ```sh
+   npx @openapitools/openapi-generator-cli@latest generate \
+     -i openapi/plugin.json -g python -o plugin/hermeum/client \
+     --library urllib3 --skip-validate-spec \
+     --additional-properties=generateSourceCodeOnly=true
+   ```
+   Then delete generator stubs if re-created: `plugin/hermeum/client/openapi_client/docs`,
+   `.../test`, `plugin/hermeum/client/openapi_client_README.md`,
+   `plugin/hermeum/client/.openapi-generator-ignore` (`.openapi-generator/` is gitignored).
+3. Update `plugin/hermeum/telemetry.py` (event-building business logic) if the
+   change affects what the emitter constructs.
+
+Schema changes without regenerated artifacts = broken plugin builds. Verify with
+`python3 -m py_compile plugin/hermeum/*.py` and, for wire-level changes, the live
+E2E in `plugin/hermeum/README.md` against a mock-runtime dev server.
+
 ## `@hermeum/docs` (`apps/docs`)
 
 ### Commands
@@ -118,4 +142,3 @@ Run from the repo root via pnpm filter, or from this directory directly.
 - Docusaurus emits to `build/` (not `dist/`); `turbo.json`'s `build.outputs` includes `build/**`.
 - Blog plugin is disabled (`blog: false`); `future.v4: true` enables Rspack via `@docusaurus/faster`.
 - Operation docs (`docs/operation/*.md`) explain configuration in terms of `HERMEUM_*` environment variables, not Helm chart value keys. The Helm chart is documented separately in the chart's `values.yaml`; operation pages should stay chart-agnostic. The sole exception is `installation.md`, which bridges the two by showing `helm install` commands alongside the env vars they set. Chart-specific behavior that has no env-var surface (e.g. `migrations.enabled`, `persistence.*`, `operator.enabled`, `ingress.*`) may still be mentioned in a `:::note` or a dedicated subsection, but the primary explanation must be env-var-first.
-
