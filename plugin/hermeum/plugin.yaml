@@ -1,0 +1,7 @@
+name: hermeum
+version: "0.1.0"
+description: >
+  Forwards hermes agent-session events (session_started, message, tool_call,
+  llm_call, error) to Hermeum's plugin-protocol ingest endpoint.
+requires_env:
+  - HERMEUM_TELEMETRY_URL

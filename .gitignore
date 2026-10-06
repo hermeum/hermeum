@@ -25,3 +25,8 @@ charts/hermeum/charts/
 
 # Local Helm values for local testing
 charts/hermeum/values-local.yaml
+
+# python client spike
+.venv/
+__pycache__/
+openapitools.json
