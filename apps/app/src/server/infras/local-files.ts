@@ -2,9 +2,29 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 
-import matter from "gray-matter";
+import { parse } from "yaml";
 
 import { File, FileAdaptor } from "../usecases/adaptors/file";
+
+/**
+ * Splits a markdown frontmatter block (delimited by `---` lines) from the body.
+ * Returns the body and the parsed frontmatter; empty data when there is no
+ * frontmatter block. Mirrors the gray-matter behavior this module relied on.
+ */
+function splitFrontmatter(raw: string): { content: string; data: Record<string, unknown> } {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
+  if (match === null || match[1] === undefined) {
+    return { content: raw, data: {} };
+  }
+  let data: Record<string, unknown>;
+  try {
+    const parsed = parse(match[1]);
+    data = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    data = {};
+  }
+  return { content: raw.slice(match[0].length), data };
+}
 
 export class LocalFiles implements FileAdaptor {
   async listFiles(dirPath: string): Promise<File[]> {
@@ -58,7 +78,7 @@ export class LocalFiles implements FileAdaptor {
     if (path.extname(filePath) !== ".md") {
       return { path: filePath, name, content: raw, data: {} };
     }
-    const { content, data } = matter(raw);
+    const { content, data } = splitFrontmatter(raw);
     return { path: filePath, name, content, data };
   }
 }
