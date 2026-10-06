@@ -1,5 +1,5 @@
 {
-  "id": "439a074e-cee6-4e7c-ac9c-7ff70ff459d3",
+  "id": "d8c1853d-a6a5-4f7f-be61-d53b03f31547",
   "prevId": "ecb8c80b-1137-4dd2-9f70-1a575e729c44",
   "version": "7",
   "dialect": "postgresql",
@@ -414,9 +414,15 @@
         }
       },
       "indexes": {
-        "agent_session_event_sessionId_timestamp_idx": {
-          "name": "agent_session_event_sessionId_timestamp_idx",
+        "agent_session_event_agent_session_idx": {
+          "name": "agent_session_event_agent_session_idx",
           "columns": [
+            {
+              "expression": "agent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "session_id",
               "isExpression": false,
@@ -425,21 +431,6 @@
             },
             {
               "expression": "timestamp",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_session_event_agentId_idx": {
-          "name": "agent_session_event_agentId_idx",
-          "columns": [
-            {
-              "expression": "agent_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

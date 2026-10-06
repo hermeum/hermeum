@@ -22,10 +22,10 @@ export const agentSessionEvent = sqliteTable(
       .notNull(),
   },
   (table) => [
-    index("agent_session_event_sessionId_timestamp_idx").on(
+    index("agent_session_event_agent_session_idx").on(
+      table.agentId,
       table.sessionId,
       table.timestamp
     ),
-    index("agent_session_event_agentId_idx").on(table.agentId),
   ]
 );

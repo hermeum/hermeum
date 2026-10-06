@@ -19,10 +19,10 @@ export const agentSessionEvent = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("agent_session_event_sessionId_timestamp_idx").on(
+    index("agent_session_event_agent_session_idx").on(
+      table.agentId,
       table.sessionId,
       table.timestamp
     ),
-    index("agent_session_event_agentId_idx").on(table.agentId),
   ]
 );

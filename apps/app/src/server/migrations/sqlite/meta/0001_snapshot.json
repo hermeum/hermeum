@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "36530efd-1994-45e1-822b-ab876e1d9765",
+  "id": "d2fbabf3-ecdc-44f0-bc41-789ba70e5549",
   "prevId": "d3d80468-8b91-4ba1-9a04-61358897099f",
   "tables": {
     "account": {
@@ -418,18 +418,12 @@
         }
       },
       "indexes": {
-        "agent_session_event_sessionId_timestamp_idx": {
-          "name": "agent_session_event_sessionId_timestamp_idx",
+        "agent_session_event_agent_session_idx": {
+          "name": "agent_session_event_agent_session_idx",
           "columns": [
+            "agent_id",
             "session_id",
             "timestamp"
-          ],
-          "isUnique": false
-        },
-        "agent_session_event_agentId_idx": {
-          "name": "agent_session_event_agentId_idx",
-          "columns": [
-            "agent_id"
           ],
           "isUnique": false
         }
