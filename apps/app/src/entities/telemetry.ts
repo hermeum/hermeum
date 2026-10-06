@@ -205,7 +205,10 @@ const SubagentEventFieldsSchema = z
       .string()
       .optional()
       .describe("Turn in the parent session that spawned this subagent; omitted when the emitter cannot know it."),
-    childSessionId: z.string().uuid().describe("Session id of the spawned subagent."),
+    childSessionId: z
+      .string()
+      .min(1)
+      .describe("Session id of the spawned subagent (hermes session ids are opaque strings, not UUIDs)."),
   })
   .describe("Shared fields for subagent lifecycle events.");
 
@@ -247,8 +250,10 @@ export const AgentSessionEventBatchSchema = z
   .object({
     sessionId: z
       .string()
-      .uuid()
-      .describe("Identifier of the agent session the events belong to."),
+      .min(1)
+      .describe(
+        "Identifier of the agent session the events belong to (hermes session ids are opaque strings, e.g. `20261006_160425_afa18d` — not UUIDs)."
+      ),
     events: z
       .array(AgentSessionEventSchema)
       .max(100)
