@@ -16,13 +16,20 @@ import { Database } from "./adaptors/database";
 import { SkillIndexAdaptor } from "./adaptors/skill-index";
 import { MockRuntime } from "./adaptors/mocks/runtime";
 
+// One MockRuntime per process: its store lives in memory, so every use case
+// holding its own instance would see a different, empty one — agents created
+// via AgentUseCase would be invisible to cross-use-case reads (e.g. telemetry
+// ownership checks). KubernetesClient stays per-instance since it holds no
+// cross-use-case state.
+const sharedMockRuntime = new MockRuntime();
+
 // Core base class for use cases backed by the file, runtime, skill index, and
 // telemetry adaptors; mixins like HermeumConfigLoadable build on the injected
 // adaptors.
 export class BaseUseCase {
   constructor(
     readonly runtime: Runtime = config.mockRuntime
-      ? new MockRuntime()
+      ? sharedMockRuntime
       : new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),

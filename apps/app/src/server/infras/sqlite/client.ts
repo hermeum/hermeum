@@ -80,6 +80,19 @@ export class SqliteDatabase implements Database {
         )
       )
       .orderBy(asc(agentSessionEvent.timestamp));
-    return rows.map((row) => AgentSessionEventSchema.parse(row.payload));
+    // Stored payloads are data at rest — one persisted under an older schema
+    // must not 500 the trajectory UI read, so invalid rows are skipped.
+    const events: AgentSessionEvent[] = [];
+    for (const row of rows) {
+      const parsed = AgentSessionEventSchema.safeParse(row.payload);
+      if (parsed.success) {
+        events.push(parsed.data);
+      } else {
+        console.warn("skipping stored agent-session event that fails the current schema", {
+          issue: parsed.error.message,
+        });
+      }
+    }
+    return events;
   }
 }
