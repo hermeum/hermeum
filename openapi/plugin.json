@@ -371,6 +371,15 @@
                             },
                             "durationS": {
                               "type": "number"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ok",
+                                "error",
+                                "blocked",
+                                "cancelled"
+                              ]
                             }
                           },
                           "required": [

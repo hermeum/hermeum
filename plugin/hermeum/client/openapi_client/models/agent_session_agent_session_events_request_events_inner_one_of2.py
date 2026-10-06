@@ -36,14 +36,25 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf2(BaseModel):
     result: Optional[Any]
     turn_id: Optional[StrictStr] = Field(default=None, alias="turnId")
     duration_s: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="durationS")
+    status: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "toolName", "toolCallId", "args", "result", "turnId", "durationS"]
+    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "toolName", "toolCallId", "args", "result", "turnId", "durationS", "status"]
 
     @field_validator('type')
     def type_validate_enum(cls, value):
         """Validates the enum"""
         if value not in set(['tool_call']):
             raise ValueError("must be one of enum values ('tool_call')")
+        return value
+
+    @field_validator('status')
+    def status_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['ok', 'error', 'blocked', 'cancelled']):
+            raise ValueError("must be one of enum values ('ok', 'error', 'blocked', 'cancelled')")
         return value
 
     model_config = ConfigDict(
@@ -122,7 +133,8 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf2(BaseModel):
             "args": obj.get("args"),
             "result": obj.get("result"),
             "turnId": obj.get("turnId"),
-            "durationS": obj.get("durationS")
+            "durationS": obj.get("durationS"),
+            "status": obj.get("status")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

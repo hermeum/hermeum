@@ -19,8 +19,8 @@ estimates server-side.
 ```
 plugin/hermeum/
 ├── plugin.yaml            # hermes plugin manifest
-├── __init__.py            # register(ctx) — hook wiring + typed payload construction
-├── telemetry.py           # typed event buffering + ≤100-event batch flush
+├── __init__.py            # register(ctx) — hook registration only
+├── telemetry.py           # event-building business logic + typed event buffering + ≤100-event batch flush
 └── client/
     ├── requirements.txt   # runtime deps for the generated client
     └── openapi_client/    # generated client, vendored (source only)
@@ -65,16 +65,21 @@ generated client's imports change, sync it against the imports in
 Hook callbacks never raise; flush failures are logged and dropped so agent
 operation is unaffected. Field extraction mirrors the langfuse plugin
 (`_serialize_assistant_message`, canonical usage mapping, redact-before-truncate).
+Hook names follow the hermes observer contract
+(docs/developer-guide/observer-hooks): LLM spans come from the request-scoped
+`post_api_request` (usage/`api_duration`/`finish_reason`/`response_model`),
+not the turn-scoped `post_llm_call`; `post_tool_call` provides
+`duration_ms` and `status`.
 
 | Hook | Event | Key fields |
 |---|---|---|
 | `on_session_start` | `session_started` | `platform`, `provider`, `model`, `apiMode` |
-| `post_llm_call` | `llm_call` | `usage`, `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
-| `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result` |
-| `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars) |
-| `on_session_finalize` | `session_finalized` | `output` (content null — the final answer arrives via the last `llm_call`), then flush |
-| `on_subagent_start` | `subagent_started` | `turnId`, `parentTurnId`, `childSessionId` |
-| `on_subagent_stop` | `subagent_stopped` | same as started |
+| `post_api_request` | `llm_call` | `usage`, `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
+| `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
+| `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |
+| `on_session_finalize` | `session_finalized` | `output` — the last assistant output seen in the session, then flush |
+| `subagent_start` | `subagent_started` | `turnId`, `parentTurnId`, `childSessionId` |
+| `subagent_stop` | `subagent_stopped` | same as started |
 
 Batches carry the hook-provided `session_id` (fallback: a per-run uuid;
 switching session ids flushes the buffer first so a batch never mixes

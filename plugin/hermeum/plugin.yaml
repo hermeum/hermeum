@@ -1,8 +1,14 @@
 name: hermeum
-version: "0.2.0"
-description: >
-  Forwards typed hermes agent-session events (session_started, llm_call,
-  tool_call, error, session_finalized, subagent_started, subagent_stopped)
-  to Hermeum's plugin-protocol ingest endpoint.
+version: "1.0.0"
+description: "Optional Hermeum telemetry for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store. Opt-in via `hermes plugins enable hermeum`."
+author: Hermeum
 requires_env:
   - HERMEUM_TELEMETRY_URL
+provides_hooks:
+  - on_session_start
+  - post_api_request
+  - post_tool_call
+  - api_request_error
+  - on_session_finalize
+  - subagent_start
+  - subagent_stop

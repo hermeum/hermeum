@@ -148,6 +148,12 @@ const ToolCallEventSchema = z
     args: z.unknown().describe("Arguments passed to the tool."),
     result: z.unknown().describe("Tool result. Sanitization/truncation is the emitter's responsibility."),
     durationS: DurationSchema.optional(),
+    status: z
+      .enum(["ok", "error", "blocked", "cancelled"])
+      .optional()
+      .describe(
+        "Lifecycle outcome of the tool call (emitted even for blocked/cancelled paths so spans close cleanly)."
+      ),
   })
   .describe("One completed tool execution.");
 
