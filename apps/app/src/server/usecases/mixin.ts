@@ -7,9 +7,12 @@ import { telemetry } from "../infras/posthog";
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { HermesSkillIndex } from "../infras/hermes-skill-index";
 import { LocalFiles } from "../infras/local-files";
+import { PostgresDatabase } from "../infras/postgres/client";
+import { SqliteDatabase } from "../infras/sqlite/client";
 import { FileAdaptor } from "./adaptors/file";
 import { TelemetryAdaptor } from "./adaptors/telemetry";
 import { Runtime } from "./adaptors/runtime";
+import { Database } from "./adaptors/database";
 import { SkillIndexAdaptor } from "./adaptors/skill-index";
 import { MockRuntime } from "./adaptors/mocks/runtime";
 
@@ -23,7 +26,9 @@ export class BaseUseCase {
       : new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),
-    readonly logger: TelemetryAdaptor = telemetry
+    readonly logger: TelemetryAdaptor = telemetry,
+    readonly db: Database =
+      config.databaseDialect === "postgres" ? new PostgresDatabase() : new SqliteDatabase()
   ) {}
 }
 
