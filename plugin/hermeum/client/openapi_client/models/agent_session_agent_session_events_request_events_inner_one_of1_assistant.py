@@ -18,20 +18,21 @@ import re  # noqa: F401
 import json
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing import Any, ClassVar, Dict, List
-from openapi_client.models.agent_session_agent_session_events_request_events_inner import AgentSessionAgentSessionEventsRequestEventsInner
+from typing import Any, ClassVar, Dict, List, Optional
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of1_assistant_tool_calls_inner import AgentSessionAgentSessionEventsRequestEventsInnerOneOf1AssistantToolCallsInner
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentSessionAgentSessionEventsRequest(BaseModel):
+class AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant(BaseModel):
     """
-    AgentSessionAgentSessionEventsRequest
+    AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant
     """ # noqa: E501
-    session_id: StrictStr = Field(alias="sessionId")
-    events: List[AgentSessionAgentSessionEventsRequestEventsInner]
+    content: Optional[StrictStr]
+    tool_calls: List[AgentSessionAgentSessionEventsRequestEventsInnerOneOf1AssistantToolCallsInner] = Field(alias="toolCalls")
+    reasoning: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["sessionId", "events"]
+    __properties: ClassVar[List[str]] = ["content", "toolCalls", "reasoning"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -51,7 +52,7 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a JSON string"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,22 +75,32 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in events (list)
+        # override the default output from pydantic by calling `to_dict()` of each item in tool_calls (list)
         _items = []
-        if self.events:
-            for _item_events in self.events:
-                _items.append(_item_events.to_dict() if _item_events is not None else None)
-            _dict['events'] = _items
+        if self.tool_calls:
+            for _item_tool_calls in self.tool_calls:
+                _items.append(_item_tool_calls.to_dict() if _item_tool_calls is not None else None)
+            _dict['toolCalls'] = _items
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
                 _dict[_key] = _value
 
+        # set to None if content (nullable) is None
+        # and model_fields_set contains the field
+        if self.content is None and "content" in self.model_fields_set:
+            _dict['content'] = None
+
+        # set to None if reasoning (nullable) is None
+        # and model_fields_set contains the field
+        if self.reasoning is None and "reasoning" in self.model_fields_set:
+            _dict['reasoning'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a dict"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant from a dict"""
         if obj is None:
             return None
 
@@ -97,8 +108,9 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "sessionId": obj.get("sessionId"),
-            "events": [AgentSessionAgentSessionEventsRequestEventsInner.from_dict(_item) for _item in obj["events"]] if obj.get("events") is not None else None
+            "content": obj.get("content"),
+            "toolCalls": [AgentSessionAgentSessionEventsRequestEventsInnerOneOf1AssistantToolCallsInner.from_dict(_item) for _item in obj["toolCalls"]] if obj.get("toolCalls") is not None else None,
+            "reasoning": obj.get("reasoning")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

@@ -80,8 +80,7 @@
                           "type": "object",
                           "properties": {
                             "accepted": {
-                              "type": "number",
-                              "description": "Number of events accepted by the server."
+                              "type": "number"
                             }
                           },
                           "required": [
@@ -114,47 +113,463 @@
                 "type": "object",
                 "properties": {
                   "sessionId": {
-                    "type": "string",
-                    "description": "Identifier of the agent session the events belong to."
+                    "type": "string"
                   },
                   "events": {
                     "type": "array",
                     "items": {
-                      "type": "object",
-                      "properties": {
-                        "eventId": {
-                          "type": "string",
-                          "description": "Client-generated unique event id."
-                        },
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "error",
-                            "message",
-                            "session_started",
-                            "tool_call",
-                            "llm_call"
-                          ]
-                        },
-                        "timestamp": {
-                          "type": "string",
-                          "description": "ISO 8601 timestamp of when the event occurred."
-                        },
-                        "data": {
+                      "oneOf": [
+                        {
                           "type": "object",
-                          "additionalProperties": {},
-                          "description": "Event-specific payload."
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "session_started"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "platform": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "type": "string"
+                            },
+                            "model": {
+                              "type": "string"
+                            },
+                            "apiMode": {
+                              "type": "string"
+                            },
+                            "turnId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "platform",
+                            "provider",
+                            "model",
+                            "apiMode"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "llm_call"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "type": "string"
+                            },
+                            "model": {
+                              "type": "string"
+                            },
+                            "apiMode": {
+                              "type": "string"
+                            },
+                            "usage": {
+                              "type": "object",
+                              "properties": {
+                                "inputTokens": {
+                                  "type": "number"
+                                },
+                                "outputTokens": {
+                                  "type": "number"
+                                },
+                                "cacheReadTokens": {
+                                  "type": "number"
+                                },
+                                "cacheWriteTokens": {
+                                  "type": "number"
+                                },
+                                "reasoningTokens": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "inputTokens",
+                                "outputTokens"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            "cost": {
+                              "type": "object",
+                              "properties": {
+                                "totalUsd": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                },
+                                "inputUsd": {
+                                  "type": "number"
+                                },
+                                "outputUsd": {
+                                  "type": "number"
+                                },
+                                "cacheReadUsd": {
+                                  "type": "number"
+                                },
+                                "cacheWriteUsd": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "totalUsd"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            "assistant": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "toolCalls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "arguments": {}
+                                    },
+                                    "required": [
+                                      "id"
+                                    ],
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "reasoning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "content",
+                                "toolCalls"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            "turnId": {
+                              "type": "string"
+                            },
+                            "durationS": {
+                              "type": "number"
+                            },
+                            "finishReason": {
+                              "type": "string"
+                            },
+                            "moaReferences": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "model": {
+                                    "type": "string"
+                                  },
+                                  "output": {},
+                                  "usage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "inputTokens": {
+                                        "type": "number"
+                                      },
+                                      "outputTokens": {
+                                        "type": "number"
+                                      },
+                                      "cacheReadTokens": {
+                                        "type": "number"
+                                      },
+                                      "cacheWriteTokens": {
+                                        "type": "number"
+                                      },
+                                      "reasoningTokens": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "inputTokens",
+                                      "outputTokens"
+                                    ],
+                                    "additionalProperties": {}
+                                  },
+                                  "costUsd": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "model"
+                                ],
+                                "additionalProperties": {}
+                              }
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "provider",
+                            "model",
+                            "apiMode",
+                            "usage",
+                            "cost",
+                            "assistant"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "tool_call"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "toolName": {
+                              "type": "string"
+                            },
+                            "toolCallId": {
+                              "type": "string"
+                            },
+                            "args": {},
+                            "result": {},
+                            "turnId": {
+                              "type": "string"
+                            },
+                            "durationS": {
+                              "type": "number"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ok",
+                                "error",
+                                "blocked",
+                                "cancelled"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "toolName",
+                            "toolCallId",
+                            "args",
+                            "result"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "error"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "stage": {
+                              "type": "string",
+                              "enum": [
+                                "llm",
+                                "tool"
+                              ]
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "turnId": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "type": "string"
+                            },
+                            "model": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "stage",
+                            "message"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "session_finalized"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "output": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "toolCalls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "arguments": {}
+                                    },
+                                    "required": [
+                                      "id"
+                                    ],
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "reasoning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "content",
+                                "toolCalls"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            "turnId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "output"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "subagent_started"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "turnId": {
+                              "type": "string"
+                            },
+                            "childSessionId": {
+                              "type": "string"
+                            },
+                            "parentTurnId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "turnId",
+                            "childSessionId"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "eventId": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "subagent_stopped"
+                            },
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "turnId": {
+                              "type": "string"
+                            },
+                            "childSessionId": {
+                              "type": "string"
+                            },
+                            "parentTurnId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "eventId",
+                            "type",
+                            "timestamp",
+                            "turnId",
+                            "childSessionId"
+                          ],
+                          "additionalProperties": {}
                         }
-                      },
-                      "required": [
-                        "eventId",
-                        "type",
-                        "timestamp",
-                        "data"
                       ],
-                      "additionalProperties": false
-                    },
-                    "description": "Batch of session events."
+                      "discriminator": {
+                        "propertyName": "type"
+                      }
+                    }
                   }
                 },
                 "required": [

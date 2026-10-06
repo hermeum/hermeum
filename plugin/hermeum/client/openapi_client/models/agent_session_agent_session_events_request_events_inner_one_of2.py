@@ -17,21 +17,45 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing import Any, ClassVar, Dict, List
-from openapi_client.models.agent_session_agent_session_events_request_events_inner import AgentSessionAgentSessionEventsRequestEventsInner
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr, field_validator
+from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentSessionAgentSessionEventsRequest(BaseModel):
+class AgentSessionAgentSessionEventsRequestEventsInnerOneOf2(BaseModel):
     """
-    AgentSessionAgentSessionEventsRequest
+    AgentSessionAgentSessionEventsRequestEventsInnerOneOf2
     """ # noqa: E501
-    session_id: StrictStr = Field(alias="sessionId")
-    events: List[AgentSessionAgentSessionEventsRequestEventsInner]
+    event_id: StrictStr = Field(alias="eventId")
+    type: StrictStr
+    timestamp: StrictStr
+    tool_name: StrictStr = Field(alias="toolName")
+    tool_call_id: StrictStr = Field(alias="toolCallId")
+    args: Optional[Any]
+    result: Optional[Any]
+    turn_id: Optional[StrictStr] = Field(default=None, alias="turnId")
+    duration_s: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="durationS")
+    status: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["sessionId", "events"]
+    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "toolName", "toolCallId", "args", "result", "turnId", "durationS", "status"]
+
+    @field_validator('type')
+    def type_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in set(['tool_call']):
+            raise ValueError("must be one of enum values ('tool_call')")
+        return value
+
+    @field_validator('status')
+    def status_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['ok', 'error', 'blocked', 'cancelled']):
+            raise ValueError("must be one of enum values ('ok', 'error', 'blocked', 'cancelled')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -51,7 +75,7 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a JSON string"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf2 from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,22 +98,26 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in events (list)
-        _items = []
-        if self.events:
-            for _item_events in self.events:
-                _items.append(_item_events.to_dict() if _item_events is not None else None)
-            _dict['events'] = _items
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
                 _dict[_key] = _value
 
+        # set to None if args (nullable) is None
+        # and model_fields_set contains the field
+        if self.args is None and "args" in self.model_fields_set:
+            _dict['args'] = None
+
+        # set to None if result (nullable) is None
+        # and model_fields_set contains the field
+        if self.result is None and "result" in self.model_fields_set:
+            _dict['result'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequest from a dict"""
+        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInnerOneOf2 from a dict"""
         if obj is None:
             return None
 
@@ -97,8 +125,16 @@ class AgentSessionAgentSessionEventsRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "sessionId": obj.get("sessionId"),
-            "events": [AgentSessionAgentSessionEventsRequestEventsInner.from_dict(_item) for _item in obj["events"]] if obj.get("events") is not None else None
+            "eventId": obj.get("eventId"),
+            "type": obj.get("type"),
+            "timestamp": obj.get("timestamp"),
+            "toolName": obj.get("toolName"),
+            "toolCallId": obj.get("toolCallId"),
+            "args": obj.get("args"),
+            "result": obj.get("result"),
+            "turnId": obj.get("turnId"),
+            "durationS": obj.get("durationS"),
+            "status": obj.get("status")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

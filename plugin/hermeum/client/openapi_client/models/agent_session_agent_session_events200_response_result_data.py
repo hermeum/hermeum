@@ -17,7 +17,7 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
+from pydantic import BaseModel, ConfigDict, StrictFloat, StrictInt
 from typing import Any, ClassVar, Dict, List, Union
 from typing import Optional, Set
 from typing_extensions import Self
@@ -27,7 +27,7 @@ class AgentSessionAgentSessionEvents200ResponseResultData(BaseModel):
     """
     AgentSessionAgentSessionEvents200ResponseResultData
     """ # noqa: E501
-    accepted: Union[StrictFloat, StrictInt] = Field(description="Number of events accepted by the server.")
+    accepted: Union[StrictFloat, StrictInt]
     additional_properties: Dict[str, Any] = {}
     __properties: ClassVar[List[str]] = ["accepted"]
 

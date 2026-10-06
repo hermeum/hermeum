@@ -13,102 +13,198 @@
 
 
 from __future__ import annotations
-import pprint
-import re  # noqa: F401
 import json
+import pprint
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, field_validator
+from typing import Any, List, Optional
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of import AgentSessionAgentSessionEventsRequestEventsInnerOneOf
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of1 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf1
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of2 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf2
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of3 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf3
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of4 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf4
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of5 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf5
+from openapi_client.models.agent_session_agent_session_events_request_events_inner_one_of6 import AgentSessionAgentSessionEventsRequestEventsInnerOneOf6
+from pydantic import StrictStr, Field
+from typing import Union, List, Set, Optional, Dict
+from typing_extensions import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
-from typing import Any, ClassVar, Dict, List
-from typing import Optional, Set
-from typing_extensions import Self
-from pydantic_core import to_jsonable_python
+AGENTSESSIONAGENTSESSIONEVENTSREQUESTEVENTSINNER_ONE_OF_SCHEMAS = ["AgentSessionAgentSessionEventsRequestEventsInnerOneOf", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf1", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf2", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf3", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf4", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf5", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf6"]
 
 class AgentSessionAgentSessionEventsRequestEventsInner(BaseModel):
     """
     AgentSessionAgentSessionEventsRequestEventsInner
-    """ # noqa: E501
-    event_id: StrictStr = Field(description="Client-generated unique event id.", alias="eventId")
-    type: StrictStr
-    timestamp: StrictStr = Field(description="ISO 8601 timestamp of when the event occurred.")
-    data: Dict[str, Any] = Field(description="Event-specific payload.")
-    additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "data"]
-
-    @field_validator('type')
-    def type_validate_enum(cls, value):
-        """Validates the enum"""
-        if value not in set(['error', 'message', 'session_started', 'tool_call', 'llm_call']):
-            raise ValueError("must be one of enum values ('error', 'message', 'session_started', 'tool_call', 'llm_call')")
-        return value
+    """
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf
+    oneof_schema_1_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf1
+    oneof_schema_2_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf1] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf2
+    oneof_schema_3_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf2] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf3
+    oneof_schema_4_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf3] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf4
+    oneof_schema_5_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf4] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf5
+    oneof_schema_6_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf5] = None
+    # data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf6
+    oneof_schema_7_validator: Optional[AgentSessionAgentSessionEventsRequestEventsInnerOneOf6] = None
+    actual_instance: Optional[Union[AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6]] = None
+    one_of_schemas: Set[str] = { "AgentSessionAgentSessionEventsRequestEventsInnerOneOf", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf1", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf2", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf3", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf4", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf5", "AgentSessionAgentSessionEventsRequestEventsInnerOneOf6" }
 
     model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
         validate_assignment=True,
         protected_namespaces=(),
     )
 
 
-    def to_str(self) -> str:
-        """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.model_dump(by_alias=True))
+    discriminator_value_class_map: Dict[str, str] = {
+    }
+
+    def __init__(self, *args, **kwargs) -> None:
+        if args:
+            if len(args) > 1:
+                raise ValueError("If a position argument is used, only 1 is allowed to set `actual_instance`")
+            if kwargs:
+                raise ValueError("If a position argument is used, keyword arguments cannot be used.")
+            super().__init__(actual_instance=args[0])
+        else:
+            super().__init__(**kwargs)
+
+    @field_validator('actual_instance')
+    def actual_instance_must_validate_oneof(cls, v):
+        instance = AgentSessionAgentSessionEventsRequestEventsInner.model_construct()
+        error_messages = []
+        match = 0
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf1
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf1`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf2
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf2`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf3
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf3`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf4
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf4`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf5
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf5`")
+        else:
+            match += 1
+        # validate data type: AgentSessionAgentSessionEventsRequestEventsInnerOneOf6
+        if not isinstance(v, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentSessionAgentSessionEventsRequestEventsInnerOneOf6`")
+        else:
+            match += 1
+        if match > 1:
+            # more than 1 match
+            raise ValueError("Multiple matches found when setting `actual_instance` in AgentSessionAgentSessionEventsRequestEventsInner with oneOf schemas: AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6. Details: " + ", ".join(error_messages))
+        elif match == 0:
+            # no match
+            raise ValueError("No match found when setting `actual_instance` in AgentSessionAgentSessionEventsRequestEventsInner with oneOf schemas: AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6. Details: " + ", ".join(error_messages))
+        else:
+            return v
+
+    @classmethod
+    def from_dict(cls, obj: Union[str, Dict[str, Any]]) -> Self:
+        return cls.from_json(json.dumps(obj))
+
+    @classmethod
+    def from_json(cls, json_str: str) -> Self:
+        """Returns the object represented by the json string"""
+        instance = cls.model_construct()
+        error_messages = []
+        match = 0
+
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf1
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf1.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf2
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf2.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf3
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf3.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf4
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf4.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf5
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf5.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+        # deserialize data into AgentSessionAgentSessionEventsRequestEventsInnerOneOf6
+        try:
+            instance.actual_instance = AgentSessionAgentSessionEventsRequestEventsInnerOneOf6.from_json(json_str)
+            match += 1
+        except (ValidationError, ValueError) as e:
+            error_messages.append(str(e))
+
+        if match > 1:
+            # more than 1 match
+            raise ValueError("Multiple matches found when deserializing the JSON string into AgentSessionAgentSessionEventsRequestEventsInner with oneOf schemas: AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6. Details: " + ", ".join(error_messages))
+        elif match == 0:
+            # no match
+            raise ValueError("No match found when deserializing the JSON string into AgentSessionAgentSessionEventsRequestEventsInner with oneOf schemas: AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6. Details: " + ", ".join(error_messages))
+        else:
+            return instance
 
     def to_json(self) -> str:
-        """Returns the JSON representation of the model using alias"""
-        return json.dumps(to_jsonable_python(self.to_dict()))
+        """Returns the JSON representation of the actual instance"""
+        if self.actual_instance is None:
+            return "null"
 
-    @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInner from a JSON string"""
-        return cls.from_dict(json.loads(json_str))
+        if hasattr(self.actual_instance, "to_json") and callable(self.actual_instance.to_json):
+            return self.actual_instance.to_json()
+        else:
+            return json.dumps(self.actual_instance)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Return the dictionary representation of the model using alias.
-
-        This has the following differences from calling pydantic's
-        `self.model_dump(by_alias=True)`:
-
-        * `None` is only added to the output dict for nullable fields that
-          were set at model initialization. Other fields with value `None`
-          are ignored.
-        * Fields in `self.additional_properties` are added to the output dict.
-        """
-        excluded_fields: Set[str] = set([
-            "additional_properties",
-        ])
-
-        _dict = self.model_dump(
-            by_alias=True,
-            exclude=excluded_fields,
-            exclude_none=True,
-        )
-        # puts key-value pairs in additional_properties in the top level
-        if self.additional_properties is not None:
-            for _key, _value in self.additional_properties.items():
-                _dict[_key] = _value
-
-        return _dict
-
-    @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentSessionAgentSessionEventsRequestEventsInner from a dict"""
-        if obj is None:
+    def to_dict(self) -> Optional[Union[Dict[str, Any], AgentSessionAgentSessionEventsRequestEventsInnerOneOf, AgentSessionAgentSessionEventsRequestEventsInnerOneOf1, AgentSessionAgentSessionEventsRequestEventsInnerOneOf2, AgentSessionAgentSessionEventsRequestEventsInnerOneOf3, AgentSessionAgentSessionEventsRequestEventsInnerOneOf4, AgentSessionAgentSessionEventsRequestEventsInnerOneOf5, AgentSessionAgentSessionEventsRequestEventsInnerOneOf6]]:
+        """Returns the dict representation of the actual instance"""
+        if self.actual_instance is None:
             return None
 
-        if not isinstance(obj, dict):
-            return cls.model_validate(obj)
+        if hasattr(self.actual_instance, "to_dict") and callable(self.actual_instance.to_dict):
+            return self.actual_instance.to_dict()
+        else:
+            # primitive type
+            return self.actual_instance
 
-        _obj = cls.model_validate({
-            "eventId": obj.get("eventId"),
-            "type": obj.get("type"),
-            "timestamp": obj.get("timestamp"),
-            "data": obj.get("data")
-        })
-        # store additional fields in additional_properties
-        for _key in obj.keys():
-            if _key not in cls.__properties:
-                _obj.additional_properties[_key] = obj.get(_key)
-
-        return _obj
+    def to_str(self) -> str:
+        """Returns the string representation of the actual instance"""
+        return pprint.pformat(self.model_dump())
 
 
