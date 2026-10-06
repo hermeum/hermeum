@@ -46,7 +46,6 @@
     "drizzle-orm": "^0.45.3",
     "express": "^5.2.1",
     "fast-json-patch": "^3.1.1",
-    "gray-matter": "^4.0.3",
     "handlebars": "^4.7.9",
     "lucide-react": "^1.49.0",
     "nodemailer": "^10.0.13",
