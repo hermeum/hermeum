@@ -262,3 +262,17 @@ export const AgentSessionEventBatchSchema = z
   .describe("Ingestion payload: one batch of agent-session events for a single session.");
 
 export type AgentSessionEventBatch = z.infer<typeof AgentSessionEventBatchSchema>;
+
+// Server-internal read shape for the agent-session trajectory UI (list view).
+// Derived from the stored events at query time — not part of the plugin
+// ingestion protocol, so it is not published via the OpenAPI spec.
+export const AgentSessionSummarySchema = z
+  .object({
+    sessionId: z.string().describe("Hermes session id the events belong to."),
+    firstEventAt: z.string().describe("ISO 8601 timestamp of the session's earliest event."),
+    lastEventAt: z.string().describe("ISO 8601 timestamp of the session's latest event."),
+    eventCount: z.number().int().positive().describe("Total number of stored events for the session."),
+  })
+  .describe("One agent session, aggregated from its stored events.");
+
+export type AgentSessionSummary = z.infer<typeof AgentSessionSummarySchema>;

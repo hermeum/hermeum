@@ -7,11 +7,21 @@ import { telemetry } from "../infras/posthog";
 import { KubernetesClient } from "../infras/kubernetes/client";
 import { HermesSkillIndex } from "../infras/hermes-skill-index";
 import { LocalFiles } from "../infras/local-files";
+import { PostgresDatabase } from "../infras/postgres/client";
+import { SqliteDatabase } from "../infras/sqlite/client";
 import { FileAdaptor } from "./adaptors/file";
 import { TelemetryAdaptor } from "./adaptors/telemetry";
 import { Runtime } from "./adaptors/runtime";
+import { Database } from "./adaptors/database";
 import { SkillIndexAdaptor } from "./adaptors/skill-index";
 import { MockRuntime } from "./adaptors/mocks/runtime";
+
+// One MockRuntime per process: its store lives in memory, so every use case
+// holding its own instance would see a different, empty one — agents created
+// via AgentUseCase would be invisible to cross-use-case reads (e.g. telemetry
+// ownership checks). KubernetesClient stays per-instance since it holds no
+// cross-use-case state.
+const sharedMockRuntime = new MockRuntime();
 
 // Core base class for use cases backed by the file, runtime, skill index, and
 // telemetry adaptors; mixins like HermeumConfigLoadable build on the injected
@@ -19,11 +29,13 @@ import { MockRuntime } from "./adaptors/mocks/runtime";
 export class BaseUseCase {
   constructor(
     readonly runtime: Runtime = config.mockRuntime
-      ? new MockRuntime()
+      ? sharedMockRuntime
       : new KubernetesClient(),
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),
-    readonly logger: TelemetryAdaptor = telemetry
+    readonly logger: TelemetryAdaptor = telemetry,
+    readonly db: Database =
+      config.databaseDialect === "postgres" ? new PostgresDatabase() : new SqliteDatabase()
   ) {}
 }
 
