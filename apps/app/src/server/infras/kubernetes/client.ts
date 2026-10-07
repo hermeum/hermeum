@@ -310,7 +310,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.skills !== undefined) {
     hermes.skills = agent.skills.map((identifier) => ({ identifier }));
   }
-  // Every agent installs the hermeum telemetry plugin (deduped if the user
+  // Every agent installs the hermeum plugin (deduped if the user
   // already listed it) and posts to the app's plugin-protocol endpoint.
   hermes.plugins = [
     ...(agent.plugins ?? []).map((identifier) => ({ identifier })),
@@ -330,7 +330,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
   hermes.env = [
     { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
-    { name: "HERMEUM_TELEMETRY_URL", value: config.telemetryEndpointUrl },
+    { name: "HERMEUM_PLUGIN_BASE_URL", value: config.pluginEndpointUrl },
   ];
 
   const spec: HermesAgentSpec = {

@@ -55,13 +55,13 @@ config:
   hermesImageRepository: nousresearch/hermes-agent
   # Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG).
   hermesImageTag: v2026.9.21
-  # Base URL agents use to reach the hermeum app (HERMEUM_TELEMETRY_URL).
-  # Injected into every managed agent, whose bundled hermeum telemetry plugin
-  # posts agent-session events to <telemetryUrl>/plugin/trpc. Defaults to the
+  # Base URL agents use to reach the hermeum app (HERMEUM_PLUGIN_BASE_URL).
+  # Injected into every managed agent, whose bundled hermeum plugin
+  # posts agent-session events to <pluginBaseUrl>/plugin/trpc. Defaults to the
   # app's in-cluster short DNS name derived from the release (Service
   # "<release-name>" or "<release-name>-hermeum"); override only when agents
   # reach the app through a different route (e.g. cross-namespace FQDN).
-  telemetryUrl: ""
+  pluginBaseUrl: ""
   # OpenAI model id used by the AI config generator (HERMEUM_OPENAI_MODEL).
   openaiModel: gpt-6.1-sol
   # Optional — override the OpenAI API base URL (HERMEUM_OPENAI_BASE_URL).

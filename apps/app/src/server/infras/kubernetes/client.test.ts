@@ -119,74 +119,74 @@ describe("agentToHermesAgent hermes env wiring", () => {
     vi.resetModules();
     return import("./client");
   }
-  const TELEMETRY_URL = "HERMEUM_TELEMETRY_URL";
-  const originalTelemetryUrl = process.env[TELEMETRY_URL];
+  const PLUGIN_BASE_URL = "HERMEUM_PLUGIN_BASE_URL";
+  const originalTelemetryUrl = process.env[PLUGIN_BASE_URL];
 
   afterEach(() => {
-    if (originalTelemetryUrl === undefined) delete process.env[TELEMETRY_URL];
-    else process.env[TELEMETRY_URL] = originalTelemetryUrl;
+    if (originalTelemetryUrl === undefined) delete process.env[PLUGIN_BASE_URL];
+    else process.env[PLUGIN_BASE_URL] = originalTelemetryUrl;
     vi.resetModules();
   });
 
-  it("always sets HERMES_WRITE_SAFE_ROOT and HERMEUM_TELEMETRY_URL as container env defaults", async () => {
-    vi.stubEnv(TELEMETRY_URL, "http://hermeum:3000");
+  it("always sets HERMES_WRITE_SAFE_ROOT and HERMEUM_PLUGIN_BASE_URL as container env defaults", async () => {
+    vi.stubEnv(PLUGIN_BASE_URL, "http://hermeum:3000");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(makeAgent());
     expect(hermesAgent.spec.hermes?.env).toEqual([
       { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
-      { name: "HERMEUM_TELEMETRY_URL", value: "http://hermeum:3000/plugin/trpc" },
+      { name: "HERMEUM_PLUGIN_BASE_URL", value: "http://hermeum:3000/plugin/trpc" },
     ]);
   });
 
   it("sets them even when the agent env defines the same vars", async () => {
-    vi.stubEnv(TELEMETRY_URL, "http://hermeum:3000");
+    vi.stubEnv(PLUGIN_BASE_URL, "http://hermeum:3000");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
       makeAgent({
         env: [
           { name: "HERMES_WRITE_SAFE_ROOT", value: "/custom" },
-          { name: "HERMEUM_TELEMETRY_URL", value: "http://evil.example.com" },
+          { name: "HERMEUM_PLUGIN_BASE_URL", value: "http://evil.example.com" },
         ],
       })
     );
     expect(hermesAgent.spec.hermes?.env).toEqual([
       { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
-      { name: "HERMEUM_TELEMETRY_URL", value: "http://hermeum:3000/plugin/trpc" },
+      { name: "HERMEUM_PLUGIN_BASE_URL", value: "http://hermeum:3000/plugin/trpc" },
     ]);
   });
 
-  it("trims a trailing slash from HERMEUM_TELEMETRY_URL before appending /plugin/trpc", async () => {
-    vi.stubEnv(TELEMETRY_URL, "http://custom.example.com:8000/");
+  it("trims a trailing slash from HERMEUM_PLUGIN_BASE_URL before appending /plugin/trpc", async () => {
+    vi.stubEnv(PLUGIN_BASE_URL, "http://custom.example.com:8000/");
     const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(makeAgent());
     expect(hermesAgent.spec.hermes?.env?.at(-1)).toEqual({
-      name: "HERMEUM_TELEMETRY_URL",
+      name: "HERMEUM_PLUGIN_BASE_URL",
       value: "http://custom.example.com:8000/plugin/trpc",
     });
   });
 });
 
-describe("ConfigSchema telemetry endpoint derivation", () => {
-  it("derives telemetryEndpointUrl by appending the /plugin/trpc mount prefix", () => {
+describe("ConfigSchema plugin endpoint derivation", () => {
+  it("derives pluginEndpointUrl by appending the /plugin/trpc mount prefix", () => {
     const parsed = ConfigSchema.parse({
       databaseUrl: "file:./test.sqlite",
-      telemetryUrl: "http://localhost:3000",
+      pluginBaseUrl: "http://localhost:3000",
     });
-    expect(parsed.telemetryEndpointUrl).toBe("http://localhost:3000/plugin/trpc");
+    expect(parsed.pluginEndpointUrl).toBe("http://localhost:3000/plugin/trpc");
   });
 
-  it("trims a trailing slash from telemetryUrl before appending", () => {
+  it("trims a trailing slash from pluginBaseUrl before appending", () => {
     const parsed = ConfigSchema.parse({
       databaseUrl: "file:./test.sqlite",
-      telemetryUrl: "http://hermeum:3000/",
+      pluginBaseUrl: "http://hermeum:3000/",
     });
-    expect(parsed.telemetryEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
+    expect(parsed.pluginEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
   });
 
   it("falls back to the http://hermeum:3000 default base URL", () => {
     const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
-    expect(parsed.telemetryUrl).toBe("http://hermeum:3000");
-    expect(parsed.telemetryEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
+    expect(parsed.pluginBaseUrl).toBe("http://hermeum:3000");
+    expect(parsed.pluginEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
   });
 
   it("pins hermesPluginIdentifier to the plugin/hermeum install identifier", () => {

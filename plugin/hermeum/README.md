@@ -10,7 +10,7 @@ arrive together); pre-call hooks are deliberately not registered. Events are
 constructed as the typed payloads generated from Hermeum's event schema
 (`openapi/plugin.json`), mirroring the bundled langfuse observability plugin's
 field extraction. Content is captured sanitized (default, like langfuse):
-secret redaction before truncation (12000 chars, `HERMEUM_TELEMETRY_MAX_CHARS`).
+secret redaction before truncation (12000 chars, `HERMEUM_PLUGIN_MAX_CHARS`).
 Cost is not computed client-side — `totalUsd` is always null; Hermeum
 estimates server-side.
 
@@ -97,8 +97,8 @@ hermes plugins enable hermeum
 
 | Env var | Default | Description |
 |---|---|---|
-| `HERMEUM_TELEMETRY_URL` | `http://localhost:3000/plugin/trpc` | Base URL of the Hermeum plugin-protocol endpoint. |
-| `HERMEUM_TELEMETRY_MAX_CHARS` | `12000` | Max chars per redacted text field before truncation. |
+| `HERMEUM_PLUGIN_BASE_URL` | `http://localhost:3000/plugin/trpc` | Base URL of the Hermeum plugin-protocol endpoint. |
+| `HERMEUM_PLUGIN_MAX_CHARS` | `12000` | Max chars per redacted text field before truncation. |
 
 ## Local verification
 

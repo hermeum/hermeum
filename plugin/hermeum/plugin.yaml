@@ -1,9 +1,9 @@
 name: hermeum
 version: "0.1.0"
-description: "Optional Hermeum telemetry for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store. Opt-in via `hermes plugins enable hermeum`."
+description: "Optional Hermeum plugin for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store. Opt-in via `hermes plugins enable hermeum`."
 author: Hermeum
 requires_env:
-  - HERMEUM_TELEMETRY_URL
+  - HERMEUM_PLUGIN_BASE_URL
 provides_hooks:
   - on_session_start
   - post_api_request

@@ -1,4 +1,4 @@
-"""Hermeum telemetry plugin.
+"""Hermeum plugin.
 
 Forwards hermes agent-session events to Hermeum's plugin-protocol endpoint
 (POST /plugin/trpc/agentSession.agentSessionEvents), constructing the typed
@@ -40,7 +40,7 @@ DEFAULT_URL = "http://localhost:3000/plugin/trpc"
 
 
 def register(ctx: Any) -> None:
-    base_url = os.environ.get("HERMEUM_TELEMETRY_URL", DEFAULT_URL)
+    base_url = os.environ.get("HERMEUM_PLUGIN_BASE_URL", DEFAULT_URL)
     telemetry = create_telemetry(base_url)
     telemetry.health_check()
 

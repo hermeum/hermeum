@@ -54,20 +54,20 @@ export const ConfigSchema = z.object({
     .string()
     .default("v2026.9.21")
     .describe("Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG)."),
-  telemetryUrl: z
+  pluginBaseUrl: z
     .url()
     .default("http://hermeum:3000")
     .describe(
-      "Base URL agents use to reach the Hermeum app (HERMEUM_TELEMETRY_URL). " +
-        "Injected into every managed agent, whose bundled hermeum telemetry plugin " +
-        "posts agent-session events to <telemetryUrl>/plugin/trpc."
+      "Base URL agents use to reach the Hermeum app (HERMEUM_PLUGIN_BASE_URL). " +
+        "Injected into every managed agent, whose bundled hermeum plugin " +
+        "posts agent-session events to <pluginBaseUrl>/plugin/trpc."
     ),
   hermesPluginIdentifier: z
     .string()
     .min(1)
     .default("hermeum/hermeum/plugin/hermeum")
     .describe(
-      "Git plugin identifier (owner/repo/subdir) of the telemetry plugin shipped in " +
+      "Git plugin identifier (owner/repo/subdir) of the plugin shipped in " +
         "this repo at plugin/hermeum, auto-installed and enabled on every managed " +
         "agent via the operator's `hermes plugins install`. Fixed — not env-configurable."
     ),
@@ -190,10 +190,10 @@ export const ConfigSchema = z.object({
     .describe("Disable all deployment telemetry heartbeats (HERMEUM_TELEMETRY_DISABLED)."),
 }).transform((c) => ({
   ...c,
-  // Derived, not env-settable: the telemetry plugin's generated client appends
+  // Derived, not env-settable: the plugin's generated client appends
   // only the tRPC procedure path (/agentSession...) to the base URL — the
   // /plugin/trpc mount prefix (server.ts) must be supplied here.
-  telemetryEndpointUrl: `${c.telemetryUrl.replace(/\/+$/, "")}/plugin/trpc`,
+  pluginEndpointUrl: `${c.pluginBaseUrl.replace(/\/+$/, "")}/plugin/trpc`,
 }));
 
 export const config = ConfigSchema.parse({
@@ -208,7 +208,7 @@ export const config = ConfigSchema.parse({
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
-  telemetryUrl: process.env.HERMEUM_TELEMETRY_URL,
+  pluginBaseUrl: process.env.HERMEUM_PLUGIN_BASE_URL,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
   openaiApiKey: process.env.HERMEUM_OPENAI_API_KEY,
