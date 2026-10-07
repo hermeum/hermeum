@@ -2,6 +2,7 @@
   "extends": "@hermeum/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
+      "@hermeum/components": ["./index.css"],
       "@hermeum/components/*": ["./*"]
     }
   },
