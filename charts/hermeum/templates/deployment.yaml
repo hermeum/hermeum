@@ -114,6 +114,10 @@ spec:
             - name: HERMEUM_ALLOWED_EMAIL_DOMAIN
               value: {{ .Values.config.allowedEmailDomain | quote }}
             {{- end }}
+            {{- if .Values.config.smtpFrom }}
+            - name: HERMEUM_SMTP_FROM
+              value: {{ .Values.config.smtpFrom | quote }}
+            {{- end }}
             {{- if .Values.config.agentIngress.scheme }}
             - name: HERMEUM_AGENT_INGRESS_SCHEME
               value: {{ .Values.config.agentIngress.scheme | quote }}

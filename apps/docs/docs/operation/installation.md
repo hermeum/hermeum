@@ -27,6 +27,9 @@ Everything installs with working defaults. For production you'll want:
   `openssl rand -base64 32`).
 - `HERMEUM_SMTP_URL` — SMTP server URL for outgoing email; needed for auth
   emails and notifications.
+- `HERMEUM_SMTP_FROM` — From address for those emails (e.g.
+  `Hermeum <no-reply@example.com>`); set it alongside `HERMEUM_SMTP_URL` —
+  most providers reject messages without a From header.
 - `HERMEUM_OPENAI_API_KEY` — API key for the OpenAI-compatible API used by the
   AI config generator.
 

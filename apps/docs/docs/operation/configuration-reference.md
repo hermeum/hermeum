@@ -51,6 +51,7 @@ is not a `HERMEUM_*` variable.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `HERMEUM_SMTP_URL` | — | SMTP server URL for outgoing email (e.g. `smtps://user:pass@smtp.example.com:465`). Optional. |
+| `HERMEUM_SMTP_FROM` | — | From address for outgoing email, e.g. `Hermeum <no-reply@example.com>`. Set it when `HERMEUM_SMTP_URL` is configured — most SMTP providers reject or spam-filter messages without a From header. Optional. |
 | `HERMEUM_ALLOWED_EMAIL_DOMAIN` | — | Restrict sign-ups to this email domain (e.g. `example.com`). Optional; when unset, any domain is accepted. |
 
 ### AI config generator

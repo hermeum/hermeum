@@ -53,7 +53,15 @@ export const auth = betterAuth({
           return;
         }
         const transporter = nodemailer.createTransport(config.smtpUrl);
+        if (!config.smtpFrom) {
+          console.warn(
+            "[OTP] HERMEUM_SMTP_FROM is not set; sending without a From header — " +
+              "many SMTP providers reject or spam-filter such messages. " +
+              'Set it to e.g. "Hermeum <no-reply@example.com>".'
+          );
+        }
         await transporter.sendMail({
+          from: config.smtpFrom,
           to: email,
           subject: "Your login code",
           text: `Your one-time login code is: ${otp}`,

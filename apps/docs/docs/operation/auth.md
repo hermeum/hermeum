@@ -34,3 +34,8 @@ Set `HERMEUM_SMTP_URL` to a connection URL (e.g.
 The URL is passed directly to
 [nodemailer's `createTransport`](https://nodemailer.com/smtp/); any form
 nodemailer accepts works.
+
+Also set `HERMEUM_SMTP_FROM` to the sender address, e.g.
+`Hermeum <no-reply@example.com>` — it becomes the message's `From` header.
+Without it, OTP emails go out with no sender at all, which most SMTP providers
+reject or spam-filter (a warning is logged at send time instead).
