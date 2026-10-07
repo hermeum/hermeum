@@ -104,7 +104,7 @@ def _redact(value: str) -> str:
 
 
 def _max_chars() -> int:
-    raw = os.environ.get("HERMEUM_TELEMETRY_MAX_CHARS", "").strip()
+    raw = os.environ.get("HERMEUM_PLUGIN_MAX_CHARS", "").strip()
     try:
         return int(raw) if raw else DEFAULT_MAX_CHARS
     except ValueError:
