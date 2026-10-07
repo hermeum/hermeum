@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import type { UIDataTypes, UIMessage } from "ai";
@@ -6,7 +6,6 @@ import { ArrowUp, Check, LoaderCircle, Square } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
-import { Input } from "@hermeum/components/ui/input";
 
 import { Marker, MarkerContent, MarkerIcon } from "@hermeum/components/ui/marker";
 import { Message, MessageContent } from "@hermeum/components/ui/message";
@@ -19,6 +18,20 @@ import {
   MessageScrollerViewport,
 } from "@hermeum/components/ui/message-scroller";
 import { Textarea } from "@hermeum/components/ui/textarea";
+import {
+  Questionnaire,
+  QuestionnaireActions,
+  QuestionnaireChoice,
+  QuestionnaireChoices,
+  QuestionnaireError,
+  QuestionnaireInput,
+  QuestionnaireItem,
+  QuestionnaireNext,
+  QuestionnairePrevious,
+  QuestionnaireProgress,
+  QuestionnaireSubmit,
+  QuestionnaireTitle,
+} from "@hermeum/components/ui/questionnaire";
 import { Streamdown } from "streamdown";
 import type { AgentInput } from "@/entities";
 import { AgentInputObjectSchema, AgentPatchSchema, applyAgentPatch, type AgentPatch } from "@/entities";
@@ -132,12 +145,12 @@ function ToolMarker({
   );
 }
 
-// Interactive wizard for a pending `clarify` tool call. Questions are shown
-// one at a time: each offers its choices (single-select, click to answer and
-// advance), an "Other" free-text option, or a plain input when the model
-// supplied no choices. A final confirmation step lists every Q→A pair for
-// review (with per-question edit) before Submit reports the answers back to
-// the model — or Skip declines answering at any point.
+// Interactive wizard for a pending `clarify` tool call, built on the shadcn
+// Questionnaire component. One question per step; each offers its choices
+// (single-select) plus a free-text "Other" input, or only the input when the
+// model supplied no choices. The final Submit is the explicit confirmation of
+// all collected answers; the host-owned Skip at any point declines the whole
+// call — skip-per-question would not fit the `{ answers, skipped }` contract.
 function ClarifyCard({
   questions,
   onSubmit,
@@ -147,165 +160,62 @@ function ClarifyCard({
   onSubmit: (answers: string[]) => void;
   onSkip: () => void;
 }) {
-  const total = questions.length;
-  // `step` indexes the question being answered; `total` is the confirmation
-  // step. `editing` holds the question index being re-answered from the
-  // confirmation step (undefined during the first pass).
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [editing, setEditing] = useState<number | undefined>(undefined);
-  // Draft for the current step: the typed "Other"/free-form text. Reset on
-  // every step transition.
-  const [draft, setDraft] = useState("");
-  const [otherMode, setOtherMode] = useState(false);
+  const items = questions.map((_, index) => ({
+    name: `question-${index}`,
+    required: true,
+    choices: questions[index]!.choices?.map((choice) => ({ value: choice })) ?? [],
+  }));
 
-  const goToStep = (next: number) => {
-    setStep(next);
-    setDraft("");
-    setOtherMode(false);
-  };
-
-  const advance = (answer: string) => {
-    setAnswers((prev) => ({ ...prev, [step]: answer }));
-    const next = editing !== undefined ? total : step + 1;
-    setEditing(undefined);
-    goToStep(next);
-  };
-
-  const back = () => {
-    if (editing !== undefined) {
-      setEditing(undefined);
-      goToStep(total);
-      return;
-    }
-    goToStep(Math.max(0, step - 1));
-  };
-
-  const submitDraft = () => {
-    const text = draft.trim();
-    if (text.length > 0) advance(text);
-  };
-
-  // Confirmation step: review every answer, then Submit (or Skip).
-  if (step === total) {
-    return (
-      <div className="flex flex-col gap-3 rounded-[0.25rem] border p-3">
-        <p className="text-sm font-medium">Confirm your answers</p>
-        <div className="flex flex-col gap-2">
-          {questions.map(({ question }, questionIndex) => (
-            <div key={questionIndex} className="flex flex-col">
-              <p className="text-xs text-muted-foreground">{question}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-sm">{answers[questionIndex]}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEditing(questionIndex);
-                    goToStep(questionIndex);
-                  }}
-                >
-                  Edit
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => onSubmit(questions.map((_, i) => answers[i]!))}>
-            Submit
-          </Button>
-          <Button size="sm" variant="outline" onClick={onSkip}>
-            Skip
-          </Button>
-        </div>
-      </div>
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit(
+      questions.map((_, index) => {
+        // A question with choices renders radios and the "Other" input under
+        // the same field name. Unchecked radios are not submitted, so the
+        // entries are the radio value (when a choice was picked) followed by
+        // any explicitly typed Other answer. The typed answer wins; otherwise
+        // the selected choice; otherwise "" (can't happen — Submit validates
+        // required items first).
+        const values = new FormData(event.currentTarget)
+          .getAll(`question-${index}`)
+          .map(String)
+          .filter((value) => value.trim().length > 0);
+        return values.length > 0 ? values[values.length - 1]!.trim() : "";
+      })
     );
-  }
-
-  const { question, choices } = questions[step]!;
-  const isLast = step === total - 1;
+  };
 
   return (
-    <div className="flex flex-col gap-3 rounded-[0.25rem] border p-3">
-      <p className="text-xs text-muted-foreground">
-        Question {step + 1} of {total}
-      </p>
-      <p className="text-sm font-medium">{question}</p>
-      {choices ? (
-        <div className="flex flex-col items-stretch gap-1.5">
-          {choices.map((choice) => (
-            <Button
-              key={choice}
-              variant={answers[step] === choice && !otherMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => advance(choice)}
-              // Full-width with normal wrapping: the button base is
-              // `whitespace-nowrap inline-flex shrink-0`, which would let a
-              // long choice overflow the card instead of wrapping.
-              className="h-auto justify-start whitespace-normal py-2 text-left font-normal normal-case tracking-normal"
-            >
-              {choice}
-            </Button>
-          ))}
-          <Button
-            variant={otherMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setOtherMode(true);
-              setDraft("");
-            }}
-            className="justify-start font-normal normal-case tracking-normal"
-          >
-            Other
-          </Button>
-          {otherMode && (
-            <Input
-              value={draft}
-              autoFocus
-              placeholder="Type your answer…"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  submitDraft();
-                }
-              }}
-              className="max-w-sm"
+    <Questionnaire items={items} shortcuts="letters" onSubmit={handleSubmit}>
+      <QuestionnaireProgress />
+      {questions.map(({ question, choices }, index) => (
+        <QuestionnaireItem key={index} name={`question-${index}`}>
+          <QuestionnaireTitle className="tracking-normal normal-case text-sm font-medium">
+            {question}
+          </QuestionnaireTitle>
+          <QuestionnaireChoices>
+            {choices?.map((choice) => (
+              <QuestionnaireChoice key={choice} value={choice}>
+                <span className="whitespace-normal">{choice}</span>
+              </QuestionnaireChoice>
+            ))}
+            <QuestionnaireInput
+              aria-label={choices ? "Other answer" : question}
+              placeholder={choices ? "Type another answer…" : "Type your answer…"}
             />
-          )}
-        </div>
-      ) : (
-        <Input
-          value={draft}
-          autoFocus
-          placeholder="Type your answer…"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              submitDraft();
-            }
-          }}
-          className="max-w-sm"
-        />
-      )}
-      <div className="flex items-center gap-2">
-        {(otherMode || !choices) && (
-          <Button size="sm" disabled={draft.trim().length === 0} onClick={submitDraft}>
-            {isLast ? "Review" : "Next"}
-          </Button>
-        )}
-        {(step > 0 || editing !== undefined) && (
-          <Button size="sm" variant="outline" onClick={back}>
-            Back
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={onSkip}>
+          </QuestionnaireChoices>
+          <QuestionnaireError>Choose an answer to continue.</QuestionnaireError>
+        </QuestionnaireItem>
+      ))}
+      <QuestionnaireActions>
+        <QuestionnairePrevious />
+        <Button type="button" size="sm" variant="outline" onClick={onSkip}>
           Skip
         </Button>
-      </div>
-    </div>
+        <QuestionnaireNext />
+        <QuestionnaireSubmit>Confirm</QuestionnaireSubmit>
+      </QuestionnaireActions>
+    </Questionnaire>
   );
 }
 
@@ -541,8 +451,8 @@ export function AgentConfigChat({
                           if (part.type === "tool-clarify") {
                             // The card mounts only on complete input: during
                             // input-streaming the questions array may still be
-                            // partial, and the card's per-step state must not
-                            // initialize against it.
+                            // partial, and the questionnaire's items/names
+                            // must not initialize against it.
                             if (part.state === "input-available") {
                               return (
                                 <ClarifyCard
