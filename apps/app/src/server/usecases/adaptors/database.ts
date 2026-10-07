@@ -1,11 +1,11 @@
-import type { AgentSessionEvent, AgentSessionEventBatch, AgentSessionSummary } from "@/entities";
+import type { AgentSession, AgentSessionSummary } from "@/entities";
 
-export type AppendAgentSessionEventsInput = Pick<AgentSessionEventBatch, "sessionId" | "events"> & {
+export type AppendAgentSessionEventsInput = Pick<AgentSession, "sessionId" | "events"> & {
   agentId: string | null;
 };
 
 export interface Database {
   appendAgentSessionEvents(input: AppendAgentSessionEventsInput): Promise<number>;
-  listAgentSessions(agentId: string): Promise<AgentSessionSummary[]>;
-  getAgentSessionEvents(agentId: string, sessionId: string): Promise<AgentSessionEvent[]>;
+  listAgentSessionSummaries(agentId: string): Promise<AgentSessionSummary[]>;
+  getAgentSession(agentId: string, sessionId: string): Promise<AgentSession>;
 }

@@ -3,6 +3,7 @@ import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import {
+  AgentSession,
   AgentSessionEvent,
   AgentSessionEventSchema,
   AgentSessionSummary,
@@ -48,7 +49,7 @@ export class PostgresDatabase implements Database {
     return rows.length;
   }
 
-  async listAgentSessions(agentId: string): Promise<AgentSessionSummary[]> {
+  async listAgentSessionSummaries(agentId: string): Promise<AgentSessionSummary[]> {
     const rows = await this.db
       .select({
         sessionId: agentSessionEvents.sessionId,
@@ -68,7 +69,7 @@ export class PostgresDatabase implements Database {
     }));
   }
 
-  async getAgentSessionEvents(agentId: string, sessionId: string): Promise<AgentSessionEvent[]> {
+  async getAgentSession(agentId: string, sessionId: string): Promise<AgentSession> {
     const rows = await this.db
       .select({ payload: agentSessionEvents.payload })
       .from(agentSessionEvents)
@@ -92,6 +93,6 @@ export class PostgresDatabase implements Database {
         });
       }
     }
-    return events;
+    return { sessionId, events };
   }
 }

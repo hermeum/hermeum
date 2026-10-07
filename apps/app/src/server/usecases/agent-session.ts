@@ -1,6 +1,5 @@
 import {
-  AgentSessionEventBatch,
-  AgentSessionEvent,
+  AgentSession,
   AgentSessionSummary,
   Context,
 } from "@/entities";
@@ -8,9 +7,9 @@ import {
 import { BaseUseCase, OwnershipGuarded } from "./mixin";
 import { AppendAgentSessionEventsInput } from "./adaptors/database";
 
-export class TelemetryUseCase extends OwnershipGuarded(BaseUseCase) {
+export class AgentSessionUseCase extends OwnershipGuarded(BaseUseCase) {
   async ingestAgentSessionEvents(
-    batch: AgentSessionEventBatch,
+    batch: AgentSession,
     agentId: string | null = null
   ): Promise<number> {
     const input: AppendAgentSessionEventsInput = {
@@ -27,9 +26,9 @@ export class TelemetryUseCase extends OwnershipGuarded(BaseUseCase) {
     return accepted;
   }
 
-  async listAgentSessions(ctx: Context, agentId: string): Promise<AgentSessionSummary[]> {
+  async listAgentSessionSummaries(ctx: Context, agentId: string): Promise<AgentSessionSummary[]> {
     await this.requireOwnedAgent(ctx, agentId);
-    const sessions = await this.db.listAgentSessions(agentId);
+    const sessions = await this.db.listAgentSessionSummaries(agentId);
     this.logger.debug("listed agent sessions", { agentId, count: sessions.length });
     return sessions;
   }
@@ -38,11 +37,11 @@ export class TelemetryUseCase extends OwnershipGuarded(BaseUseCase) {
     ctx: Context,
     agentId: string,
     sessionId: string
-  ): Promise<AgentSessionEvent[]> {
+  ): Promise<AgentSession> {
     await this.requireOwnedAgent(ctx, agentId);
-    const events = await this.db.getAgentSessionEvents(agentId, sessionId);
-    this.logger.debug("got agent session events", { agentId, sessionId, count: events.length });
-    return events;
+    const session = await this.db.getAgentSession(agentId, sessionId);
+    this.logger.debug("got agent session events", { agentId, sessionId, count: session.events.length });
+    return session;
   }
 
   // Agents live in the Runtime (Kubernetes), not the database — ownership is
