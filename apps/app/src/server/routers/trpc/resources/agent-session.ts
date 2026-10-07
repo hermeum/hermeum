@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AgentSessionEvent, AgentSessionSummary } from "@/entities";
+import { AgentSession, AgentSessionSummary } from "@/entities";
 import { TelemetryUseCase } from "@/server/usecases/telemetry";
 import { protectedProcedure, t } from "./shared.js";
 
@@ -10,12 +10,12 @@ export const agentSessionResourceRouter = t.router({
   list: protectedProcedure
     .input(z.object({ agentId: z.string().min(1) }))
     .query(async ({ ctx, input }): Promise<AgentSessionSummary[]> => {
-      return await usecase.listAgentSessions(ctx, input.agentId);
+      return await usecase.listAgentSessionSummaries(ctx, input.agentId);
     }),
 
   get: protectedProcedure
     .input(z.object({ agentId: z.string().min(1), sessionId: z.string().min(1) }))
-    .query(async ({ ctx, input }): Promise<AgentSessionEvent[]> => {
+    .query(async ({ ctx, input }): Promise<AgentSession> => {
       return await usecase.getAgentSession(ctx, input.agentId, input.sessionId);
     }),
 });

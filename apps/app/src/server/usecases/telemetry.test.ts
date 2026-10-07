@@ -24,8 +24,8 @@ import type { Agent, AgentSession, Context } from "@/entities";
 function makeDatabase(): Database {
   return {
     appendAgentSessionEvents: vi.fn().mockResolvedValue(2),
-    listAgentSessions: vi.fn().mockResolvedValue([]),
-    getAgentSessionEvents: vi.fn().mockResolvedValue([]),
+    listAgentSessionSummaries: vi.fn().mockResolvedValue([]),
+    getAgentSession: vi.fn().mockResolvedValue({ sessionId: "hermes-session-1", events: [] }),
   };
 }
 
@@ -126,10 +126,10 @@ describe("TelemetryUseCase.ingestAgentSessionEvents", () => {
   });
 });
 
-describe("TelemetryUseCase.listAgentSessions", () => {
+describe("TelemetryUseCase.listAgentSessionSummaries", () => {
   it("returns the sessions owned by the agent", async () => {
     const db = makeDatabase();
-    (db.listAgentSessions as ReturnType<typeof vi.fn>).mockResolvedValue([
+    (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
         sessionId: "hermes-session-1",
         firstEventAt: "2026-10-06T16:04:25.000Z",
@@ -139,31 +139,31 @@ describe("TelemetryUseCase.listAgentSessions", () => {
     ]);
     const usecase = makeUseCase(db, makeRuntime(makeAgent()));
 
-    const sessions = await usecase.listAgentSessions(makeCtx(), "agent-1");
+    const sessions = await usecase.listAgentSessionSummaries(makeCtx(), "agent-1");
 
     expect(sessions).toHaveLength(1);
     expect(sessions[0]!.sessionId).toBe("hermes-session-1");
-    expect(db.listAgentSessions).toHaveBeenCalledWith("agent-1");
+    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1");
   });
 
   it("throws when the agent does not exist", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(null));
 
-    await expect(usecase.listAgentSessions(makeCtx(), "agent-1")).rejects.toThrow(
+    await expect(usecase.listAgentSessionSummaries(makeCtx(), "agent-1")).rejects.toThrow(
       "HermesAgent agent-1 not found"
     );
-    expect(db.listAgentSessions).not.toHaveBeenCalled();
+    expect(db.listAgentSessionSummaries).not.toHaveBeenCalled();
   });
 
   it("throws when the requesting user does not own the agent", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
 
-    await expect(usecase.listAgentSessions(makeCtx(), "agent-1")).rejects.toThrow(
+    await expect(usecase.listAgentSessionSummaries(makeCtx(), "agent-1")).rejects.toThrow(
       "You don't have permission to perform this action"
     );
-    expect(db.listAgentSessions).not.toHaveBeenCalled();
+    expect(db.listAgentSessionSummaries).not.toHaveBeenCalled();
   });
 });
 
@@ -174,7 +174,7 @@ describe("TelemetryUseCase.getAgentSession", () => {
 
     await usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1");
 
-    expect(db.getAgentSessionEvents).toHaveBeenCalledWith("agent-1", "hermes-session-1");
+    expect(db.getAgentSession).toHaveBeenCalledWith("agent-1", "hermes-session-1");
   });
 
   it("throws when the agent does not exist", async () => {
@@ -184,7 +184,7 @@ describe("TelemetryUseCase.getAgentSession", () => {
     await expect(
       usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1")
     ).rejects.toThrow("HermesAgent agent-1 not found");
-    expect(db.getAgentSessionEvents).not.toHaveBeenCalled();
+    expect(db.getAgentSession).not.toHaveBeenCalled();
   });
 
   it("throws when the requesting user does not own the agent", async () => {
@@ -194,6 +194,6 @@ describe("TelemetryUseCase.getAgentSession", () => {
     await expect(
       usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1")
     ).rejects.toThrow("You don't have permission to perform this action");
-    expect(db.getAgentSessionEvents).not.toHaveBeenCalled();
+    expect(db.getAgentSession).not.toHaveBeenCalled();
   });
 });
