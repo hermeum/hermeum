@@ -98,6 +98,8 @@ spec:
               value: {{ .Values.config.hermesImageRepository | quote }}
             - name: HERMEUM_HERMES_IMAGE_TAG
               value: {{ .Values.config.hermesImageTag | quote }}
+            - name: HERMEUM_TELEMETRY_URL
+              value: {{ default (printf "http://%s:%v" (include "hermeum.fullname" .) (.Values.config.port | int)) .Values.config.telemetryUrl | quote }}
             - name: HERMEUM_OPENAI_MODEL
               value: {{ .Values.config.openaiModel | quote }}
             {{- if .Values.config.openaiBaseUrl }}

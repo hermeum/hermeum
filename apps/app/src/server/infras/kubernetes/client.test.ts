@@ -9,8 +9,9 @@ import {
   maskSensitiveEnv,
   splitAgentEnv,
 } from "./client";
+import { ConfigSchema, config } from "@/server/libs/config";
 import type { Agent } from "@/entities";
-import type { HermesAgent } from "./types/hermes-agent";
+import type { HermesAgent, HermesPlugin } from "./types/hermes-agent";
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -111,16 +112,156 @@ describe("agentToHermesAgent workspace.dotEnv wiring", () => {
 });
 
 describe("agentToHermesAgent hermes env wiring", () => {
-  it("always sets HERMES_WRITE_SAFE_ROOT as a container env default", () => {
-    const hermesAgent = agentToHermesAgent(makeAgent());
-    expect(hermesAgent.spec.hermes?.env).toEqual([{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }]);
+  // Same module-reimport pattern as the ingress tests below: `config` is a
+  // module-level singleton parsed at import time, so the env var is stubbed
+  // before dynamically importing a fresh copy.
+  async function importFresh(): Promise<typeof import("./client")> {
+    vi.resetModules();
+    return import("./client");
+  }
+  const TELEMETRY_URL = "HERMEUM_TELEMETRY_URL";
+  const originalTelemetryUrl = process.env[TELEMETRY_URL];
+
+  afterEach(() => {
+    if (originalTelemetryUrl === undefined) delete process.env[TELEMETRY_URL];
+    else process.env[TELEMETRY_URL] = originalTelemetryUrl;
+    vi.resetModules();
   });
 
-  it("sets it even when the agent env defines the same var", () => {
+  it("always sets HERMES_WRITE_SAFE_ROOT and HERMEUM_TELEMETRY_URL as container env defaults", async () => {
+    vi.stubEnv(TELEMETRY_URL, "http://hermeum:3000");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.env).toEqual([
+      { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
+      { name: "HERMEUM_TELEMETRY_URL", value: "http://hermeum:3000/plugin/trpc" },
+    ]);
+  });
+
+  it("sets them even when the agent env defines the same vars", async () => {
+    vi.stubEnv(TELEMETRY_URL, "http://hermeum:3000");
+    const { agentToHermesAgent } = await importFresh();
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ env: [{ name: "HERMES_WRITE_SAFE_ROOT", value: "/custom" }] })
+      makeAgent({
+        env: [
+          { name: "HERMES_WRITE_SAFE_ROOT", value: "/custom" },
+          { name: "HERMEUM_TELEMETRY_URL", value: "http://evil.example.com" },
+        ],
+      })
     );
-    expect(hermesAgent.spec.hermes?.env).toEqual([{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }]);
+    expect(hermesAgent.spec.hermes?.env).toEqual([
+      { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
+      { name: "HERMEUM_TELEMETRY_URL", value: "http://hermeum:3000/plugin/trpc" },
+    ]);
+  });
+
+  it("trims a trailing slash from HERMEUM_TELEMETRY_URL before appending /plugin/trpc", async () => {
+    vi.stubEnv(TELEMETRY_URL, "http://custom.example.com:8000/");
+    const { agentToHermesAgent } = await importFresh();
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.env?.at(-1)).toEqual({
+      name: "HERMEUM_TELEMETRY_URL",
+      value: "http://custom.example.com:8000/plugin/trpc",
+    });
+  });
+});
+
+describe("ConfigSchema telemetry endpoint derivation", () => {
+  it("derives telemetryEndpointUrl by appending the /plugin/trpc mount prefix", () => {
+    const parsed = ConfigSchema.parse({
+      databaseUrl: "file:./test.sqlite",
+      telemetryUrl: "http://localhost:3000",
+    });
+    expect(parsed.telemetryEndpointUrl).toBe("http://localhost:3000/plugin/trpc");
+  });
+
+  it("trims a trailing slash from telemetryUrl before appending", () => {
+    const parsed = ConfigSchema.parse({
+      databaseUrl: "file:./test.sqlite",
+      telemetryUrl: "http://hermeum:3000/",
+    });
+    expect(parsed.telemetryEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
+  });
+
+  it("falls back to the http://hermeum:3000 default base URL", () => {
+    const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
+    expect(parsed.telemetryUrl).toBe("http://hermeum:3000");
+    expect(parsed.telemetryEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
+  });
+
+  it("pins hermesPluginIdentifier to the plugin/hermeum install identifier", () => {
+    const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
+    expect(parsed.hermesPluginIdentifier).toBe("hermeum/hermeum/plugin/hermeum");
+  });
+});
+
+describe("agentToHermesAgent default plugin injection", () => {
+  it("always installs the hermeum plugin enabled, even without user plugins", () => {
+    const hermesAgent = agentToHermesAgent(makeAgent());
+    expect(hermesAgent.spec.hermes?.plugins).toEqual([
+      { identifier: config.hermesPluginIdentifier, enable: true },
+    ]);
+  });
+
+  it("preserves user plugins and appends the hermeum plugin", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ plugins: ["owner/some-plugin"] })
+    );
+    expect(hermesAgent.spec.hermes?.plugins).toEqual([
+      { identifier: "owner/some-plugin" },
+      { identifier: config.hermesPluginIdentifier, enable: true },
+    ]);
+  });
+
+  it("does not duplicate the hermeum plugin when the user already listed it", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ plugins: [config.hermesPluginIdentifier, "owner/some-plugin"] })
+    );
+    expect(hermesAgent.spec.hermes?.plugins).toEqual([
+      { identifier: config.hermesPluginIdentifier },
+      { identifier: "owner/some-plugin" },
+    ]);
+  });
+});
+
+describe("mapHermesAgent default plugin read-back", () => {
+  function makeHermesAgent(
+    overrides: Partial<HermesAgent> = {},
+    plugins?: HermesPlugin[]
+  ): HermesAgent {
+    return {
+      apiVersion: "agents.hermeum.app/v1alpha1",
+      kind: "HermesAgent",
+      metadata: { name: "agent-1" },
+      spec: {
+        hermes: {
+          image: { repository: "nousresearch/hermes-agent", tag: "test" },
+          ...(plugins !== undefined && { plugins }),
+        },
+      },
+      ...overrides,
+    } as HermesAgent;
+  }
+
+  it("filters the auto-installed hermeum plugin out of the plugin list", () => {
+    const agent = mapHermesAgent(
+      makeHermesAgent({}, [
+        { identifier: "owner/some-plugin" },
+        { identifier: config.hermesPluginIdentifier, enable: true },
+      ])
+    );
+    expect(agent.plugins).toEqual(["owner/some-plugin"]);
+  });
+
+  it("keeps user plugins in read-back", () => {
+    const agent = mapHermesAgent(makeHermesAgent({}, [{ identifier: "owner/some-plugin" }]));
+    expect(agent.plugins).toEqual(["owner/some-plugin"]);
+  });
+
+  it("round-trips agentToHermesAgent output to the user's plugin list only", () => {
+    const cr = agentToHermesAgent(makeAgent({ plugins: ["owner/some-plugin"] }));
+    const agent = mapHermesAgent(cr);
+    expect(agent.plugins).toEqual(["owner/some-plugin"]);
   });
 });
 

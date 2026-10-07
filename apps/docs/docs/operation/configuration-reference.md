@@ -42,6 +42,19 @@ The container image emitted into every `HermesAgent` CR's `spec.image`.
 | `HERMEUM_HERMES_IMAGE_REPOSITORY` | `nousresearch/hermes-agent` | Container image repository for the Hermes agent. Omit the registry host for Docker Hub, or include it (e.g. `ghcr.io/hermeum/hermes-agent`) for other registries. |
 | `HERMEUM_HERMES_IMAGE_TAG` | `v2026.9.21` | Container image tag for the Hermes agent. Pin to a specific release for reproducible agent pods. |
 
+### Agent-session telemetry
+
+Every agent managed by Hermeum automatically installs the [`hermeum` telemetry
+plugin](https://github.com/hermeum/hermeum/tree/main/plugin/hermeum) (via the
+operator's `hermes plugins install`), which forwards agent-session events to
+Hermeum's plugin-protocol endpoint. The endpoint URL is derived from the base
+URL below; it is injected as `HERMEUM_TELEMETRY_URL` into the agent's container
+env and always wins over a user-set agent env var of the same name.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HERMEUM_TELEMETRY_URL` | `http://hermeum:3000` | Base URL agents use to reach the Hermeum app. The hermeum telemetry plugin posts events to `<telemetryUrl>/plugin/trpc/agentSession.agentSessionEvents`. The Helm chart defaults this to the app's in-cluster Service DNS (`http://<release-name>:<config.port>`); override for cross-namespace or proxied routes. |
+
 ### Auth
 
 Better Auth email/password, allowed email domains, and outgoing SMTP. Better
