@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AgentSessionEventBatchSchema } from "@/entities";
+import { AgentSessionSchema } from "@/entities";
 import { TelemetryUseCase } from "@/server/usecases/telemetry";
 import { t } from "./shared.js";
 
@@ -20,7 +20,7 @@ export const agentSessionRouter = t.router({
   health: t.procedure.output(z.object({ ok: z.boolean() })).query(() => ({ ok: true })),
 
   agentSessionEvents: t.procedure
-    .input(AgentSessionEventBatchSchema)
+    .input(AgentSessionSchema)
     .output(IngestAckSchema)
     .mutation(async ({ input }) => ({
       accepted: await usecase.ingestAgentSessionEvents(input),

@@ -1,6 +1,6 @@
-import type { AgentSessionEvent, AgentSessionEventBatch, AgentSessionSummary } from "@/entities";
+import type { AgentSession, AgentSessionEvent, AgentSessionSummary } from "@/entities";
 
-export type AppendAgentSessionEventsInput = Pick<AgentSessionEventBatch, "sessionId" | "events"> & {
+export type AppendAgentSessionEventsInput = Pick<AgentSession, "sessionId" | "events"> & {
   agentId: string | null;
 };
 

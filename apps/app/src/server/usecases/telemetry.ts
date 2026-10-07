@@ -1,5 +1,5 @@
 import {
-  AgentSessionEventBatch,
+  AgentSession,
   AgentSessionEvent,
   AgentSessionSummary,
   Context,
@@ -10,7 +10,7 @@ import { AppendAgentSessionEventsInput } from "./adaptors/database";
 
 export class TelemetryUseCase extends OwnershipGuarded(BaseUseCase) {
   async ingestAgentSessionEvents(
-    batch: AgentSessionEventBatch,
+    batch: AgentSession,
     agentId: string | null = null
   ): Promise<number> {
     const input: AppendAgentSessionEventsInput = {

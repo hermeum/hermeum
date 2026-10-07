@@ -19,7 +19,7 @@ vi.mock("@/server/libs/config", () => ({
 import { TelemetryUseCase } from "./telemetry";
 import type { Database } from "./adaptors/database";
 import type { Runtime } from "./adaptors/runtime";
-import type { Agent, AgentSessionEventBatch, Context } from "@/entities";
+import type { Agent, AgentSession, Context } from "@/entities";
 
 function makeDatabase(): Database {
   return {
@@ -62,7 +62,7 @@ function makeCtx(userId = "user-1"): Context {
   };
 }
 
-function makeBatch(overrides: Partial<AgentSessionEventBatch> = {}): AgentSessionEventBatch {
+function makeBatch(overrides: Partial<AgentSession> = {}): AgentSession {
   return {
     sessionId: "hermes-session-1",
     events: [
@@ -83,7 +83,7 @@ function makeBatch(overrides: Partial<AgentSessionEventBatch> = {}): AgentSessio
       },
     ],
     ...overrides,
-  } as AgentSessionEventBatch;
+  } as AgentSession;
 }
 
 function makeUseCase(db: Database, runtime: Runtime): TelemetryUseCase {

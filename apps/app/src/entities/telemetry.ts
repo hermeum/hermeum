@@ -246,7 +246,7 @@ export const AgentSessionEventSchema = z.discriminatedUnion("type", [
 
 export type AgentSessionEvent = z.infer<typeof AgentSessionEventSchema>;
 
-export const AgentSessionEventBatchSchema = z
+export const AgentSessionSchema = z
   .object({
     sessionId: z
       .string()
@@ -261,7 +261,7 @@ export const AgentSessionEventBatchSchema = z
   })
   .describe("Ingestion payload: one batch of agent-session events for a single session.");
 
-export type AgentSessionEventBatch = z.infer<typeof AgentSessionEventBatchSchema>;
+export type AgentSession = z.infer<typeof AgentSessionSchema>;
 
 // Server-internal read shape for the agent-session trajectory UI (list view).
 // Derived from the stored events at query time — not part of the plugin
