@@ -16,7 +16,7 @@ vi.mock("@/server/libs/config", () => ({
   config: { configPath: "./config.yaml", hermesDocsPath: "./docs" },
 }));
 
-import { TelemetryUseCase } from "./telemetry";
+import { AgentSessionUseCase } from "./agent-session";
 import type { Database } from "./adaptors/database";
 import type { Runtime } from "./adaptors/runtime";
 import type { Agent, AgentSession, Context } from "@/entities";
@@ -86,19 +86,19 @@ function makeBatch(overrides: Partial<AgentSession> = {}): AgentSession {
   } as AgentSession;
 }
 
-function makeUseCase(db: Database, runtime: Runtime): TelemetryUseCase {
+function makeUseCase(db: Database, runtime: Runtime): AgentSessionUseCase {
   // Constructors of the inherited mixin chain accept the injected adaptors in
   // BaseUseCase order: runtime, files, skillIndex, logger, db.
-  return new (TelemetryUseCase as unknown as new (
+  return new (AgentSessionUseCase as unknown as new (
     runtime: Runtime,
     files: unknown,
     skillIndex: unknown,
     logger: unknown,
     db: Database
-  ) => TelemetryUseCase)(runtime, {}, {}, { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }, db);
+  ) => AgentSessionUseCase)(runtime, {}, {}, { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }, db);
 }
 
-describe("TelemetryUseCase.ingestAgentSessionEvents", () => {
+describe("AgentSessionUseCase.ingestAgentSessionEvents", () => {
   it("appends the batch to the database with a null agentId and returns the accepted count", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(null));
@@ -126,7 +126,7 @@ describe("TelemetryUseCase.ingestAgentSessionEvents", () => {
   });
 });
 
-describe("TelemetryUseCase.listAgentSessionSummaries", () => {
+describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
   it("returns the sessions owned by the agent", async () => {
     const db = makeDatabase();
     (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -167,7 +167,7 @@ describe("TelemetryUseCase.listAgentSessionSummaries", () => {
   });
 });
 
-describe("TelemetryUseCase.getAgentSession", () => {
+describe("AgentSessionUseCase.getAgentSession", () => {
   it("returns the ordered events for the session", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(makeAgent()));

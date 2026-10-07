@@ -7,7 +7,7 @@ import {
 import { BaseUseCase, OwnershipGuarded } from "./mixin";
 import { AppendAgentSessionEventsInput } from "./adaptors/database";
 
-export class TelemetryUseCase extends OwnershipGuarded(BaseUseCase) {
+export class AgentSessionUseCase extends OwnershipGuarded(BaseUseCase) {
   async ingestAgentSessionEvents(
     batch: AgentSession,
     agentId: string | null = null

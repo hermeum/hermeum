@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 import { AgentSession, AgentSessionSummary } from "@/entities";
-import { TelemetryUseCase } from "@/server/usecases/telemetry";
+import { AgentSessionUseCase } from "@/server/usecases/agent-session";
 import { protectedProcedure, t } from "./shared.js";
 
-const usecase = new TelemetryUseCase();
+const usecase = new AgentSessionUseCase();
 
 export const agentSessionResourceRouter = t.router({
   list: protectedProcedure
