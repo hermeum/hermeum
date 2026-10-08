@@ -121,6 +121,14 @@ function EventListRow({
   );
 }
 
+// Passed via the `theme` prop, which REPLACES the component's default light
+// theme (`& { backgroundColor: #fff }`) instead of competing with it — appended
+// extensions lose to the built-in one under CodeMirror's precedence rules, and
+// the theme's generated style block also beats Tailwind classes.
+const jsonViewerTheme = EditorView.theme({
+  "&": { backgroundColor: "var(--color-muted)" },
+}, { dark: false });
+
 function EventDetail({ event }: { event: AgentSessionEvent }) {
   const serialized = useMemo(() => JSON.stringify(event, null, 2), [event]);
   const kind = eventKind(event);
@@ -144,18 +152,20 @@ function EventDetail({ event }: { event: AgentSessionEvent }) {
       <div className="px-3 py-2 text-xs text-muted-foreground">
         {new Date(event.timestamp).toLocaleString()}
       </div>
-      {/* Read-only JSON viewer: folding + wrapping, editor chrome styled away
-          like AgentConfigEditor; scrolls internally within the pane. */}
-      <div className="min-h-0 flex-1 overflow-hidden border-t">
+      {/* Read-only JSON viewer: line wrapping, editor chrome styled away
+          like AgentConfigEditor, muted card background; scrolls internally
+          within the pane. */}
+      <div className="min-h-0 flex-1 overflow-hidden p-3">
         <CodeMirror
           value={serialized}
+          theme={jsonViewerTheme}
           extensions={[jsonLang(), EditorView.lineWrapping]}
           editable={false}
           height="100%"
           maxHeight="100%"
           basicSetup={{
             lineNumbers: false,
-            foldGutter: true,
+            foldGutter: false,
             searchKeymap: false,
             autocompletion: false,
             lintKeymap: false,
@@ -163,7 +173,7 @@ function EventDetail({ event }: { event: AgentSessionEvent }) {
             highlightActiveLineGutter: false,
           }}
           className={cn(
-            "h-full [&_.cm-content]:outline-none! [&_.cm-editor.cm-focused]:outline-none! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
+            "h-full rounded-[0.25rem] overflow-hidden [&_.cm-editor]:outline-none! [&_.cm-content]:outline-none! [&_.cm-editor.cm-focused]:outline-none!"
           )}
         />
       </div>
