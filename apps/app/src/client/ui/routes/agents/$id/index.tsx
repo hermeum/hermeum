@@ -29,24 +29,32 @@ import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditInstanceDialog } from "./-components/edit-agent-dialog";
 import { AgentTab } from "./-components/agent-tab";
+import { SessionsTab } from "./-components/sessions-tab";
 
 export const Route = createFileRoute("/agents/$id/")({
   component: AgentDetailPage,
+  validateSearch: (search: Record<string, unknown>): { tab?: "agent" | "sessions" } => {
+    const tab = search.tab;
+    return tab === "agent" || tab === "sessions" ? { tab } : {};
+  },
 });
 
 function AgentDetailPage() {
   const { id } = Route.useParams();
+  const { tab = "agent" } = Route.useSearch();
+  const navigate = useNavigate();
+  const setTab = (tab: "agent" | "sessions") =>
+    void navigate({ to: "/agents/$id", params: { id }, search: (prev) => ({ ...prev, tab }) });
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const {
     data: agent,
     isPending,
     isFetching,
     error,
   } = useQuery(trpc.agent.get.queryOptions({ id }));
-  const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const invalidateDetail = () =>
     queryClient.invalidateQueries({ queryKey: trpc.agent.get.queryKey({ id }) });
@@ -151,13 +159,18 @@ function AgentDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="agent">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "agent" | "sessions")}>
         <TabsList variant="line">
           <TabsTrigger value="agent">Agent</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent">
           <AgentTab agent={agent} />
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <SessionsTab agentId={id} />
         </TabsContent>
       </Tabs>
 

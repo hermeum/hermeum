@@ -12,7 +12,7 @@
  * webhook does not substitute them either.
  *
  * Usage:
- *   pnpm --filter @hermeum/app exec tsx src/server/scripts/render-template.ts <template-id>
+ *   pnpm --filter @hermeum/app exec tsx scripts/test-render-template.ts <template-id>
  *
  * Env: a .env in the CWD is loaded by `@/server/libs/config` at import time;
  * HERMEUM_DATABASE_URL and friends must be present there (placeholder values
@@ -39,7 +39,7 @@ const { applyPatch } = fastJsonPatch.default ?? fastJsonPatch;
 
 const templateId = process.argv[2];
 if (!templateId) {
-  console.error("Usage: tsx src/server/scripts/render-template.ts <template-id>");
+  console.error("Usage: tsx scripts/test-render-template.ts <template-id>");
   process.exit(1);
 }
 
