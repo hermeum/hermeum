@@ -12,16 +12,22 @@ import {
 } from "@hermeum/components/ui/message-scroller";
 import { Streamdown } from "streamdown";
 
+import { cn } from "@hermeum/components/lib/utils";
+
 import type { AgentSessionEvent } from "@/entities";
 
 // One display item reduced from the event stream. Messages (user + assistant
 // text) render as bubbles; tool/error/lifecycle events render as compact
 // marker rows. Keyed for the virtualizer's stable identity + measurement.
+// `eventId` is the originating event — the shared selection key with the
+// events side panel (`key` stays unique since one llm_call fans out into
+// two items).
 type TranscriptItem =
-  | { kind: "user"; key: string; at: string; text: string }
+  | { kind: "user"; key: string; eventId: string; at: string; text: string }
   | {
       kind: "assistant";
       key: string;
+      eventId: string;
       at: string;
       content: string;
       reasoning: string | null;
@@ -30,13 +36,21 @@ type TranscriptItem =
   | {
       kind: "tool";
       key: string;
+      eventId: string;
       at: string;
       toolName: string;
       status: "ok" | "error" | "blocked" | "cancelled" | undefined;
       durationS: number | undefined;
     }
-  | { kind: "error"; key: string; at: string; stage: "llm" | "tool"; message: string }
-  | { kind: "lifecycle"; key: string; at: string; label: string };
+  | {
+      kind: "error";
+      key: string;
+      eventId: string;
+      at: string;
+      stage: "llm" | "tool";
+      message: string;
+    }
+  | { kind: "lifecycle"; key: string; eventId: string; at: string; label: string };
 
 // Reduce the ordered event stream into display items. `llm_call` carries the
 // user's turn-opening message on the same event as the assistant reply, so it
@@ -51,6 +65,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
         items.push({
           kind: "user",
           key: `${event.eventId}:user`,
+          eventId: event.eventId,
           at: event.timestamp,
           text: event.userMessage,
         });
@@ -59,6 +74,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
         items.push({
           kind: "assistant",
           key: `${event.eventId}:assistant`,
+          eventId: event.eventId,
           at: event.timestamp,
           content: event.assistant.content,
           reasoning: event.assistant.reasoning ?? null,
@@ -69,6 +85,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
       items.push({
         kind: "tool",
         key: event.eventId,
+        eventId: event.eventId,
         at: event.timestamp,
         toolName: event.toolName,
         status: event.status,
@@ -78,6 +95,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
       items.push({
         kind: "error",
         key: event.eventId,
+        eventId: event.eventId,
         at: event.timestamp,
         stage: event.stage,
         message: event.message,
@@ -86,6 +104,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
       items.push({
         kind: "lifecycle",
         key: event.eventId,
+        eventId: event.eventId,
         at: event.timestamp,
         label: `Session started · ${event.provider}/${event.model}`,
       });
@@ -93,6 +112,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
       items.push({
         kind: "lifecycle",
         key: event.eventId,
+        eventId: event.eventId,
         at: event.timestamp,
         label: "Session finalized",
       });
@@ -191,7 +211,12 @@ function CollapsibleContent({ children }: { children: ReactNode }) {
       {overflows && (
         <button
           type="button"
-          onClick={() => setExpanded((value) => !value)}
+          // The bubble container carries the panel-sync click handler; expanding
+          // the content must not also select the event.
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded((value) => !value);
+          }}
           className="w-fit cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           {expanded ? "Show less" : "Show more"}
@@ -201,18 +226,32 @@ function CollapsibleContent({ children }: { children: ReactNode }) {
   );
 }
 
+const selectedRowClass =
+  "data-[selected=true]:ring-1 data-[selected=true]:ring-ring/60 data-[selected=true]:bg-muted/50";
+
 function TranscriptRow({
   item,
   agentLabel,
+  selected,
+  onSelect,
 }: {
   item: TranscriptItem;
   agentLabel: string;
+  selected: boolean;
+  onSelect: (eventId: string) => void;
 }) {
+  const handleClick = () => onSelect(item.eventId);
   if (item.kind === "user") {
     return (
       <div className="flex flex-col gap-1">
         <MessageLine label="User" at={item.at} tone="user" />
-        <Bubble variant="muted" align="start">
+        <Bubble
+          variant="muted"
+          align="start"
+          data-selected={selected}
+          onClick={handleClick}
+          className={cn("cursor-pointer", selectedRowClass)}
+        >
           <BubbleContent>
             <CollapsibleContent>
               <Streamdown mode="static">{item.text}</Streamdown>
@@ -226,7 +265,13 @@ function TranscriptRow({
     return (
       <div className="flex flex-col gap-1">
         <MessageLine label={agentLabel} at={item.at} tone="agent" />
-        <Bubble variant="outline" align="start">
+        <Bubble
+          variant="outline"
+          align="start"
+          data-selected={selected}
+          onClick={handleClick}
+          className={cn("cursor-pointer", selectedRowClass)}
+        >
           <BubbleContent>
             {item.reasoning !== null && (
               <p className="text-xs text-muted-foreground">
@@ -246,7 +291,13 @@ function TranscriptRow({
     const duration =
       item.durationS !== undefined ? ` · ${item.durationS.toFixed(1)}s` : "";
     return (
-      <Marker className="normal-case tracking-normal font-normal">
+      <Marker
+        render={<button type="button" onClick={handleClick} data-selected={selected} />}
+        className={cn(
+          "normal-case tracking-normal font-normal cursor-pointer w-full text-left",
+          selectedRowClass
+        )}
+      >
         <MarkerIcon>
           <ToolStatusIcon status={item.status} />
         </MarkerIcon>
@@ -259,7 +310,13 @@ function TranscriptRow({
   }
   if (item.kind === "error") {
     return (
-      <Marker className="normal-case tracking-normal font-normal">
+      <Marker
+        render={<button type="button" onClick={handleClick} data-selected={selected} />}
+        className={cn(
+          "normal-case tracking-normal font-normal cursor-pointer w-full text-left",
+          selectedRowClass
+        )}
+      >
         <MarkerIcon>
           <CircleAlert className="text-destructive" />
         </MarkerIcon>
@@ -270,7 +327,11 @@ function TranscriptRow({
     );
   }
   return (
-    <Marker variant="separator" className="normal-case tracking-normal">
+    <Marker
+      variant="separator"
+      render={<button type="button" onClick={handleClick} data-selected={selected} />}
+      className={cn("normal-case tracking-normal cursor-pointer", selectedRowClass)}
+    >
       <MarkerContent>{item.label}</MarkerContent>
     </Marker>
   );
@@ -342,9 +403,15 @@ function ScrollToEndButton({
 export function SessionTranscript({
   events,
   agentLabel,
+  selectedEventId,
+  onSelectEvent,
 }: {
   events: AgentSessionEvent[];
   agentLabel: string;
+  // Panel-sync selection: the bubble/marker whose originating event is selected
+  // gets a highlight. Both panels share the state owned by the session page.
+  selectedEventId: string | null;
+  onSelectEvent: (eventId: string) => void;
 }) {
   const items = buildTranscriptItems(events);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -355,6 +422,20 @@ export function SessionTranscript({
     estimateSize: (index) => estimateItemSize(items[index]!),
     overscan: 8,
   });
+
+  // Sync from the events panel: bring the selected item into view. `align:
+  // auto` is a no-op when the row is already visible, so clicks originating
+  // here don't visibly re-scroll.
+  useEffect(() => {
+    if (selectedEventId === null) return;
+    const index = items.findIndex((item) => item.eventId === selectedEventId);
+    if (index >= 0) {
+      virtualizer.scrollToIndex(index, { align: "auto" });
+    }
+    // `items` derives from events (stable per session); the virtualizer
+    // instance is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEventId]);
 
   const scrollToEnd = () => {
     virtualizer.scrollToIndex(items.length - 1, { align: "end" });
@@ -375,10 +456,15 @@ export function SessionTranscript({
                   key={virtualRow.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  className="absolute inset-x-0 pb-8"
+                  className="absolute inset-x-0 px-2 pb-8"
                   style={{ transform: `translateY(${virtualRow.start}px)` }}
                 >
-                  <TranscriptRow item={item} agentLabel={agentLabel} />
+                  <TranscriptRow
+                    item={item}
+                    agentLabel={agentLabel}
+                    selected={item.eventId === selectedEventId}
+                    onSelect={onSelectEvent}
+                  />
                 </div>
               );
             })}

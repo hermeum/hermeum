@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { json as jsonLang } from "@codemirror/lang-json";
@@ -96,13 +96,13 @@ function EventListRow({
 }: {
   event: AgentSessionEvent;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (eventId: string) => void;
 }) {
   const kind = eventKind(event);
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={() => onSelect(event.eventId)}
       data-selected={selected}
       className={cn(
         "flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm",
@@ -181,8 +181,18 @@ function EventDetail({ event }: { event: AgentSessionEvent }) {
   );
 }
 
-export function SessionEventsPanel({ events }: { events: AgentSessionEvent[] }) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+export function SessionEventsPanel({
+  events,
+  selectedEventId,
+  onSelectEvent,
+}: {
+  events: AgentSessionEvent[];
+  // Fully controlled by the session page so both panels share one selection:
+  // a bubble click in the transcript lands here, and a row click here
+  // highlights the bubble in the transcript.
+  selectedEventId: string | null;
+  onSelectEvent: (eventId: string) => void;
+}) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const virtualizer = useVirtualizer({
@@ -193,7 +203,23 @@ export function SessionEventsPanel({ events }: { events: AgentSessionEvent[] }) 
     getItemKey: (index) => events[index]!.eventId,
   });
 
-  const selected = selectedIndex !== null ? events[selectedIndex] : undefined;
+  // Sync from the transcript: select the row and bring it into view.
+  // `align: auto` scrolls only when the row is off-screen, so clicks that
+  // originated in this list don't visibly re-scroll.
+  useEffect(() => {
+    if (selectedEventId === null) return;
+    const index = events.findIndex((event) => event.eventId === selectedEventId);
+    if (index >= 0) {
+      virtualizer.scrollToIndex(index, { align: "auto" });
+    }
+    // `events` is stable per session; the virtualizer instance is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEventId]);
+
+  const selected =
+    selectedEventId !== null
+      ? events.find((event) => event.eventId === selectedEventId)
+      : undefined;
 
   return (
     <ResizablePanelGroup orientation="vertical" className="min-h-0">
@@ -216,8 +242,8 @@ export function SessionEventsPanel({ events }: { events: AgentSessionEvent[] }) 
                 >
                   <EventListRow
                     event={events[row.index]!}
-                    selected={row.index === selectedIndex}
-                    onSelect={() => setSelectedIndex(row.index)}
+                    selected={events[row.index]!.eventId === selectedEventId}
+                    onSelect={onSelectEvent}
                   />
                 </div>
               ))}

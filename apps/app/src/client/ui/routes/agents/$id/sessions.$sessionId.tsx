@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@hermeum/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@hermeum/components/ui/resizable";
@@ -19,6 +20,10 @@ function SessionPage() {
   const { id, sessionId } = Route.useParams();
   const navigate = useNavigate();
   const trpc = useTRPC();
+  // Selection shared by both panels (transcript bubble/marker ↔ event row).
+  // eventId is the key: llm_call events own both the user and assistant
+  // items, so selecting either highlights both in the events list sense.
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const { data: agent } = useQuery(trpc.agent.get.queryOptions({ id }));
   const {
     data: session,
@@ -76,6 +81,8 @@ function SessionPage() {
           <SessionTranscript
             events={session.events}
             agentLabel={agent?.name ?? agent?.id ?? "Agent"}
+            selectedEventId={selectedEventId}
+            onSelectEvent={setSelectedEventId}
           />
         </div>
       )}
@@ -87,6 +94,8 @@ function SessionPage() {
               <SessionTranscript
                 events={session.events}
                 agentLabel={agent?.name ?? agent?.id ?? "Agent"}
+                selectedEventId={selectedEventId}
+                onSelectEvent={setSelectedEventId}
               />
             </ResizablePanel>
             <ResizableHandle withHandle />
@@ -95,7 +104,11 @@ function SessionPage() {
                 resizable internals beats utility classes, so hiding happens
                 on this plain wrapper, not on the group/panels) */}
             <ResizablePanel defaultSize="35%" minSize="25%" className="min-h-0">
-              <SessionEventsPanel events={session.events} />
+              <SessionEventsPanel
+                events={session.events}
+                selectedEventId={selectedEventId}
+                onSelectEvent={setSelectedEventId}
+              />
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
