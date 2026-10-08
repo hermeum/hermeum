@@ -127,7 +127,7 @@ describe("AgentSessionUseCase.ingestAgentSessionEvents", () => {
 });
 
 describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
-  it("returns the sessions owned by the agent", async () => {
+  it("returns the sessions for the agent without an ownership check", async () => {
     const db = makeDatabase();
     (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
@@ -137,63 +137,45 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
         eventCount: 2,
       },
     ]);
-    const usecase = makeUseCase(db, makeRuntime(makeAgent()));
+    const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
 
-    const sessions = await usecase.listAgentSessionSummaries(makeCtx(), "agent-1");
+    const sessions = await usecase.listAgentSessionSummaries(makeCtx("other-user"), "agent-1");
 
     expect(sessions).toHaveLength(1);
     expect(sessions[0]!.sessionId).toBe("hermes-session-1");
     expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1");
   });
 
-  it("throws when the agent does not exist", async () => {
+  it("does not consult the runtime at all", async () => {
+    const runtime = makeRuntime(null);
     const db = makeDatabase();
-    const usecase = makeUseCase(db, makeRuntime(null));
+    const usecase = makeUseCase(db, runtime);
 
-    await expect(usecase.listAgentSessionSummaries(makeCtx(), "agent-1")).rejects.toThrow(
-      "HermesAgent agent-1 not found"
-    );
-    expect(db.listAgentSessionSummaries).not.toHaveBeenCalled();
-  });
+    await usecase.listAgentSessionSummaries(makeCtx(), "agent-1");
 
-  it("throws when the requesting user does not own the agent", async () => {
-    const db = makeDatabase();
-    const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
-
-    await expect(usecase.listAgentSessionSummaries(makeCtx(), "agent-1")).rejects.toThrow(
-      "You don't have permission to perform this action"
-    );
-    expect(db.listAgentSessionSummaries).not.toHaveBeenCalled();
+    expect(runtime.getHermesAgent).not.toHaveBeenCalled();
+    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1");
   });
 });
 
 describe("AgentSessionUseCase.getAgentSession", () => {
-  it("returns the ordered events for the session", async () => {
+  it("returns the ordered events for the session without an ownership check", async () => {
     const db = makeDatabase();
-    const usecase = makeUseCase(db, makeRuntime(makeAgent()));
+    const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
 
-    await usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1");
+    await usecase.getAgentSession(makeCtx("other-user"), "agent-1", "hermes-session-1");
 
     expect(db.getAgentSession).toHaveBeenCalledWith("agent-1", "hermes-session-1");
   });
 
-  it("throws when the agent does not exist", async () => {
+  it("does not consult the runtime at all", async () => {
+    const runtime = makeRuntime(null);
     const db = makeDatabase();
-    const usecase = makeUseCase(db, makeRuntime(null));
+    const usecase = makeUseCase(db, runtime);
 
-    await expect(
-      usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1")
-    ).rejects.toThrow("HermesAgent agent-1 not found");
-    expect(db.getAgentSession).not.toHaveBeenCalled();
-  });
+    await usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1");
 
-  it("throws when the requesting user does not own the agent", async () => {
-    const db = makeDatabase();
-    const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
-
-    await expect(
-      usecase.getAgentSession(makeCtx(), "agent-1", "hermes-session-1")
-    ).rejects.toThrow("You don't have permission to perform this action");
-    expect(db.getAgentSession).not.toHaveBeenCalled();
+    expect(runtime.getHermesAgent).not.toHaveBeenCalled();
+    expect(db.getAgentSession).toHaveBeenCalledWith("agent-1", "hermes-session-1");
   });
 });

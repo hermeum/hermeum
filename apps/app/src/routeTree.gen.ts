@@ -18,6 +18,7 @@ import { Route as SharedEnvSetsIndexRouteImport } from './client/ui/routes/share
 import { Route as SharedEnvSetsIdRouteImport } from './client/ui/routes/shared-env-sets/$id'
 import { Route as AgentsIdIndexRouteImport } from './client/ui/routes/agents/$id/index'
 import { Route as AgentsIdEditRouteImport } from './client/ui/routes/agents/$id/edit'
+import { Route as AgentsIdSessionsSessionIdRouteImport } from './client/ui/routes/agents/$id/sessions.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,12 @@ const AgentsIdEditRoute = AgentsIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => AgentsIdRoute,
 } as any)
+const AgentsIdSessionsSessionIdRoute =
+  AgentsIdSessionsSessionIdRouteImport.update({
+    id: '/sessions/$sessionId',
+    path: '/sessions/$sessionId',
+    getParentRoute: () => AgentsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
   '/agents/$id/edit': typeof AgentsIdEditRoute
   '/agents/$id/': typeof AgentsIdIndexRoute
+  '/agents/$id/sessions/$sessionId': typeof AgentsIdSessionsSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/shared-env-sets': typeof SharedEnvSetsIndexRoute
   '/agents/$id/edit': typeof AgentsIdEditRoute
   '/agents/$id': typeof AgentsIdIndexRoute
+  '/agents/$id/sessions/$sessionId': typeof AgentsIdSessionsSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/shared-env-sets/': typeof SharedEnvSetsIndexRoute
   '/agents/$id/edit': typeof AgentsIdEditRoute
   '/agents/$id/': typeof AgentsIdIndexRoute
+  '/agents/$id/sessions/$sessionId': typeof AgentsIdSessionsSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/shared-env-sets/'
     | '/agents/$id/edit'
     | '/agents/$id/'
+    | '/agents/$id/sessions/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/shared-env-sets'
     | '/agents/$id/edit'
     | '/agents/$id'
+    | '/agents/$id/sessions/$sessionId'
   id:
     | '__root__'
     | '/'
@@ -131,6 +143,7 @@ export interface FileRouteTypes {
     | '/shared-env-sets/'
     | '/agents/$id/edit'
     | '/agents/$id/'
+    | '/agents/$id/sessions/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,17 +221,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsIdEditRouteImport
       parentRoute: typeof AgentsIdRoute
     }
+    '/agents/$id/sessions/$sessionId': {
+      id: '/agents/$id/sessions/$sessionId'
+      path: '/sessions/$sessionId'
+      fullPath: '/agents/$id/sessions/$sessionId'
+      preLoaderRoute: typeof AgentsIdSessionsSessionIdRouteImport
+      parentRoute: typeof AgentsIdRoute
+    }
   }
 }
 
 interface AgentsIdRouteChildren {
   AgentsIdEditRoute: typeof AgentsIdEditRoute
   AgentsIdIndexRoute: typeof AgentsIdIndexRoute
+  AgentsIdSessionsSessionIdRoute: typeof AgentsIdSessionsSessionIdRoute
 }
 
 const AgentsIdRouteChildren: AgentsIdRouteChildren = {
   AgentsIdEditRoute: AgentsIdEditRoute,
   AgentsIdIndexRoute: AgentsIdIndexRoute,
+  AgentsIdSessionsSessionIdRoute: AgentsIdSessionsSessionIdRoute,
 }
 
 const AgentsIdRouteWithChildren = AgentsIdRoute._addFileChildren(
