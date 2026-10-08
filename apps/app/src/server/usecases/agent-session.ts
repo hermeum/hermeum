@@ -4,10 +4,10 @@ import {
   Context,
 } from "@/entities";
 
-import { BaseUseCase, OwnershipGuarded } from "./mixin";
+import { BaseUseCase } from "./mixin";
 import { AppendAgentSessionEventsInput } from "./adaptors/database";
 
-export class AgentSessionUseCase extends OwnershipGuarded(BaseUseCase) {
+export class AgentSessionUseCase extends BaseUseCase {
   async ingestAgentSessionEvents(
     batch: AgentSession,
     agentId: string | null = null
@@ -26,8 +26,11 @@ export class AgentSessionUseCase extends OwnershipGuarded(BaseUseCase) {
     return accepted;
   }
 
+  // Reads are not ownership-guarded: any authenticated user may browse agent
+  // session telemetry. Ingest stays unauthenticated but unscoped (plugin
+  // protocol); per-agent token authentication is deferred there.
   async listAgentSessionSummaries(ctx: Context, agentId: string): Promise<AgentSessionSummary[]> {
-    await this.requireOwnedAgent(ctx, agentId);
+    void ctx;
     const sessions = await this.db.listAgentSessionSummaries(agentId);
     this.logger.debug("listed agent sessions", { agentId, count: sessions.length });
     return sessions;
@@ -38,19 +41,9 @@ export class AgentSessionUseCase extends OwnershipGuarded(BaseUseCase) {
     agentId: string,
     sessionId: string
   ): Promise<AgentSession> {
-    await this.requireOwnedAgent(ctx, agentId);
+    void ctx;
     const session = await this.db.getAgentSession(agentId, sessionId);
     this.logger.debug("got agent session events", { agentId, sessionId, count: session.events.length });
     return session;
-  }
-
-  // Agents live in the Runtime (Kubernetes), not the database — ownership is
-  // verified there before any session data is read.
-  private async requireOwnedAgent(ctx: Context, agentId: string): Promise<void> {
-    const agent = await this.runtime.getHermesAgent(agentId);
-    if (!agent) {
-      throw new Error(`HermesAgent ${agentId} not found`);
-    }
-    this.verifyOwnership(ctx, agent);
   }
 }

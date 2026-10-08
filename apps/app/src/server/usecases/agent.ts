@@ -9,6 +9,41 @@ import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 // namespace. Fall back to the namespace for CJS consumers (e.g. vitest).
 const { applyPatch } = fastJsonPatch.default ?? fastJsonPatch;
 
+// Every soul deployed to a hermes-agent carries this managed preamble: it is
+// prepended on write (create, update) and stripped on every read so the
+// user-facing soul stays user-authored. hermes-agent loads SOUL.md as the
+// identity slot — the first section of the system prompt — making this the
+// first thing the deployed agent reads. Advisory by nature (defense-in-depth
+// on top of the upstream config.yaml write guard and SOUL.md approval gate).
+// Skills are deliberately absent: hermes-agent's curator maintains
+// agent-created skills in the background, so self-managing skills is
+// legitimate behavior.
+export const MANAGED_SOUL_PREAMBLE = `# Managed by Hermeum
+
+Your configuration — config.yaml, .env, plugins, and crons — is managed
+by Hermeum. Do not edit these files or change plugins or cron jobs yourself;
+changes made outside Hermeum are not tracked and are lost when the agent is
+updated or redeployed. When a configuration change is needed, tell the user to
+update your agent spec in Hermeum instead.`;
+
+// Idempotent: input may already carry the preamble (e.g. a hand-written API
+// patch echoing the stored soul), so never double-inject.
+function withManagedSoulPreamble(soul: string): string {
+  return soul.startsWith(MANAGED_SOUL_PREAMBLE)
+    ? soul
+    : `${MANAGED_SOUL_PREAMBLE}\n\n${soul}`;
+}
+
+// Returns the user-authored soul, or undefined when only the preamble remains.
+// A no-op for stored souls without the prefix (agents migrated gradually).
+function stripManagedSoulPreamble(soul: string | undefined): string | undefined {
+  if (soul === undefined) return undefined;
+  const stripped = soul.startsWith(MANAGED_SOUL_PREAMBLE)
+    ? soul.slice(MANAGED_SOUL_PREAMBLE.length).replace(/^\n+/, "")
+    : soul;
+  return stripped === "" ? undefined : stripped;
+}
+
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),
 });
@@ -18,13 +53,13 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
   async listHermesAgents(ctx: Context, input?: ListAgentsFilter): Promise<Agent[]> {
     const agents = await this.runtime.listHermesAgents(input);
     this.logger.debug("listed hermes agents", { count: agents.length, filter: input });
-    return agents;
+    return agents.map((a) => this.stripManagedSoul(a));
   }
 
   async getHermesAgent(ctx: Context, id: string): Promise<Agent | null> {
     const agent = await this.runtime.getHermesAgent(id);
     this.logger.debug("got hermes agent", { id, found: agent !== null });
-    return agent;
+    return agent === null ? null : this.stripManagedSoul(agent);
   }
 
   async createHermesAgent(ctx: Context, agentInput: AgentInput): Promise<Agent> {
@@ -32,9 +67,19 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
 
     await this.checkAgentInputAllowed(agentInput);
     const userId = this.requireUser(ctx).id;
-    const agent = await this.runtime.createHermesAgent({ ...agentInput, userId });
+    // Soulless agents get the preamble alone — the management guard applies
+    // to every deployed agent, not just those with a user-authored soul.
+    const soul =
+      agentInput.soul !== undefined
+        ? withManagedSoulPreamble(agentInput.soul)
+        : MANAGED_SOUL_PREAMBLE;
+    const agent = await this.runtime.createHermesAgent({
+      ...agentInput,
+      soul,
+      userId,
+    });
     this.logger.info("created hermes agent", { id: agent.id, userId });
-    return agent;
+    return this.stripManagedSoul(agent);
   }
 
   async updateHermesAgent(ctx: Context, id: string, patch: AgentInput): Promise<Agent> {
@@ -51,9 +96,17 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
     }
-    const updated = await this.runtime.patchHermesAgent({ id, patch });
+    // Only soul-carrying patches inject — a patch without a soul keeps the
+    // stored soul (gradual migration: agents deployed before the preamble
+    // gain the guard on their next soul-bearing edit).
+    const soul =
+      patch.soul !== undefined ? withManagedSoulPreamble(patch.soul) : undefined;
+    const updated = await this.runtime.patchHermesAgent({
+      id,
+      patch: soul !== undefined ? { ...patch, soul } : patch,
+    });
     this.logger.info("updated hermes agent", { id, userId: this.requireUser(ctx).id });
-    return updated;
+    return this.stripManagedSoul(updated);
   }
 
   private checkEnvSensitivityNotDowngraded(existingEnv: Env, patchEnv: Env): void {
@@ -75,7 +128,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     this.verifyOwnership(ctx, agent);
     const archived = await this.runtime.archiveHermesAgent(id);
     this.logger.info("archived hermes agent", { id, userId: this.requireUser(ctx).id });
-    return archived;
+    return this.stripManagedSoul(archived);
   }
 
   async suspendHermesAgent(ctx: Context, id: string): Promise<Agent> {
@@ -87,7 +140,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     this.verifyOwnership(ctx, agent);
     const suspended = await this.runtime.patchHermesAgent({ id, patch: { suspended: true } });
     this.logger.info("suspended hermes agent", { id, userId: this.requireUser(ctx).id });
-    return suspended;
+    return this.stripManagedSoul(suspended);
   }
 
   async resumeHermesAgent(ctx: Context, id: string): Promise<Agent> {
@@ -99,7 +152,15 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     this.verifyOwnership(ctx, agent);
     const resumed = await this.runtime.patchHermesAgent({ id, patch: { suspended: false } });
     this.logger.info("resumed hermes agent", { id, userId: this.requireUser(ctx).id });
-    return resumed;
+    return this.stripManagedSoul(resumed);
+  }
+
+  // Inverse of the preamble injection on write: every runtime-returned Agent
+  // is stripped before it reaches callers, keeping the user-facing soul
+  // user-owned (the same read-direction policy as the hermeum-plugin filter).
+  private stripManagedSoul(agent: Agent): Agent {
+    const soul = stripManagedSoulPreamble(agent.soul);
+    return soul === agent.soul ? agent : { ...agent, soul };
   }
 
   private async checkAgentInputAllowed(
