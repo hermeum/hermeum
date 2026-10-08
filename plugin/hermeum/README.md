@@ -5,8 +5,11 @@ events (`session_started`, `llm_call`, `tool_call`, `error`, `session_finalized`
 `subagent_started`, `subagent_stopped`) to Hermeum's plugin-protocol endpoint
 (`POST /plugin/trpc/agentSession.agentSessionEvents`).
 
-Post-only: every event is a completed record (input, output, duration, usage
-arrive together); pre-call hooks are deliberately not registered. Events are
+Post-only events: every event is a completed record (input, output, duration,
+usage arrive together); no event is emitted pre-call. The `pre_api_request`
+hook is registered only to stash the turn's user_message (the post-api hook
+carries no request side — langfuse reads it from the same pre hook), consumed
+by the next `llm_call` of that turn. Events are
 constructed as the typed payloads generated from Hermeum's event schema
 (`openapi/plugin.json`), mirroring the bundled langfuse observability plugin's
 field extraction. Content is captured sanitized (default, like langfuse):
@@ -73,8 +76,9 @@ not the turn-scoped `post_llm_call`; `post_tool_call` provides
 
 | Hook | Event | Key fields |
 |---|---|---|
+| `pre_api_request` | — (context stash) | keeps the turn's `user_message` for the next `llm_call` |
 | `on_session_start` | `session_started` | `platform`, `provider`, `model`, `apiMode` |
-| `post_api_request` | `llm_call` | `usage`, `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
+| `post_api_request` | `llm_call` | `userMessage`, `usage`, `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
 | `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
 | `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |
 | `on_session_finalize` | `session_finalized` | `output` — the last assistant output seen in the session, then flush |

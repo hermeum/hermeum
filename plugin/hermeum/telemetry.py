@@ -69,6 +69,12 @@ log = logging.getLogger("hermeum.telemetry")
 
 FLUSH_THRESHOLD = 100
 
+# Ceiling on live user-message stash entries (per turn_id): turns whose
+# pre_api_request fires but never reach a post_api_request (interrupted,
+# api_request_error) would leak forever, so over the cap the oldest entries
+# are evicted. Same leak-bounds reasoning as langfuse's _MAX_TRACE_STATE.
+_STASH_CAP = 256
+
 DEFAULT_URL = "http://localhost:3000/plugin/trpc"
 DEFAULT_MAX_CHARS = 12000
 ERROR_MESSAGE_MAX = 200
@@ -273,6 +279,9 @@ class HermeumTelemetry:
         self._session_id = str(uuid.uuid4())
         self._buffer: list[AgentSessionAgentSessionEventsRequestEventsInner] = []
         self._last_assistant: Assistant | None = None
+        # turn_id -> sanitized user message, captured from pre_api_request and
+        # consumed by the next llm_call for the same turn.
+        self._user_messages: dict[str, str] = {}
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -293,6 +302,21 @@ class HermeumTelemetry:
             return False
 
     # -- hook methods (registered per hook name; never raise) --------------
+
+    def pre_api_request(self, **kwargs: Any) -> None:
+        """Context-capture only — no event is emitted pre-call. Stashes the
+        turn's user message (langfuse's source: turn_api_request passes
+        ``user_message=original_user_message``) so the following llm_call
+        events stay complete records."""
+        turn_id = _safe_str(kwargs.get("turn_id")) or ""
+        if not turn_id:
+            return
+        user_message = _sanitize_text(kwargs.get("user_message"))
+        if not user_message:
+            return
+        if len(self._user_messages) >= _STASH_CAP and turn_id not in self._user_messages:
+            self._user_messages.pop(next(iter(self._user_messages)))
+        self._user_messages[turn_id] = user_message
 
     def session_started(self, **kwargs: Any) -> None:
         self._bind(kwargs)
@@ -327,9 +351,11 @@ class HermeumTelemetry:
         assistant = _assistant_from(kwargs.get("assistant_message"))
         if assistant.content or assistant.tool_calls:
             self._last_assistant = assistant
+        turn_id = _safe_str(kwargs.get("turn_id")) or ""
         self._record(lambda: LlmCallEvent(
             **_envelope(kwargs),
             type="llm_call",
+            user_message=self._user_messages.pop(turn_id, None),
             provider=_safe_str(kwargs.get("provider")) or "unknown",
             model=_safe_str(kwargs.get("response_model") or kwargs.get("model")) or "unknown",
             api_mode=_safe_str(kwargs.get("api_mode")) or "unknown",

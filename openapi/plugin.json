@@ -277,6 +277,9 @@
                             "turnId": {
                               "type": "string"
                             },
+                            "userMessage": {
+                              "type": "string"
+                            },
                             "durationS": {
                               "type": "number"
                             },
