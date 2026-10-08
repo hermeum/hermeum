@@ -3,11 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@hermeum/components/ui/button";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@hermeum/components/ui/resizable";
 import { Separator } from "@hermeum/components/ui/separator";
 import { Skeleton } from "@hermeum/components/ui/skeleton";
 
 import { useTRPC } from "@/router";
 import { SessionTranscript } from "./-components/session-transcript";
+import { SessionEventsPanel } from "./-components/session-events-panel";
 
 export const Route = createFileRoute("/agents/$id/sessions/$sessionId")({
   component: SessionPage,
@@ -54,7 +56,7 @@ function SessionPage() {
         <Separator className="mt-4" />
       </div>
 
-      {/* Chat history */}
+      {/* Chat history + events side panel (desktop); transcript only below lg */}
       {isPending ? (
         <div className="flex flex-col gap-3 p-2">
           <Skeleton className="h-16 w-2/3" />
@@ -70,10 +72,33 @@ function SessionPage() {
           </p>
         </div>
       ) : (
-        <SessionTranscript
-          events={session.events}
-          agentLabel={agent?.name ?? agent?.id ?? "Agent"}
-        />
+        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+          <SessionTranscript
+            events={session.events}
+            agentLabel={agent?.name ?? agent?.id ?? "Agent"}
+          />
+        </div>
+      )}
+      {!isPending && !error && session && session.events.length > 0 && (
+        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+          <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+            {/* Transcript */}
+            <ResizablePanel defaultSize="65%" minSize="40%" className="min-h-0">
+              <SessionTranscript
+                events={session.events}
+                agentLabel={agent?.name ?? agent?.id ?? "Agent"}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+
+            {/* Events panel — desktop only (inline display:flex on the
+                resizable internals beats utility classes, so hiding happens
+                on this plain wrapper, not on the group/panels) */}
+            <ResizablePanel defaultSize="35%" minSize="25%" className="min-h-0">
+              <SessionEventsPanel events={session.events} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       )}
     </div>
   );
