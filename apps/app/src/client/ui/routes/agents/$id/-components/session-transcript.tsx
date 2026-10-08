@@ -1,12 +1,12 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CircleAlert, LoaderCircle, Plug } from "lucide-react";
+import { ArrowDownIcon, CircleAlert, LoaderCircle, Plug } from "lucide-react";
 
+import { Button } from "@hermeum/components/ui/button";
 import { Bubble, BubbleContent } from "@hermeum/components/ui/bubble";
 import { Marker, MarkerContent, MarkerIcon } from "@hermeum/components/ui/marker";
 import {
   MessageScroller,
-  MessageScrollerButton,
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@hermeum/components/ui/message-scroller";
@@ -240,6 +240,53 @@ function estimateItemSize(item: TranscriptItem): number {
   }
 }
 
+// Scroll-to-end affordance for the virtualized transcript. The MessageScroller
+// primitive's button tracks item visibility, which virtualization strips (only
+// a window of items is mounted), so this watches the viewport's scroll offset
+// directly: visible when scrolled away from the bottom, and
+// scrollToIndex(last) on click with dynamic measurement in mind.
+function ScrollToEndButton({
+  scrollRef,
+  onScrollToEnd,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onScrollToEnd: () => void;
+}) {
+  const [awayFromEnd, setAwayFromEnd] = useState(false);
+
+  useEffect(() => {
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const update = () => {
+      setAwayFromEnd(
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 24
+      );
+    };
+    update();
+    viewport.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(viewport);
+    return () => {
+      viewport.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [scrollRef]);
+
+  return (
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label="Scroll to end"
+      className={`absolute bottom-4 left-1/2 -translate-x-1/2 transition-[translate,scale,opacity] duration-200 ${
+        awayFromEnd ? "opacity-100" : "pointer-events-none scale-95 opacity-0"
+      }`}
+      onClick={onScrollToEnd}
+    >
+      <ArrowDownIcon />
+    </Button>
+  );
+}
+
 export function SessionTranscript({
   events,
   agentLabel,
@@ -256,17 +303,20 @@ export function SessionTranscript({
     estimateSize: (index) => estimateItemSize(items[index]!),
     overscan: 8,
   });
-  const virtualItems = virtualizer.getVirtualItems();
+
+  const scrollToEnd = () => {
+    virtualizer.scrollToIndex(items.length - 1, { align: "end" });
+  };
 
   return (
     <MessageScrollerProvider>
-      <MessageScroller className="min-h-0 flex-1">
+      <MessageScroller className="relative min-h-0 flex-1">
         <MessageScrollerViewport ref={scrollRef}>
           <div
             className="relative w-full"
             style={{ height: virtualizer.getTotalSize() }}
           >
-            {virtualItems.map((virtualRow) => {
+            {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = items[virtualRow.index]!;
               return (
                 <div
@@ -282,7 +332,7 @@ export function SessionTranscript({
             })}
           </div>
         </MessageScrollerViewport>
-        <MessageScrollerButton />
+        <ScrollToEndButton scrollRef={scrollRef} onScrollToEnd={scrollToEnd} />
       </MessageScroller>
     </MessageScrollerProvider>
   );
