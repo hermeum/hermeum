@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { mapHermesAgent } from "../infras/kubernetes/client.js";
+import { mapHermesAgent } from "../infras/kubernetes/index.js";
 import { HermesAgent } from "../infras/kubernetes/types/hermes-agent.js";
 import { AgentUseCase } from "../usecases/agent.js";
 

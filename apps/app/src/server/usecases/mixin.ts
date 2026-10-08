@@ -4,7 +4,7 @@ import { Context, HermeumConfig, HermeumConfigSchema, User } from "@/entities";
 import { config } from "@/server/libs/config";
 
 import { telemetry } from "../infras/posthog";
-import { KubernetesClient } from "../infras/kubernetes/client";
+import { KubernetesClient } from "../infras/kubernetes";
 import { HermesSkillIndex } from "../infras/hermes-skill-index";
 import { LocalFiles } from "../infras/local-files";
 import { PostgresDatabase } from "../infras/postgres/client";
