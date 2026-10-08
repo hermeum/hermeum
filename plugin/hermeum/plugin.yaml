@@ -5,6 +5,7 @@ author: Hermeum
 requires_env:
   - HERMEUM_PLUGIN_BASE_URL
 provides_hooks:
+  - pre_api_request
   - on_session_start
   - post_api_request
   - post_tool_call

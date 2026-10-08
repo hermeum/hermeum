@@ -106,6 +106,12 @@ const LlmCallEventSchema = z
       .string()
       .optional()
       .describe("Agent turn this call belongs to; groups llm/tool/error events into a trajectory."),
+    userMessage: z
+      .string()
+      .optional()
+      .describe(
+        "The user message that initiated this turn, when the emitter captured it. Sanitization/truncation is the emitter's responsibility."
+      ),
     provider: z.string().describe("Model provider (e.g. `openrouter`, `anthropic`)."),
     model: z.string().describe("Model identifier that served the request."),
     apiMode: z.string().describe("API style used (e.g. `completions`, `responses`, `converse`)."),

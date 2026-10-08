@@ -41,11 +41,12 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf1(BaseModel):
     cost: AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost
     assistant: AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant
     turn_id: Optional[StrictStr] = Field(default=None, alias="turnId")
+    user_message: Optional[StrictStr] = Field(default=None, alias="userMessage")
     duration_s: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, alias="durationS")
     finish_reason: Optional[StrictStr] = Field(default=None, alias="finishReason")
     moa_references: Optional[List[AgentSessionAgentSessionEventsRequestEventsInnerOneOf1MoaReferencesInner]] = Field(default=None, alias="moaReferences")
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "provider", "model", "apiMode", "usage", "cost", "assistant", "turnId", "durationS", "finishReason", "moaReferences"]
+    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "provider", "model", "apiMode", "usage", "cost", "assistant", "turnId", "userMessage", "durationS", "finishReason", "moaReferences"]
 
     @field_validator('type')
     def type_validate_enum(cls, value):
@@ -137,6 +138,7 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf1(BaseModel):
             "cost": AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Cost.from_dict(obj["cost"]) if obj.get("cost") is not None else None,
             "assistant": AgentSessionAgentSessionEventsRequestEventsInnerOneOf1Assistant.from_dict(obj["assistant"]) if obj.get("assistant") is not None else None,
             "turnId": obj.get("turnId"),
+            "userMessage": obj.get("userMessage"),
             "durationS": obj.get("durationS"),
             "finishReason": obj.get("finishReason"),
             "moaReferences": [AgentSessionAgentSessionEventsRequestEventsInnerOneOf1MoaReferencesInner.from_dict(_item) for _item in obj["moaReferences"]] if obj.get("moaReferences") is not None else None
