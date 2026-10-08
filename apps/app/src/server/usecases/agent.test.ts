@@ -18,7 +18,7 @@ vi.mock("@/server/libs/config", () => ({
 
 import { stringify } from "yaml";
 
-import { AgentUseCase } from "./agent";
+import { AgentUseCase, MANAGED_SOUL_PREAMBLE } from "./agent";
 import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
@@ -566,5 +566,142 @@ describe("AgentUseCase env sensitivity validation", () => {
         env: [{ name: "NEW_VAR", value: "hello" }],
       })
     ).resolves.toBeDefined();
+  });
+});
+
+describe("AgentUseCase managed soul preamble", () => {
+  it("createHermesAgent prepends the preamble to a user soul and strips it from the return value", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: { soul?: string }) => makeAgent({ soul: input.soul })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const agent = await useCase.createHermesAgent(makeCtx("user-1"), {
+      soul: "You are helpful.",
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        soul: `${MANAGED_SOUL_PREAMBLE}\n\nYou are helpful.`,
+      })
+    );
+    expect(agent.soul).toBe("You are helpful.");
+  });
+
+  it("createHermesAgent sets the preamble alone when no soul is provided", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: { soul?: string }) => makeAgent({ soul: input.soul })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const agent = await useCase.createHermesAgent(makeCtx("user-1"), {});
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ soul: MANAGED_SOUL_PREAMBLE })
+    );
+    expect(agent.soul).toBeUndefined();
+  });
+
+  it("createHermesAgent is idempotent when the input soul already carries the preamble", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: { soul?: string }) => makeAgent({ soul: input.soul })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      soul: `${MANAGED_SOUL_PREAMBLE}\n\nYou are helpful.`,
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        soul: `${MANAGED_SOUL_PREAMBLE}\n\nYou are helpful.`,
+      })
+    );
+  });
+
+  it("updateHermesAgent injects the preamble into a soul-carrying patch and strips the return value", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ patch }: { patch: { soul?: string } }) => makeAgent({ soul: patch.soul })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const agent = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      soul: "You are helpful.",
+    });
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: expect.objectContaining({
+        soul: `${MANAGED_SOUL_PREAMBLE}\n\nYou are helpful.`,
+      }),
+    });
+    expect(agent.soul).toBe("You are helpful.");
+  });
+
+  it("updateHermesAgent leaves patches without a soul untouched (gradual migration)", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ name: "Renamed" })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: { name: "Renamed" },
+    });
+  });
+
+  it("strips the preamble on reads: getHermesAgent, listHermesAgents, and suspension returns", async () => {
+    const storedSoul = `${MANAGED_SOUL_PREAMBLE}\n\nUser soul.`;
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ soul: storedSoul })
+    );
+    (runtime.listHermesAgents as ReturnType<typeof vi.fn>).mockResolvedValue([
+      makeAgent({ soul: storedSoul }),
+    ]);
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ soul: storedSoul })
+    );
+    (runtime.archiveHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ soul: storedSoul })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+    const ctx = makeCtx("user-1");
+
+    expect((await useCase.getHermesAgent(ctx, "agent-1"))?.soul).toBe("User soul.");
+    expect((await useCase.listHermesAgents(ctx))[0]?.soul).toBe("User soul.");
+    expect((await useCase.suspendHermesAgent(ctx, "agent-1")).soul).toBe("User soul.");
+    expect((await useCase.resumeHermesAgent(ctx, "agent-1")).soul).toBe("User soul.");
+    expect((await useCase.archiveHermesAgent(ctx, "agent-1")).soul).toBe("User soul.");
+  });
+
+  it("maps a preamble-only stored soul back to undefined", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ soul: MANAGED_SOUL_PREAMBLE })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    expect((await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul).toBeUndefined();
+  });
+
+  it("passes stored souls without the preamble through unchanged (pre-preamble agents)", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ soul: "Legacy soul that mentions config.yaml." })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    expect(
+      (await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul
+    ).toBe("Legacy soul that mentions config.yaml.");
   });
 });
