@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CircleAlert, Plug, Sparkles } from "lucide-react";
+import CodeMirror, { EditorView } from "@uiw/react-codemirror";
+import { json as jsonLang } from "@codemirror/lang-json";
 
-import { ScrollArea } from "@hermeum/components/ui/scroll-area";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -45,17 +45,10 @@ function eventKind(event: AgentSessionEvent): string {
   }
 }
 
-function eventIcon(event: AgentSessionEvent) {
-  switch (event.type) {
-    case "llm_call":
-      return <Sparkles />;
-    case "tool_call":
-      return <Plug />;
-    case "error":
-      return <CircleAlert className="text-destructive" />;
-    default:
-      return null;
-  }
+// First 4 + last 4 chars with the rest elided, e.g. `38b6…d8ac` — the full id
+// stays available via hover title and the payload copy button.
+function shortId(id: string): string {
+  return `${id.slice(0, 4)}…${id.slice(-4)}`;
 }
 
 // One-line preview: the most human-meaningful content of the event.
@@ -131,28 +124,49 @@ function EventListRow({
 function EventDetail({ event }: { event: AgentSessionEvent }) {
   const serialized = useMemo(() => JSON.stringify(event, null, 2), [event]);
   const kind = eventKind(event);
-  const icon = eventIcon(event);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-        {icon}
         <span className="text-sm font-medium">
           Event <span className="font-mono">{kind}</span>
         </span>
-        <span className="font-mono text-xs text-muted-foreground">{event.eventId}</span>
-        <div className="ml-auto flex items-center gap-1">
+        <span
+          className="truncate font-mono text-xs text-muted-foreground"
+          title={event.eventId}
+        >
+          {shortId(event.eventId)}
+        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <CopyButton text={serialized} className="opacity-60 hover:opacity-100" />
         </div>
       </div>
-      <div className="text-xs text-muted-foreground px-3 py-2">
+      <div className="px-3 py-2 text-xs text-muted-foreground">
         {new Date(event.timestamp).toLocaleString()}
       </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <pre className="wrap-break-word px-3 pb-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-          {serialized}
-        </pre>
-      </ScrollArea>
+      {/* Read-only JSON viewer: folding + wrapping, editor chrome styled away
+          like AgentConfigEditor; scrolls internally within the pane. */}
+      <div className="min-h-0 flex-1 overflow-hidden border-t">
+        <CodeMirror
+          value={serialized}
+          extensions={[jsonLang(), EditorView.lineWrapping]}
+          editable={false}
+          height="100%"
+          maxHeight="100%"
+          basicSetup={{
+            lineNumbers: false,
+            foldGutter: true,
+            searchKeymap: false,
+            autocompletion: false,
+            lintKeymap: false,
+            highlightActiveLine: false,
+            highlightActiveLineGutter: false,
+          }}
+          className={cn(
+            "h-full [&_.cm-content]:outline-none! [&_.cm-editor.cm-focused]:outline-none! [&_.cm-gutters]:border-r-0! [&_.cm-gutters]:bg-transparent! [&_.cm-gutterElement]:pl-3! [&_.cm-gutterElement]:pr-2! [&_.cm-gutterElement]:text-muted-foreground/60"
+          )}
+        />
+      </div>
     </div>
   );
 }

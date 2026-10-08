@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDownIcon, CircleAlert, LoaderCircle, Plug } from "lucide-react";
 
@@ -153,6 +153,54 @@ function ToolStatusIcon({ status }: { status: "ok" | "error" | "blocked" | "canc
   return <LoaderCircle className="animate-spin" />;
 }
 
+const COLLAPSED_MAX_HEIGHT_PX = 192;
+
+// "Show more" behavior for long bubble content: clamped with a bottom fade
+// while collapsed, expanded in full when toggled. Overflow is measured on the
+// clamped element so a "Show more" button only appears when the content
+// actually exceeds the cap (state lives per-rendered-row; the virtualizer
+// remeasures the row on toggle).
+function CollapsibleContent({ children }: { children: ReactNode }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el.firstElementChild ?? el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={scrollerRef}
+        className="relative overflow-hidden"
+        style={expanded ? undefined : { maxHeight: COLLAPSED_MAX_HEIGHT_PX }}
+        data-collapsed={!expanded && overflows}
+      >
+        {children}
+        {!expanded && overflows && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent" />
+        )}
+      </div>
+      {overflows && (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="w-fit cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </>
+  );
+}
+
 function TranscriptRow({
   item,
   agentLabel,
@@ -166,7 +214,9 @@ function TranscriptRow({
         <MessageLine label="User" at={item.at} tone="user" />
         <Bubble variant="muted" align="start">
           <BubbleContent>
-            <Streamdown mode="static">{item.text}</Streamdown>
+            <CollapsibleContent>
+              <Streamdown mode="static">{item.text}</Streamdown>
+            </CollapsibleContent>
           </BubbleContent>
         </Bubble>
       </div>
@@ -184,7 +234,9 @@ function TranscriptRow({
                 {item.durationS !== undefined && ` for ${item.durationS.toFixed(1)}s`}
               </p>
             )}
-            <Streamdown>{item.content}</Streamdown>
+            <CollapsibleContent>
+              <Streamdown>{item.content}</Streamdown>
+            </CollapsibleContent>
           </BubbleContent>
         </Bubble>
       </div>
