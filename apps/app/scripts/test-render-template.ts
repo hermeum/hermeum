@@ -29,7 +29,7 @@ import { AgentInputObjectSchema, Context, Template } from "@/entities";
 import { telemetry } from "@/server/infras/posthog";
 import { HermesSkillIndex } from "@/server/infras/hermes-skill-index";
 import { LocalFiles } from "@/server/infras/local-files";
-import { agentToHermesAgent } from "@/server/infras/kubernetes/client";
+import { agentToHermesAgent } from "@/server/infras/kubernetes";
 import { config } from "@/server/libs/config";
 import { Runtime } from "@/server/usecases/adaptors/runtime";
 import { AgentUseCase } from "@/server/usecases/agent";
