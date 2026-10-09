@@ -19,12 +19,12 @@ vi.mock("@/server/libs/config", () => ({
 import { AgentSessionUseCase } from "./agent-session";
 import type { Database } from "./adaptors/database";
 import type { Runtime } from "./adaptors/runtime";
-import type { Agent, AgentSession, Context } from "@/entities";
+import type { Agent, AgentSession, Context, PaginatedResult } from "@/entities";
 
 function makeDatabase(): Database {
   return {
     appendAgentSessionEvents: vi.fn().mockResolvedValue(2),
-    listAgentSessionSummaries: vi.fn().mockResolvedValue([]),
+    listAgentSessionSummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
     getAgentSession: vi.fn().mockResolvedValue({ sessionId: "hermes-session-1", events: [] }),
   };
 }
@@ -127,23 +127,56 @@ describe("AgentSessionUseCase.ingestAgentSessionEvents", () => {
 });
 
 describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
-  it("returns the sessions for the agent without an ownership check", async () => {
-    const db = makeDatabase();
-    (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue([
+  const page: PaginatedResult<{
+    sessionId: string;
+    firstEventAt: string;
+    lastEventAt: string;
+    eventCount: number;
+  }> = {
+    items: [
       {
         sessionId: "hermes-session-1",
         firstEventAt: "2026-10-06T16:04:25.000Z",
         lastEventAt: "2026-10-06T16:04:26.000Z",
         eventCount: 2,
       },
-    ]);
+    ],
+    hasMore: false,
+  };
+
+  it("returns the page for the agent without an ownership check", async () => {
+    const db = makeDatabase();
+    (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue(page);
     const usecase = makeUseCase(db, makeRuntime(makeAgent({ userId: "other-user" })));
 
-    const sessions = await usecase.listAgentSessionSummaries(makeCtx("other-user"), "agent-1");
+    const result = await usecase.listAgentSessionSummaries(makeCtx("other-user"), "agent-1", {
+      limit: 20,
+      offset: 0,
+    });
 
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0]!.sessionId).toBe("hermes-session-1");
-    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.sessionId).toBe("hermes-session-1");
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("passes the query through to the database without defaulting", async () => {
+    const db = makeDatabase();
+    (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue(page);
+    const usecase = makeUseCase(db, makeRuntime(null));
+
+    await usecase.listAgentSessionSummaries(makeCtx(), "agent-1", { limit: 20, offset: 0 });
+
+    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1", { limit: 20, offset: 0 });
+  });
+
+  it("passes an arbitrary page request through unchanged", async () => {
+    const db = makeDatabase();
+    (db.listAgentSessionSummaries as ReturnType<typeof vi.fn>).mockResolvedValue(page);
+    const usecase = makeUseCase(db, makeRuntime(null));
+
+    await usecase.listAgentSessionSummaries(makeCtx(), "agent-1", { limit: 5, offset: 10 });
+
+    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1", { limit: 5, offset: 10 });
   });
 
   it("does not consult the runtime at all", async () => {
@@ -151,10 +184,10 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, runtime);
 
-    await usecase.listAgentSessionSummaries(makeCtx(), "agent-1");
+    await usecase.listAgentSessionSummaries(makeCtx(), "agent-1", { limit: 20, offset: 0 });
 
     expect(runtime.getHermesAgent).not.toHaveBeenCalled();
-    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1");
+    expect(db.listAgentSessionSummaries).toHaveBeenCalledWith("agent-1", { limit: 20, offset: 0 });
   });
 });
 

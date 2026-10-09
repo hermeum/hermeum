@@ -2,6 +2,8 @@ import {
   AgentSession,
   AgentSessionSummary,
   Context,
+  PaginatedResult,
+  PaginationQuery,
 } from "@/entities";
 
 import { BaseUseCase } from "./mixin";
@@ -29,11 +31,15 @@ export class AgentSessionUseCase extends BaseUseCase {
   // Reads are not ownership-guarded: any authenticated user may browse agent
   // session telemetry. Ingest stays unauthenticated but unscoped (plugin
   // protocol); per-agent token authentication is deferred there.
-  async listAgentSessionSummaries(ctx: Context, agentId: string): Promise<AgentSessionSummary[]> {
+  async listAgentSessionSummaries(
+    ctx: Context,
+    agentId: string,
+    query: PaginationQuery
+  ): Promise<PaginatedResult<AgentSessionSummary>> {
     void ctx;
-    const sessions = await this.db.listAgentSessionSummaries(agentId);
-    this.logger.debug("listed agent sessions", { agentId, count: sessions.length });
-    return sessions;
+    const result = await this.db.listAgentSessionSummaries(agentId, query);
+    this.logger.debug("listed agent sessions", { agentId, count: result.items.length });
+    return result;
   }
 
   async getAgentSession(

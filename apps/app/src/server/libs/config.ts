@@ -65,10 +65,10 @@ export const ConfigSchema = z.object({
   hermesPluginIdentifier: z
     .string()
     .min(1)
-    .default("hermeum/hermeum/plugin/hermeum")
+    .default("hermeum/hermeum/plugins/hermeum")
     .describe(
       "Git plugin identifier (owner/repo/subdir) of the plugin shipped in " +
-        "this repo at plugin/hermeum, auto-installed and enabled on every managed " +
+        "this repo at plugins/hermeum, auto-installed and enabled on every managed " +
         "agent via the operator's `hermes plugins install`. Fixed — not env-configurable."
     ),
   openaiModel: z

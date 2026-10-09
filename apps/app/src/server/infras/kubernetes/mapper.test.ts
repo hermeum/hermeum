@@ -152,9 +152,9 @@ describe("ConfigSchema plugin endpoint derivation", () => {
     expect(parsed.pluginEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
   });
 
-  it("pins hermesPluginIdentifier to the plugin/hermeum install identifier", () => {
+  it("pins hermesPluginIdentifier to the plugins/hermeum install identifier", () => {
     const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
-    expect(parsed.hermesPluginIdentifier).toBe("hermeum/hermeum/plugin/hermeum");
+    expect(parsed.hermesPluginIdentifier).toBe("hermeum/hermeum/plugins/hermeum");
   });
 });
 

@@ -1,6 +1,6 @@
-# Generated Python client (plugin/hermeum/client/openapi_client) — regenerate with:
+# Generated Python client (plugins/hermeum/client/openapi_client) — regenerate with:
 #   npx @openapitools/openapi-generator-cli@latest generate \
-#     -i openapi/plugin.json -g python -o plugin/hermeum/client \
+#     -i openapi/plugin.json -g python -o plugins/hermeum/client \
 #     --library urllib3 --skip-validate-spec \
 #     --additional-properties=generateSourceCodeOnly=true
 # Runtime deps required by the generated client (not pip-installed; vendored via sys.path):
@@ -8,10 +8,13 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
 import sys
+import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -69,6 +72,10 @@ log = logging.getLogger("hermeum.telemetry")
 
 FLUSH_THRESHOLD = 100
 
+# Periodic flush (seconds): sub-threshold events would otherwise sit in the
+# buffer until a finalize that may never come (sparse activity, one-shots).
+FLUSH_INTERVAL_S = 30.0
+
 # Ceiling on live user-message stash entries (per turn_id): turns whose
 # pre_api_request fires but never reach a post_api_request (interrupted,
 # api_request_error) would leak forever, so over the cap the oldest entries
@@ -78,6 +85,9 @@ _STASH_CAP = 256
 DEFAULT_URL = "http://localhost:3000/plugin/trpc"
 DEFAULT_MAX_CHARS = 12000
 ERROR_MESSAGE_MAX = 200
+# Read timeout for ingest calls: bounds the atexit flush so a hung server
+# cannot delay process exit (localhost normally answers in milliseconds).
+REQUEST_TIMEOUT_S = 5.0
 
 # Tool-lifecycle outcome values from the hermes observer contract (post_tool_call.status).
 TOOL_STATUSES = ("ok", "error", "blocked", "cancelled")
@@ -274,28 +284,64 @@ class HermeumTelemetry:
     """
 
     def __init__(self, base_url: str = DEFAULT_URL) -> None:
-        configuration = Configuration(host=base_url)
+        # retries=0: REQUEST_TIMEOUT_S must bound each call, not each of the
+        # generated client's default-3 retries (the health GET would take
+        # ~4x the timeout against a lingering server).
+        configuration = Configuration(host=base_url, retries=0)
         self._api = AgentSessionApi(ApiClient(configuration))
         self._session_id = str(uuid.uuid4())
+        # Guards _buffer and _session_id: the periodic-flush thread and
+        # bind_session touch them concurrently with the hook thread. Sends
+        # happen outside the lock by design.
+        self._lock = threading.RLock()
         self._buffer: list[AgentSessionAgentSessionEventsRequestEventsInner] = []
         self._last_assistant: Assistant | None = None
         # turn_id -> sanitized user message, captured from pre_api_request and
         # consumed by the next llm_call for the same turn.
         self._user_messages: dict[str, str] = {}
+        # Turn ids whose user message was already stamped onto an llm_call.
+        # pre_api_request refires before EVERY api call of a turn with the
+        # same original user message; without this set each refill would
+        # stamp userMessage onto every llm_call of the turn (duplicated user
+        # bubbles in the transcript UI).
+        self._consumed_turns: set[str] = set()
+
+        if FLUSH_INTERVAL_S > 0:
+            # Daemon: dies with the process; atexit below covers the exit
+            # flush, so the timer needs no shutdown join.
+            self._timer = threading.Thread(
+                target=self._flush_loop, name="hermeum-telemetry-flush", daemon=True
+            )
+            self._timer.start()
+        # atexit (LIFO) so short-lived runs (chat -q, cron) that exit without
+        # on_session_finalize still deliver buffered leavings.
+        atexit.register(self.flush)
 
     # -- lifecycle ---------------------------------------------------------
+
+    def _flush_loop(self) -> None:
+        """Periodic flush: delivers sub-threshold leavings the threshold
+        flush never reaches (sparse sessions, idle gaps)."""
+        while True:
+            time.sleep(FLUSH_INTERVAL_S)
+            try:
+                self.flush()
+            except Exception:
+                # flush() already swallows send failures; this guards only
+                # against lock/orchestration errors killing the timer.
+                log.warning("[hermeum-telemetry] periodic flush failed", exc_info=True)
 
     def bind_session(self, session_id: str) -> None:
         """Adopt the hermes-provided session id; flush on switch so a batch
         never mixes sessions."""
         if session_id and self._session_id != session_id:
-            if self._buffer:
-                self.flush()
-            self._session_id = session_id
+            self.flush()
+            with self._lock:
+                self._session_id = session_id
 
     def health_check(self) -> bool:
         try:
-            response = self._api.agent_session_health()
+            response = self._api.agent_session_health(_request_timeout=REQUEST_TIMEOUT_S)
             return bool(response.result.data.ok)  # type: ignore[union-attr]
         except Exception:
             log.warning("[hermeum-telemetry] health check failed", exc_info=True)
@@ -310,6 +356,10 @@ class HermeumTelemetry:
         events stay complete records."""
         turn_id = _safe_str(kwargs.get("turn_id")) or ""
         if not turn_id:
+            return
+        # One stamp per turn: skip if already stashed (pending) or consumed
+        # (stamped by an earlier llm_call of this turn).
+        if turn_id in self._user_messages or turn_id in self._consumed_turns:
             return
         user_message = _sanitize_text(kwargs.get("user_message"))
         if not user_message:
@@ -352,10 +402,20 @@ class HermeumTelemetry:
         if assistant.content or assistant.tool_calls:
             self._last_assistant = assistant
         turn_id = _safe_str(kwargs.get("turn_id")) or ""
+        stamped = self._user_messages.pop(turn_id, None)
+        if stamped is not None:
+            # Mark the turn stamped so later pre_api_request refires within
+            # the same turn can't re-stash (see pre_api_request).
+            self._consumed_turns.add(turn_id)
+            if len(self._consumed_turns) > _STASH_CAP:
+                # Bound memory: drop the oldest consumed ids (a set has no
+                # order guarantee, so trim wholesale — _STASH_CAP is generous
+                # relative to a session's turn count).
+                self._consumed_turns = set(list(self._consumed_turns)[-_STASH_CAP:])
         self._record(lambda: LlmCallEvent(
             **_envelope(kwargs),
             type="llm_call",
-            user_message=self._user_messages.pop(turn_id, None),
+            user_message=stamped,
             provider=_safe_str(kwargs.get("provider")) or "unknown",
             model=_safe_str(kwargs.get("response_model") or kwargs.get("model")) or "unknown",
             api_mode=_safe_str(kwargs.get("api_mode")) or "unknown",
@@ -404,6 +464,14 @@ class HermeumTelemetry:
         ))
         self.flush()
 
+    def session_end(self, **kwargs: Any) -> None:
+        """Turn-scoped hook (on_session_end fires after EVERY turn —
+        turn_finalizer, session boundary is on_session_finalize). Flush-only:
+        no event is recorded and _last_assistant is not touched, so per-turn
+        firing must not persist per-turn "session finalized" markers."""
+        self._bind(kwargs)
+        self.flush()
+
     def subagent_started(self, **kwargs: Any) -> None:
         self._subagent_event(SubagentStartedEvent, "subagent_started", kwargs)
 
@@ -433,26 +501,37 @@ class HermeumTelemetry:
 
     def _record(self, build: Any) -> None:
         """Append the event produced by `build()`, swallowing construction
-        failures so hook callbacks never raise; flush at capacity."""
+        failures so hook callbacks never raise; flush at capacity (the flush
+        itself re-takes the lock, so it runs outside the `with` block)."""
+        should_flush = False
         try:
-            self._buffer.append(build())
-            if len(self._buffer) >= FLUSH_THRESHOLD:
+            with self._lock:
+                self._buffer.append(build())
+                should_flush = len(self._buffer) >= FLUSH_THRESHOLD
+            if should_flush:
                 self.flush()
         except Exception:
             log.warning("[hermeum-telemetry] failed to build event", exc_info=True)
 
     def flush(self) -> None:
-        if not self._buffer:
-            return
-        batch, self._buffer = self._buffer[:FLUSH_THRESHOLD], self._buffer[FLUSH_THRESHOLD:]
+        # Snapshot batch + session id together under the lock (they must
+        # agree; a concurrent bind_session switch must not re-label this
+        # batch); send outside it — detached from the buffer, so the network
+        # call never blocks hook callbacks or the timer thread.
+        with self._lock:
+            if not self._buffer:
+                return
+            batch, self._buffer = self._buffer[:FLUSH_THRESHOLD], self._buffer[FLUSH_THRESHOLD:]
+            session_id = self._session_id
         try:
             response = self._api.agent_session_agent_session_events(
                 AgentSessionAgentSessionEventsRequest(
-                    session_id=self._session_id,
+                    session_id=session_id,
                     # oneOf wrapper: pydantic rejects the bare OneOf* members,
                     # so wrap each concrete event in the union model.
                     events=[AgentSessionAgentSessionEventsRequestEventsInner(e) for e in batch],
-                )
+                ),
+                _request_timeout=REQUEST_TIMEOUT_S,
             )
             log.debug(
                 "[hermeum-telemetry] flushed %s events (server accepted %s)",
