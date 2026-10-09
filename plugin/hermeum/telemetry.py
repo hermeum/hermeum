@@ -8,10 +8,12 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
 import sys
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -67,7 +69,7 @@ from openapi_client.models.agent_session_agent_session_events_request_events_inn
 
 log = logging.getLogger("hermeum.telemetry")
 
-FLUSH_THRESHOLD = 100
+FLUSH_THRESHOLD = 10
 
 # Ceiling on live user-message stash entries (per turn_id): turns whose
 # pre_api_request fires but never reach a post_api_request (interrupted,
@@ -277,11 +279,25 @@ class HermeumTelemetry:
         configuration = Configuration(host=base_url)
         self._api = AgentSessionApi(ApiClient(configuration))
         self._session_id = str(uuid.uuid4())
+        # Guards _buffer and _session_id across hook callbacks from different
+        # Hermes threads (chat thread, gateway dispatch). Sends happen
+        # outside the lock by design.
+        self._lock = threading.RLock()
         self._buffer: list[AgentSessionAgentSessionEventsRequestEventsInner] = []
         self._last_assistant: Assistant | None = None
         # turn_id -> sanitized user message, captured from pre_api_request and
         # consumed by the next llm_call for the same turn.
         self._user_messages: dict[str, str] = {}
+        # Turn ids whose user message was already stamped onto an llm_call.
+        # pre_api_request refires before EVERY api call of a turn with the
+        # same original user message; without this set each refill would
+        # stamp userMessage onto every llm_call of the turn (duplicated user
+        # bubbles in the transcript UI).
+        self._consumed_turns: set[str] = set()
+
+        # atexit (LIFO) so short-lived runs (chat -q, cron) that exit without
+        # on_session_finalize still deliver buffered leavings.
+        atexit.register(self.flush)
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -289,9 +305,9 @@ class HermeumTelemetry:
         """Adopt the hermes-provided session id; flush on switch so a batch
         never mixes sessions."""
         if session_id and self._session_id != session_id:
-            if self._buffer:
-                self.flush()
-            self._session_id = session_id
+            self.flush()
+            with self._lock:
+                self._session_id = session_id
 
     def health_check(self) -> bool:
         try:
@@ -310,6 +326,10 @@ class HermeumTelemetry:
         events stay complete records."""
         turn_id = _safe_str(kwargs.get("turn_id")) or ""
         if not turn_id:
+            return
+        # One stamp per turn: skip if already stashed (pending) or consumed
+        # (stamped by an earlier llm_call of this turn).
+        if turn_id in self._user_messages or turn_id in self._consumed_turns:
             return
         user_message = _sanitize_text(kwargs.get("user_message"))
         if not user_message:
@@ -352,10 +372,20 @@ class HermeumTelemetry:
         if assistant.content or assistant.tool_calls:
             self._last_assistant = assistant
         turn_id = _safe_str(kwargs.get("turn_id")) or ""
+        stamped = self._user_messages.pop(turn_id, None)
+        if stamped is not None:
+            # Mark the turn stamped so later pre_api_request refires within
+            # the same turn can't re-stash (see pre_api_request).
+            self._consumed_turns.add(turn_id)
+            if len(self._consumed_turns) > _STASH_CAP:
+                # Bound memory: drop the oldest consumed ids (a set has no
+                # order guarantee, so trim wholesale — _STASH_CAP is generous
+                # relative to a session's turn count).
+                self._consumed_turns = set(list(self._consumed_turns)[-_STASH_CAP:])
         self._record(lambda: LlmCallEvent(
             **_envelope(kwargs),
             type="llm_call",
-            user_message=self._user_messages.pop(turn_id, None),
+            user_message=stamped,
             provider=_safe_str(kwargs.get("provider")) or "unknown",
             model=_safe_str(kwargs.get("response_model") or kwargs.get("model")) or "unknown",
             api_mode=_safe_str(kwargs.get("api_mode")) or "unknown",
@@ -433,22 +463,32 @@ class HermeumTelemetry:
 
     def _record(self, build: Any) -> None:
         """Append the event produced by `build()`, swallowing construction
-        failures so hook callbacks never raise; flush at capacity."""
+        failures so hook callbacks never raise; flush at capacity (the flush
+        itself re-takes the lock, so it runs outside the `with` block)."""
+        should_flush = False
         try:
-            self._buffer.append(build())
-            if len(self._buffer) >= FLUSH_THRESHOLD:
+            with self._lock:
+                self._buffer.append(build())
+                should_flush = len(self._buffer) >= FLUSH_THRESHOLD
+            if should_flush:
                 self.flush()
         except Exception:
             log.warning("[hermeum-telemetry] failed to build event", exc_info=True)
 
     def flush(self) -> None:
-        if not self._buffer:
-            return
-        batch, self._buffer = self._buffer[:FLUSH_THRESHOLD], self._buffer[FLUSH_THRESHOLD:]
+        # Snapshot batch + session id together under the lock (they must
+        # agree; a concurrent bind_session switch must not re-label this
+        # batch); send outside it — detached from the buffer, so the network
+        # call never blocks hook callbacks.
+        with self._lock:
+            if not self._buffer:
+                return
+            batch, self._buffer = self._buffer[:FLUSH_THRESHOLD], self._buffer[FLUSH_THRESHOLD:]
+            session_id = self._session_id
         try:
             response = self._api.agent_session_agent_session_events(
                 AgentSessionAgentSessionEventsRequest(
-                    session_id=self._session_id,
+                    session_id=session_id,
                     # oneOf wrapper: pydantic rejects the bare OneOf* members,
                     # so wrap each concrete event in the union model.
                     events=[AgentSessionAgentSessionEventsRequestEventsInner(e) for e in batch],

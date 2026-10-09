@@ -23,11 +23,25 @@ estimates server-side.
 plugin/hermeum/
 ├── plugin.yaml            # hermes plugin manifest
 ├── __init__.py            # register(ctx) — hook registration only
-├── telemetry.py           # event-building business logic + typed event buffering + ≤100-event batch flush
+├── telemetry.py           # event-building business logic + typed event buffering + threshold/atexit flush
 └── client/
     ├── requirements.txt   # runtime deps for the generated client
     └── openapi_client/    # generated client, vendored (source only)
 ```
+
+## Flushing
+
+Events buffer client-side and are delivered on two triggers:
+
+1. **Threshold** — buffer reaches 10 events (one batch per flush; the
+   server caps batches at 100, so a single flush never exceeds it).
+2. **Finalize/exit** — `on_session_finalize` (and its `on_session_end`
+   alias) flush after the `session_finalized` event; `atexit` flushes
+   whatever remains when the process exits without a finalize hook
+   (one-shot runs, kills).
+
+Switching session ids flushes first so a batch never mixes sessions.
+Failed sends are logged and dropped; the agent is never affected.
 
 ## Generating the client
 
@@ -82,6 +96,7 @@ not the turn-scoped `post_llm_call`; `post_tool_call` provides
 | `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
 | `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |
 | `on_session_finalize` | `session_finalized` | `output` — the last assistant output seen in the session, then flush |
+| `on_session_end` | `session_finalized` | alias — registered to the same handler so the final flush fires either hook name |
 | `subagent_start` | `subagent_started` | `turnId`, `parentTurnId`, `childSessionId` |
 | `subagent_stop` | `subagent_stopped` | same as started |
 

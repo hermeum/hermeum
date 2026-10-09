@@ -22,6 +22,8 @@ request-scoped hook:
                        durationS from duration_ms, status)
 - api_request_error -> error (stage llm, message from error/reason)
 - on_session_finalize -> session_finalized (last assistant output) + flush
+  (on_session_end registered to the same handler so the final flush fires on
+  either hook name — both are accepted upstream, langfuse-style)
 - subagent_start    -> subagent_started (turnId, parentTurnId, childSessionId)
 - subagent_stop     -> subagent_stopped
 
@@ -55,6 +57,9 @@ def register(ctx: Any) -> None:
     ctx.register_hook("post_tool_call", telemetry.tool_call)
     ctx.register_hook("api_request_error", telemetry.api_error)
     ctx.register_hook("on_session_finalize", telemetry.session_finalized)
+    # Both names for the same handler (langfuse does the same): the final
+    # flush must fire whichever variant this Hermes version emits.
+    ctx.register_hook("on_session_end", telemetry.session_finalized)
     ctx.register_hook("subagent_start", telemetry.subagent_started)
     ctx.register_hook("subagent_stop", telemetry.subagent_stopped)
 
