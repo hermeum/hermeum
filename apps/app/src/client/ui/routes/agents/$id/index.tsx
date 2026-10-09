@@ -62,8 +62,12 @@ function AgentDetailPage() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  const invalidateDetail = () =>
+  const invalidateDetail = () => {
     queryClient.invalidateQueries({ queryKey: trpc.agent.get.queryKey({ id }) });
+    // No input → the key is the procedure-path prefix, so every page of the
+    // session list (any limit/offset) is refetched, not just the visible one.
+    queryClient.invalidateQueries({ queryKey: trpc.agentSession.list.queryKey() });
+  };
 
   const { mutate: suspendAgent } = useMutation(
     trpc.agent.suspend.mutationOptions({
