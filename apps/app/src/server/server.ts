@@ -50,9 +50,11 @@ export const createServer = async (
   const app = express();
 
   app.all("/auth/*splat", toNodeHandler(auth));
-  // Plugin ingest batches can reach multi-MB (100 events × 12K-char fields),
-  // above body-parser's default 100KB JSON limit — raise the limit for this
-  // path only; the later global parser skips already-parsed bodies.
+  // Plugin ingest batches can reach multi-MB (a 100-event batch with
+  // 12K-char sanitized text fields), above body-parser's default 100KB
+  // JSON limit — raise the limit for this path only (large structured
+  // tool args/results are not plugin-truncated; oversize rejections drop
+  // the whole batch); the later global parser skips already-parsed bodies.
   app.use("/plugin/trpc", express.json({ limit: "8mb" }));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);

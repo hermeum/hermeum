@@ -85,6 +85,9 @@ _STASH_CAP = 256
 DEFAULT_URL = "http://localhost:3000/plugin/trpc"
 DEFAULT_MAX_CHARS = 12000
 ERROR_MESSAGE_MAX = 200
+# Read timeout for ingest calls: bounds the atexit flush so a hung server
+# cannot delay process exit (localhost normally answers in milliseconds).
+REQUEST_TIMEOUT_S = 5.0
 
 # Tool-lifecycle outcome values from the hermes observer contract (post_tool_call.status).
 TOOL_STATUSES = ("ok", "error", "blocked", "cancelled")
@@ -335,7 +338,7 @@ class HermeumTelemetry:
 
     def health_check(self) -> bool:
         try:
-            response = self._api.agent_session_health()
+            response = self._api.agent_session_health(_request_timeout=REQUEST_TIMEOUT_S)
             return bool(response.result.data.ok)  # type: ignore[union-attr]
         except Exception:
             log.warning("[hermeum-telemetry] health check failed", exc_info=True)
@@ -458,6 +461,14 @@ class HermeumTelemetry:
         ))
         self.flush()
 
+    def session_end(self, **kwargs: Any) -> None:
+        """Turn-scoped hook (on_session_end fires after EVERY turn —
+        turn_finalizer, session boundary is on_session_finalize). Flush-only:
+        no event is recorded and _last_assistant is not touched, so per-turn
+        firing must not persist per-turn "session finalized" markers."""
+        self._bind(kwargs)
+        self.flush()
+
     def subagent_started(self, **kwargs: Any) -> None:
         self._subagent_event(SubagentStartedEvent, "subagent_started", kwargs)
 
@@ -516,7 +527,8 @@ class HermeumTelemetry:
                     # oneOf wrapper: pydantic rejects the bare OneOf* members,
                     # so wrap each concrete event in the union model.
                     events=[AgentSessionAgentSessionEventsRequestEventsInner(e) for e in batch],
-                )
+                ),
+                _request_timeout=REQUEST_TIMEOUT_S,
             )
             log.debug(
                 "[hermeum-telemetry] flushed %s events (server accepted %s)",
