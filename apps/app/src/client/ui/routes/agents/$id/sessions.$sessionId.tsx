@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@hermeum/components/ui/button";
@@ -28,28 +28,44 @@ function SessionPage() {
   const {
     data: session,
     isPending,
+    isFetching,
     error,
   } = useQuery(trpc.agentSession.get.queryOptions({ agentId: id, sessionId }));
+  const queryClient = useQueryClient();
+  const refreshSession = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.agentSession.get.queryKey({ agentId: id, sessionId }),
+    });
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-6">
-      {/* Header: back, title + timestamps, separator as in the design */}
+      {/* Header: back, title + timestamps, actions right, separator as in the design */}
       <div className="shrink-0">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Back to sessions"
+              onClick={() =>
+                navigate({ to: "/agents/$id", params: { id }, search: { tab: "sessions" } })
+              }
+            >
+              <ArrowLeft />
+            </Button>
+            <h1 className="truncate text-2xl font-semibold tracking-tight font-mono">
+              {sessionId}
+            </h1>
+            {agent && <span className="text-muted-foreground">· {agent.name ?? agent.id}</span>}
+          </div>
           <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Back to sessions"
-            onClick={() =>
-              navigate({ to: "/agents/$id", params: { id }, search: { tab: "sessions" } })
-            }
+            variant="outline"
+            size="icon"
+            aria-label="Refresh session"
+            onClick={refreshSession}
           >
-            <ArrowLeft />
+            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <h1 className="truncate text-2xl font-semibold tracking-tight font-mono">
-            {sessionId}
-          </h1>
-          {agent && <span className="text-muted-foreground">· {agent.name ?? agent.id}</span>}
         </div>
         {session && session.events.length > 0 && (
           <p className="mt-1 text-sm text-muted-foreground">

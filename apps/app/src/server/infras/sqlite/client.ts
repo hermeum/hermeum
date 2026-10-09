@@ -7,6 +7,8 @@ import {
   AgentSessionEvent,
   AgentSessionEventSchema,
   AgentSessionSummary,
+  PaginatedResult,
+  PaginationQuery,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
@@ -50,7 +52,11 @@ export class SqliteDatabase implements Database {
     return rows.length;
   }
 
-  async listAgentSessionSummaries(agentId: string): Promise<AgentSessionSummary[]> {
+  async listAgentSessionSummaries(
+    agentId: string,
+    query: PaginationQuery
+  ): Promise<PaginatedResult<AgentSessionSummary>> {
+    // limit + 1 probes for a next page without a separate count query.
     const rows = await this.db
       .select({
         sessionId: agentSessionEvents.sessionId,
@@ -61,13 +67,16 @@ export class SqliteDatabase implements Database {
       .from(agentSessionEvents)
       .where(eq(agentSessionEvents.agentId, agentId))
       .groupBy(agentSessionEvents.sessionId)
-      .orderBy(desc(sql`max(${agentSessionEvents.timestamp})`));
-    return rows.map((row) => ({
+      .orderBy(desc(sql`max(${agentSessionEvents.timestamp})`))
+      .limit(query.limit + 1)
+      .offset(query.offset);
+    const items = rows.slice(0, query.limit).map((row) => ({
       sessionId: row.sessionId,
       firstEventAt: new Date(row.firstEventAt).toISOString(),
       lastEventAt: new Date(row.lastEventAt).toISOString(),
       eventCount: Number(row.eventCount),
     }));
+    return { items, hasMore: rows.length > query.limit };
   }
 
   async getAgentSession(agentId: string, sessionId: string): Promise<AgentSession> {
