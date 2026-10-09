@@ -1,6 +1,6 @@
-# Generated Python client (plugin/hermeum/client/openapi_client) — regenerate with:
+# Generated Python client (plugins/hermeum/client/openapi_client) — regenerate with:
 #   npx @openapitools/openapi-generator-cli@latest generate \
-#     -i openapi/plugin.json -g python -o plugin/hermeum/client \
+#     -i openapi/plugin.json -g python -o plugins/hermeum/client \
 #     --library urllib3 --skip-validate-spec \
 #     --additional-properties=generateSourceCodeOnly=true
 # Runtime deps required by the generated client (not pip-installed; vendored via sys.path):
