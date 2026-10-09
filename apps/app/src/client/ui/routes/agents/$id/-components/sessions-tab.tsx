@@ -1,9 +1,13 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 
-import { Button } from "@hermeum/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@hermeum/components/ui/pagination";
 import { Skeleton } from "@hermeum/components/ui/skeleton";
 import {
   Table,
@@ -28,6 +32,7 @@ function formatTime(iso: string): string {
 export function SessionsTab({ agentId, page }: { agentId: string; page: number }) {
   const trpc = useTRPC();
   const navigate = useNavigate();
+  const router = useRouter();
   const { data, isPending, isPlaceholderData, error } = useQuery({
     ...trpc.agentSession.list.queryOptions({
       agentId,
@@ -43,8 +48,20 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
     void navigate({
       to: "/agents/$id",
       params: { id: agentId },
-      search: (prev) => ({ ...prev, page: nextPage }),
+      // Dropping the page key entirely once back on page one keeps the URL clean.
+      search: ({ page: _page, ...rest }) =>
+        nextPage > 1 ? { ...rest, page: nextPage } : rest,
     });
+
+  // Prev/next get real hrefs (middle-click works, aria-disabled + classes
+  // stand in for the disabled attribute that anchors cannot have); clicking
+  // falls through to SPA navigation so no full document reload happens.
+  const pageHref = (targetPage: number) =>
+    router.buildLocation({
+      to: "/agents/$id",
+      params: { id: agentId },
+      search: { tab: "sessions", ...(targetPage > 1 ? { page: targetPage } : {}) },
+    }).href;
 
   if (isPending) {
     return (
@@ -103,34 +120,33 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
           ))}
         </TableBody>
       </Table>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Page {page}
-          {isPlaceholderData ? " …" : ""}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            aria-label="Previous page"
-            onClick={() => setPage(page - 1)}
-          >
-            <ChevronLeft className="size-4" />
-            Prev
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!data.hasMore || isPlaceholderData}
-            aria-label="Next page"
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      <Pagination className="justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              href={pageHref(page - 1)}
+              text="Prev"
+              aria-disabled={page <= 1}
+              className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                if (page > 1) setPage(page - 1);
+              }}
+            />
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationNext
+              href={pageHref(page + 1)}
+              aria-disabled={!data.hasMore || isPlaceholderData}
+              className={!data.hasMore || isPlaceholderData ? "pointer-events-none opacity-50" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                if (data.hasMore && !isPlaceholderData) setPage(page + 1);
+              }}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }
