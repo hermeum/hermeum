@@ -11,5 +11,6 @@ provides_hooks:
   - post_tool_call
   - api_request_error
   - on_session_finalize
+  - on_session_end
   - subagent_start
   - subagent_stop

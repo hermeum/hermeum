@@ -23,11 +23,29 @@ estimates server-side.
 plugins/hermeum/
 ├── plugin.yaml            # hermes plugin manifest
 ├── __init__.py            # register(ctx) — hook registration only
-├── telemetry.py           # event-building business logic + typed event buffering + ≤100-event batch flush
+├── telemetry.py           # event-building business logic + typed event buffering + flush (threshold/interval/atexit)
 └── client/
     ├── requirements.txt   # runtime deps for the generated client
     └── openapi_client/    # generated client, vendored (source only)
 ```
+
+## Flushing
+
+Events buffer client-side and are delivered on three triggers:
+
+1. **Threshold** — buffer reaches 100 events (`FLUSH_THRESHOLD`, the
+   server-side batch cap; one batch per flush never exceeds it).
+2. **Interval** — a daemon timer flushes every 30s so sub-threshold
+   leavings from sparse activity don't sit in the buffer indefinitely
+   (`FLUSH_INTERVAL_S` in `telemetry.py`).
+3. **Finalize/exit** — `on_session_finalize` flushes after the
+   `session_finalized` event; `on_session_end` (upstream: turn-scoped,
+   fires after every turn) flushes without recording; `atexit` flushes
+   whatever remains at normal interpreter exit (one-shot runs, cron —
+   SIGTERM/SIGKILL is not covered).
+
+Switching session ids flushes first so a batch never mixes sessions.
+Failed sends are logged and dropped; the agent is never affected.
 
 ## Generating the client
 
@@ -82,6 +100,7 @@ not the turn-scoped `post_llm_call`; `post_tool_call` provides
 | `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
 | `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |
 | `on_session_finalize` | `session_finalized` | `output` — the last assistant output seen in the session, then flush |
+| `on_session_end` | — (flush only) | turn-scoped upstream (fires after every turn) — flushes without recording |
 | `subagent_start` | `subagent_started` | `turnId`, `parentTurnId`, `childSessionId` |
 | `subagent_stop` | `subagent_stopped` | same as started |
 
@@ -111,15 +130,13 @@ Against the app dev server (`HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/ap
 ```sh
 python -m venv .venv && .venv/bin/pip install -r plugins/hermeum/client/requirements.txt
 .venv/bin/python -c "
-import sys, uuid
+import sys
 sys.path.insert(0, 'plugins/hermeum')
-from telemetry import HermeumTelemetry, ToolCallEvent
-from datetime import datetime, timezone
+from telemetry import HermeumTelemetry
 t = HermeumTelemetry('http://localhost:3000/plugin/trpc')
 print('health:', t.health_check())
-t.record(ToolCallEvent(event_id=str(uuid.uuid4()), type='tool_call',
-    timestamp=datetime.now(timezone.utc).isoformat(),
-    tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok'))
+# Hook methods build the typed event payloads — no manual event construction.
+t.tool_call(tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok', status='ok')
 t.flush()
 "
 ```
