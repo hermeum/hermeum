@@ -289,14 +289,16 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.skills !== undefined) {
     hermes.skills = agent.skills.map((identifier) => ({ identifier }));
   }
-  // Every agent installs the hermeum plugin (deduped if the user
-  // already listed it) and posts to the app's plugin-protocol endpoint.
-  hermes.plugins = [
-    ...(agent.plugins ?? []).map((identifier) => ({ identifier })),
-    ...(agent.plugins?.includes(config.hermesPluginIdentifier)
-      ? []
-      : [{ identifier: config.hermesPluginIdentifier, enable: true as const }]),
-  ];
+  // Pure CR translation of the plugin list — which plugins are installed is
+  // use-case policy (AgentUseCase managed-aspect pipeline). The hermeum
+  // plugin's CR entry carries enable: true — a CR-shape concern: the entity
+  // Plugins type is plain identifier strings and can't express the flag.
+  if (agent.plugins !== undefined) {
+    hermes.plugins = agent.plugins.map((identifier) => ({
+      identifier,
+      ...(identifier === config.hermesPluginIdentifier && { enable: true as const }),
+    }));
+  }
   if (agent.packages !== undefined) {
     hermes.packages = {
       ...(agent.packages.pip !== undefined && { pip: { install: agent.packages.pip } }),
@@ -307,10 +309,10 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     hermes.crons = agent.crons;
   }
   hermes.image = { repository: config.hermesImageRepository, tag: config.hermesImageTag };
-  hermes.env = [
-    { name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" },
-    { name: "HERMEUM_PLUGIN_BASE_URL", value: config.pluginEndpointUrl },
-  ];
+  // Container-level env the agent can't reach through its workspace .env —
+  // the config.yaml write guard. (The hermeum plugin's endpoint env var is
+  // agent-managed .env, injected by the AgentUseCase managed-aspect pipeline.)
+  hermes.env = [{ name: "HERMES_WRITE_SAFE_ROOT", value: "/opt/data:/tmp" }];
 
   const spec: HermesAgentSpec = {
     ...(agent.suspended !== undefined && { suspend: agent.suspended }),
@@ -387,12 +389,9 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     ),
     soul: raw.spec.hermes?.workspace?.files?.["SOUL.md"],
     skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
-    // The auto-installed hermeum plugin is a platform detail, not user config
-    // — filter it out so the UI plugin list stays user-owned (agentToHermesAgent
-    // re-injects it when building the CR).
-    plugins: raw.spec.hermes?.plugins
-      ?.map((p) => p.identifier)
-      .filter((identifier) => identifier !== config.hermesPluginIdentifier),
+    // Pure CR translation — the use case filters the auto-installed hermeum
+    // plugin out of the user-facing list on read.
+    plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
     packages: raw.spec.hermes?.packages && {
       ...(raw.spec.hermes.packages.pip?.install !== undefined && {
         pip: raw.spec.hermes.packages.pip.install,
