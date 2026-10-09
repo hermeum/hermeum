@@ -130,15 +130,13 @@ Against the app dev server (`HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/ap
 ```sh
 python -m venv .venv && .venv/bin/pip install -r plugins/hermeum/client/requirements.txt
 .venv/bin/python -c "
-import sys, uuid
+import sys
 sys.path.insert(0, 'plugins/hermeum')
-from telemetry import HermeumTelemetry, ToolCallEvent
-from datetime import datetime, timezone
+from telemetry import HermeumTelemetry
 t = HermeumTelemetry('http://localhost:3000/plugin/trpc')
 print('health:', t.health_check())
-t.record(ToolCallEvent(event_id=str(uuid.uuid4()), type='tool_call',
-    timestamp=datetime.now(timezone.utc).isoformat(),
-    tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok'))
+# Hook methods build the typed event payloads — no manual event construction.
+t.tool_call(tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok', status='ok')
 t.flush()
 "
 ```

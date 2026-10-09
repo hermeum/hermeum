@@ -284,7 +284,10 @@ class HermeumTelemetry:
     """
 
     def __init__(self, base_url: str = DEFAULT_URL) -> None:
-        configuration = Configuration(host=base_url)
+        # retries=0: REQUEST_TIMEOUT_S must bound each call, not each of the
+        # generated client's default-3 retries (the health GET would take
+        # ~4x the timeout against a lingering server).
+        configuration = Configuration(host=base_url, retries=0)
         self._api = AgentSessionApi(ApiClient(configuration))
         self._session_id = str(uuid.uuid4())
         # Guards _buffer and _session_id: the periodic-flush thread and
