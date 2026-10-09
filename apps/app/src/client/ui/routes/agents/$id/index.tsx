@@ -33,15 +33,21 @@ import { SessionsTab } from "./-components/sessions-tab";
 
 export const Route = createFileRoute("/agents/$id/")({
   component: AgentDetailPage,
-  validateSearch: (search: Record<string, unknown>): { tab?: "agent" | "sessions" } => {
+  validateSearch: (search: Record<string, unknown>): { tab?: "agent" | "sessions"; page?: number } => {
     const tab = search.tab;
-    return tab === "agent" || tab === "sessions" ? { tab } : {};
+    const rawPage = search.page;
+    const page =
+      typeof rawPage === "number" ? rawPage : typeof rawPage === "string" ? Number(rawPage) : NaN;
+    return {
+      ...(tab === "agent" || tab === "sessions" ? { tab } : {}),
+      ...(Number.isInteger(page) && page >= 1 ? { page } : {}),
+    };
   },
 });
 
 function AgentDetailPage() {
   const { id } = Route.useParams();
-  const { tab = "agent" } = Route.useSearch();
+  const { tab = "agent", page = 1 } = Route.useSearch();
   const navigate = useNavigate();
   const setTab = (tab: "agent" | "sessions") =>
     void navigate({ to: "/agents/$id", params: { id }, search: (prev) => ({ ...prev, tab }) });
@@ -170,7 +176,7 @@ function AgentDetailPage() {
         </TabsContent>
 
         <TabsContent value="sessions">
-          <SessionsTab agentId={id} />
+          <SessionsTab agentId={id} page={page} />
         </TabsContent>
       </Tabs>
 
