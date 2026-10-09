@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -69,7 +70,11 @@ from openapi_client.models.agent_session_agent_session_events_request_events_inn
 
 log = logging.getLogger("hermeum.telemetry")
 
-FLUSH_THRESHOLD = 10
+FLUSH_THRESHOLD = 100
+
+# Periodic flush (seconds): sub-threshold events would otherwise sit in the
+# buffer until a finalize that may never come (sparse activity, one-shots).
+FLUSH_INTERVAL_S = 30.0
 
 # Ceiling on live user-message stash entries (per turn_id): turns whose
 # pre_api_request fires but never reach a post_api_request (interrupted,
@@ -279,9 +284,9 @@ class HermeumTelemetry:
         configuration = Configuration(host=base_url)
         self._api = AgentSessionApi(ApiClient(configuration))
         self._session_id = str(uuid.uuid4())
-        # Guards _buffer and _session_id across hook callbacks from different
-        # Hermes threads (chat thread, gateway dispatch). Sends happen
-        # outside the lock by design.
+        # Guards _buffer and _session_id: the periodic-flush thread and
+        # bind_session touch them concurrently with the hook thread. Sends
+        # happen outside the lock by design.
         self._lock = threading.RLock()
         self._buffer: list[AgentSessionAgentSessionEventsRequestEventsInner] = []
         self._last_assistant: Assistant | None = None
@@ -295,11 +300,30 @@ class HermeumTelemetry:
         # bubbles in the transcript UI).
         self._consumed_turns: set[str] = set()
 
+        if FLUSH_INTERVAL_S > 0:
+            # Daemon: dies with the process; atexit below covers the exit
+            # flush, so the timer needs no shutdown join.
+            self._timer = threading.Thread(
+                target=self._flush_loop, name="hermeum-telemetry-flush", daemon=True
+            )
+            self._timer.start()
         # atexit (LIFO) so short-lived runs (chat -q, cron) that exit without
         # on_session_finalize still deliver buffered leavings.
         atexit.register(self.flush)
 
     # -- lifecycle ---------------------------------------------------------
+
+    def _flush_loop(self) -> None:
+        """Periodic flush: delivers sub-threshold leavings the threshold
+        flush never reaches (sparse sessions, idle gaps)."""
+        while True:
+            time.sleep(FLUSH_INTERVAL_S)
+            try:
+                self.flush()
+            except Exception:
+                # flush() already swallows send failures; this guards only
+                # against lock/orchestration errors killing the timer.
+                log.warning("[hermeum-telemetry] periodic flush failed", exc_info=True)
 
     def bind_session(self, session_id: str) -> None:
         """Adopt the hermes-provided session id; flush on switch so a batch
@@ -479,7 +503,7 @@ class HermeumTelemetry:
         # Snapshot batch + session id together under the lock (they must
         # agree; a concurrent bind_session switch must not re-label this
         # batch); send outside it — detached from the buffer, so the network
-        # call never blocks hook callbacks.
+        # call never blocks hook callbacks or the timer thread.
         with self._lock:
             if not self._buffer:
                 return

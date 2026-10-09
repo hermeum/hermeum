@@ -23,7 +23,7 @@ estimates server-side.
 plugin/hermeum/
 ├── plugin.yaml            # hermes plugin manifest
 ├── __init__.py            # register(ctx) — hook registration only
-├── telemetry.py           # event-building business logic + typed event buffering + threshold/atexit flush
+├── telemetry.py           # event-building business logic + typed event buffering + flush (threshold/interval/atexit)
 └── client/
     ├── requirements.txt   # runtime deps for the generated client
     └── openapi_client/    # generated client, vendored (source only)
@@ -31,11 +31,14 @@ plugin/hermeum/
 
 ## Flushing
 
-Events buffer client-side and are delivered on two triggers:
+Events buffer client-side and are delivered on three triggers:
 
 1. **Threshold** — buffer reaches 10 events (one batch per flush; the
    server caps batches at 100, so a single flush never exceeds it).
-2. **Finalize/exit** — `on_session_finalize` (and its `on_session_end`
+2. **Interval** — a daemon timer flushes every 30s so sub-threshold
+   leavings from sparse activity don't sit in the buffer indefinitely
+   (`FLUSH_INTERVAL_S` in `telemetry.py`).
+3. **Finalize/exit** — `on_session_finalize` (and its `on_session_end`
    alias) flush after the `session_finalized` event; `atexit` flushes
    whatever remains when the process exits without a finalize hook
    (one-shot runs, kills).
