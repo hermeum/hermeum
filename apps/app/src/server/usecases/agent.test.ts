@@ -13,7 +13,12 @@ vi.mock("../infras/posthog", () => ({
   },
 }));
 vi.mock("@/server/libs/config", () => ({
-  config: { configPath: "./config.yaml", hermesDocsPath: "./docs" },
+  config: {
+    configPath: "./config.yaml",
+    hermesDocsPath: "./docs",
+    hermesPluginIdentifier: "hermeum/hermeum/plugin/hermeum",
+    pluginEndpointUrl: "http://hermeum:3000/plugin/trpc",
+  },
 }));
 
 import { stringify } from "yaml";
@@ -22,7 +27,13 @@ import { AgentUseCase, MANAGED_SOUL_PREAMBLE } from "./agent";
 import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
-import type { Agent, Context, SharedEnvSet } from "@/entities";
+import type { Agent, AgentInput, Context, SharedEnvSet } from "@/entities";
+
+const HERMES_PLUGIN = "hermeum/hermeum/plugin/hermeum";
+const PLUGIN_ENV_VAR = {
+  name: "HERMEUM_PLUGIN_BASE_URL",
+  value: "http://hermeum:3000/plugin/trpc",
+};
 
 // FileAdaptor serving the Hermeum config file the use case inherits loading for.
 // Accepts the legacy flat-array shape and the multi-candidate array-of-arrays
@@ -703,5 +714,182 @@ describe("AgentUseCase managed soul preamble", () => {
     expect(
       (await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul
     ).toBe("Legacy soul that mentions config.yaml.");
+  });
+});
+
+describe("AgentUseCase managed hermeum plugin", () => {
+  it("createHermesAgent injects the plugin identifier and endpoint env var", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins, env: input.env })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const agent = await useCase.createHermesAgent(makeCtx("user-1"), {});
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: [HERMES_PLUGIN],
+        env: [PLUGIN_ENV_VAR],
+      })
+    );
+    expect(agent.plugins).toEqual([]);
+    expect(agent.env).toEqual([]);
+  });
+
+  it("createHermesAgent preserves user plugins and appends the managed one", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: ["owner/some-plugin"],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+      })
+    );
+  });
+
+  it("createHermesAgent is idempotent when the input already lists the managed plugin", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: ["owner/some-plugin", HERMES_PLUGIN],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+      })
+    );
+  });
+
+  it("createHermesAgent force-overrides a user-supplied endpoint env var", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ env: input.env })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      env: [{ name: "HERMEUM_PLUGIN_BASE_URL", value: "http://evil.example.com" }],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ env: [PLUGIN_ENV_VAR] })
+    );
+  });
+
+  it("updateHermesAgent injects into carrying patches only", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ patch }: { patch: AgentInput }) => makeAgent({ plugins: patch.plugins, env: patch.env })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const withPlugins = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      plugins: ["owner/some-plugin"],
+    });
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: expect.objectContaining({
+        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+      }),
+    });
+    expect(withPlugins.plugins).toEqual(["owner/some-plugin"]);
+
+    const withEnv = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      env: [{ name: "NEW_VAR", value: "hello" }],
+    });
+    expect(runtime.patchHermesAgent).toHaveBeenLastCalledWith({
+      id: "agent-1",
+      patch: expect.objectContaining({
+        env: [{ name: "NEW_VAR", value: "hello" }, PLUGIN_ENV_VAR],
+      }),
+    });
+    expect(withEnv.env?.filter((v) => v.name !== PLUGIN_ENV_VAR.name)).toEqual([
+      { name: "NEW_VAR", value: "hello" },
+    ]);
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
+    expect(runtime.patchHermesAgent).toHaveBeenLastCalledWith({
+      id: "agent-1",
+      patch: { name: "Renamed" },
+    });
+  });
+
+  // Deliberate: no backfill migration for pre-pipeline agents. Before the
+  // plugin moved from CR container env to agent .env (this PR), the endpoint
+  // var never shipped in a release (plugin install landed in #268, after
+  // v0.2.1) — the only exposure is dev builds, where the plugin falls back to
+  // its default URL until the next env-carrying edit. Pinning keeps that
+  // decision visible instead of drift.
+  it("does not backfill the endpoint var for agents predating the pipeline", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1", env: [{ name: "OLD_VAR", value: "1" }] })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ name: "Renamed" })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: { name: "Renamed" },
+    });
+  });
+
+  it("strips the managed plugin and endpoint var from every read direction", async () => {
+    const storedPlugins = ["owner/some-plugin", HERMES_PLUGIN];
+    const storedEnv = [{ name: "NEW_VAR", value: "hello" }, PLUGIN_ENV_VAR];
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ plugins: storedPlugins, env: storedEnv })
+    );
+    (runtime.listHermesAgents as ReturnType<typeof vi.fn>).mockResolvedValue([
+      makeAgent({ plugins: storedPlugins, env: storedEnv }),
+    ]);
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ plugins: storedPlugins, env: storedEnv })
+    );
+    (runtime.archiveHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ plugins: storedPlugins, env: storedEnv })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+    const ctx = makeCtx("user-1");
+
+    for (const result of [
+      await useCase.getHermesAgent(ctx, "agent-1"),
+      (await useCase.listHermesAgents(ctx))[0],
+      await useCase.suspendHermesAgent(ctx, "agent-1"),
+      await useCase.resumeHermesAgent(ctx, "agent-1"),
+      await useCase.archiveHermesAgent(ctx, "agent-1"),
+      await useCase.updateHermesAgent(ctx, "agent-1", { name: "Renamed" }),
+    ]) {
+      expect(result?.plugins).toEqual(["owner/some-plugin"]);
+      expect(result?.env).toEqual([{ name: "NEW_VAR", value: "hello" }]);
+    }
+  });
+
+  it("leaves agents without the managed content untouched", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ plugins: ["owner/some-plugin"], env: [{ name: "V", value: "1" }] })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    const agent = await useCase.getHermesAgent(makeCtx("user-1"), "agent-1");
+    expect(agent?.plugins).toEqual(["owner/some-plugin"]);
+    expect(agent?.env).toEqual([{ name: "V", value: "1" }]);
   });
 });
