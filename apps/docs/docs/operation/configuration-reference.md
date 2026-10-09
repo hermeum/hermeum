@@ -48,8 +48,9 @@ Every agent managed by Hermeum automatically installs the [`hermeum`
 plugin](https://github.com/hermeum/hermeum/tree/main/plugin/hermeum) (via the
 operator's `hermes plugins install`), which forwards agent-session events to
 Hermeum's plugin-protocol endpoint. The endpoint URL is derived from the base
-URL below; it is injected as `HERMEUM_PLUGIN_BASE_URL` into the agent's container
-env and always wins over a user-set agent env var of the same name.
+URL below; it is injected as `HERMEUM_PLUGIN_BASE_URL` into the agent's
+workspace `.env` and always wins over a user-set agent env var of the same
+name.
 
 | Variable | Default | Description |
 | --- | --- | --- |

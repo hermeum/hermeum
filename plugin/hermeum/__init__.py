@@ -41,7 +41,7 @@ from .telemetry import create_telemetry
 
 log = __import__("logging").getLogger("hermeum.plugin")
 
-DEFAULT_URL = "http://localhost:3000/plugin/trpc"
+DEFAULT_URL = "http://hermeum:3000/plugin/trpc"
 
 
 def register(ctx: Any) -> None:

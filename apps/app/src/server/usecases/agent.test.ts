@@ -826,6 +826,29 @@ describe("AgentUseCase managed hermeum plugin", () => {
     });
   });
 
+  // Deliberate: no backfill migration for pre-pipeline agents. Before the
+  // plugin moved from CR container env to agent .env (this PR), the endpoint
+  // var never shipped in a release (plugin install landed in #268, after
+  // v0.2.1) — the only exposure is dev builds, where the plugin falls back to
+  // its default URL until the next env-carrying edit. Pinning keeps that
+  // decision visible instead of drift.
+  it("does not backfill the endpoint var for agents predating the pipeline", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1", env: [{ name: "OLD_VAR", value: "1" }] })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ name: "Renamed" })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: { name: "Renamed" },
+    });
+  });
+
   it("strips the managed plugin and endpoint var from every read direction", async () => {
     const storedPlugins = ["owner/some-plugin", HERMES_PLUGIN];
     const storedEnv = [{ name: "NEW_VAR", value: "hello" }, PLUGIN_ENV_VAR];
@@ -858,7 +881,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     }
   });
 
-  it("strips leave agents without the managed content untouched", async () => {
+  it("leaves agents without the managed content untouched", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ plugins: ["owner/some-plugin"], env: [{ name: "V", value: "1" }] })
