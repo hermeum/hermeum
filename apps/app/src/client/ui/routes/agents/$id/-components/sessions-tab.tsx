@@ -19,6 +19,7 @@ import {
 } from "@hermeum/components/ui/table";
 
 import { useTRPC } from "@/router";
+import { CopyButton } from "@/client/ui/components/copy-button";
 import type { AgentSessionSummary } from "@/entities";
 
 // Page size is owned by the UI and sent explicitly as `limit`; the server
@@ -99,13 +100,19 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
           {sessions.map((session) => (
             <TableRow key={session.sessionId}>
               <TableCell>
-                <Link
-                  to="/agents/$id/sessions/$sessionId"
-                  params={{ id: agentId, sessionId: session.sessionId }}
-                  className="font-mono text-sm underline-offset-4 hover:underline"
-                >
-                  {session.sessionId}
-                </Link>
+                <span className="group/cell flex items-center gap-1">
+                  <Link
+                    to="/agents/$id/sessions/$sessionId"
+                    params={{ id: agentId, sessionId: session.sessionId }}
+                    className="font-mono text-sm underline-offset-4 hover:underline"
+                  >
+                    {session.sessionId}
+                  </Link>
+                  <CopyButton
+                    text={session.sessionId}
+                    className="opacity-0 group-hover/cell:opacity-100"
+                  />
+                </span>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {formatTime(session.firstEventAt)}
