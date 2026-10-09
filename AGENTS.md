@@ -104,22 +104,22 @@ event vocabulary. It fans out into generated artifacts — when it changes, rege
 all of them in the same commit:
 
 1. `pnpm openapi:generate` — refreshes `openapi/plugin.json` from the Zod schemas.
-2. Regenerate the vendored Python client (also documented in `plugin/hermeum/README.md`):
+2. Regenerate the vendored Python client (also documented in `plugins/hermeum/README.md`):
    ```sh
    npx @openapitools/openapi-generator-cli@latest generate \
-     -i openapi/plugin.json -g python -o plugin/hermeum/client \
+     -i openapi/plugin.json -g python -o plugins/hermeum/client \
      --library urllib3 --skip-validate-spec \
      --additional-properties=generateSourceCodeOnly=true
    ```
-   Then delete generator stubs if re-created: `plugin/hermeum/client/openapi_client/docs`,
-   `.../test`, `plugin/hermeum/client/openapi_client_README.md`,
-   `plugin/hermeum/client/.openapi-generator-ignore` (`.openapi-generator/` is gitignored).
-3. Update `plugin/hermeum/telemetry.py` (event-building business logic) if the
+   Then delete generator stubs if re-created: `plugins/hermeum/client/openapi_client/docs`,
+   `.../test`, `plugins/hermeum/client/openapi_client_README.md`,
+   `plugins/hermeum/client/.openapi-generator-ignore` (`.openapi-generator/` is gitignored).
+3. Update `plugins/hermeum/telemetry.py` (event-building business logic) if the
    change affects what the emitter constructs.
 
 Schema changes without regenerated artifacts = broken plugin builds. Verify with
-`python3 -m py_compile plugin/hermeum/*.py` and, for wire-level changes, the live
-E2E in `plugin/hermeum/README.md` against a mock-runtime dev server.
+`python3 -m py_compile plugins/hermeum/*.py` and, for wire-level changes, the live
+E2E in `plugins/hermeum/README.md` against a mock-runtime dev server.
 
 ## `@hermeum/docs` (`apps/docs`)
 
