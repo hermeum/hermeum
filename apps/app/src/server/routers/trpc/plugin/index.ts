@@ -1,5 +1,5 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { t } from "./shared.js";
+import { createPluginTRPCContext, t } from "./shared.js";
 import { agentSessionRouter } from "./telemetry.js";
 
 export const pluginRouter = t.router({
@@ -10,4 +10,5 @@ export type PluginRouter = typeof pluginRouter;
 
 export const pluginTrpcMiddleware = createExpressMiddleware({
   router: pluginRouter,
+  createContext: createPluginTRPCContext(),
 });

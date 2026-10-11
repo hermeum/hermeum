@@ -23,6 +23,14 @@ import { MockRuntime } from "./adaptors/mocks/runtime";
 // cross-use-case state.
 const sharedMockRuntime = new MockRuntime();
 
+// One Database per process, same reasoning: the BaseUseCase default and the
+// plugin tRPC context (which verifies ingest tokens against the same app
+// database) must share a single adaptor — a second instance would open a
+// second connection to the same database. Constructing it never touches the
+// database (connections open lazily on first use).
+export const sharedDatabase: Database =
+  config.databaseDialect === "postgres" ? new PostgresDatabase() : new SqliteDatabase();
+
 // Core base class for use cases backed by the file, runtime, skill index, and
 // telemetry adaptors; mixins like HermeumConfigLoadable build on the injected
 // adaptors.
@@ -34,8 +42,7 @@ export class BaseUseCase {
     readonly files: FileAdaptor = new LocalFiles(),
     readonly skillIndex: SkillIndexAdaptor = new HermesSkillIndex(),
     readonly logger: TelemetryAdaptor = telemetry,
-    readonly db: Database =
-      config.databaseDialect === "postgres" ? new PostgresDatabase() : new SqliteDatabase()
+    readonly db: Database = sharedDatabase
   ) {}
 }
 
