@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "863279ef-bfb6-49c9-ba1f-c827314ab9ff",
+  "id": "efb3f204-9a18-41c9-a88a-c6a2653cf4c5",
   "prevId": "1ff6245a-9705-4441-ae27-4b7883569877",
   "tables": {
     "account": {
@@ -457,6 +457,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "revoked_at": {
           "name": "revoked_at",

@@ -1,1 +1,0 @@
-ALTER TABLE "agent_tokens" ADD COLUMN "updated_at" timestamp;
