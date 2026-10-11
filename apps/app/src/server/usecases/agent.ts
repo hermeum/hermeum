@@ -118,11 +118,13 @@ class SoulPreamble implements ManagedAgentAspect {
 // Hermeum plugin: every managed agent auto-installs the hermeum plugin so it
 // posts its session telemetry to Hermeum. The bundled plugin reads its
 // endpoint and ingest token from the environment
-// (plugin/hermeum/__init__.py), so all three managed pieces ship as one
-// unit: the plugin identifier, the endpoint var (config-sourced, always
-// live), and the per-agent ingest token. Both env names are platform-owned —
-// user-supplied entries are force-overridden so the injected values are
-// always live, and stripping by name stays unambiguous.
+// (plugin/hermeum/__init__.py), so all four managed pieces ship as one
+// unit: the plugin identifier (pinned to pluginRef — the hermeum commit the
+// plugin ships from, see config.ts), the endpoint var (config-sourced,
+// always live), and the per-agent ingest token. The identifier and both env
+// names are platform-owned — user-supplied entries are force-overridden so
+// the injected values are always live, and stripping by name stays
+// unambiguous.
 //
 // The token is secret and per-agent, so the aspect never generates it: the
 // use case creates one per agent (persisting only the SHA-256 digest, see
@@ -186,11 +188,12 @@ class HermeumPlugin implements ManagedAgentAspect {
   }
 
   #mergedPlugins(plugins: Plugins | undefined): NonNullable<Plugins> {
+    // The managed identifier is platform-owned: a user-supplied entry is
+    // dropped and replaced wholesale — ref included — so the pin is always
+    // live (mirrors the env force-override above).
     return [
-      ...(plugins ?? []),
-      ...(plugins?.some((plugin) => plugin.identifier === config.pluginIdentifier)
-        ? []
-        : [{ identifier: config.pluginIdentifier }]),
+      ...(plugins?.filter((plugin) => plugin.identifier !== config.pluginIdentifier) ?? []),
+      { identifier: config.pluginIdentifier, ref: config.pluginRef },
     ];
   }
 

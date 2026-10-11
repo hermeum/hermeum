@@ -17,6 +17,7 @@ vi.mock("@/server/libs/config", () => ({
     configPath: "./config.yaml",
     hermesDocsPath: "./docs",
     pluginIdentifier: "hermeum/hermeum/plugin/hermeum",
+    pluginRef: "fe9e5350054cccaf3a38d49b70900d4300b90462",
     pluginEndpointUrl: "http://hermeum:3000/plugin/trpc",
   },
 }));
@@ -32,7 +33,10 @@ import type { JsonPatchOp } from "@/entities";
 import type { Agent, AgentInput, AgentPlugin, Context, Env, SharedEnvSet } from "@/entities";
 import { ENV_SECRET_SENTINEL } from "@/entities";
 
-const HERMES_PLUGIN: AgentPlugin = { identifier: "hermeum/hermeum/plugin/hermeum" };
+const HERMES_PLUGIN: AgentPlugin = {
+  identifier: "hermeum/hermeum/plugin/hermeum",
+  ref: "fe9e5350054cccaf3a38d49b70900d4300b90462",
+};
 const USER_PLUGIN: AgentPlugin = { identifier: "owner/some-plugin" };
 const PLUGIN_ENV_VAR = {
   name: "HERMEUM_PLUGIN_BASE_URL",
@@ -812,6 +816,40 @@ describe("AgentUseCase managed hermeum plugin", () => {
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
         plugins: [USER_PLUGIN, HERMES_PLUGIN],
+      })
+    );
+  });
+
+  it("createHermesAgent drops a user-supplied managed plugin entry without a ref", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: [{ identifier: HERMES_PLUGIN.identifier }],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: [HERMES_PLUGIN],
+      })
+    );
+  });
+
+  it("createHermesAgent force-overrides a user-pinned managed plugin ref", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: [{ identifier: HERMES_PLUGIN.identifier, ref: "0".repeat(40) }],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: [HERMES_PLUGIN],
       })
     );
   });

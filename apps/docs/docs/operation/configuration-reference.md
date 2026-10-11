@@ -47,7 +47,10 @@ The container image emitted into every `HermesAgent` CR's `spec.image`.
 Every agent managed by Hermeum automatically installs the [`hermeum`
 plugin](https://github.com/hermeum/hermeum/tree/main/plugins/hermeum) (via the
 operator's `hermes plugins install`), which forwards agent-session events to
-Hermeum's plugin-protocol endpoint. The endpoint URL is derived from the base
+Hermeum's plugin-protocol endpoint. The install is pinned to a fixed Hermeum
+commit shipped with the app, so it does not drift with the repository's
+default branch.
+The endpoint URL is derived from the base
 URL below; it is injected as `HERMEUM_PLUGIN_BASE_URL` into the agent's
 workspace `.env` and always wins over a user-set agent env var of the same
 name. The endpoint is authenticated: at agent-create time Hermeum provisions

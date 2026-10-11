@@ -71,6 +71,18 @@ export const ConfigSchema = z.object({
         "this repo at plugins/hermeum, auto-installed and enabled on every managed " +
         "agent via the operator's `hermes plugins install`. Fixed — not env-configurable."
     ),
+  // Pinned for the upcoming v0.3.0 release — fe9e535… is PR-288's merge commit
+  // (main HEAD at authoring time). Set to the current HEAD on every version
+  // upgrade (see AGENTS.md).
+  pluginRef: z
+    .string()
+    .regex(/^[0-9a-fA-F]{40}$/, "pluginRef must be a full 40-character Git commit SHA.")
+    .default("fe9e5350054cccaf3a38d49b70900d4300b90462")
+    .describe(
+      "Commit SHA pinning the auto-installed hermeum plugin install (pluginIdentifier) " +
+        "to the hermeum repo revision it ships with. Manually bumped per release — " +
+        "not env-configurable."
+    ),
   openaiModel: z
     .string()
     .min(1)
