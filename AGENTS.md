@@ -39,7 +39,7 @@ When upgrading the Hermeum app version, update every place that mirrors it, in l
 - `packages/components/package.json` — `version`
 - `packages/typescript-config/package.json` — `version`
 - `charts/hermeum/Chart.yaml` — `appVersion` (the app release version). The chart `version` is the packaging version and is independent of `appVersion`; bump its patch version whenever the chart is republished for the upgrade.
-- `plugins/hermeum/plugin.yaml` — `version` (mirrors the app version; read by hermes-agent's plugin manifest surface).
+- `plugins/hermeum/plugin.yaml` — `version` (mirrors the app version of the release it ships with; it leads the package versions between the plugin change and the release bump).
 - `apps/app/src/server/libs/config.ts` — the `hermesPluginRef` Zod default: the commit SHA the auto-installed hermeum plugin is pinned to. On every version upgrade, set it to the **current HEAD** (`git rev-parse HEAD`) so the installed plugin matches the release commit.
 
 The chart `image.tag` (`charts/hermeum/values.yaml`) defaults to `appVersion` when empty — leave it empty unless pinning to a non-`appVersion` tag.

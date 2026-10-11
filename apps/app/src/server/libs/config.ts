@@ -71,8 +71,9 @@ export const ConfigSchema = z.object({
         "this repo at plugins/hermeum, auto-installed and enabled on every managed " +
         "agent via the operator's `hermes plugins install`. Fixed — not env-configurable."
     ),
-  // v0.3.0 pin — the hermeum commit the auto-installed hermeum plugin installs
-  // from. Bumped to the current HEAD on every version upgrade (see AGENTS.md).
+  // Pinned for the upcoming v0.3.0 release — fe9e535… is PR-288's merge commit
+  // (main HEAD at authoring time). Set to the current HEAD on every version
+  // upgrade (see AGENTS.md).
   hermesPluginRef: z
     .string()
     .regex(/^[0-9a-fA-F]{40}$/, "hermesPluginRef must be a full 40-character Git commit SHA.")

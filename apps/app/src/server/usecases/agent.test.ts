@@ -775,6 +775,40 @@ describe("AgentUseCase managed hermeum plugin", () => {
     );
   });
 
+  it("createHermesAgent drops a user-supplied managed plugin entry without a ref", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: [{ identifier: HERMES_PLUGIN.identifier }],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: [HERMES_PLUGIN],
+      })
+    );
+  });
+
+  it("createHermesAgent force-overrides a user-pinned managed plugin ref", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+    );
+    const useCase = new AgentUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      plugins: [{ identifier: HERMES_PLUGIN.identifier, ref: "0".repeat(40) }],
+    });
+    expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plugins: [HERMES_PLUGIN],
+      })
+    );
+  });
+
   it("createHermesAgent force-overrides a user-supplied endpoint env var", async () => {
     const runtime = makeRuntime();
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(

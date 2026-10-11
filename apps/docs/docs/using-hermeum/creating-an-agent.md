@@ -136,9 +136,9 @@ plugins:
 :::note
 Hermeum also auto-installs its own plugin (`hermeum/hermeum/plugins/hermeum`)
 on every agent, reporting agent-session trajectories back to the Hermeum app. The
-install is pinned to a fixed Hermeum commit so the plugin version always matches
-the app release. It is a platform detail — it does not appear in your plugin list
-and doesn't count toward the 20-plugin limit.
+install is pinned to a fixed Hermeum commit shipped with the app, so it does not
+drift with the repository's default branch. It is a platform detail — it does not
+appear in your plugin list and doesn't count toward the 20-plugin limit.
 :::
 
 ## Packages
