@@ -20,7 +20,8 @@ with the pinned submodule — no server-side estimation). Langfuse semantics:
 subscription-included routes (e.g. OpenAI Codex plans) yield null, a total is
 only exported when the estimate is complete, and a partial component breakdown
 (`inputUsd`/`outputUsd`/`cacheReadUsd`/`cacheWriteUsd`) is never promoted to a
-total. MoA advisor references carry usage only (the schema has no cost field).
+total. MoA advisor references carry usage only — the optional `costUsd`
+field is intentionally left unpopulated.
 
 ## Layout
 

@@ -484,6 +484,15 @@ class HermeumTelemetry:
                 # order guarantee, so trim wholesale — _STASH_CAP is generous
                 # relative to a session's turn count).
                 self._consumed_turns = set(list(self._consumed_turns)[-_STASH_CAP:])
+        # Estimated before _record: for routes without bundled pricing,
+        # estimation may fetch model metadata over the network (bounded +
+        # cached), which must not run while _record holds self._lock.
+        cost = _cost(
+            raw_usage,
+            provider=kwargs.get("provider"),
+            model=kwargs.get("response_model") or kwargs.get("model"),
+            base_url=kwargs.get("base_url"),
+        )
         self._record(lambda: LlmCallEvent(
             **_envelope(kwargs),
             type="llm_call",
@@ -494,12 +503,7 @@ class HermeumTelemetry:
             duration_s=_duration_s(kwargs.get("api_duration")),
             finish_reason=_safe_str(kwargs.get("finish_reason")) or None,
             usage=_usage_from_any(raw_usage),
-            cost=_cost(
-                raw_usage,
-                provider=kwargs.get("provider"),
-                model=kwargs.get("response_model") or kwargs.get("model"),
-                base_url=kwargs.get("base_url"),
-            ),
+            cost=cost,
             assistant=assistant,
             moa_references=moa_references,
         ))
