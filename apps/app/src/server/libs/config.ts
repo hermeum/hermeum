@@ -62,7 +62,7 @@ export const ConfigSchema = z.object({
         "Injected into every managed agent, whose bundled hermeum plugin " +
         "posts agent-session events to <pluginBaseUrl>/plugin/trpc."
     ),
-  hermesPluginIdentifier: z
+  pluginIdentifier: z
     .string()
     .min(1)
     .default("hermeum/hermeum/plugins/hermeum")

@@ -16,7 +16,7 @@ vi.mock("@/server/libs/config", () => ({
   config: {
     configPath: "./config.yaml",
     hermesDocsPath: "./docs",
-    hermesPluginIdentifier: "hermeum/hermeum/plugin/hermeum",
+    pluginIdentifier: "hermeum/hermeum/plugin/hermeum",
     pluginEndpointUrl: "http://hermeum:3000/plugin/trpc",
   },
 }));
