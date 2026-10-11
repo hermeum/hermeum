@@ -5,6 +5,7 @@ import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp, DEFAULT
 
 import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 import { config } from "@/server/libs/config";
+import { generatePluginToken, hashPluginToken } from "@/server/libs/plugin-token";
 
 // fast-json-patch's ESM export places applyPatch on `default`, not the
 // namespace. Fall back to the namespace for CJS consumers (e.g. vitest).
@@ -95,7 +96,16 @@ class SoulPreamble implements ManagedAgentAspect {
 // endpoint name is platform-owned: a user-supplied entry is force-overridden
 // so the injected value is always live, and stripping by name stays
 // unambiguous.
+//
+// The concern also owns the per-agent ingest token (HERMEUM_PLUGIN_TOKEN).
+// Unlike the endpoint var, its value is per-agent and secret, so it is not
+// config-sourced and cannot be aspect-injected: the use case generates it at
+// create time, ships it as a sensitive env var, and persists only its
+// SHA-256 digest in the app database. The aspect's part of the bargain is
+// read-side: stripping the token env entry on every expose, next to the
+// endpoint var.
 const MANAGED_PLUGIN_ENV_NAME = "HERMEUM_PLUGIN_BASE_URL";
+const MANAGED_PLUGIN_TOKEN_ENV_NAME = "HERMEUM_PLUGIN_TOKEN";
 
 class HermeumPlugin implements ManagedAgentAspect {
   wrapInput(input: AgentInput): AgentInput {
@@ -117,7 +127,9 @@ class HermeumPlugin implements ManagedAgentAspect {
     const plugins = agent.plugins?.filter(
       (identifier) => identifier !== config.hermesPluginIdentifier
     );
-    const env = agent.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME);
+    const env = agent.env?.filter(
+      (v) => v.name !== MANAGED_PLUGIN_ENV_NAME && v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME
+    );
     return {
       ...agent,
       ...(plugins !== undefined && { plugins }),
@@ -159,6 +171,38 @@ function stripManagedAgent(agent: Agent): Agent {
   return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.stripAgent(acc), agent);
 }
 
+// ─── Managed plugin ingest token ─────────────────────────────────────────────
+// The raw token is generated per agent at create time and shipped only as a
+// sensitive env var; its SHA-256 digest is what the server verifies ingest
+// against (libs/plugin-token). Env-side injection happens here, use-case
+// level, because the value is per-agent — the HermeumPlugin aspect handles
+// only the config-sourced endpoint var (and strips both on read).
+
+// Force-override any user-supplied entry: the name is platform-owned.
+function withManagedPluginTokenEnv(env: Env | undefined, value: string): Env {
+  return [
+    ...(env?.filter((v) => v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME) ?? []),
+    { name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value, sensitive: true },
+  ];
+}
+
+// Env-carrying patches replace the stored env wholesale, so the token entry
+// must ride the patch to survive. The stored agent arrives with sensitive
+// values masked to ENV_SECRET_SENTINEL by the runtime; copying the masked
+// entry verbatim keeps the raw value out of this layer while the runtime's
+// sentinel resolution restores it in the Secret. Never regenerated here —
+// the stored digest only changes when the agent is created.
+function withPreservedPluginTokenEnv(patch: AgentInput, storedEnv: Env | undefined): AgentInput {
+  if (patch.env === undefined) return patch;
+  const filtered = patch.env.filter((v) => v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME);
+  const stored = storedEnv?.find((v) => v.name === MANAGED_PLUGIN_TOKEN_ENV_NAME);
+  if (!stored) return { ...patch, env: filtered };
+  return {
+    ...patch,
+    env: [...filtered, { name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value: stored.value, sensitive: true }],
+  };
+}
+
 export const ListAgentsFilterSchema = z.object({
   archived: z.boolean().optional(),
 });
@@ -182,11 +226,20 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
 
     await this.checkAgentInputAllowed(agentInput);
     const userId = this.requireUser(ctx).id;
+    // The raw token must be in the agent's env before its pod first posts;
+    // the digest must be in the app DB before the server first verifies. A
+    // failed store surfaces here — the agent exists but its ingest stays
+    // unauthorized until re-created, so a silent gap is worse than an error.
+    const pluginToken = generatePluginToken();
     const agent = await this.runtime.createHermesAgent({
-      ...wrapManagedInput(agentInput),
+      ...wrapManagedInput({
+        ...agentInput,
+        env: withManagedPluginTokenEnv(agentInput.env, pluginToken),
+      }),
       userId,
     });
-    this.logger.info("created hermes agent", { id: agent.id, userId });
+    await this.db.storeAgentToken(agent.id, hashPluginToken(pluginToken));
+    this.logger.info("created herme agent", { id: agent.id, userId });
     return stripManagedAgent(agent);
   }
 
@@ -203,6 +256,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     await this.checkAgentInputAllowed(patch);
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
+      patch = withPreservedPluginTokenEnv(patch, agent.env);
     }
     const updated = await this.runtime.patchHermesAgent({
       id,
@@ -230,7 +284,11 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     }
     this.verifyOwnership(ctx, agent);
     const archived = await this.runtime.archiveHermesAgent(id);
-    this.logger.info("archived hermes agent", { id, userId: this.requireUser(ctx).id });
+    // Archived is terminal: revoke the ingest token so a lingering pod can
+    // no longer post telemetry. Idempotent (archiving twice re-patches), so
+    // a failure simply retries the whole operation.
+    await this.db.revokeAgentToken(id);
+    this.logger.info("archived herme agent", { id, userId: this.requireUser(ctx).id });
     return stripManagedAgent(archived);
   }
 

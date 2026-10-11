@@ -1,6 +1,6 @@
 import DatabaseClient from "better-sqlite3";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 
 import {
   AgentSession,
@@ -12,7 +12,7 @@ import {
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
-import { agentSessionEvents } from "./schema.js";
+import { agentSessionEvents, agentTokens } from "./schema.js";
 import {
   AppendAgentSessionEventsInput,
   Database,
@@ -104,5 +104,30 @@ export class SqliteDatabase implements Database {
       }
     }
     return { sessionId, events };
+  }
+
+  async storeAgentToken(agentId: string, tokenHash: string): Promise<void> {
+    await this.db
+      .insert(agentTokens)
+      .values({ agentId, tokenHash })
+      .onConflictDoUpdate({
+        target: agentTokens.agentId,
+        set: { tokenHash, revokedAt: null },
+      });
+  }
+
+  async findAgentIdByTokenHash(tokenHash: string): Promise<string | null> {
+    const rows = await this.db
+      .select({ agentId: agentTokens.agentId })
+      .from(agentTokens)
+      .where(and(eq(agentTokens.tokenHash, tokenHash), isNull(agentTokens.revokedAt)));
+    return rows.at(0)?.agentId ?? null;
+  }
+
+  async revokeAgentToken(agentId: string): Promise<void> {
+    await this.db
+      .update(agentTokens)
+      .set({ revokedAt: new Date() })
+      .where(eq(agentTokens.agentId, agentId));
   }
 }

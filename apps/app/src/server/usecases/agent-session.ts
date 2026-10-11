@@ -10,10 +10,7 @@ import { BaseUseCase } from "./mixin";
 import { AppendAgentSessionEventsInput } from "./adaptors/database";
 
 export class AgentSessionUseCase extends BaseUseCase {
-  async ingestAgentSessionEvents(
-    batch: AgentSession,
-    agentId: string | null = null
-  ): Promise<number> {
+  async ingestAgentSessionEvents(batch: AgentSession, agentId: string): Promise<number> {
     const input: AppendAgentSessionEventsInput = {
       agentId,
       sessionId: batch.sessionId,
@@ -29,8 +26,8 @@ export class AgentSessionUseCase extends BaseUseCase {
   }
 
   // Reads are not ownership-guarded: any authenticated user may browse agent
-  // session telemetry. Ingest stays unauthenticated but unscoped (plugin
-  // protocol); per-agent token authentication is deferred there.
+  // session telemetry. Ingest is authenticated by the plugin tRPC context
+  // (per-agent token → resolved agentId) before reaching this use case.
   async listAgentSessionSummaries(
     ctx: Context,
     agentId: string,

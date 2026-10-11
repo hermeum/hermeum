@@ -4,9 +4,10 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 // Agent-session telemetry events ingested from hermes agents
 // (POST /plugin/trpc/agentSession.agentSessionEvents). One row per event;
 // the full typed payload is serialized into `payload` while the queryable
-// fields are promoted to columns. `agentId` is filled later when per-agent
-// token authentication lands — agents live in the Kubernetes Runtime, so
-// there is no foreign key.
+// fields are promoted to columns. `agentId` carries the agent resolved from
+// the ingest token (nullable only for rows persisted before per-agent token
+// authentication landed) — agents live in the Kubernetes Runtime, so there
+// is no foreign key.
 export const agentSessionEvents = sqliteTable(
   "agent_session_events",
   {
@@ -29,3 +30,17 @@ export const agentSessionEvents = sqliteTable(
     ),
   ]
 );
+
+// Per-agent plugin ingest tokens (Authorization: Bearer on /plugin/trpc).
+// Only the SHA-256 digest of the raw token is stored — the raw value ships
+// exclusively in the managed agent's env (HERMEUM_PLUGIN_TOKEN, sensitive).
+// Archiving an agent sets `revokedAt`; verification treats revoked rows as
+// absent. No foreign key — agents live in the Kubernetes Runtime.
+export const agentTokens = sqliteTable("agent_tokens", {
+  agentId: text("agent_id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+});

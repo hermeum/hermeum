@@ -26,6 +26,9 @@ function makeDatabase(): Database {
     appendAgentSessionEvents: vi.fn().mockResolvedValue(2),
     listAgentSessionSummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
     getAgentSession: vi.fn().mockResolvedValue({ sessionId: "hermes-session-1", events: [] }),
+    storeAgentToken: vi.fn(),
+    findAgentIdByTokenHash: vi.fn(),
+    revokeAgentToken: vi.fn(),
   };
 }
 
@@ -99,29 +102,29 @@ function makeUseCase(db: Database, runtime: Runtime): AgentSessionUseCase {
 }
 
 describe("AgentSessionUseCase.ingestAgentSessionEvents", () => {
-  it("appends the batch to the database with a null agentId and returns the accepted count", async () => {
+  it("appends the batch to the database with the given agentId and returns the accepted count", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(null));
     const batch = makeBatch();
 
-    const accepted = await usecase.ingestAgentSessionEvents(batch);
+    const accepted = await usecase.ingestAgentSessionEvents(batch, "agent-1");
 
     expect(accepted).toBe(2);
     expect(db.appendAgentSessionEvents).toHaveBeenCalledWith({
-      agentId: null,
+      agentId: "agent-1",
       sessionId: "hermes-session-1",
       events: batch.events,
     });
   });
 
-  it("passes an explicit agentId through when provided", async () => {
+  it("passes a different agentId through unchanged", async () => {
     const db = makeDatabase();
     const usecase = makeUseCase(db, makeRuntime(null));
 
-    await usecase.ingestAgentSessionEvents(makeBatch(), "agent-1");
+    await usecase.ingestAgentSessionEvents(makeBatch(), "agent-2");
 
     expect(db.appendAgentSessionEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: "agent-1" })
+      expect.objectContaining({ agentId: "agent-2" })
     );
   });
 });

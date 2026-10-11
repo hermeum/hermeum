@@ -24,16 +24,23 @@ vi.mock("@/server/libs/config", () => ({
 import { stringify } from "yaml";
 
 import { AgentUseCase, MANAGED_SOUL_PREAMBLE } from "./agent";
+import { hashPluginToken } from "@/server/libs/plugin-token";
+import type { Database } from "./adaptors/database";
 import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
-import type { Agent, AgentInput, Context, SharedEnvSet } from "@/entities";
+import type { Agent, AgentInput, Context, Env, SharedEnvSet } from "@/entities";
+import { ENV_SECRET_SENTINEL } from "@/entities";
 
 const HERMES_PLUGIN = "hermeum/hermeum/plugin/hermeum";
 const PLUGIN_ENV_VAR = {
   name: "HERMEUM_PLUGIN_BASE_URL",
   value: "http://hermeum:3000/plugin/trpc",
 };
+const PLUGIN_TOKEN_ENV_NAME = "HERMEUM_PLUGIN_TOKEN";
+
+// Matches any generated ingest token (hmt_ + 32 bytes base64url).
+const anyTokenValue = expect.stringMatching(/^hmt_[A-Za-z0-9_-]+$/);
 
 // FileAdaptor serving the Hermeum config file the use case inherits loading for.
 // Accepts the legacy flat-array shape and the multi-candidate array-of-arrays
@@ -98,9 +105,27 @@ function makeSharedEnvSet(overrides: Partial<SharedEnvSet> = {}): SharedEnvSet {
   };
 }
 
+function makeDatabase(): Database {
+  return {
+    appendAgentSessionEvents: vi.fn(),
+    listAgentSessionSummaries: vi.fn(),
+    getAgentSession: vi.fn(),
+    storeAgentToken: vi.fn(),
+    findAgentIdByTokenHash: vi.fn(),
+    revokeAgentToken: vi.fn(),
+  };
+}
+
+// BaseUseCase order: runtime, files, skillIndex, logger, db — skillIndex and
+// logger take the defaults (the telemetry module is mocked at the top), while
+// db is stubbed so token persistence never opens a real database.
+function makeUseCase(runtime: Runtime, files: FileAdaptor, db: Database = makeDatabase()): AgentUseCase {
+  return new AgentUseCase(runtime, files, undefined, undefined, db);
+}
+
 describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
   it("returns null when agent.type is undefined and no default type is configured", async () => {
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ "some-type": { mutatingWebhookJsonPatch: [] } })
     );
@@ -110,7 +135,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("falls back to the default agent type when agent.type is undefined", async () => {
     const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({
         "some-type": { mutatingWebhookJsonPatch: [] },
@@ -123,7 +148,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("does not fall back to the default agent type when a set type is unknown", async () => {
     const patch: JsonPatchOp[] = [{ op: "add", path: "/a", value: 1 }];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ default: { mutatingWebhookJsonPatch: patch } })
     );
@@ -136,7 +161,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "add", path: "/b", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ default: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -148,13 +173,13 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
   });
 
   it("returns null when config.agentTypes is undefined", async () => {
-    const useCase = new AgentUseCase(makeRuntime(), makeConfig(undefined));
+    const useCase = makeUseCase(makeRuntime(), makeConfig(undefined));
     const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "some-type" }));
     expect(result).toBeNull();
   });
 
   it("returns null when the agentType key is missing from config", async () => {
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ "other-type": { mutatingWebhookJsonPatch: [] } })
     );
@@ -171,7 +196,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
           "id={{agentId}} user={{userId}} name={{agentName}} desc={{agentDescription}} type={{agentType}}",
       },
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ "my-type": { mutatingWebhookJsonPatch: patch } })
     );
@@ -192,7 +217,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("passes through ops without a value property unchanged", async () => {
     const patch: JsonPatchOp[] = [{ op: "remove", path: "/metadata/labels/old" }];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
@@ -212,7 +237,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
         ],
       },
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
@@ -227,7 +252,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       { op: "remove", path: "/old" },
       { op: "add", path: "/new", value: "{{agentId}}" },
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: patch } })
     );
@@ -242,7 +267,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "test", path: "/spec/model", value: "x" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "add", path: "/b", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -255,7 +280,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "test", path: "/spec/model", value: "claude" }, { op: "add", path: "/b", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -272,7 +297,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "test", path: "/spec/model", value: "claude" }, { op: "add", path: "/b", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -289,7 +314,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
       [{ op: "add", path: "/b", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -307,7 +332,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "add", path: "/b", value: 2 }],
       [{ op: "test", path: "/spec/camofox/enabled", value: true }, { op: "add", path: "/c", value: 3 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -333,7 +358,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
         { op: "add", path: "/skipped", value: true },
       ],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -349,7 +374,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       [{ op: "add", path: "/missing-parent/child", value: 1 }],
       [{ op: "add", path: "/valid", value: 2 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -378,7 +403,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
         { op: "add", path: "/leaked", value: 99 },
       ],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -393,7 +418,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "add", path: "/spec/model", value: "claude" }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -406,7 +431,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
     const candidates: JsonPatchOp[][] = [
       [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
     ];
-    const useCase = new AgentUseCase(
+    const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
@@ -429,7 +454,7 @@ describe("AgentUseCase shared env set validation", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ sharedEnvSets: ["envset-1"] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
@@ -444,7 +469,7 @@ describe("AgentUseCase shared env set validation", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ sharedEnvSets: ["envset-1"] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
@@ -456,7 +481,7 @@ describe("AgentUseCase shared env set validation", () => {
     (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSharedEnvSet({ id: "envset-1", userId: "user-1", archived: true })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
@@ -466,7 +491,7 @@ describe("AgentUseCase shared env set validation", () => {
   it("createHermesAgent throws when a referenced env set does not exist", async () => {
     const runtime = makeRuntime();
     (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.createHermesAgent(makeCtx("user-1"), { sharedEnvSets: ["envset-1"] })
@@ -484,7 +509,7 @@ describe("AgentUseCase shared env set validation", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ sharedEnvSets: ["envset-1"] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { sharedEnvSets: ["envset-1"] })
@@ -499,7 +524,7 @@ describe("AgentUseCase shared env set validation", () => {
     (runtime.getSharedEnvSet as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSharedEnvSet({ id: "envset-1", archived: true })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { sharedEnvSets: ["envset-1"] })
@@ -516,7 +541,7 @@ describe("AgentUseCase env sensitivity validation", () => {
         env: [{ name: "API_KEY", value: "<secret>", sensitive: true }],
       })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
@@ -533,7 +558,7 @@ describe("AgentUseCase env sensitivity validation", () => {
         env: [{ name: "API_KEY", value: "<secret>", sensitive: true }],
       })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
@@ -550,7 +575,7 @@ describe("AgentUseCase env sensitivity validation", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ env: [{ name: "REGION", value: "<secret>", sensitive: true }] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
@@ -570,7 +595,7 @@ describe("AgentUseCase env sensitivity validation", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ env: [{ name: "NEW_VAR", value: "hello" }] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await expect(
       useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
@@ -586,7 +611,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: { soul?: string }) => makeAgent({ soul: input.soul })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.createHermesAgent(makeCtx("user-1"), {
       soul: "You are helpful.",
@@ -604,7 +629,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: { soul?: string }) => makeAgent({ soul: input.soul })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.createHermesAgent(makeCtx("user-1"), {});
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
@@ -618,7 +643,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: { soul?: string }) => makeAgent({ soul: input.soul })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
       soul: `${MANAGED_SOUL_PREAMBLE}\n\nYou are helpful.`,
@@ -638,7 +663,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async ({ patch }: { patch: { soul?: string } }) => makeAgent({ soul: patch.soul })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       soul: "You are helpful.",
@@ -660,7 +685,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ name: "Renamed" })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
     expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
@@ -684,7 +709,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.archiveHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ soul: storedSoul })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
     const ctx = makeCtx("user-1");
 
     expect((await useCase.getHermesAgent(ctx, "agent-1"))?.soul).toBe("User soul.");
@@ -699,7 +724,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ soul: MANAGED_SOUL_PREAMBLE })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     expect((await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul).toBeUndefined();
   });
@@ -709,7 +734,7 @@ describe("AgentUseCase managed soul preamble", () => {
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ soul: "Legacy soul that mentions config.yaml." })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     expect(
       (await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul
@@ -718,20 +743,29 @@ describe("AgentUseCase managed soul preamble", () => {
 });
 
 describe("AgentUseCase managed hermeum plugin", () => {
-  it("createHermesAgent injects the plugin identifier and endpoint env var", async () => {
+  it("createHermesAgent injects the plugin identifier, endpoint var and ingest token", async () => {
     const runtime = makeRuntime();
+    const db = makeDatabase();
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ plugins: input.plugins, env: input.env })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig(), db);
 
     const agent = await useCase.createHermesAgent(makeCtx("user-1"), {});
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
         plugins: [HERMES_PLUGIN],
-        env: [PLUGIN_ENV_VAR],
+        env: [
+          { name: PLUGIN_TOKEN_ENV_NAME, value: anyTokenValue, sensitive: true },
+          PLUGIN_ENV_VAR,
+        ],
       })
     );
+    // The persisted digest matches the raw token injected into the env.
+    const created = (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as AgentInput;
+    const token = created.env?.find((v) => v.name === PLUGIN_TOKEN_ENV_NAME)?.value;
+    expect(db.storeAgentToken).toHaveBeenCalledWith("agent-1", hashPluginToken(token!));
     expect(agent.plugins).toEqual([]);
     expect(agent.env).toEqual([]);
   });
@@ -741,7 +775,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ plugins: input.plugins })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
       plugins: ["owner/some-plugin"],
@@ -758,7 +792,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ plugins: input.plugins })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
       plugins: ["owner/some-plugin", HERMES_PLUGIN],
@@ -775,14 +809,37 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ env: input.env })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
       env: [{ name: "HERMEUM_PLUGIN_BASE_URL", value: "http://evil.example.com" }],
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
-      expect.objectContaining({ env: [PLUGIN_ENV_VAR] })
+      expect.objectContaining({
+        env: [{ name: PLUGIN_TOKEN_ENV_NAME, value: anyTokenValue, sensitive: true }, PLUGIN_ENV_VAR],
+      })
     );
+  });
+
+  it("createHermesAgent force-overrides a user-supplied ingest token", async () => {
+    const runtime = makeRuntime();
+    (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async (input: AgentInput) => makeAgent({ env: input.env })
+    );
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    await useCase.createHermesAgent(makeCtx("user-1"), {
+      env: [{ name: PLUGIN_TOKEN_ENV_NAME, value: "hmt_forged" }],
+    });
+    const created = (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as AgentInput;
+    const token = created.env?.find((v) => v.name === PLUGIN_TOKEN_ENV_NAME)?.value;
+    // Not the user's value, and marked sensitive.
+    expect(token).not.toBe("hmt_forged");
+    expect(created.env).toEqual([
+      { name: PLUGIN_TOKEN_ENV_NAME, value: token, sensitive: true },
+      PLUGIN_ENV_VAR,
+    ]);
   });
 
   it("updateHermesAgent injects into carrying patches only", async () => {
@@ -793,7 +850,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async ({ patch }: { patch: AgentInput }) => makeAgent({ plugins: patch.plugins, env: patch.env })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     const withPlugins = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       plugins: ["owner/some-plugin"],
@@ -840,7 +897,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ name: "Renamed" })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", { name: "Renamed" });
     expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
@@ -849,9 +906,89 @@ describe("AgentUseCase managed hermeum plugin", () => {
     });
   });
 
-  it("strips the managed plugin and endpoint var from every read direction", async () => {
+  // Same pinned decision for the ingest token: pre-pipeline agents have no
+  // token and gain none on later edits — their ingest stays unauthorized
+  // (fail-closed) until the agent is re-created.
+  it("does not backfill the ingest token for agents predating the pipeline", async () => {
+    const runtime = makeRuntime();
+    const db = makeDatabase();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1", env: [{ name: "OLD_VAR", value: "1" }] })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ patch }: { patch: AgentInput }) => makeAgent({ env: patch.env })
+    );
+    const useCase = makeUseCase(runtime, makeConfig(), db);
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      env: [{ name: "OLD_VAR", value: "1" }],
+    });
+    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as { patch: AgentInput };
+    expect(patch.patch.env?.some((v) => v.name === PLUGIN_TOKEN_ENV_NAME)).toBe(false);
+    expect(db.storeAgentToken).not.toHaveBeenCalled();
+  });
+
+  it("updateHermesAgent preserves the ingest token across env patches (sentinel round-trip)", async () => {
+    const runtime = makeRuntime();
+    const db = makeDatabase();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({
+        userId: "user-1",
+        env: [
+          { name: "OLD_VAR", value: "1" },
+          { name: PLUGIN_TOKEN_ENV_NAME, value: ENV_SECRET_SENTINEL, sensitive: true },
+        ],
+      })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ patch }: { patch: AgentInput }) => makeAgent({ env: patch.env })
+    );
+    const useCase = makeUseCase(runtime, makeConfig(), db);
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      env: [{ name: "NEW_VAR", value: "hello" }],
+    });
+    // The masked entry rides the patch verbatim; the raw value never
+    // surfaces at the use-case layer, and the digest is never re-stored.
+    expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
+      id: "agent-1",
+      patch: expect.objectContaining({
+        env: [
+          { name: "NEW_VAR", value: "hello" },
+          { name: PLUGIN_TOKEN_ENV_NAME, value: ENV_SECRET_SENTINEL, sensitive: true },
+          PLUGIN_ENV_VAR,
+        ],
+      }),
+    });
+    expect(db.storeAgentToken).not.toHaveBeenCalled();
+  });
+
+  it("updateHermesAgent drops a user-supplied ingest token from env patches", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1", env: [{ name: "OLD_VAR", value: "1" }] })
+    );
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ patch }: { patch: AgentInput }) => makeAgent({ env: patch.env })
+    );
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
+      env: [{ name: PLUGIN_TOKEN_ENV_NAME, value: "hmt_forged" }],
+    });
+    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as { patch: AgentInput };
+    expect(patch.patch.env?.some((v) => v.name === PLUGIN_TOKEN_ENV_NAME)).toBe(false);
+  });
+
+  it("strips the managed plugin, endpoint var and ingest token from every read direction", async () => {
     const storedPlugins = ["owner/some-plugin", HERMES_PLUGIN];
-    const storedEnv = [{ name: "NEW_VAR", value: "hello" }, PLUGIN_ENV_VAR];
+    const storedEnv: Env = [
+      { name: "NEW_VAR", value: "hello" },
+      PLUGIN_ENV_VAR,
+      { name: PLUGIN_TOKEN_ENV_NAME, value: "hmt_stored", sensitive: true },
+    ];
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ plugins: storedPlugins, env: storedEnv })
@@ -865,7 +1002,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.archiveHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ plugins: storedPlugins, env: storedEnv })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
     const ctx = makeCtx("user-1");
 
     for (const result of [
@@ -886,10 +1023,25 @@ describe("AgentUseCase managed hermeum plugin", () => {
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ plugins: ["owner/some-plugin"], env: [{ name: "V", value: "1" }] })
     );
-    const useCase = new AgentUseCase(runtime, makeConfig());
+    const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.getHermesAgent(makeCtx("user-1"), "agent-1");
     expect(agent?.plugins).toEqual(["owner/some-plugin"]);
     expect(agent?.env).toEqual([{ name: "V", value: "1" }]);
+  });
+
+  it("archiveHermesAgent revokes the ingest token after archiving", async () => {
+    const runtime = makeRuntime();
+    const db = makeDatabase();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ userId: "user-1" })
+    );
+    (runtime.archiveHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeAgent({ archived: true })
+    );
+    const useCase = makeUseCase(runtime, makeConfig(), db);
+
+    await useCase.archiveHermesAgent(makeCtx("user-1"), "agent-1");
+    expect(db.revokeAgentToken).toHaveBeenCalledWith("agent-1");
   });
 });

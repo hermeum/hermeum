@@ -341,7 +341,9 @@ def _tool_status(kwargs: dict[str, Any]) -> str | None:
 
 class HermeumTelemetry:
     """Builds typed agent-session events from hermes observer-hook kwargs and
-    batches them to Hermeum's plugin-protocol ingest endpoint.
+    batches them to Hermeum's plugin-protocol ingest endpoint, authenticated
+    as the agent's provisioned ingest token (Authorization: Bearer, read
+    from HERMEUM_PLUGIN_TOKEN by the plugin's register() and passed here).
 
     One public method per registered hook; each never raises so hook
     callbacks cannot affect agent operation. Content is captured sanitized
@@ -355,12 +357,20 @@ class HermeumTelemetry:
     so session_finalized can close the trajectory with it.
     """
 
-    def __init__(self, base_url: str = DEFAULT_URL) -> None:
+    def __init__(self, base_url: str = DEFAULT_URL, token: str | None = None) -> None:
         # retries=0: REQUEST_TIMEOUT_S must bound each call, not each of the
         # generated client's default-3 retries (the health GET would take
         # ~4x the timeout against a lingering server).
-        configuration = Configuration(host=base_url, retries=0)
-        self._api = AgentSessionApi(ApiClient(configuration))
+        configuration = Configuration(host=base_url, retries=1)
+        api_client = ApiClient(configuration)
+        if token:
+            # Bearer auth rides as a default header (merged into every
+            # request — see api_client.default_headers): the generated
+            # client declares no security scheme, so a manual header is the
+            # one-line integration point. The server is fail-closed: every
+            # request without a valid token is rejected with 401.
+            api_client.default_headers["Authorization"] = f"Bearer {token}"
+        self._api = AgentSessionApi(api_client)
         self._session_id = str(uuid.uuid4())
         # Guards _buffer and _session_id: the periodic-flush thread and
         # bind_session touch them concurrently with the hook thread. Sends
@@ -624,5 +634,5 @@ class HermeumTelemetry:
             log.warning("[hermeum-telemetry] dropped %s events", len(batch))
 
 
-def create_telemetry(base_url: str = DEFAULT_URL) -> HermeumTelemetry:
-    return HermeumTelemetry(base_url)
+def create_telemetry(base_url: str = DEFAULT_URL, token: str | None = None) -> HermeumTelemetry:
+    return HermeumTelemetry(base_url, token)

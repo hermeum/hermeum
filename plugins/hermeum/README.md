@@ -3,7 +3,8 @@
 A [hermes-agent](../../../vendor/hermes-agent) plugin that forwards agent-session
 events (`session_started`, `llm_call`, `tool_call`, `error`, `session_finalized`,
 `subagent_started`, `subagent_stopped`) to Hermeum's plugin-protocol endpoint
-(`POST /plugin/trpc/agentSession.agentSessionEvents`).
+(`POST /plugin/trpc/agentSession.agentSessionEvents`), authenticated as the
+agent's provisioned ingest token (see Configuration).
 
 Post-only events: every event is a completed record (input, output, duration,
 usage arrive together); no event is emitted pre-call. The `pre_api_request`
@@ -127,19 +128,30 @@ hermes plugins enable hermeum
 | Env var | Default | Description |
 |---|---|---|
 | `HERMEUM_PLUGIN_BASE_URL` | `http://localhost:3000/plugin/trpc` | Base URL of the Hermeum plugin-protocol endpoint. |
+| `HERMEUM_PLUGIN_TOKEN` | — (required) | Per-agent ingest token, provisioned by Hermeum at agent-create time and presented as `Authorization: Bearer` on every request. The server is fail-closed: without a valid token every request — including the health probe — is rejected with 401. |
 | `HERMEUM_PLUGIN_MAX_CHARS` | `12000` | Max chars per redacted text field before truncation. |
 
 ## Local verification
 
-Against the app dev server (`HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`):
+Against the app dev server (`HERMEUM_MOCK_RUNTIME=true pnpm --filter @hermeum/app dev`).
+The plugin endpoint is token-guarded, so first seed an ingest token for an
+agent that exists in the mock runtime (create it in the UI and copy its id):
 
 ```sh
+HERMEUM_DATABASE_URL=file:./sqlite.db pnpm --filter @hermeum/app exec tsx scripts/seed-plugin-token.ts <agentId>
+# prints: export HERMEUM_PLUGIN_TOKEN=hmt_...
+```
+
+Then, with the printed token exported:
+
+```sh
+export HERMEUM_PLUGIN_TOKEN=hmt_...  # from the seed script output
 python -m venv .venv && .venv/bin/pip install -r plugins/hermeum/client/requirements.txt
 .venv/bin/python -c "
-import sys
+import os, sys
 sys.path.insert(0, 'plugins/hermeum')
 from telemetry import HermeumTelemetry
-t = HermeumTelemetry('http://localhost:3000/plugin/trpc')
+t = HermeumTelemetry('http://localhost:3000/plugin/trpc', token=os.environ['HERMEUM_PLUGIN_TOKEN'])
 print('health:', t.health_check())
 # Hook methods build the typed event payloads — no manual event construction.
 t.tool_call(tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok', status='ok')
