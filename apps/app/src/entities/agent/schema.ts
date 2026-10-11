@@ -85,11 +85,31 @@ export type Soul = z.infer<typeof SoulSchema>;
 
 export type Skill = SkillIdentifier;
 
+export const AgentPluginSchema = z
+  .looseObject({
+    identifier: z
+      .string()
+      .min(1)
+      .describe(
+        'Plugin identifier to install (e.g. "owner/some-plugin" or a community-index name).'
+      ),
+    ref: z
+      .string()
+      .regex(/^[0-9a-fA-F]{40}$/, "ref must be a full 40-character Git commit SHA.")
+      .optional()
+      .describe("Pin the install to an immutable 40-character Git commit SHA."),
+  })
+  // Plugins installed by Hermeum are always enabled — the flag isn't exposed;
+  // the mapper stamps enable: true on every CR entry.
+  .describe("A plugin to install for the agent.");
+
+export type AgentPlugin = z.infer<typeof AgentPluginSchema>;
+
 export const PluginsSchema = z
-  .array(z.string())
+  .array(AgentPluginSchema)
   .max(20)
   .optional()
-  .describe("Plugin identifiers to install.");
+  .describe("Plugins to install.");
 
 export type Plugins = z.infer<typeof PluginsSchema>;
 
@@ -217,8 +237,22 @@ export const CronDeliverSchema = z
 
 export type CronDeliver = z.infer<typeof CronDeliverSchema>;
 
+// https://hermes-agent.nousresearch.com/docs/user-guide/features/cron
+export const CronReasoningEffortSchema = z.enum([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultra",
+]);
+
+export type CronReasoningEffort = z.infer<typeof CronReasoningEffortSchema>;
+
 export const AgentCronSchema = z
-  .object({
+  .looseObject({
     name: z.string().min(1).describe("Cron job name."),
     schedule: CronScheduleSchema,
     prompt: z.string().min(1).describe("Prompt to run when this cron triggers."),
@@ -230,6 +264,45 @@ export const AgentCronSchema = z
       .optional()
       .describe("Number of times to repeat the run. Omit to run once per trigger."),
     skills: z.array(z.string()).optional().describe("Skill names to load for this cron's run."),
+    workdir: z
+      .string()
+      .regex(/^\//, "Workdir must be an absolute path.")
+      .optional()
+      .describe(
+        `Absolute directory the run executes from.
+        
+Injects AGENTS.md / CLAUDE.md / .cursorrules from that directory into the
+system prompt and uses it as the working directory for terminal, file, and
+code-execution tools. Omit to run detached from any project.`
+      ),
+    model: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Pin this cron to a specific inference model. Omit to follow the agent's configured model."
+      ),
+    provider: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Inference provider paired with model (e.g. "openrouter", "nous"). Omit to follow the default provider.'
+      ),
+    reasoningEffort: CronReasoningEffortSchema.optional().describe(
+      `Pin this cron's reasoning (thinking) effort, overriding the agent's default for these runs.
+
+Levels the model doesn't support are clamped or omitted by the provider at
+request time. Has no effect on script-only jobs.`
+    ),
+    continuity: z
+      .boolean()
+      .optional()
+      .describe(
+        `Each run wakes up with this cron's own previous output injected into its prompt, so it \
+can dedupe against what was already reported and continue where the last run left off \
+(scouts, monitors, incremental digests). The first run is unchanged.`
+      ),
   })
   .describe(
     `A scheduled cron job that triggers an agent run.

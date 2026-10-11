@@ -13,6 +13,8 @@ import { ConfigSchema, config } from "@/server/libs/config";
 import type { Agent } from "@/entities";
 import type { HermesAgent, HermesPlugin } from "./types/hermes-agent";
 
+const PLUGIN_REF = "3a9f1b2c4d5e6f708192a3b4c5d6e7f8091a2b3c";
+
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
     id: "agent-1",
@@ -164,21 +166,28 @@ describe("agentToHermesAgent plugin passthrough", () => {
     expect(hermesAgent.spec.hermes?.plugins).toBeUndefined();
   });
 
-  it("maps user plugins as plain identifier entries", () => {
+  it("maps user plugins as CR entries", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ plugins: ["owner/some-plugin"] })
+      makeAgent({
+        plugins: [{ identifier: "owner/some-plugin", ref: PLUGIN_REF }],
+      })
     );
     expect(hermesAgent.spec.hermes?.plugins).toEqual([
-      { identifier: "owner/some-plugin" },
+      { identifier: "owner/some-plugin", ref: PLUGIN_REF, enable: true },
     ]);
   });
 
-  it("stamps enable: true on the hermeum plugin's CR entry", () => {
+  it("stamps enable: true on every CR entry, overriding a hand-written value", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ plugins: ["owner/some-plugin", config.pluginIdentifier] })
+      makeAgent({
+        plugins: [
+          { identifier: "owner/some-plugin" },
+          { identifier: config.pluginIdentifier, enable: false },
+        ],
+      })
     );
     expect(hermesAgent.spec.hermes?.plugins).toEqual([
-      { identifier: "owner/some-plugin" },
+      { identifier: "owner/some-plugin", enable: true },
       { identifier: config.pluginIdentifier, enable: true },
     ]);
   });
@@ -203,22 +212,33 @@ describe("mapHermesAgent plugin read-back passthrough", () => {
     } as HermesAgent;
   }
 
-  it("returns every plugin identifier, including the managed one", () => {
+  it("returns every plugin, including the managed one, dropping the CR-only enable flag", () => {
     const agent = mapHermesAgent(
       makeHermesAgent({}, [
-        { identifier: "owner/some-plugin" },
+        { identifier: "owner/some-plugin", ref: PLUGIN_REF },
         { identifier: config.pluginIdentifier, enable: true },
       ])
     );
-    expect(agent.plugins).toEqual(["owner/some-plugin", config.pluginIdentifier]);
+    expect(agent.plugins).toEqual([
+      { identifier: "owner/some-plugin", ref: PLUGIN_REF },
+      { identifier: config.pluginIdentifier },
+    ]);
   });
 
   it("round-trips agentToHermesAgent output losslessly", () => {
     const cr = agentToHermesAgent(
-      makeAgent({ plugins: ["owner/some-plugin", config.pluginIdentifier] })
+      makeAgent({
+        plugins: [
+          { identifier: "owner/some-plugin", ref: PLUGIN_REF },
+          { identifier: config.pluginIdentifier },
+        ],
+      })
     );
     const agent = mapHermesAgent(cr);
-    expect(agent.plugins).toEqual(["owner/some-plugin", config.pluginIdentifier]);
+    expect(agent.plugins).toEqual([
+      { identifier: "owner/some-plugin", ref: PLUGIN_REF },
+      { identifier: config.pluginIdentifier },
+    ]);
   });
 });
 
@@ -551,27 +571,39 @@ describe("mapHermesAgent crons round-trip", () => {
         deliver: "slack",
         repeat: 3,
         skills: ["standup-summarizer"],
+        workdir: "/workspace/acme",
+        model: "gpt-5",
+        provider: "nous",
+        reasoningEffort: "high",
+        continuity: true,
       },
     ];
     const agent = mapHermesAgent(makeRawAgent(crons));
     expect(agent.crons).toEqual(crons);
   });
 
-  it("strips unsupported HermesCron fields (script, noAgent, workdir, profile)", () => {
+  it("strips unsupported HermesCron fields (script, noAgent, profile)", () => {
     const rawCrons = [
       {
         name: "cleanup",
         schedule: "0 0 * * *",
         prompt: "Clean up temp files.",
+        workdir: "/tmp",
         script: "rm -rf /tmp/*",
         noAgent: true,
-        workdir: "/tmp",
+        monitorScript: "watch.sh",
+        monitorURL: "https://example.com/status",
         profile: "default",
       },
     ];
     const agent = mapHermesAgent(makeRawAgent(rawCrons));
     expect(agent.crons).toEqual([
-      { name: "cleanup", schedule: "0 0 * * *", prompt: "Clean up temp files." },
+      {
+        name: "cleanup",
+        schedule: "0 0 * * *",
+        prompt: "Clean up temp files.",
+        workdir: "/tmp",
+      },
     ]);
   });
 

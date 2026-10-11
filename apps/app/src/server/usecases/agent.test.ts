@@ -27,9 +27,10 @@ import { AgentUseCase, MANAGED_SOUL_PREAMBLE } from "./agent";
 import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
-import type { Agent, AgentInput, Context, SharedEnvSet } from "@/entities";
+import type { Agent, AgentInput, AgentPlugin, Context, SharedEnvSet } from "@/entities";
 
-const HERMES_PLUGIN = "hermeum/hermeum/plugin/hermeum";
+const HERMES_PLUGIN: AgentPlugin = { identifier: "hermeum/hermeum/plugin/hermeum" };
+const USER_PLUGIN: AgentPlugin = { identifier: "owner/some-plugin" };
 const PLUGIN_ENV_VAR = {
   name: "HERMEUM_PLUGIN_BASE_URL",
   value: "http://hermeum:3000/plugin/trpc",
@@ -744,11 +745,11 @@ describe("AgentUseCase managed hermeum plugin", () => {
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
-      plugins: ["owner/some-plugin"],
+      plugins: [USER_PLUGIN],
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       })
     );
   });
@@ -761,11 +762,11 @@ describe("AgentUseCase managed hermeum plugin", () => {
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
-      plugins: ["owner/some-plugin", HERMES_PLUGIN],
+      plugins: [USER_PLUGIN, HERMES_PLUGIN],
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       })
     );
   });
@@ -796,15 +797,15 @@ describe("AgentUseCase managed hermeum plugin", () => {
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     const withPlugins = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
-      plugins: ["owner/some-plugin"],
+      plugins: [USER_PLUGIN],
     });
     expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
       id: "agent-1",
       patch: expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       }),
     });
-    expect(withPlugins.plugins).toEqual(["owner/some-plugin"]);
+    expect(withPlugins.plugins).toEqual([USER_PLUGIN]);
 
     const withEnv = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       env: [{ name: "NEW_VAR", value: "hello" }],
@@ -850,7 +851,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
   });
 
   it("strips the managed plugin and endpoint var from every read direction", async () => {
-    const storedPlugins = ["owner/some-plugin", HERMES_PLUGIN];
+    const storedPlugins = [USER_PLUGIN, HERMES_PLUGIN];
     const storedEnv = [{ name: "NEW_VAR", value: "hello" }, PLUGIN_ENV_VAR];
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -876,7 +877,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
       await useCase.archiveHermesAgent(ctx, "agent-1"),
       await useCase.updateHermesAgent(ctx, "agent-1", { name: "Renamed" }),
     ]) {
-      expect(result?.plugins).toEqual(["owner/some-plugin"]);
+      expect(result?.plugins).toEqual([USER_PLUGIN]);
       expect(result?.env).toEqual([{ name: "NEW_VAR", value: "hello" }]);
     }
   });
@@ -884,12 +885,12 @@ describe("AgentUseCase managed hermeum plugin", () => {
   it("leaves agents without the managed content untouched", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ plugins: ["owner/some-plugin"], env: [{ name: "V", value: "1" }] })
+      makeAgent({ plugins: [USER_PLUGIN], env: [{ name: "V", value: "1" }] })
     );
     const useCase = new AgentUseCase(runtime, makeConfig());
 
     const agent = await useCase.getHermesAgent(makeCtx("user-1"), "agent-1");
-    expect(agent?.plugins).toEqual(["owner/some-plugin"]);
+    expect(agent?.plugins).toEqual([USER_PLUGIN]);
     expect(agent?.env).toEqual([{ name: "V", value: "1" }]);
   });
 });
