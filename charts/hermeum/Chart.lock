@@ -1,6 +1,6 @@
 dependencies:
 - name: hermes-agent-operator
   repository: oci://ghcr.io/hermeum/charts
-  version: 0.5.3
-digest: sha256:8641756ec209210c04ba886bb6d995f324acbba5b37d73353df5fa7ee6b3a286
-generated: "2026-09-28T07:13:03.461372+09:00"
+  version: 0.5.5
+digest: sha256:415ebef831aec81b7dead41a2352a4d56ec34274a800228b341c234c0e4c3540
+generated: "2026-10-11T21:58:03.627112+09:00"

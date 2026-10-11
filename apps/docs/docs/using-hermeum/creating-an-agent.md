@@ -120,10 +120,18 @@ skills:
 
 ## Plugins
 
-Plugins extend the agent runtime itself. You can add up to 20 plugin identifiers per
-agent, in the `<owner>/<repo>` format. See the
+Plugins extend the agent runtime itself. You can add up to 20 plugins per agent, each
+with an `<owner>/<repo>` identifier — plugins installed by Hermeum are always enabled.
+Optionally pin a plugin to an immutable Git commit SHA (`ref`). See the
 [built-in plugins guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/built-in-plugins)
 for what's available out of the box.
+
+```yaml title="Example"
+plugins:
+  - identifier: owner/some-plugin
+  - identifier: owner/pinned-plugin
+    ref: "3a9f1b2c4d5e6f708192a3b4c5d6e7f8091a2b3c"
+```
 
 :::note
 Hermeum also auto-installs its own plugin (`hermeum/hermeum/plugins/hermeum`)
@@ -163,6 +171,17 @@ Schedules can be:
 The output of a cron can be delivered to any connected platform — Slack, Discord,
 email, and more.
 
+Each cron can also pin its own run settings:
+
+- `workdir` — an absolute directory the run executes from; injects that project's
+  `AGENTS.md` / `CLAUDE.md` / `.cursorrules` and uses it as the working directory for
+  terminal, file, and code-execution tools
+- `model` / `provider` — pin the inference model (and provider) for this cron's runs
+- `reasoningEffort` — pin the thinking effort: `none`, `minimal`, `low`, `medium`,
+  `high`, `xhigh`, `max`, or `ultra`
+- `continuity` — inject each run's previous output into the next run's prompt, so the
+  job can dedupe against what was already reported (scouts, monitors, digests)
+
 ```yaml title="Example"
 crons:
   - name: daily-standup
@@ -171,6 +190,13 @@ crons:
       Summarize yesterday's GitHub commits and open PRs, then post a
       standup-ready digest.
     deliver: slack
+  - name: repo-watchdog
+    schedule: "every 1h"
+    prompt: Check for new failing CI runs and report anything new.
+    deliver: slack
+    workdir: /workspace/acme
+    reasoningEffort: low
+    continuity: true
 ```
 
 ## Next steps

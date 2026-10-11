@@ -29,10 +29,11 @@ import type { Database } from "./adaptors/database";
 import type { FileAdaptor } from "./adaptors/file";
 import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
-import type { Agent, AgentInput, Context, Env, SharedEnvSet } from "@/entities";
+import type { Agent, AgentInput, AgentPlugin, Context, Env, SharedEnvSet } from "@/entities";
 import { ENV_SECRET_SENTINEL } from "@/entities";
 
-const HERMES_PLUGIN = "hermeum/hermeum/plugin/hermeum";
+const HERMES_PLUGIN: AgentPlugin = { identifier: "hermeum/hermeum/plugin/hermeum" };
+const USER_PLUGIN: AgentPlugin = { identifier: "owner/some-plugin" };
 const PLUGIN_ENV_VAR = {
   name: "HERMEUM_PLUGIN_BASE_URL",
   value: "http://hermeum:3000/plugin/trpc",
@@ -119,7 +120,11 @@ function makeDatabase(): Database {
 // BaseUseCase order: runtime, files, skillIndex, logger, db — skillIndex and
 // logger take the defaults (the telemetry module is mocked at the top), while
 // db is stubbed so token persistence never opens a real database.
-function makeUseCase(runtime: Runtime, files: FileAdaptor, db: Database = makeDatabase()): AgentUseCase {
+function makeUseCase(
+  runtime: Runtime,
+  files: FileAdaptor,
+  db: Database = makeDatabase()
+): AgentUseCase {
   return new AgentUseCase(runtime, files, undefined, undefined, db);
 }
 
@@ -158,17 +163,19 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("evaluates the default type's candidates against the incoming object", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/a", value: 1 },
+      ],
       [{ op: "add", path: "/b", value: 2 }],
     ];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ default: { mutatingWebhookJsonPatch: candidates } })
     );
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: undefined }),
-      { spec: { model: "claude" } },
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: undefined }), {
+      spec: { model: "claude" },
+    });
     expect(result).toEqual(candidates[1]);
   });
 
@@ -264,7 +271,10 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("returns all candidates concatenated when no incomingObject is given (backwards compat)", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "x" }, { op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/spec/model", value: "x" },
+        { op: "add", path: "/a", value: 1 },
+      ],
       [{ op: "add", path: "/b", value: 2 }],
     ];
     const useCase = makeUseCase(
@@ -277,41 +287,50 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("skips candidates whose test ops fail (non-matching)", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
-      [{ op: "test", path: "/spec/model", value: "claude" }, { op: "add", path: "/b", value: 2 }],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/a", value: 1 },
+      ],
+      [
+        { op: "test", path: "/spec/model", value: "claude" },
+        { op: "add", path: "/b", value: 2 },
+      ],
     ];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const incoming = { spec: { model: "claude" } };
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      incoming,
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
     expect(result).toEqual(candidates[1]);
   });
 
   it("returns an empty patch when no candidate matches (no-op)", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
-      [{ op: "test", path: "/spec/model", value: "claude" }, { op: "add", path: "/b", value: 2 }],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/a", value: 1 },
+      ],
+      [
+        { op: "test", path: "/spec/model", value: "claude" },
+        { op: "add", path: "/b", value: 2 },
+      ],
     ];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const incoming = { spec: { model: "gemini" } };
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      incoming,
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
     expect(result).toEqual([]);
   });
 
   it("matches a candidate with no test ops (unconditional)", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/a", value: 1 },
+      ],
       [{ op: "add", path: "/b", value: 2 }],
     ];
     const useCase = makeUseCase(
@@ -319,28 +338,28 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const incoming = { spec: { model: "anything" } };
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      incoming,
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
     expect(result).toEqual(candidates[1]);
   });
 
   it("combines every matching candidate in declaration order", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/searxng/enabled", value: true }, { op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/spec/searxng/enabled", value: true },
+        { op: "add", path: "/a", value: 1 },
+      ],
       [{ op: "add", path: "/b", value: 2 }],
-      [{ op: "test", path: "/spec/camofox/enabled", value: true }, { op: "add", path: "/c", value: 3 }],
+      [
+        { op: "test", path: "/spec/camofox/enabled", value: true },
+        { op: "add", path: "/c", value: 3 },
+      ],
     ];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const incoming = { spec: { searxng: { enabled: true }, camofox: { enabled: true } } };
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      incoming,
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
     expect(result).toEqual(candidates.flat());
   });
 
@@ -362,10 +381,9 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      { spec: {} },
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), {
+      spec: {},
+    });
     expect(result).toEqual([candidates[0], candidates[1]].flat());
   });
 
@@ -378,10 +396,7 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      {},
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), {});
     expect(result).toEqual(candidates[1]);
   });
 
@@ -407,17 +422,14 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      { spec: {} },
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), {
+      spec: {},
+    });
     expect(result).toEqual(candidates[0]);
   });
 
   it("does not mutate the incoming object while combining", async () => {
-    const candidates: JsonPatchOp[][] = [
-      [{ op: "add", path: "/spec/model", value: "claude" }],
-    ];
+    const candidates: JsonPatchOp[][] = [[{ op: "add", path: "/spec/model", value: "claude" }]];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
@@ -429,17 +441,17 @@ describe("AgentUseCase.getmutatingWebhookJsonPatch", () => {
 
   it("preserves test ops in the returned patch for K8s atomic re-assertion", async () => {
     const candidates: JsonPatchOp[][] = [
-      [{ op: "test", path: "/spec/model", value: "gpt-4" }, { op: "add", path: "/a", value: 1 }],
+      [
+        { op: "test", path: "/spec/model", value: "gpt-4" },
+        { op: "add", path: "/a", value: 1 },
+      ],
     ];
     const useCase = makeUseCase(
       makeRuntime(),
       makeConfig({ t: { mutatingWebhookJsonPatch: candidates } })
     );
     const incoming = { spec: { model: "gpt-4" } };
-    const result = await useCase.getmutatingWebhookJsonPatch(
-      makeAgent({ type: "t" }),
-      incoming,
-    );
+    const result = await useCase.getmutatingWebhookJsonPatch(makeAgent({ type: "t" }), incoming);
     expect(result).toEqual(candidates[0]);
     expect(result![0]!.op).toBe("test");
   });
@@ -736,9 +748,9 @@ describe("AgentUseCase managed soul preamble", () => {
     );
     const useCase = makeUseCase(runtime, makeConfig());
 
-    expect(
-      (await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul
-    ).toBe("Legacy soul that mentions config.yaml.");
+    expect((await useCase.getHermesAgent(makeCtx("user-1"), "agent-1"))?.soul).toBe(
+      "Legacy soul that mentions config.yaml."
+    );
   });
 });
 
@@ -778,11 +790,11 @@ describe("AgentUseCase managed hermeum plugin", () => {
     const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
-      plugins: ["owner/some-plugin"],
+      plugins: [USER_PLUGIN],
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       })
     );
   });
@@ -795,11 +807,11 @@ describe("AgentUseCase managed hermeum plugin", () => {
     const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
-      plugins: ["owner/some-plugin", HERMES_PLUGIN],
+      plugins: [USER_PLUGIN, HERMES_PLUGIN],
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       })
     );
   });
@@ -816,7 +828,10 @@ describe("AgentUseCase managed hermeum plugin", () => {
     });
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
-        env: [{ name: PLUGIN_TOKEN_ENV_NAME, value: anyTokenValue, sensitive: true }, PLUGIN_ENV_VAR],
+        env: [
+          { name: PLUGIN_TOKEN_ENV_NAME, value: anyTokenValue, sensitive: true },
+          PLUGIN_ENV_VAR,
+        ],
       })
     );
   });
@@ -848,20 +863,21 @@ describe("AgentUseCase managed hermeum plugin", () => {
       makeAgent({ userId: "user-1" })
     );
     (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
-      async ({ patch }: { patch: AgentInput }) => makeAgent({ plugins: patch.plugins, env: patch.env })
+      async ({ patch }: { patch: AgentInput }) =>
+        makeAgent({ plugins: patch.plugins, env: patch.env })
     );
     const useCase = makeUseCase(runtime, makeConfig());
 
     const withPlugins = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
-      plugins: ["owner/some-plugin"],
+      plugins: [USER_PLUGIN],
     });
     expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
       id: "agent-1",
       patch: expect.objectContaining({
-        plugins: ["owner/some-plugin", HERMES_PLUGIN],
+        plugins: [USER_PLUGIN, HERMES_PLUGIN],
       }),
     });
-    expect(withPlugins.plugins).toEqual(["owner/some-plugin"]);
+    expect(withPlugins.plugins).toEqual([USER_PLUGIN]);
 
     const withEnv = await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       env: [{ name: "NEW_VAR", value: "hello" }],
@@ -923,8 +939,9 @@ describe("AgentUseCase managed hermeum plugin", () => {
     await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       env: [{ name: "OLD_VAR", value: "1" }],
     });
-    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as { patch: AgentInput };
+    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
+      patch: AgentInput;
+    };
     expect(patch.patch.env?.some((v) => v.name === PLUGIN_TOKEN_ENV_NAME)).toBe(false);
     expect(db.storeAgentToken).not.toHaveBeenCalled();
   });
@@ -977,13 +994,14 @@ describe("AgentUseCase managed hermeum plugin", () => {
     await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
       env: [{ name: PLUGIN_TOKEN_ENV_NAME, value: "hmt_forged" }],
     });
-    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as { patch: AgentInput };
+    const patch = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
+      patch: AgentInput;
+    };
     expect(patch.patch.env?.some((v) => v.name === PLUGIN_TOKEN_ENV_NAME)).toBe(false);
   });
 
   it("strips the managed plugin, endpoint var and ingest token from every read direction", async () => {
-    const storedPlugins = ["owner/some-plugin", HERMES_PLUGIN];
+    const storedPlugins: AgentPlugin[] = [USER_PLUGIN, HERMES_PLUGIN];
     const storedEnv: Env = [
       { name: "NEW_VAR", value: "hello" },
       PLUGIN_ENV_VAR,
@@ -1013,7 +1031,7 @@ describe("AgentUseCase managed hermeum plugin", () => {
       await useCase.archiveHermesAgent(ctx, "agent-1"),
       await useCase.updateHermesAgent(ctx, "agent-1", { name: "Renamed" }),
     ]) {
-      expect(result?.plugins).toEqual(["owner/some-plugin"]);
+      expect(result?.plugins).toEqual([USER_PLUGIN]);
       expect(result?.env).toEqual([{ name: "NEW_VAR", value: "hello" }]);
     }
   });
@@ -1021,12 +1039,12 @@ describe("AgentUseCase managed hermeum plugin", () => {
   it("leaves agents without the managed content untouched", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ plugins: ["owner/some-plugin"], env: [{ name: "V", value: "1" }] })
+      makeAgent({ plugins: [USER_PLUGIN], env: [{ name: "V", value: "1" }] })
     );
     const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.getHermesAgent(makeCtx("user-1"), "agent-1");
-    expect(agent?.plugins).toEqual(["owner/some-plugin"]);
+    expect(agent?.plugins).toEqual([USER_PLUGIN]);
     expect(agent?.env).toEqual([{ name: "V", value: "1" }]);
   });
 

@@ -8,6 +8,7 @@ import {
   Context,
   Env,
   JsonPatchOp,
+  Plugins,
   DEFAULT_AGENT_TYPE_KEY,
 } from "@/entities";
 
@@ -162,7 +163,7 @@ class HermeumPlugin implements ManagedAgentAspect {
 
   stripAgent(agent: Agent): Agent {
     const plugins = agent.plugins?.filter(
-      (identifier) => identifier !== config.hermesPluginIdentifier
+      (plugin) => plugin.identifier !== config.hermesPluginIdentifier
     );
     const env = agent.env?.filter(
       (v) => v.name !== MANAGED_PLUGIN_ENV_NAME && v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME
@@ -184,10 +185,12 @@ class HermeumPlugin implements ManagedAgentAspect {
     );
   }
 
-  #mergedPlugins(plugins: string[] | undefined): string[] {
+  #mergedPlugins(plugins: Plugins | undefined): NonNullable<Plugins> {
     return [
       ...(plugins ?? []),
-      ...(plugins?.includes(config.hermesPluginIdentifier) ? [] : [config.hermesPluginIdentifier]),
+      ...(plugins?.some((plugin) => plugin.identifier === config.hermesPluginIdentifier)
+        ? []
+        : [{ identifier: config.hermesPluginIdentifier }]),
     ];
   }
 

@@ -4,6 +4,7 @@ import * as k8s from "@kubernetes/client-node";
 
 import {
   Agent,
+  AgentCron,
   AgentEndpoints,
   AgentPhase,
   ENV_SECRET_SENTINEL,
@@ -290,13 +291,13 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     hermes.skills = agent.skills.map((identifier) => ({ identifier }));
   }
   // Pure CR translation of the plugin list — which plugins are installed is
-  // use-case policy (AgentUseCase managed-aspect pipeline). The hermeum
-  // plugin's CR entry carries enable: true — a CR-shape concern: the entity
-  // Plugins type is plain identifier strings and can't express the flag.
+  // use-case policy (AgentUseCase managed-aspect pipeline). App-installed
+  // plugins are always enabled — every CR entry carries enable: true, the
+  // flag is stripped again on read-back.
   if (agent.plugins !== undefined) {
-    hermes.plugins = agent.plugins.map((identifier) => ({
-      identifier,
-      ...(identifier === config.hermesPluginIdentifier && { enable: true as const }),
+    hermes.plugins = agent.plugins.map((plugin) => ({
+      ...plugin,
+      enable: true as const,
     }));
   }
   if (agent.packages !== undefined) {
@@ -391,7 +392,10 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     skills: raw.spec.hermes?.skills?.map((s) => s.identifier),
     // Pure CR translation — the use case filters the auto-installed hermeum
     // plugin out of the user-facing list on read.
-    plugins: raw.spec.hermes?.plugins?.map((p) => p.identifier),
+    plugins: raw.spec.hermes?.plugins?.map((p) => ({
+      ...(p.ref !== undefined && { ref: p.ref }),
+      identifier: p.identifier,
+    })),
     packages: raw.spec.hermes?.packages && {
       ...(raw.spec.hermes.packages.pip?.install !== undefined && {
         pip: raw.spec.hermes.packages.pip.install,
@@ -408,6 +412,13 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
       ...(c.deliver !== undefined && { deliver: c.deliver }),
       ...(c.repeat !== undefined && { repeat: c.repeat }),
       ...(c.skills !== undefined && { skills: c.skills }),
+      ...(c.workdir !== undefined && { workdir: c.workdir }),
+      ...(c.model !== undefined && { model: c.model }),
+      ...(c.provider !== undefined && { provider: c.provider }),
+      ...(c.reasoningEffort !== undefined && {
+        reasoningEffort: c.reasoningEffort as AgentCron["reasoningEffort"],
+      }),
+      ...(c.continuity !== undefined && { continuity: c.continuity }),
     })),
     suspended: raw.spec.suspend,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
