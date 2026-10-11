@@ -115,7 +115,7 @@ class HermeumPlugin implements ManagedAgentAspect {
 
   stripAgent(agent: Agent): Agent {
     const plugins = agent.plugins?.filter(
-      (identifier) => identifier !== config.hermesPluginIdentifier
+      (identifier) => identifier !== config.pluginIdentifier
     );
     const env = agent.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME);
     return {
@@ -128,9 +128,9 @@ class HermeumPlugin implements ManagedAgentAspect {
   #managed(input: AgentInput): Pick<AgentInput, "plugins" | "env"> {
     const plugins = [
       ...(input.plugins ?? []),
-      ...(input.plugins?.includes(config.hermesPluginIdentifier)
+      ...(input.plugins?.includes(config.pluginIdentifier)
         ? []
-        : [config.hermesPluginIdentifier]),
+        : [config.pluginIdentifier]),
     ];
     const env = [
       ...(input.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME) ?? []),

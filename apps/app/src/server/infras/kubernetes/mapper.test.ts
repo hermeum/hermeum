@@ -152,9 +152,9 @@ describe("ConfigSchema plugin endpoint derivation", () => {
     expect(parsed.pluginEndpointUrl).toBe("http://hermeum:3000/plugin/trpc");
   });
 
-  it("pins hermesPluginIdentifier to the plugins/hermeum install identifier", () => {
+  it("pins pluginIdentifier to the plugins/hermeum install identifier", () => {
     const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
-    expect(parsed.hermesPluginIdentifier).toBe("hermeum/hermeum/plugins/hermeum");
+    expect(parsed.pluginIdentifier).toBe("hermeum/hermeum/plugins/hermeum");
   });
 });
 
@@ -175,11 +175,11 @@ describe("agentToHermesAgent plugin passthrough", () => {
 
   it("stamps enable: true on the hermeum plugin's CR entry", () => {
     const hermesAgent = agentToHermesAgent(
-      makeAgent({ plugins: ["owner/some-plugin", config.hermesPluginIdentifier] })
+      makeAgent({ plugins: ["owner/some-plugin", config.pluginIdentifier] })
     );
     expect(hermesAgent.spec.hermes?.plugins).toEqual([
       { identifier: "owner/some-plugin" },
-      { identifier: config.hermesPluginIdentifier, enable: true },
+      { identifier: config.pluginIdentifier, enable: true },
     ]);
   });
 });
@@ -207,18 +207,18 @@ describe("mapHermesAgent plugin read-back passthrough", () => {
     const agent = mapHermesAgent(
       makeHermesAgent({}, [
         { identifier: "owner/some-plugin" },
-        { identifier: config.hermesPluginIdentifier, enable: true },
+        { identifier: config.pluginIdentifier, enable: true },
       ])
     );
-    expect(agent.plugins).toEqual(["owner/some-plugin", config.hermesPluginIdentifier]);
+    expect(agent.plugins).toEqual(["owner/some-plugin", config.pluginIdentifier]);
   });
 
   it("round-trips agentToHermesAgent output losslessly", () => {
     const cr = agentToHermesAgent(
-      makeAgent({ plugins: ["owner/some-plugin", config.hermesPluginIdentifier] })
+      makeAgent({ plugins: ["owner/some-plugin", config.pluginIdentifier] })
     );
     const agent = mapHermesAgent(cr);
-    expect(agent.plugins).toEqual(["owner/some-plugin", config.hermesPluginIdentifier]);
+    expect(agent.plugins).toEqual(["owner/some-plugin", config.pluginIdentifier]);
   });
 });
 

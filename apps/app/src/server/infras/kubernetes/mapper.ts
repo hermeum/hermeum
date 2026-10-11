@@ -296,7 +296,7 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
   if (agent.plugins !== undefined) {
     hermes.plugins = agent.plugins.map((identifier) => ({
       identifier,
-      ...(identifier === config.hermesPluginIdentifier && { enable: true as const }),
+      ...(identifier === config.pluginIdentifier && { enable: true as const }),
     }));
   }
   if (agent.packages !== undefined) {
