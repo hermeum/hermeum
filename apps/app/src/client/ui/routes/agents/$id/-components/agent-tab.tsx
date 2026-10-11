@@ -22,6 +22,7 @@ import {
   getPlatformDescription,
   getPlatformLabel,
   type Agent,
+  type AgentCron,
   type ToolsetId,
   type PlatformId,
 } from "@/entities";
@@ -155,6 +156,16 @@ function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
   );
 }
 
+function cronSettings(cron: AgentCron): string[] {
+  return [
+    ...(cron.workdir !== undefined ? [`workdir: ${cron.workdir}`] : []),
+    ...(cron.model !== undefined ? [`model: ${cron.model}`] : []),
+    ...(cron.provider !== undefined ? [`provider: ${cron.provider}`] : []),
+    ...(cron.reasoningEffort !== undefined ? [`reasoning: ${cron.reasoningEffort}`] : []),
+    ...(cron.continuity === true ? ["continuity: on"] : []),
+  ];
+}
+
 function CronsSection({ agent }: { agent: Agent }) {
   const crons = agent.crons ?? [];
   return (
@@ -217,6 +228,12 @@ function CronsSection({ agent }: { agent: Agent }) {
                       <div className="flex flex-col gap-1.5">
                         <p className="text-xs font-medium text-muted-foreground">Skills</p>
                         <ButtonList items={cron.skills} max={10} />
+                      </div>
+                    )}
+                    {cronSettings(cron).length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Run settings</p>
+                        <ButtonList items={cronSettings(cron)} max={10} />
                       </div>
                     )}
                   </div>
@@ -323,7 +340,10 @@ export function AgentTab({ agent }: { agent: Agent }) {
       <div className="py-8 flex flex-col gap-3">
         <p className="text-sm font-bold">Plugins</p>
         {agent.plugins && agent.plugins.length > 0 ? (
-          <ButtonList items={agent.plugins} max={10} />
+          <ButtonList
+            items={agent.plugins.map((p) => (p.ref ? `${p.identifier} @ ${p.ref.slice(0, 7)}` : p.identifier))}
+            max={10}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">No plugins configured.</p>
         )}

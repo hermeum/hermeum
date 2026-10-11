@@ -910,6 +910,98 @@ describe("AgentInputSchema crons validation", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts the new workdir/model/provider/reasoningEffort/continuity fields", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [
+        makeCron({
+          workdir: "/workspace/acme",
+          model: "gpt-5",
+          provider: "nous",
+          reasoningEffort: "high",
+          continuity: true,
+        }),
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts every reasoningEffort level", () => {
+    for (const reasoningEffort of [
+      "none",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+      "ultra",
+    ]) {
+      const result = AgentInputSchema.safeParse({ crons: [makeCron({ reasoningEffort })] });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects an unrecognized reasoningEffort level", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ reasoningEffort: "extreme" })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a relative workdir", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ workdir: "projects/acme" })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes unknown cron fields through unvalidated (looseObject forward-compat)", () => {
+    const result = AgentInputSchema.safeParse({
+      crons: [makeCron({ profile: "researcher" })],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("AgentPluginSchema validation", () => {
+  it("accepts a plain identifier entry", () => {
+    const result = AgentInputSchema.safeParse({
+      plugins: [{ identifier: "owner/some-plugin" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a pinned ref", () => {
+    const result = AgentInputSchema.safeParse({
+      plugins: [
+        {
+          identifier: "owner/some-plugin",
+          ref: "3a9f1b2c4d5e6f708192a3b4c5d6e7f8091a2b3c",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a ref that is not a full 40-character commit SHA", () => {
+    const result = AgentInputSchema.safeParse({
+      plugins: [{ identifier: "owner/some-plugin", ref: "v1.2.3" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an entry missing the identifier", () => {
+    const result = AgentInputSchema.safeParse({ plugins: [{ enable: true }] });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes unknown plugin fields through unvalidated (looseObject forward-compat)", () => {
+    const result = AgentInputSchema.safeParse({
+      plugins: [{ identifier: "owner/some-plugin", category: "utilities" }],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("AgentInputObjectSchema as LLM structured-output schema", () => {

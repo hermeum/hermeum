@@ -66,11 +66,7 @@ export interface HermesCron {
   deliver?: string | undefined;
   repeat?: number | undefined;
   skills?: string[] | undefined;
-  script?: string | undefined;
-  noAgent?: boolean | undefined;
   workdir?: string | undefined;
-  monitorScript?: string | undefined;
-  monitorURL?: string | undefined;
   model?: string | undefined;
   provider?: string | undefined;
   reasoningEffort?: string | undefined;
