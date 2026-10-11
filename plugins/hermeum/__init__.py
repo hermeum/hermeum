@@ -1,7 +1,9 @@
 """Hermeum plugin.
 
 Forwards hermes agent-session events to Hermeum's plugin-protocol endpoint
-(POST /plugin/trpc/agentSession.agentSessionEvents), constructing the typed
+(POST /plugin/trpc/agentSession.agentSessionEvents), authenticated as the
+agent's provisioned ingest token (HERMEUM_PLUGIN_TOKEN, presented as
+`Authorization: Bearer` — the server is fail-closed), constructing the typed
 event payloads defined by Hermeum's schema (entities/telemetry.ts — see the
 event union's `oneOf` in openapi/plugin.json). Field extraction mirrors the
 bundled langfuse observability plugin. All event-building business logic
@@ -53,7 +55,14 @@ DEFAULT_URL = "http://hermeum:3000/plugin/trpc"
 
 def register(ctx: Any) -> None:
     base_url = os.environ.get("HERMEUM_PLUGIN_BASE_URL", DEFAULT_URL)
-    telemetry = create_telemetry(base_url)
+    token = os.environ.get("HERMEUM_PLUGIN_TOKEN", "").strip()
+    if not token:
+        log.warning(
+            "[hermeum-telemetry] HERMEUM_PLUGIN_TOKEN is not set — the Hermeum "
+            "server rejects unauthenticated plugin requests, so all events "
+            "will be dropped"
+        )
+    telemetry = create_telemetry(base_url, token)
     telemetry.health_check()
 
     ctx.register_hook("pre_api_request", telemetry.pre_api_request)

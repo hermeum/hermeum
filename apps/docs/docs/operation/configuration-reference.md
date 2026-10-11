@@ -53,7 +53,12 @@ default branch.
 The endpoint URL is derived from the base
 URL below; it is injected as `HERMEUM_PLUGIN_BASE_URL` into the agent's
 workspace `.env` and always wins over a user-set agent env var of the same
-name.
+name. The endpoint is authenticated: at agent-create time Hermeum provisions
+each agent with a per-agent ingest token (injected as the sensitive
+`HERMEUM_PLUGIN_TOKEN` env var, its SHA-256 digest stored in the app database)
+and rejects every request — including the health probe — without a valid
+token. Archiving an agent revokes its token. Nothing here is
+operator-configurable; the token lifecycle is fully automatic.
 
 | Variable | Default | Description |
 | --- | --- | --- |
