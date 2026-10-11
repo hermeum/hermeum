@@ -1,7 +1,15 @@
 import { z } from "zod";
 import * as fastJsonPatch from "fast-json-patch";
 
-import { Agent, AgentInput, AgentInputSchema, Context, Env, JsonPatchOp, DEFAULT_AGENT_TYPE_KEY } from "@/entities";
+import {
+  Agent,
+  AgentInput,
+  AgentInputSchema,
+  Context,
+  Env,
+  JsonPatchOp,
+  DEFAULT_AGENT_TYPE_KEY,
+} from "@/entities";
 
 import { BaseUseCase, HermeumConfigLoadable, OwnershipGuarded } from "./mixin";
 import { config } from "@/server/libs/config";
@@ -29,17 +37,35 @@ update your agent spec in Hermeum instead.`;
 
 // A managed aspect of the deployed agent. wrapInput applies the policy to a
 // create payload — every managed field is populated, even when the input
-// leaves it undefined. wrapPatch applies it to an update patch — only patches
-// carrying the field are wrapped; a patch without it keeps the stored value
-// (gradual migration: agents deployed before a policy gain it on their next
-// field-bearing edit). stripAgent removes managed content from a
+// leaves it undefined; ctx carries per-agent values only the use case can
+// produce. wrapPatch applies it to an update patch — only patches carrying
+// the field are wrapped; a patch without it keeps the stored value (gradual
+// migration: agents deployed before a policy gain it on their next
+// field-bearing edit); ctx.storedAgent is the runtime-returned agent being
+// patched (sensitive env values masked), so per-agent values ride the patch
+// instead of being regenerated. stripAgent removes managed content from a
 // runtime-returned agent before it reaches callers. Implementations must be
 // pure, and a no-change step must return its input object unchanged so
-// untouched agents keep identity.
+// untouched agents keep identity. Aspects without per-agent context simply
+// ignore the ctx argument.
 interface ManagedAgentAspect {
-  wrapInput(input: AgentInput): AgentInput;
-  wrapPatch(patch: AgentInput): AgentInput;
+  wrapInput(input: AgentInput, ctx: ManagedCreateContext): AgentInput;
+  wrapPatch(patch: AgentInput, ctx: ManagedPatchContext): AgentInput;
   stripAgent(agent: Agent): Agent;
+}
+
+// Values only the use case can supply on create: the plugin ingest token,
+// which the use case generates and persists the digest of — aspects never
+// touch randomness or the database.
+interface ManagedCreateContext {
+  pluginToken: string;
+}
+
+// The agent being patched, as returned by the runtime (sensitive env values
+// masked; wrapPatch sees the un-stripped form). Update never regenerates
+// per-agent values.
+interface ManagedPatchContext {
+  storedAgent: Agent;
 }
 
 // Soul preamble: every soul deployed to a hermes-agent carries the managed
@@ -49,6 +75,7 @@ interface ManagedAgentAspect {
 // config.yaml write guard and SOUL.md approval gate). Skills are deliberately
 // absent: hermes-agent's curator maintains agent-created skills in the
 // background, so self-managing skills is legitimate behavior.
+// Deployment-wide — no per-agent context, so the ctx argument is ignored.
 class SoulPreamble implements ManagedAgentAspect {
   wrapInput(input: AgentInput): AgentInput {
     // Soulless agents get the preamble alone — the management guard applies
@@ -72,9 +99,7 @@ class SoulPreamble implements ManagedAgentAspect {
   // Idempotent: input may already carry the preamble (e.g. a hand-written API
   // patch echoing the stored soul), so never double-inject.
   #withPreamble(soul: string): string {
-    return soul.startsWith(MANAGED_SOUL_PREAMBLE)
-      ? soul
-      : `${MANAGED_SOUL_PREAMBLE}\n\n${soul}`;
+    return soul.startsWith(MANAGED_SOUL_PREAMBLE) ? soul : `${MANAGED_SOUL_PREAMBLE}\n\n${soul}`;
   }
 
   // Returns the user-authored soul, or undefined when only the preamble
@@ -90,36 +115,48 @@ class SoulPreamble implements ManagedAgentAspect {
 }
 
 // Hermeum plugin: every managed agent auto-installs the hermeum plugin so it
-// posts its session telemetry to Hermeum. The bundled plugin reads the
-// endpoint from the environment (plugin/hermeum/__init__.py), so the var is
-// injected together with the identifier — one concern, managed as a unit. The
-// endpoint name is platform-owned: a user-supplied entry is force-overridden
-// so the injected value is always live, and stripping by name stays
-// unambiguous.
+// posts its session telemetry to Hermeum. The bundled plugin reads its
+// endpoint and ingest token from the environment
+// (plugin/hermeum/__init__.py), so all three managed pieces ship as one
+// unit: the plugin identifier, the endpoint var (config-sourced, always
+// live), and the per-agent ingest token. Both env names are platform-owned —
+// user-supplied entries are force-overridden so the injected values are
+// always live, and stripping by name stays unambiguous.
 //
-// The concern also owns the per-agent ingest token (HERMEUM_PLUGIN_TOKEN).
-// Unlike the endpoint var, its value is per-agent and secret, so it is not
-// config-sourced and cannot be aspect-injected: the use case generates it at
-// create time, ships it as a sensitive env var, and persists only its
-// SHA-256 digest in the app database. The aspect's part of the bargain is
-// read-side: stripping the token env entry on every expose, next to the
-// endpoint var.
+// The token is secret and per-agent, so the aspect never generates it: the
+// use case creates one per agent (persisting only the SHA-256 digest, see
+// libs/plugin-token) and hands the raw value in via the create context. On
+// patches the masked stored entry rides along (never regenerated — the
+// digest only changes on create), and every read strips the entry.
 const MANAGED_PLUGIN_ENV_NAME = "HERMEUM_PLUGIN_BASE_URL";
 const MANAGED_PLUGIN_TOKEN_ENV_NAME = "HERMEUM_PLUGIN_TOKEN";
 
 class HermeumPlugin implements ManagedAgentAspect {
-  wrapInput(input: AgentInput): AgentInput {
-    return { ...input, ...this.#managed(input) };
+  wrapInput(input: AgentInput, ctx: ManagedCreateContext): AgentInput {
+    return {
+      ...input,
+      plugins: this.#mergedPlugins(input.plugins),
+      env: [
+        ...this.#userEnv(input.env),
+        { name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value: ctx.pluginToken, sensitive: true },
+        { name: MANAGED_PLUGIN_ENV_NAME, value: config.pluginEndpointUrl },
+      ],
+    };
   }
 
   // The plugins/env carrying guards are independent — a patch touching only
   // one of the two fields keeps the stored value of the other.
-  wrapPatch(patch: AgentInput): AgentInput {
-    const managed = this.#managed(patch);
+  wrapPatch(patch: AgentInput, ctx: ManagedPatchContext): AgentInput {
     return {
       ...patch,
-      ...(patch.plugins !== undefined && { plugins: managed.plugins }),
-      ...(patch.env !== undefined && { env: managed.env }),
+      ...(patch.plugins !== undefined && { plugins: this.#mergedPlugins(patch.plugins) }),
+      ...(patch.env !== undefined && {
+        env: [
+          ...this.#userEnv(patch.env),
+          ...this.#preservedToken(ctx.storedAgent.env),
+          { name: MANAGED_PLUGIN_ENV_NAME, value: config.pluginEndpointUrl },
+        ],
+      }),
     };
   }
 
@@ -137,18 +174,33 @@ class HermeumPlugin implements ManagedAgentAspect {
     };
   }
 
-  #managed(input: AgentInput): Pick<AgentInput, "plugins" | "env"> {
-    const plugins = [
-      ...(input.plugins ?? []),
-      ...(input.plugins?.includes(config.hermesPluginIdentifier)
-        ? []
-        : [config.hermesPluginIdentifier]),
+  // Managed names are platform-owned: user-supplied entries for either are
+  // dropped before the managed ones are appended.
+  #userEnv(env: Env | undefined): NonNullable<Env> {
+    return (
+      env?.filter(
+        (v) => v.name !== MANAGED_PLUGIN_ENV_NAME && v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME
+      ) ?? []
+    );
+  }
+
+  #mergedPlugins(plugins: string[] | undefined): string[] {
+    return [
+      ...(plugins ?? []),
+      ...(plugins?.includes(config.hermesPluginIdentifier) ? [] : [config.hermesPluginIdentifier]),
     ];
-    const env = [
-      ...(input.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME) ?? []),
-      { name: MANAGED_PLUGIN_ENV_NAME, value: config.pluginEndpointUrl },
-    ];
-    return { plugins, env };
+  }
+
+  // Env-carrying patches replace the stored env wholesale, so the token entry
+  // must ride the patch to survive. The stored agent arrives with sensitive
+  // values masked to ENV_SECRET_SENTINEL by the runtime; copying the masked
+  // entry verbatim keeps the raw value out of this layer while the runtime's
+  // sentinel resolution restores it in the Secret. Never regenerated here —
+  // the stored digest only changes when the agent is created.
+  #preservedToken(storedEnv: Env | undefined): NonNullable<Env> {
+    const stored = storedEnv?.find((v) => v.name === MANAGED_PLUGIN_TOKEN_ENV_NAME);
+    if (!stored) return [];
+    return [{ name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value: stored.value, sensitive: true }];
   }
 }
 
@@ -156,12 +208,12 @@ const MANAGED_ASPECTS: ManagedAgentAspect[] = [new SoulPreamble(), new HermeumPl
 
 // Apply every managed aspect to a write payload. Call after input validation
 // (AgentInputSchema.parse) so injected entries can't trip schema limits.
-function wrapManagedInput(input: AgentInput): AgentInput {
-  return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.wrapInput(acc), input);
+function wrapManagedInput(input: AgentInput, ctx: ManagedCreateContext): AgentInput {
+  return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.wrapInput(acc, ctx), input);
 }
 
-function wrapManagedPatch(patch: AgentInput): AgentInput {
-  return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.wrapPatch(acc), patch);
+function wrapManagedPatch(patch: AgentInput, ctx: ManagedPatchContext): AgentInput {
+  return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.wrapPatch(acc, ctx), patch);
 }
 
 // Inverse of the write-direction wrapping: every runtime-returned Agent is
@@ -169,38 +221,6 @@ function wrapManagedPatch(patch: AgentInput): AgentInput {
 // user-owned. Untouched agents pass through by identity.
 function stripManagedAgent(agent: Agent): Agent {
   return MANAGED_ASPECTS.reduce((acc, aspect) => aspect.stripAgent(acc), agent);
-}
-
-// ─── Managed plugin ingest token ─────────────────────────────────────────────
-// The raw token is generated per agent at create time and shipped only as a
-// sensitive env var; its SHA-256 digest is what the server verifies ingest
-// against (libs/plugin-token). Env-side injection happens here, use-case
-// level, because the value is per-agent — the HermeumPlugin aspect handles
-// only the config-sourced endpoint var (and strips both on read).
-
-// Force-override any user-supplied entry: the name is platform-owned.
-function withManagedPluginTokenEnv(env: Env | undefined, value: string): Env {
-  return [
-    ...(env?.filter((v) => v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME) ?? []),
-    { name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value, sensitive: true },
-  ];
-}
-
-// Env-carrying patches replace the stored env wholesale, so the token entry
-// must ride the patch to survive. The stored agent arrives with sensitive
-// values masked to ENV_SECRET_SENTINEL by the runtime; copying the masked
-// entry verbatim keeps the raw value out of this layer while the runtime's
-// sentinel resolution restores it in the Secret. Never regenerated here —
-// the stored digest only changes when the agent is created.
-function withPreservedPluginTokenEnv(patch: AgentInput, storedEnv: Env | undefined): AgentInput {
-  if (patch.env === undefined) return patch;
-  const filtered = patch.env.filter((v) => v.name !== MANAGED_PLUGIN_TOKEN_ENV_NAME);
-  const stored = storedEnv?.find((v) => v.name === MANAGED_PLUGIN_TOKEN_ENV_NAME);
-  if (!stored) return { ...patch, env: filtered };
-  return {
-    ...patch,
-    env: [...filtered, { name: MANAGED_PLUGIN_TOKEN_ENV_NAME, value: stored.value, sensitive: true }],
-  };
 }
 
 export const ListAgentsFilterSchema = z.object({
@@ -232,10 +252,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     // unauthorized until re-created, so a silent gap is worse than an error.
     const pluginToken = generatePluginToken();
     const agent = await this.runtime.createHermesAgent({
-      ...wrapManagedInput({
-        ...agentInput,
-        env: withManagedPluginTokenEnv(agentInput.env, pluginToken),
-      }),
+      ...wrapManagedInput(agentInput, { pluginToken }),
       userId,
     });
     await this.db.storeAgentToken(agent.id, hashPluginToken(pluginToken));
@@ -256,11 +273,10 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     await this.checkAgentInputAllowed(patch);
     if (patch.env !== undefined) {
       this.checkEnvSensitivityNotDowngraded(agent.env, patch.env);
-      patch = withPreservedPluginTokenEnv(patch, agent.env);
     }
     const updated = await this.runtime.patchHermesAgent({
       id,
-      patch: wrapManagedPatch(patch),
+      patch: wrapManagedPatch(patch, { storedAgent: agent }),
     });
     this.logger.info("updated hermes agent", { id, userId: this.requireUser(ctx).id });
     return stripManagedAgent(updated);
@@ -341,7 +357,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
 
   async getmutatingWebhookJsonPatch(
     agent: Agent,
-    incomingObject?: unknown,
+    incomingObject?: unknown
   ): Promise<JsonPatchOp[] | null> {
     const { agentTypes } = await this.loadHermeumConfig();
     // Agents without an explicit type fall back to the reserved `default`
