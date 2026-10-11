@@ -14,8 +14,13 @@ constructed as the typed payloads generated from Hermeum's event schema
 (`openapi/plugin.json`), mirroring the bundled langfuse observability plugin's
 field extraction. Content is captured sanitized (default, like langfuse):
 secret redaction before truncation (12000 chars, `HERMEUM_PLUGIN_MAX_CHARS`).
-Cost is not computed client-side — `totalUsd` is always null; Hermeum
-estimates server-side.
+Cost is estimated client-side via hermes-agent's own `agent.usage_pricing`
+(the module the bundled langfuse plugin uses, so pricing stays in lockstep
+with the pinned submodule — no server-side estimation). Langfuse semantics:
+subscription-included routes (e.g. OpenAI Codex plans) yield null, a total is
+only exported when the estimate is complete, and a partial component breakdown
+(`inputUsd`/`outputUsd`/`cacheReadUsd`/`cacheWriteUsd`) is never promoted to a
+total. MoA advisor references carry usage only (the schema has no cost field).
 
 ## Layout
 
@@ -96,7 +101,7 @@ not the turn-scoped `post_llm_call`; `post_tool_call` provides
 |---|---|---|
 | `pre_api_request` | — (context stash) | keeps the turn's `user_message` for the next `llm_call` |
 | `on_session_start` | `session_started` | `platform`, `provider`, `model`, `apiMode` |
-| `post_api_request` | `llm_call` | `userMessage`, `usage`, `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
+| `post_api_request` | `llm_call` | `userMessage`, `usage`, `cost` (estimated via `agent.usage_pricing`), `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
 | `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
 | `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |
 | `on_session_finalize` | `session_finalized` | `output` — the last assistant output seen in the session, then flush |

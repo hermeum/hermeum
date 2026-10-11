@@ -17,6 +17,7 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -100,6 +101,16 @@ _USAGE_FIELDS = (
     ("cache_read_tokens", False),
     ("cache_write_tokens", False),
     ("reasoning_tokens", False),
+)
+
+# (usage attr, Cost field, PricingEntry rate attr) for the per-component
+# breakdown; a None rate or zero tokens skips the component — same keys as
+# the langfuse plugin's cost_details breakdown.
+_COST_BREAKDOWN_FIELDS = (
+    ("input_tokens", "input_usd", "input_cost_per_million"),
+    ("output_tokens", "output_usd", "output_cost_per_million"),
+    ("cache_read_tokens", "cache_read_usd", "cache_read_cost_per_million"),
+    ("cache_write_tokens", "cache_write_usd", "cache_write_cost_per_million"),
 )
 
 
@@ -198,6 +209,64 @@ def _usage_from_any(raw: Any) -> Usage:
     return Usage(**fields)
 
 
+def _cost(raw_usage: Any, *, provider: Any, model: Any, base_url: Any) -> Cost:
+    """Per-call estimated cost via hermes-agent's own ``agent.usage_pricing``
+    (the module the bundled langfuse plugin uses — same pricing data as the
+    pinned submodule, no server-side estimation needed). Langfuse semantics:
+    subscription-included routes are skipped, and a total is exported only
+    when the estimate is complete — a partial component subtotal is never
+    promoted to a total, and a zero total is not exported as authoritative.
+    Fail-open: any import/estimation problem yields an all-null Cost."""
+    raw_model = _safe_str(model)
+    if raw_usage is None or not raw_model:
+        return Cost(total_usd=None)
+    base_url_text = _safe_str(base_url) or ""
+    try:
+        from agent.usage_pricing import (
+            CanonicalUsage,
+            estimate_usage_cost,
+            get_pricing_entry,
+            resolve_billing_route,
+        )
+
+        get = raw_usage.get if isinstance(raw_usage, dict) else (lambda key, _o=raw_usage: getattr(_o, key, None))
+        canonical = CanonicalUsage(
+            input_tokens=int(get("input_tokens") or 0),
+            output_tokens=int(get("output_tokens") or 0),
+            cache_read_tokens=int(get("cache_read_tokens") or 0),
+            cache_write_tokens=int(get("cache_write_tokens") or 0),
+            reasoning_tokens=int(get("reasoning_tokens") or 0),
+            request_count=int(get("request_count") or 1),
+        )
+        provider_text = _safe_str(provider) or ""
+
+        # Subscription-included routes (e.g. openai-codex) have no provider
+        # invoice for usage, so there is nothing to export.
+        route = resolve_billing_route(raw_model, provider=provider_text, base_url=base_url_text)
+        if route.billing_mode == "subscription_included":
+            return Cost(total_usd=None)
+
+        cost = estimate_usage_cost(
+            raw_model, canonical, provider=provider_text, base_url=base_url_text, api_key=""
+        )
+        # Unknown pricing -> no components either (a partial breakdown without
+        # a total would look authoritative); included/zero -> skip likewise.
+        if cost.amount_usd is None or cost.status == "included" or float(cost.amount_usd) <= 0:
+            return Cost(total_usd=None)
+
+        cost_fields: dict[str, float] = {"total_usd": float(cost.amount_usd)}
+        entry = get_pricing_entry(raw_model, provider=provider_text, base_url=base_url_text)
+        for attr, cost_attr, rate_attr in _COST_BREAKDOWN_FIELDS:
+            rate = getattr(entry, rate_attr, None) if entry else None
+            tokens = getattr(canonical, attr)
+            if rate is not None and tokens:
+                cost_fields[cost_attr] = float(Decimal(tokens) * rate / Decimal("1000000"))
+        return Cost(**cost_fields)
+    except Exception:
+        log.debug("[hermeum-telemetry] usage pricing failed", exc_info=True)
+        return Cost(total_usd=None)
+
+
 def _assistant_from(message: Any) -> Assistant:
     """Assistant output from an assistant_message object (langfuse
     _serialize_assistant_message) — content, reasoning, tool_calls."""
@@ -276,8 +345,11 @@ class HermeumTelemetry:
 
     One public method per registered hook; each never raises so hook
     callbacks cannot affect agent operation. Content is captured sanitized
-    (redact before truncate). Cost is not computed here (totalUsd: null) —
-    Hermeum estimates server-side. LLM spans come from the request-scoped
+    (redact before truncate). Cost is estimated client-side via hermes-agent's
+    ``agent.usage_pricing`` (same module the langfuse plugin uses) — an
+    all-null cost means pricing is unknown or the route is
+    subscription-included; a partial component breakdown is never promoted to
+    a total. LLM spans come from the request-scoped
     post_api_request hook (usage/duration/finish_reason); post_tool_call
     provides result, duration and status. The last assistant output is kept
     so session_finalized can close the trajectory with it.
@@ -422,7 +494,12 @@ class HermeumTelemetry:
             duration_s=_duration_s(kwargs.get("api_duration")),
             finish_reason=_safe_str(kwargs.get("finish_reason")) or None,
             usage=_usage_from_any(raw_usage),
-            cost=Cost(total_usd=None),
+            cost=_cost(
+                raw_usage,
+                provider=kwargs.get("provider"),
+                model=kwargs.get("response_model") or kwargs.get("model"),
+                base_url=kwargs.get("base_url"),
+            ),
             assistant=assistant,
             moa_references=moa_references,
         ))
