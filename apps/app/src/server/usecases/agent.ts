@@ -259,7 +259,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
       userId,
     });
     await this.db.storeAgentToken(agent.id, hashPluginToken(pluginToken));
-    this.logger.info("created herme agent", { id: agent.id, userId });
+    this.logger.info("created hermes agent", { id: agent.id, userId });
     return stripManagedAgent(agent);
   }
 
@@ -307,7 +307,7 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     // no longer post telemetry. Idempotent (archiving twice re-patches), so
     // a failure simply retries the whole operation.
     await this.db.revokeAgentToken(id);
-    this.logger.info("archived herme agent", { id, userId: this.requireUser(ctx).id });
+    this.logger.info("archived hermes agent", { id, userId: this.requireUser(ctx).id });
     return stripManagedAgent(archived);
   }
 

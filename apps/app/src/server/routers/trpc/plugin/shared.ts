@@ -22,10 +22,13 @@ export const createPluginTRPCContext =
   async ({ req }: { req: Request }): Promise<PluginContext> => {
     const header = req.headers.authorization ?? "";
     const match = /^Bearer\s+(.+)$/i.exec(header);
-    if (!match) {
+    // An empty (whitespace-only) value is rejected explicitly — fail-closed
+    // either way, but clearer and no wasted digest lookup.
+    const token = match?.[1]?.trim();
+    if (!token) {
       return { agentId: null };
     }
-    const agentId = await db.findAgentIdByTokenHash(hashPluginToken(match[1]!.trim()));
+    const agentId = await db.findAgentIdByTokenHash(hashPluginToken(token));
     return { agentId };
   };
 

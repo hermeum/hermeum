@@ -358,9 +358,12 @@ class HermeumTelemetry:
     """
 
     def __init__(self, base_url: str = DEFAULT_URL, token: str | None = None) -> None:
-        # retries=0: REQUEST_TIMEOUT_S must bound each call, not each of the
-        # generated client's default-3 retries (the health GET would take
-        # ~4x the timeout against a lingering server).
+        # retries=1, not 0: events are fire-and-forget, so one retry gives a
+        # transient in-cluster blip (conn reset, brief server restart) a
+        # cheap second chance instead of silently dropping the batch. The
+        # tradeoff: REQUEST_TIMEOUT_S must bound each attempt, so a call is
+        # bounded at 2x the timeout worst case (the generated client's
+        # default of 3 retries would stretch the atexit flush fourfold).
         configuration = Configuration(host=base_url, retries=1)
         api_client = ApiClient(configuration)
         if token:

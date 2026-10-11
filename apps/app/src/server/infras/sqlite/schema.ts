@@ -35,12 +35,14 @@ export const agentSessionEvents = sqliteTable(
 // Only the SHA-256 digest of the raw token is stored — the raw value ships
 // exclusively in the managed agent's env (HERMEUM_PLUGIN_TOKEN, sensitive).
 // Archiving an agent sets `revokedAt`; verification treats revoked rows as
-// absent. No foreign key — agents live in the Kubernetes Runtime.
+// absent. `updatedAt` changes on re-provisioning, leaving a rotation trail.
+// No foreign key — agents live in the Kubernetes Runtime.
 export const agentTokens = sqliteTable("agent_tokens", {
   agentId: text("agent_id").primaryKey(),
   tokenHash: text("token_hash").notNull().unique(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
   revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
 });

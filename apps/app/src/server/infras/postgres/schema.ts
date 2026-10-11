@@ -32,10 +32,12 @@ export const agentSessionEvents = pgTable(
 // Only the SHA-256 digest of the raw token is stored — the raw value ships
 // exclusively in the managed agent's env (HERMEUM_PLUGIN_TOKEN, sensitive).
 // Archiving an agent sets `revokedAt`; verification treats revoked rows as
-// absent. No foreign key — agents live in the Kubernetes Runtime.
+// absent. `updatedAt` changes on re-provisioning, leaving a rotation trail.
+// No foreign key — agents live in the Kubernetes Runtime.
 export const agentTokens = pgTable("agent_tokens", {
   agentId: text("agent_id").primaryKey(),
   tokenHash: text("token_hash").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
   revokedAt: timestamp("revoked_at"),
 });

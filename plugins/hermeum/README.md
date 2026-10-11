@@ -140,6 +140,10 @@ agent that exists in the mock runtime (create it in the UI and copy its id):
 ```sh
 HERMEUM_DATABASE_URL=file:./sqlite.db pnpm --filter @hermeum/app exec tsx scripts/seed-plugin-token.ts <agentId>
 # prints: export HERMEUM_PLUGIN_TOKEN=hmt_...
+#
+# The printed token authorizes ingest for the agent — treat it like any
+# other credential; don't leave it in shared logs or persistent shell history
+# (with HISTCONTROL=ignorespace you can prefix the export with a space).
 ```
 
 Then, with the printed token exported:

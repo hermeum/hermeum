@@ -1,0 +1,1 @@
+ALTER TABLE `agent_tokens` ADD `updated_at` integer;

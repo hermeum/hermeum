@@ -70,6 +70,12 @@ describe("createPluginTRPCContext", () => {
     expect(findAgentIdByTokenHash).not.toHaveBeenCalled();
   });
 
+  it("yields a null agent id for an empty bearer token without a lookup", async () => {
+    const ctx = await createPluginTRPCContext()({ req: makeRequest("Bearer   ") });
+    expect(ctx.agentId).toBeNull();
+    expect(findAgentIdByTokenHash).not.toHaveBeenCalled();
+  });
+
   it("yields a null agent id for an unknown or revoked token", async () => {
     findAgentIdByTokenHash.mockResolvedValue(null);
     const ctx = await createPluginTRPCContext()({ req: makeRequest("Bearer hmt_unknown") });

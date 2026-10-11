@@ -9,15 +9,17 @@ import { generatePluginToken, hashPluginToken } from "../src/server/libs/plugin-
 // a hand-run plugin client impossible to authenticate. This script mints a
 // token straight into the app database and prints the raw value.
 //
+// Treat the output like any other credential — it authorizes ingest for the
+// agent. Avoid pasting it into shared logs or persistent shell history
+// (e.g. with HISTCONTROL=ignorespace, prefix the export with a space).
+//
 // Usage:
 //   HERMEUM_DATABASE_URL=file:./sqlite.db pnpm exec tsx scripts/seed-plugin-token.ts <agentId>
 //
 // The agent id must exist in the Runtime the server sees (with
 // HERMEUM_MOCK_RUNTIME=true, create the agent in the UI first and copy its
 // id) — the token stamps ingested events with the agent id, and session
-// reads are ownership-guarded through the runtime agent lookup. Print the
-// token once and treat it like any other credential: it authorizes ingest
-// for that agent.
+// reads are ownership-guarded through the runtime agent lookup.
 
 const main = (): void => {
   const agentId = process.argv[2];

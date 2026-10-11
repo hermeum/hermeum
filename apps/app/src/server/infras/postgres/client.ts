@@ -13,10 +13,7 @@ import {
 import { config } from "@/server/libs/config";
 
 import { agentSessionEvents, agentTokens } from "./schema.js";
-import {
-  AppendAgentSessionEventsInput,
-  Database,
-} from "@/server/usecases/adaptors/database.js";
+import { AppendAgentSessionEventsInput, Database } from "@/server/usecases/adaptors/database.js";
 
 // Postgres persistence for the app database. Owns the connection and
 // implements the Database adaptor against the postgres schema; injected into
@@ -83,10 +80,7 @@ export class PostgresDatabase implements Database {
       .select({ payload: agentSessionEvents.payload })
       .from(agentSessionEvents)
       .where(
-        and(
-          eq(agentSessionEvents.agentId, agentId),
-          eq(agentSessionEvents.sessionId, sessionId)
-        )
+        and(eq(agentSessionEvents.agentId, agentId), eq(agentSessionEvents.sessionId, sessionId))
       )
       .orderBy(asc(agentSessionEvents.timestamp));
     // Stored payloads are data at rest — one persisted under an older schema
@@ -108,10 +102,10 @@ export class PostgresDatabase implements Database {
   async storeAgentToken(agentId: string, tokenHash: string): Promise<void> {
     await this.db
       .insert(agentTokens)
-      .values({ agentId, tokenHash })
+      .values({ agentId, tokenHash, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: agentTokens.agentId,
-        set: { tokenHash, revokedAt: null },
+        set: { tokenHash, updatedAt: new Date(), revokedAt: null },
       });
   }
 
