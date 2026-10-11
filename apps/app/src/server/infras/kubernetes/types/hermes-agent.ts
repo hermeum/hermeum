@@ -33,6 +33,8 @@ export interface HermesStorage {
 export interface HermesDotEnv {
   secretRef?: { name: string } | undefined;
   configMapRef?: { name: string } | undefined;
+  secretRefs?: { name: string }[] | undefined;
+  configMapRefs?: { name: string }[] | undefined;
 }
 
 export interface HermesWorkspace {
@@ -45,6 +47,7 @@ export interface HermesWorkspace {
 export interface HermesPlugin {
   identifier: string;
   enable?: boolean | undefined;
+  ref?: string | undefined;
 }
 
 export interface HermesSkill {
@@ -63,9 +66,11 @@ export interface HermesCron {
   deliver?: string | undefined;
   repeat?: number | undefined;
   skills?: string[] | undefined;
-  script?: string | undefined;
-  noAgent?: boolean | undefined;
   workdir?: string | undefined;
+  model?: string | undefined;
+  provider?: string | undefined;
+  reasoningEffort?: string | undefined;
+  continuity?: boolean | undefined;
   profile?: string | undefined;
 }
 
