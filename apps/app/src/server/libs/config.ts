@@ -62,7 +62,7 @@ export const ConfigSchema = z.object({
         "Injected into every managed agent, whose bundled hermeum plugin " +
         "posts agent-session events to <pluginBaseUrl>/plugin/trpc."
     ),
-  hermesPluginIdentifier: z
+  pluginIdentifier: z
     .string()
     .min(1)
     .default("hermeum/hermeum/plugins/hermeum")
@@ -74,12 +74,12 @@ export const ConfigSchema = z.object({
   // Pinned for the upcoming v0.3.0 release — fe9e535… is PR-288's merge commit
   // (main HEAD at authoring time). Set to the current HEAD on every version
   // upgrade (see AGENTS.md).
-  hermesPluginRef: z
+  pluginRef: z
     .string()
-    .regex(/^[0-9a-fA-F]{40}$/, "hermesPluginRef must be a full 40-character Git commit SHA.")
+    .regex(/^[0-9a-fA-F]{40}$/, "pluginRef must be a full 40-character Git commit SHA.")
     .default("fe9e5350054cccaf3a38d49b70900d4300b90462")
     .describe(
-      "Commit SHA pinning the auto-installed hermeum plugin install (hermesPluginIdentifier) " +
+      "Commit SHA pinning the auto-installed hermeum plugin install (pluginIdentifier) " +
         "to the hermeum repo revision it ships with. Manually bumped per release — " +
         "not env-configurable."
     ),

@@ -92,7 +92,7 @@ class SoulPreamble implements ManagedAgentAspect {
 // posts its session telemetry to Hermeum. The bundled plugin reads the
 // endpoint from the environment (plugin/hermeum/__init__.py), so the var is
 // injected together with the identifier — one concern, managed as a unit. The
-// install is also pinned to hermesPluginRef (the hermeum commit the plugin
+// install is also pinned to pluginRef (the hermeum commit the plugin
 // ships from — see config.ts) so the installed plugin revision is
 // release-controlled. The identifier and endpoint name are platform-owned: a
 // user-supplied entry or env var is force-overridden so the injected pinned
@@ -117,7 +117,7 @@ class HermeumPlugin implements ManagedAgentAspect {
 
   stripAgent(agent: Agent): Agent {
     const plugins = agent.plugins?.filter(
-      (plugin) => plugin.identifier !== config.hermesPluginIdentifier
+      (plugin) => plugin.identifier !== config.pluginIdentifier
     );
     const env = agent.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME);
     return {
@@ -132,8 +132,8 @@ class HermeumPlugin implements ManagedAgentAspect {
       // The managed identifier is platform-owned: a user-supplied entry is
       // dropped and replaced wholesale — ref included — so the pin is always
       // live (mirrors the env force-override below).
-      ...(input.plugins?.filter((plugin) => plugin.identifier !== config.hermesPluginIdentifier) ?? []),
-      { identifier: config.hermesPluginIdentifier, ref: config.hermesPluginRef },
+      ...(input.plugins?.filter((plugin) => plugin.identifier !== config.pluginIdentifier) ?? []),
+      { identifier: config.pluginIdentifier, ref: config.pluginRef },
     ];
     const env = [
       ...(input.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME) ?? []),
