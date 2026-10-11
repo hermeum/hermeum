@@ -16,7 +16,8 @@ request-scoped hook:
                         next llm_call of the same turn; emits no event
 - on_session_start  -> session_started (platform/provider/model/apiMode)
 - post_api_request  -> llm_call (userMessage, usage, assistant, durationS,
-                        finishReason, response_model; also carries sanitized
+                        finishReason, response_model, cost estimate via
+                        agent.usage_pricing; also carries sanitized
                         request/response)
 - post_tool_call    -> tool_call (toolName, toolCallId, args, result,
                        durationS from duration_ms, status)
@@ -33,7 +34,9 @@ Pre-call *events* are deliberately not emitted — every event is a completed
 record; the pre_api_request hook is registered only to stash turn context.
 Content is captured in a "sanitized" mode (langfuse default): secret
 redaction before truncation, so a secret straddling the cut cannot leak.
-Cost is not computed here (totalUsd: null) — Hermeum estimates server-side.
+Cost is estimated client-side via hermes-agent's ``agent.usage_pricing``
+(langfuse semantics: subscription-included routes yield null, and a partial
+component breakdown is never promoted to a total).
 """
 
 from __future__ import annotations
