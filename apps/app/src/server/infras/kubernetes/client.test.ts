@@ -29,4 +29,12 @@ describe("ConfigSchema plugin endpoint derivation", () => {
     const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
     expect(parsed.hermesPluginIdentifier).toBe("hermeum/hermeum/plugins/hermeum");
   });
+
+  it("pins hermesPluginRef to the plugins/hermeum install commit pin", () => {
+    const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
+    expect(parsed.hermesPluginRef).toBe(
+      "fe9e5350054cccaf3a38d49b70900d4300b90462",
+    );
+    expect(parsed.hermesPluginRef).toMatch(/^[0-9a-f]{40}$/);
+  });
 });

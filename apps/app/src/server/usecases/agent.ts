@@ -92,9 +92,11 @@ class SoulPreamble implements ManagedAgentAspect {
 // posts its session telemetry to Hermeum. The bundled plugin reads the
 // endpoint from the environment (plugin/hermeum/__init__.py), so the var is
 // injected together with the identifier — one concern, managed as a unit. The
-// endpoint name is platform-owned: a user-supplied entry is force-overridden
-// so the injected value is always live, and stripping by name stays
-// unambiguous.
+// install is also pinned to hermesPluginRef (the hermeum commit the plugin
+// ships from — see config.ts) so the installed plugin version matches the app
+// release. The endpoint name is platform-owned: a user-supplied entry is
+// force-overridden so the injected value is always live, and stripping by
+// name stays unambiguous.
 const MANAGED_PLUGIN_ENV_NAME = "HERMEUM_PLUGIN_BASE_URL";
 
 class HermeumPlugin implements ManagedAgentAspect {
@@ -130,7 +132,7 @@ class HermeumPlugin implements ManagedAgentAspect {
       ...(input.plugins ?? []),
       ...(input.plugins?.some((plugin) => plugin.identifier === config.hermesPluginIdentifier)
         ? []
-        : [{ identifier: config.hermesPluginIdentifier }]),
+        : [{ identifier: config.hermesPluginIdentifier, ref: config.hermesPluginRef }]),
     ];
     const env = [
       ...(input.env?.filter((v) => v.name !== MANAGED_PLUGIN_ENV_NAME) ?? []),

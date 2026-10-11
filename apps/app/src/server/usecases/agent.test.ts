@@ -17,6 +17,7 @@ vi.mock("@/server/libs/config", () => ({
     configPath: "./config.yaml",
     hermesDocsPath: "./docs",
     hermesPluginIdentifier: "hermeum/hermeum/plugin/hermeum",
+    hermesPluginRef: "fe9e5350054cccaf3a38d49b70900d4300b90462",
     pluginEndpointUrl: "http://hermeum:3000/plugin/trpc",
   },
 }));
@@ -29,7 +30,10 @@ import type { Runtime } from "./adaptors/runtime";
 import type { JsonPatchOp } from "@/entities";
 import type { Agent, AgentInput, AgentPlugin, Context, SharedEnvSet } from "@/entities";
 
-const HERMES_PLUGIN: AgentPlugin = { identifier: "hermeum/hermeum/plugin/hermeum" };
+const HERMES_PLUGIN: AgentPlugin = {
+  identifier: "hermeum/hermeum/plugin/hermeum",
+  ref: "fe9e5350054cccaf3a38d49b70900d4300b90462",
+};
 const USER_PLUGIN: AgentPlugin = { identifier: "owner/some-plugin" };
 const PLUGIN_ENV_VAR = {
   name: "HERMEUM_PLUGIN_BASE_URL",
