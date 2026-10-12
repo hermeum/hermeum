@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Multi-stage Dockerfile for @hermeum/app.
 # Build from repo root:
-#   docker build -f dockerfiles/Dockerfile.app -t hermeum-app .
+#   docker build -f dockerfiles/Dockerfile.app \
+#     --build-arg PLUGIN_REF=$(git rev-parse HEAD) -t hermeum-app .
 
 ARG NODE_IMAGE=node:24-alpine
 ARG PNPM_VERSION=9.15.0
@@ -56,6 +57,14 @@ RUN apk add --no-cache libstdc++ wget
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0
+
+# Commit SHA the image is built from — pins the auto-installed hermeum
+# plugin (HERMEUM_PLUGIN_REF). CI passes the workflow's github.sha; local
+# builds pass --build-arg PLUGIN_REF=$(git rev-parse HEAD). When omitted,
+# the arg expands to an empty string, which the app treats as unpinned —
+# the plugin installs from the repo's default branch (main).
+ARG PLUGIN_REF
+ENV HERMEUM_PLUGIN_REF=${PLUGIN_REF}
 
 WORKDIR /app
 

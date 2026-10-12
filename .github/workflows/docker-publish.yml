@@ -38,6 +38,8 @@ jobs:
           file: dockerfiles/Dockerfile.app
           platforms: linux/arm64,linux/amd64
           push: true
+          build-args: |
+            PLUGIN_REF=${{ github.sha }}
           tags: |
             ghcr.io/hermeum/hermeum:${{ github.ref_name }}
             ghcr.io/hermeum/hermeum:latest

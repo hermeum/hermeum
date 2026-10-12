@@ -69,19 +69,22 @@ export const ConfigSchema = z.object({
     .describe(
       "Git plugin identifier (owner/repo/subdir) of the plugin shipped in " +
         "this repo at plugins/hermeum, auto-installed and enabled on every managed " +
-        "agent via the operator's `hermes plugins install`. Fixed — not env-configurable."
+        "agent via the operator's `hermes plugins install` (HERMEUM_PLUGIN_IDENTIFIER)."
     ),
-  // Pinned for the upcoming v0.3.0 release — fe9e535… is PR-288's merge commit
-  // (main HEAD at authoring time). Set to the current HEAD on every version
-  // upgrade (see AGENTS.md).
   pluginRef: z
-    .string()
-    .regex(/^[0-9a-fA-F]{40}$/, "pluginRef must be a full 40-character Git commit SHA.")
-    .default("fe9e5350054cccaf3a38d49b70900d4300b90462")
+    .preprocess(
+      // "" (e.g. the Dockerfile ENV baked without a build-arg) means unpinned.
+      (value) => (value === "" ? undefined : value),
+      z
+        .string()
+        .regex(/^[0-9a-fA-F]{40}$/, "pluginRef must be a full 40-character Git commit SHA.")
+        .optional()
+    )
     .describe(
       "Commit SHA pinning the auto-installed hermeum plugin install (pluginIdentifier) " +
-        "to the hermeum repo revision it ships with. Manually bumped per release — " +
-        "not env-configurable."
+        "to the hermeum repo revision it ships with (HERMEUM_PLUGIN_REF). " +
+        "When unset or empty, the plugin installs from the repo's default branch (main). " +
+        "Set by CI (bakes the built commit) — omit locally."
     ),
   openaiModel: z
     .string()
@@ -221,6 +224,8 @@ export const config = ConfigSchema.parse({
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   pluginBaseUrl: process.env.HERMEUM_PLUGIN_BASE_URL,
+  pluginIdentifier: process.env.HERMEUM_PLUGIN_IDENTIFIER,
+  pluginRef: process.env.HERMEUM_PLUGIN_REF,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,
   openaiBaseUrl: process.env.HERMEUM_OPENAI_BASE_URL,
   openaiApiKey: process.env.HERMEUM_OPENAI_API_KEY,
