@@ -159,12 +159,17 @@ describe("ConfigSchema plugin endpoint derivation", () => {
     expect(parsed.pluginIdentifier).toBe("hermeum/hermeum/plugins/hermeum");
   });
 
-  it("pins pluginRef to the plugins/hermeum install commit pin", () => {
-    const parsed = ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" });
-    expect(parsed.pluginRef).toBe(
-      "fe9e5350054cccaf3a38d49b70900d4300b90462",
-    );
-    expect(parsed.pluginRef).toMatch(/^[0-9a-f]{40}$/);
+  it("leaves pluginRef unset when HERMEUM_PLUGIN_REF is absent or empty", () => {
+    expect(ConfigSchema.parse({ databaseUrl: "file:./test.sqlite" }).pluginRef).toBeUndefined();
+    expect(
+      ConfigSchema.parse({ databaseUrl: "file:./test.sqlite", pluginRef: "" }).pluginRef
+    ).toBeUndefined();
+  });
+
+  it("rejects a pluginRef that is not a full 40-character SHA", () => {
+    expect(() =>
+      ConfigSchema.parse({ databaseUrl: "file:./test.sqlite", pluginRef: "v1.2.3" })
+    ).toThrow(/pluginRef must be a full 40-character Git commit SHA/);
   });
 });
 

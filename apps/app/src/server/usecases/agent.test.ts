@@ -25,6 +25,7 @@ vi.mock("@/server/libs/config", () => ({
 import { stringify } from "yaml";
 
 import { AgentUseCase, MANAGED_SOUL_PREAMBLE } from "./agent";
+import { config } from "@/server/libs/config";
 import { hashPluginToken } from "@/server/libs/plugin-token";
 import type { Database } from "./adaptors/database";
 import type { FileAdaptor } from "./adaptors/file";
@@ -852,6 +853,29 @@ describe("AgentUseCase managed hermeum plugin", () => {
         plugins: [HERMES_PLUGIN],
       })
     );
+  });
+
+  it("createHermesAgent installs the managed plugin without a ref when pluginRef is unset", async () => {
+    const originalRef = config.pluginRef;
+    config.pluginRef = undefined;
+    try {
+      const runtime = makeRuntime();
+      (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
+        async (input: AgentInput) => makeAgent({ plugins: input.plugins })
+      );
+      const useCase = makeUseCase(runtime, makeConfig());
+
+      await useCase.createHermesAgent(makeCtx("user-1"), {
+        plugins: [USER_PLUGIN],
+      });
+      expect(runtime.createHermesAgent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plugins: [USER_PLUGIN, { identifier: HERMES_PLUGIN.identifier }],
+        })
+      );
+    } finally {
+      config.pluginRef = originalRef;
+    }
   });
 
   it("createHermesAgent force-overrides a user-supplied endpoint env var", async () => {
