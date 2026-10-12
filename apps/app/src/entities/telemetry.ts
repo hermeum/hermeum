@@ -186,9 +186,7 @@ const SessionStartedEventSchema = z
     timestamp: z.string().describe("ISO 8601 timestamp of when the event occurred."),
     turnId: z.string().optional(),
     platform: z.string().describe("Hermes platform hosting the session (e.g. `api`, `cli`)."),
-    provider: z.string().describe("Initial model provider for the session."),
     model: z.string().describe("Initial model for the session."),
-    apiMode: z.string().describe("Initial API style (e.g. `completions`, `responses`, `converse`)."),
   })
   .describe("Session lifecycle: an agent session started.");
 

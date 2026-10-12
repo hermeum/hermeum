@@ -459,9 +459,7 @@ class HermeumTelemetry:
             **_envelope(kwargs),
             type="session_started",
             platform=_safe_str(kwargs.get("platform")) or "unknown",
-            provider=_safe_str(kwargs.get("provider")) or "unknown",
             model=_safe_str(kwargs.get("model")) or "unknown",
-            api_mode=_safe_str(kwargs.get("api_mode")) or "unknown",
         ))
 
     def llm_call(self, **kwargs: Any) -> None:
