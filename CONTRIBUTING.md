@@ -37,16 +37,18 @@ Before you begin, make sure you have the following installed and running:
    ```dotenv
    HERMEUM_CONFIG_PATH=config.default.yaml
    HERMEUM_KUBERNETES_NAMESPACE=default
-   HERMEUM_DATABASE_URL=file://sqlite.db
+   HERMEUM_DATABASE_URL=file:./sqlite.db
    HERMEUM_OPENAI_API_KEY=<your-openai-api-key>
+   HERMEUM_PLUGIN_BASE_URL=http://host.docker.internal:3000
    ```
 
    | Variable | Description |
    | --- | --- |
    | `HERMEUM_CONFIG_PATH` | Path (relative to `apps/app`) to the default agent config file. The checked-in `config.default.yaml` defines the built-in templates. |
    | `HERMEUM_KUBERNETES_NAMESPACE` | Kubernetes namespace where Hermeum will create and watch `HermesAgent` resources. Must match a namespace your kubecontext can access. |
-   | `HERMEUM_DATABASE_URL` | Connection URL for the app database. Use the `file://` scheme for local SQLite, e.g. `file://sqlite.db`. |
+   | `HERMEUM_DATABASE_URL` | Connection URL for the app database. Use the `file:` scheme for local SQLite, e.g. `file:./sqlite.db`. |
    | `HERMEUM_OPENAI_API_KEY` | OpenAI API key used by the chat use cases that tailor agent configurations. |
+   | `HERMEUM_PLUGIN_BASE_URL` | Base URL managed agents use to reach the Hermeum app. With a Docker-hosted cluster, `http://host.docker.internal:3000` reaches the dev server on your machine; the default (`http://hermeum:3000`) assumes the app runs in-cluster. |
 
 3. **Run database migrations**:
 
