@@ -16,7 +16,7 @@ request-scoped hook:
 - pre_api_request    -> context stash only: the turn's user_message (the
                         post-api hook carries no request side) kept for the
                         next llm_call of the same turn; emits no event
-- on_session_start  -> session_started (platform/provider/model/apiMode)
+- on_session_start  -> session_started (platform/model)
 - post_api_request  -> llm_call (userMessage, usage, assistant, durationS,
                         finishReason, response_model, cost estimate via
                         agent.usage_pricing; also carries sanitized

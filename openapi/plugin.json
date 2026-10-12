@@ -135,13 +135,7 @@
                             "platform": {
                               "type": "string"
                             },
-                            "provider": {
-                              "type": "string"
-                            },
                             "model": {
-                              "type": "string"
-                            },
-                            "apiMode": {
                               "type": "string"
                             },
                             "turnId": {
@@ -153,9 +147,7 @@
                             "type",
                             "timestamp",
                             "platform",
-                            "provider",
-                            "model",
-                            "apiMode"
+                            "model"
                           ],
                           "additionalProperties": {}
                         },

@@ -31,12 +31,10 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf(BaseModel):
     type: StrictStr
     timestamp: StrictStr
     platform: StrictStr
-    provider: StrictStr
     model: StrictStr
-    api_mode: StrictStr = Field(alias="apiMode")
     turn_id: Optional[StrictStr] = Field(default=None, alias="turnId")
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "platform", "provider", "model", "apiMode", "turnId"]
+    __properties: ClassVar[List[str]] = ["eventId", "type", "timestamp", "platform", "model", "turnId"]
 
     @field_validator('type')
     def type_validate_enum(cls, value):
@@ -107,9 +105,7 @@ class AgentSessionAgentSessionEventsRequestEventsInnerOneOf(BaseModel):
             "type": obj.get("type"),
             "timestamp": obj.get("timestamp"),
             "platform": obj.get("platform"),
-            "provider": obj.get("provider"),
             "model": obj.get("model"),
-            "apiMode": obj.get("apiMode"),
             "turnId": obj.get("turnId")
         })
         # store additional fields in additional_properties

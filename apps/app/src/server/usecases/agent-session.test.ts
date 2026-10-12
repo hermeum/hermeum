@@ -74,9 +74,7 @@ function makeBatch(overrides: Partial<AgentSession> = {}): AgentSession {
         type: "session_started",
         timestamp: "2026-10-06T16:04:25.000Z",
         platform: "api",
-        provider: "openrouter",
         model: "test-model",
-        apiMode: "completions",
       },
       {
         eventId: "22222222-2222-4222-8222-222222222222",

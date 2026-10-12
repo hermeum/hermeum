@@ -102,7 +102,7 @@ not the turn-scoped `post_llm_call`; `post_tool_call` provides
 | Hook | Event | Key fields |
 |---|---|---|
 | `pre_api_request` | — (context stash) | keeps the turn's `user_message` for the next `llm_call` |
-| `on_session_start` | `session_started` | `platform`, `provider`, `model`, `apiMode` |
+| `on_session_start` | `session_started` | `platform`, `model` |
 | `post_api_request` | `llm_call` | `userMessage`, `usage`, `cost` (estimated via `agent.usage_pricing`), `assistant` (content/reasoning/toolCalls), `durationS`, `finishReason`, `moaReferences?` |
 | `post_tool_call` | `tool_call` | `toolName`, `toolCallId`, `args`, `result`, `durationS` (from `duration_ms`), `status` (`ok`/`error`/`blocked`/`cancelled`) |
 | `api_request_error` | `error` | `stage: "llm"`, `message` (≤200 chars, from structured `error`/`reason`) |

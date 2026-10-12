@@ -88,9 +88,7 @@ function buildDemoSession(baseOffsetMs: number): AgentSessionEvent[] {
       type: "session_started",
       timestamp: t(120_000),
       platform: "api",
-      provider: "openai",
       model: "gpt-4.1-mini",
-      apiMode: "completions",
     },
     llmCall({
       at: t(119_800),
@@ -162,9 +160,7 @@ function buildRetrySession(baseOffsetMs: number): AgentSessionEvent[] {
       type: "session_started",
       timestamp: t(300_000),
       platform: "api",
-      provider: "openai",
       model: "gpt-4.1-mini",
-      apiMode: "completions",
     },
     llmCall({
       at: t(298_000),

@@ -67,7 +67,7 @@ function eventPreview(event: AgentSessionEvent): string {
     case "error":
       return event.message;
     case "session_started":
-      return `${event.provider}/${event.model}`;
+      return event.model;
     case "session_finalized":
       return event.output.content ?? "—";
     case "subagent_started":

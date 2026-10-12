@@ -35,9 +35,7 @@ const BATCH: AgentSession = {
       type: "session_started",
       timestamp: "2026-10-06T16:04:25.000Z",
       platform: "api",
-      provider: "openrouter",
       model: "test-model",
-      apiMode: "completions",
     },
   ],
 };

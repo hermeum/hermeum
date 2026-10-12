@@ -106,7 +106,7 @@ function buildTranscriptItems(events: AgentSessionEvent[]): TranscriptItem[] {
         key: event.eventId,
         eventId: event.eventId,
         at: event.timestamp,
-        label: `Session started · ${event.provider}/${event.model}`,
+        label: `Session started · ${event.model}`,
       });
     } else if (event.type === "session_finalized") {
       items.push({
