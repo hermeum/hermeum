@@ -68,15 +68,21 @@ describe("AgentInputSchema webhook reserved env var validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("does not require WEBHOOK_SECRET when webhook is enabled via config only", () => {
-    // config.platforms.webhook.enabled no longer enables the webhook
-    // (env-only enablement), so the reserved env var is not required.
+  it("requires WEBHOOK_SECRET when webhook is enabled via config only", () => {
+    // config.platforms.webhook.enabled enables the webhook, so the reserved
+    // env var pairing applies on the config path too.
     const input = {
       config: { platforms: { webhook: { enabled: true } } },
     };
     const result = AgentInputSchema.safeParse(input);
-    expect(result.success).toBe(true);
-    expect(isWebhookEnabled(input as never)).toBe(false);
+    expect(result.success).toBe(false);
+    expect(isWebhookEnabled(input as never)).toBe(true);
+
+    const withSecret = AgentInputSchema.safeParse({
+      config: { platforms: { webhook: { enabled: true } } },
+      env: [{ name: "WEBHOOK_SECRET", value: "shh", sensitive: true }],
+    });
+    expect(withSecret.success).toBe(true);
   });
 });
 
@@ -176,7 +182,7 @@ describe("AgentInputSchema webhook route toolsets", () => {
   });
 });
 
-describe("AgentInputSchema webhook env-only enablement", () => {
+describe("AgentInputSchema webhook enablement", () => {
   it("requires WEBHOOK_ENABLED=true on the env path", () => {
     const result = AgentInputSchema.safeParse({
       env: [
@@ -210,13 +216,13 @@ describe("AgentInputSchema webhook env-only enablement", () => {
     expect(result.success).toBe(true);
   });
 
-  it("does not require WEBHOOK_SECRET for config-only webhook settings (routes, port)", () => {
+  it("requires WEBHOOK_SECRET when enabled via config, even with routes and port only", () => {
     const result = AgentInputSchema.safeParse({
       config: {
         platforms: { webhook: { enabled: true, extra: { port: 9000 } } },
       },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 });
 
@@ -409,13 +415,13 @@ describe("isWebhookEnabled", () => {
     }
   });
 
-  it("returns false when config.platforms.webhook.enabled is true (env-only enablement)", () => {
-    // Webhook enablement is env-only — config does not count as enablement.
+  it("returns true when config.platforms.webhook.enabled is true (config enablement)", () => {
+    // Webhook enablement covers the config path.
     expect(
       isWebhookEnabled({
         config: { platforms: { webhook: { enabled: true } } },
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("returns false when config.platforms.webhook.enabled is false or absent", () => {
@@ -432,19 +438,19 @@ describe("isWebhookEnabled", () => {
     expect(isWebhookEnabled({})).toBe(false);
   });
 
-  it("is driven solely by the WEBHOOK_ENABLED env var", () => {
+  it("prefers config.platforms.webhook.enabled over WEBHOOK_ENABLED env var", () => {
     expect(
       isWebhookEnabled({
         env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         config: { platforms: { webhook: { enabled: false } } },
       })
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isWebhookEnabled({
         env: [{ name: "WEBHOOK_ENABLED", value: "false" }],
         config: { platforms: { webhook: { enabled: true } } },
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 
@@ -1537,16 +1543,14 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("WEBHOOK_ENABLED");
     });
 
-    it("is unavailable when enabled via config only (env-only enablement)", () => {
-      // Webhook enablement is env-only — config.platforms.webhook.enabled
-      // does not count.
+    it("is available when enabled via config only", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
           config: { platforms: { webhook: { enabled: true } } },
         })
       );
-      expect(result.status).toBe("unavailable");
+      expect(result.status).toBe("available");
     });
 
     it("is available when the port comes from config.platforms.webhook.extra.port", () => {
@@ -1613,7 +1617,7 @@ describe("derivePlatformAvailability", () => {
       expect(result.endpoint).toBeUndefined();
     });
 
-    it("is driven solely by the WEBHOOK_ENABLED env var, not config", () => {
+    it("is disabled by explicit config.platforms.webhook.enabled=false, even with WEBHOOK_ENABLED=true", () => {
       const result = derivePlatformAvailability(
         PlatformId.Webhook,
         makeAgent({
@@ -1621,7 +1625,7 @@ describe("derivePlatformAvailability", () => {
           env: [{ name: "WEBHOOK_ENABLED", value: "true" }],
         })
       );
-      expect(result.status).toBe("available");
+      expect(result.status).toBe("unavailable");
     });
   });
 

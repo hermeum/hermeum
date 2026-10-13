@@ -28,13 +28,18 @@ export function getApiServerPort(input: AgentInput): number {
   return API_SERVER_DEFAULT_PORT;
 }
 
-// Webhook enablement is env-only (WEBHOOK_ENABLED=true);
-// config.platforms.webhook carries only routes and other non-secret
-// settings. Enabling the platform (and the reserved WEBHOOK_SECRET env
-// entry) stays on the env-var path.
+// Webhook enablement and port can be configured via config.yaml
+// (config.platforms.webhook.enabled / extra.port) or via env vars
+// (WEBHOOK_ENABLED / WEBHOOK_PORT) — alternative paths, like the API
+// server. When both are set, the config values win; the env vars apply
+// when the corresponding config field is absent. The HMAC secret is
+// env-only (reserved sensitive WEBHOOK_SECRET env entry). See
+// docs/official/webhooks.md.
 const WEBHOOK_DEFAULT_PORT = 8644;
 
 export function isWebhookEnabled(input: AgentInput): boolean {
+  const configEnabled = input.config?.platforms?.webhook?.enabled;
+  if (configEnabled !== undefined) return configEnabled;
   return (
     input.env?.some(
       (v) => v.name === "WEBHOOK_ENABLED" && v.value.toLowerCase() === "true",
@@ -210,7 +215,9 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       if (!isWebhookEnabled(agent)) {
         return {
           status: "unavailable",
-          reason: "Set WEBHOOK_ENABLED=true (and the WEBHOOK_SECRET env entry).",
+          reason:
+            "Set WEBHOOK_ENABLED=true (or config.platforms.webhook.enabled), " +
+            "and the WEBHOOK_SECRET env entry.",
         };
       }
       return { status: "available", ...(endpoint && { endpoint }) };
