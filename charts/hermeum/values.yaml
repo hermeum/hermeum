@@ -54,7 +54,7 @@ config:
   # Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY).
   hermesImageRepository: nousresearch/hermes-agent
   # Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG).
-  hermesImageTag: v2026.9.21
+  hermesImageTag: v0.21.6
   # Base URL agents use to reach the hermeum app (HERMEUM_PLUGIN_BASE_URL).
   # Injected into every managed agent, whose bundled hermeum plugin
   # posts agent-session events to <pluginBaseUrl>/plugin/trpc. Defaults to the

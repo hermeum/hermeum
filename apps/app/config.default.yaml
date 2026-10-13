@@ -86,8 +86,6 @@ templates:
         - name: SENTRY_AUTH_TOKEN
           value: <fill-me>
           sensitive: true
-        - name: WEBHOOK_ENABLED
-          value: "true"
         - name: WEBHOOK_SECRET
           value: <fill-me>
           sensitive: true
@@ -193,8 +191,6 @@ templates:
         - name: OPENAI_API_KEY
           value: <fill-me>
           sensitive: true
-        - name: WEBHOOK_ENABLED
-          value: "true"
         - name: GH_TOKEN
           value: <fill-me>
           sensitive: true

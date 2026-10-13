@@ -12,9 +12,10 @@ routes, and delivers responses to a target platform.
 
 ## Fields
 
-- `enabled` — whether the webhook platform adapter is enabled. The
-  adapter (and the `WEBHOOK_SECRET` env var) only takes effect when
-  `WEBHOOK_ENABLED=true` is also set — see
+- `enabled` — whether the webhook platform adapter is enabled. An
+  alternative to the `WEBHOOK_ENABLED` env var; this config field wins
+  when both are set. The `WEBHOOK_SECRET` env entry stays
+  required either way — see
   [Environment variables](#environment-variables).
 - `secret` — global HMAC secret used for signature validation on all
   routes. Env-only: set the `WEBHOOK_SECRET` env entry (sensitive) instead
@@ -217,6 +218,7 @@ route:
 ```yaml
 platforms:
   webhook:
+    enabled: true
     extra:
       routes:
         oom-emergency:
@@ -224,8 +226,6 @@ platforms:
           toolsets: ["terminal", "file", "code_execution", "web"]
           deliver: "telegram"
 env:
-  - name: WEBHOOK_ENABLED
-    value: "true"
   - name: WEBHOOK_SECRET
     value: monitor-secret-here
     sensitive: true
@@ -243,7 +243,7 @@ Hermeum does not author.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `WEBHOOK_ENABLED` | Enable the webhook platform adapter. Required for `WEBHOOK_SECRET`/`WEBHOOK_PORT` to take effect. | `false` |
+| `WEBHOOK_ENABLED` | Enable the webhook platform adapter. `platforms.webhook.enabled` takes precedence when both are set. | `false` |
 | `WEBHOOK_PORT` | HTTP server port for receiving webhooks. | `8644` |
 | `WEBHOOK_SECRET` | Global HMAC secret used for signature validation on all routes. Mark the env entry `sensitive: true`. | _(none)_ |
 
@@ -253,18 +253,22 @@ value nested under `extra:` wins if the same key appears in both places.
 Signature schemes: GitHub, GitLab, Standard Webhooks, and the generic
 V2 / legacy V1 forms described upstream.
 
-The app reads `WEBHOOK_ENABLED` / `WEBHOOK_PORT` to drive the agent's
-Kubernetes container and Service port mappings, mirroring the
-`API_SERVER_*` env vars (see [api-server.md](./api-server.md)). The secret
+The app derives the agent's Kubernetes container and Service port
+mappings from platform enablement and the webhook port — the same paths
+the `API_SERVER_*` env vars and `gateway.api_server` config feed for the
+API server (see [api-server.md](./api-server.md)). The secret
 flows to the agent through its env Secret/ConfigMap alongside other
 sensitive env vars — no separate `secretRef` is wired into the CR.
 
-### Env-var enablement only
+### Enablement and precedence
 
-Webhook behavioral settings that live in `config.yaml` (`extra.port`,
-`extra.routes`) are preferred there, but **enabling the platform is
-env-only** (`WEBHOOK_ENABLED=true`) — config enablement is not surfaced.
-`extra.port` still takes precedence over `WEBHOOK_PORT` when both are set.
+The platform can be enabled either via `platforms.webhook.enabled: true`
+in `config.yaml` or via the `WEBHOOK_ENABLED` env var — two alternative
+paths. When both are set, the config field wins; an explicit
+`enabled: false` in config disables the platform regardless of the env
+var. Other behavioral settings that live in `config.yaml` (`extra.port`,
+`extra.routes`) are preferred there; `extra.port` takes precedence over
+`WEBHOOK_PORT` when both are set.
 
 ## Example
 
@@ -274,6 +278,7 @@ env-only** (`WEBHOOK_ENABLED=true`) — config enablement is not surfaced.
 config:
   platforms:
     webhook:
+      enabled: true
       extra:
         port: 8644
         routes:
@@ -294,8 +299,6 @@ config:
               repo: "{repository.full_name}"
               pr_number: "{number}"
 env:
-  - name: WEBHOOK_ENABLED
-    value: "true"
   - name: WEBHOOK_SECRET
     value: wh-secret-here
     sensitive: true
@@ -304,7 +307,7 @@ env:
     sensitive: true
 ```
 
-The webhook is enabled via the `WEBHOOK_ENABLED` env entry, and the HMAC
+The webhook is enabled via `platforms.webhook.enabled` in the config, and the HMAC
 secret flows through the sensitive `WEBHOOK_SECRET` env entry — secrets
 never go into `config.yaml` (see [Secrets](#secrets)). The `GH_TOKEN` env
 entry is required for `github_comment` delivery so the `gh` CLI can
