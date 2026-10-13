@@ -91,6 +91,8 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
         <TableHeader>
           <TableRow>
             <TableHead>Session</TableHead>
+            <TableHead>Platform</TableHead>
+            <TableHead>Model</TableHead>
             <TableHead>Started</TableHead>
             <TableHead>Last activity</TableHead>
             <TableHead className="text-right">Events</TableHead>
@@ -114,6 +116,10 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
                   />
                 </span>
               </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {session.platform ?? "—"}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">{session.model ?? "—"}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {formatTime(session.firstEventAt)}
               </TableCell>

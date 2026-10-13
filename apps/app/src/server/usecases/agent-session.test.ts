@@ -133,6 +133,8 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
     firstEventAt: string;
     lastEventAt: string;
     eventCount: number;
+    platform: string | null;
+    model: string | null;
   }> = {
     items: [
       {
@@ -140,6 +142,8 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
         firstEventAt: "2026-10-06T16:04:25.000Z",
         lastEventAt: "2026-10-06T16:04:26.000Z",
         eventCount: 2,
+        platform: "cli",
+        model: "gpt-5",
       },
     ],
     hasMore: false,
@@ -157,6 +161,8 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]!.sessionId).toBe("hermes-session-1");
+    expect(result.items[0]!.platform).toBe("cli");
+    expect(result.items[0]!.model).toBe("gpt-5");
     expect(result.hasMore).toBe(false);
   });
 
