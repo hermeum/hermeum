@@ -127,6 +127,7 @@ function EventListRow({
 // the theme's generated style block also beats Tailwind classes.
 const jsonViewerTheme = EditorView.theme({
   "&": { backgroundColor: "var(--color-muted)" },
+  "& .cm-content": { paddingTop: "12px", paddingBottom: "12px" },
 }, { dark: false });
 
 function EventDetail({ event }: { event: AgentSessionEvent }) {
@@ -145,9 +146,6 @@ function EventDetail({ event }: { event: AgentSessionEvent }) {
         >
           {shortId(event.eventId)}
         </span>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <CopyButton text={serialized} className="opacity-60 hover:opacity-100" />
-        </div>
       </div>
       <div className="px-3 py-2 text-xs text-muted-foreground">
         {new Date(event.timestamp).toLocaleString()}
@@ -155,7 +153,10 @@ function EventDetail({ event }: { event: AgentSessionEvent }) {
       {/* Read-only JSON viewer: line wrapping, editor chrome styled away
           like AgentConfigEditor, muted card background; scrolls internally
           within the pane. */}
-      <div className="min-h-0 flex-1 overflow-hidden p-3">
+      <div className="relative min-h-0 flex-1 overflow-hidden p-3">
+        <div className="absolute right-5 top-5 z-10">
+          <CopyButton text={serialized} className="opacity-60 hover:opacity-100" />
+        </div>
         <CodeMirror
           value={serialized}
           theme={jsonViewerTheme}
