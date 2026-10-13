@@ -59,6 +59,7 @@ export class PostgresDatabase implements Database {
         firstEventAt: sql<Date>`min(${agentSessionEvents.timestamp})`,
         lastEventAt: sql<Date>`max(${agentSessionEvents.timestamp})`,
         eventCount: sql<number>`count(*)`,
+        finalizedCount: sql<number>`count(*) filter (where ${agentSessionEvents.type} = 'session_finalized')`,
       })
       .from(agentSessionEvents)
       .where(eq(agentSessionEvents.agentId, agentId))
@@ -92,6 +93,7 @@ export class PostgresDatabase implements Database {
       firstEventAt: row.firstEventAt.toISOString(),
       lastEventAt: row.lastEventAt.toISOString(),
       eventCount: Number(row.eventCount),
+      finalized: Number(row.finalizedCount) > 0,
       platform: meta.get(row.sessionId)?.platform ?? null,
       model: meta.get(row.sessionId)?.model ?? null,
     }));

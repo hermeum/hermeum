@@ -60,6 +60,7 @@ export class SqliteDatabase implements Database {
         firstEventAt: sql<number>`min(${agentSessionEvents.timestamp})`,
         lastEventAt: sql<number>`max(${agentSessionEvents.timestamp})`,
         eventCount: sql<number>`count(*)`,
+        finalizedCount: sql<number>`count(*) filter (where ${agentSessionEvents.type} = 'session_finalized')`,
       })
       .from(agentSessionEvents)
       .where(eq(agentSessionEvents.agentId, agentId))
@@ -93,6 +94,7 @@ export class SqliteDatabase implements Database {
       firstEventAt: new Date(row.firstEventAt).toISOString(),
       lastEventAt: new Date(row.lastEventAt).toISOString(),
       eventCount: Number(row.eventCount),
+      finalized: Number(row.finalizedCount) > 0,
       platform: meta.get(row.sessionId)?.platform ?? null,
       model: meta.get(row.sessionId)?.model ?? null,
     }));

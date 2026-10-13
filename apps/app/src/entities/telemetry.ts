@@ -288,6 +288,11 @@ export const AgentSessionSummarySchema = z
       .describe(
         "Model the session ran on: the session_started event's initial model, falling back to the earliest llm_call's model; null when neither was ingested."
       ),
+    finalized: z
+      .boolean()
+      .describe(
+        "True when the session emitted a session_finalized event (final answer delivered, no further tool calls)."
+      ),
   })
   .describe("One agent session, aggregated from its stored events.");
 
