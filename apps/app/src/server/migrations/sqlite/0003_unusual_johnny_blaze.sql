@@ -1,0 +1,2 @@
+DROP INDEX `agent_session_events_agent_session_idx`;--> statement-breakpoint
+CREATE INDEX `agent_session_events_agent_session_idx` ON `agent_session_events` (`agent_id`,`session_id`,`type`,`timestamp`);
