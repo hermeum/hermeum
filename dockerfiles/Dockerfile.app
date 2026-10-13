@@ -5,7 +5,7 @@
 #     --build-arg PLUGIN_REF=$(git rev-parse HEAD) -t hermeum-app .
 
 ARG NODE_IMAGE=node:24-alpine
-ARG PNPM_VERSION=9.15.0
+ARG PNPM_VERSION=10.34.7
 
 # --------------------------------------------------------------------------- #
 # base — common foundation: Node + pinned pnpm + native build toolchain       #
