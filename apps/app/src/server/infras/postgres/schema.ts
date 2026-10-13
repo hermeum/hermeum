@@ -23,6 +23,7 @@ export const agentSessionEvents = pgTable(
     index("agent_session_events_agent_session_idx").on(
       table.agentId,
       table.sessionId,
+      table.type,
       table.timestamp
     ),
   ]
