@@ -59,7 +59,8 @@ export class PostgresDatabase implements Database {
         firstEventAt: sql<Date>`min(${agentSessionEvents.timestamp})`,
         lastEventAt: sql<Date>`max(${agentSessionEvents.timestamp})`,
         eventCount: sql<number>`count(*)`,
-        finalizedCount: sql<number>`count(*) filter (where ${agentSessionEvents.type} = 'session_finalized')`,
+        finalized:
+          sql<boolean | null>`max(case when ${agentSessionEvents.type} = 'session_finalized' then ${agentSessionEvents.timestamp} end) = max(${agentSessionEvents.timestamp})`,
       })
       .from(agentSessionEvents)
       .where(eq(agentSessionEvents.agentId, agentId))
@@ -93,7 +94,7 @@ export class PostgresDatabase implements Database {
       firstEventAt: row.firstEventAt.toISOString(),
       lastEventAt: row.lastEventAt.toISOString(),
       eventCount: Number(row.eventCount),
-      finalized: Number(row.finalizedCount) > 0,
+      finalized: row.finalized === true,
       platform: meta.get(row.sessionId)?.platform ?? null,
       model: meta.get(row.sessionId)?.model ?? null,
     }));
@@ -108,7 +109,7 @@ export class PostgresDatabase implements Database {
         sessionId: agentSessionEvents.sessionId,
         type: agentSessionEvents.type,
         payload: agentSessionEvents.payload,
-        rn: sql<number>`row_number() over (partition by ${agentSessionEvents.sessionId}, ${agentSessionEvents.type} order by ${agentSessionEvents.timestamp} asc)`.as(
+        rn: sql<number>`row_number() over (partition by ${agentSessionEvents.sessionId}, ${agentSessionEvents.type} order by ${agentSessionEvents.timestamp} asc, ${agentSessionEvents.id} asc)`.as(
           "rn"
         ),
       })

@@ -291,7 +291,7 @@ export const AgentSessionSummarySchema = z
     finalized: z
       .boolean()
       .describe(
-        "True when the session emitted a session_finalized event (final answer delivered, no further tool calls)."
+        "True when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls). Events ingested after finalization flip it back to false."
       ),
   })
   .describe("One agent session, aggregated from its stored events.");
