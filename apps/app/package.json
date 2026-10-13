@@ -3,6 +3,9 @@
   "version": "0.2.1",
   "private": true,
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx watch src/server/server.ts",
     "build": "vite build & vite build --mode server & vite build --mode cmd & wait",

@@ -5,6 +5,11 @@ packages:
 shamefullyHoist: false
 strictPeerDependencies: false
 
+# Required by the pnpm v10 deploy command (dockerfiles/Dockerfile.app), which
+# only deploys workspaces with injected workspace deps. Dev installs keep
+# plain symlinks thanks to dedupeInjectedDeps (the default).
+injectWorkspacePackages: true
+
 overrides:
   serialize-javascript@<7: ">=7.1.2"
   uuid@<11.1.1: ">=11.1.1"
