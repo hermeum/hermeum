@@ -27,14 +27,15 @@ const { applyPatch } = fastJsonPatch.default ?? fastJsonPatch;
 // the call sites never change. The runtime stores whatever the pipeline wraps
 // and returns it verbatim; wrapping/stripping is pure use-case policy.
 
-// The preamble wrapped around every managed soul (see SoulPreamble).
-export const MANAGED_SOUL_PREAMBLE = `# Managed by Hermeum
+// The postamble appended to every managed soul (see SoulPostamble).
+export const MANAGED_SOUL_POSTAMBLE = `# Managed by the platform
 
-Your configuration — config.yaml, .env, plugins, and crons — is managed
-by Hermeum. Do not edit these files or change plugins or cron jobs yourself;
-changes made outside Hermeum are not tracked and are lost when the agent is
-updated or redeployed. When a configuration change is needed, tell the user to
-update your agent spec in Hermeum instead.`;
+Your configuration — config.yaml, .env, plugins, skills, and crons — is
+managed by the platform you were deployed from. Do not edit these files
+or change plugins or cron jobs yourself, and do not install or uninstall
+skills; changes made outside the platform are not tracked and are lost
+when the agent is updated or redeployed. When a configuration change is
+needed, tell the user to update your agent spec on the platform instead.`;
 
 // A managed aspect of the deployed agent. wrapInput applies the policy to a
 // create payload — every managed field is populated, even when the input
@@ -69,47 +70,51 @@ interface ManagedPatchContext {
   storedAgent: Agent;
 }
 
-// Soul preamble: every soul deployed to a hermes-agent carries the managed
-// preamble. hermes-agent loads SOUL.md as the identity slot — the first
-// section of the system prompt — making it the first thing the deployed agent
-// reads. Advisory by nature (defense-in-depth on top of the upstream
-// config.yaml write guard and SOUL.md approval gate). Skills are deliberately
-// absent: hermes-agent's curator maintains agent-created skills in the
-// background, so self-managing skills is legitimate behavior.
+// Soul postamble: every soul deployed to a hermes-agent carries the managed
+// notice at its end. hermes-agent loads SOUL.md as the identity slot — the
+// first section of the system prompt — so the user-authored identity leads
+// and the managed notice trails it. Advisory by nature (defense-in-depth on
+// top of the upstream config.yaml write guard and SOUL.md approval gate).
+// Skills are included in the notice: agents must not install or uninstall
+// skills themselves.
 // Deployment-wide — no per-agent context, so the ctx argument is ignored.
-class SoulPreamble implements ManagedAgentAspect {
+// Legacy front-preamble souls (deployed before the position flip) are not
+// recognized: they pass through unchanged on reads and gain the trailing
+// copy on their next soul edit — same gradual migration as pre-preamble
+// agents.
+class SoulPostamble implements ManagedAgentAspect {
   wrapInput(input: AgentInput): AgentInput {
-    // Soulless agents get the preamble alone — the management guard applies
+    // Soulless agents get the postamble alone — the management guard applies
     // to every deployed agent, not just those with a user-authored soul.
     return {
       ...input,
-      soul: input.soul === undefined ? MANAGED_SOUL_PREAMBLE : this.#withPreamble(input.soul),
+      soul: input.soul === undefined ? MANAGED_SOUL_POSTAMBLE : this.#withPostamble(input.soul),
     };
   }
 
   wrapPatch(patch: AgentInput): AgentInput {
     if (patch.soul === undefined) return patch;
-    return { ...patch, soul: this.#withPreamble(patch.soul) };
+    return { ...patch, soul: this.#withPostamble(patch.soul) };
   }
 
   stripAgent(agent: Agent): Agent {
-    const soul = this.#stripPreamble(agent.soul);
+    const soul = this.#stripPostamble(agent.soul);
     return soul === agent.soul ? agent : { ...agent, soul };
   }
 
-  // Idempotent: input may already carry the preamble (e.g. a hand-written API
-  // patch echoing the stored soul), so never double-inject.
-  #withPreamble(soul: string): string {
-    return soul.startsWith(MANAGED_SOUL_PREAMBLE) ? soul : `${MANAGED_SOUL_PREAMBLE}\n\n${soul}`;
+  // Idempotent: input may already carry the postamble (e.g. a hand-written
+  // API patch echoing the stored soul), so never double-inject.
+  #withPostamble(soul: string): string {
+    return soul.endsWith(MANAGED_SOUL_POSTAMBLE) ? soul : `${soul}\n\n${MANAGED_SOUL_POSTAMBLE}`;
   }
 
-  // Returns the user-authored soul, or undefined when only the preamble
-  // remains. A no-op for stored souls without the prefix (agents migrated
+  // Returns the user-authored soul, or undefined when only the postamble
+  // remains. A no-op for stored souls without the suffix (agents migrated
   // gradually).
-  #stripPreamble(soul: string | undefined): string | undefined {
+  #stripPostamble(soul: string | undefined): string | undefined {
     if (soul === undefined) return undefined;
-    const stripped = soul.startsWith(MANAGED_SOUL_PREAMBLE)
-      ? soul.slice(MANAGED_SOUL_PREAMBLE.length).replace(/^\n+/, "")
+    const stripped = soul.endsWith(MANAGED_SOUL_POSTAMBLE)
+      ? soul.slice(0, -MANAGED_SOUL_POSTAMBLE.length).replace(/\n+$/, "")
       : soul;
     return stripped === "" ? undefined : stripped;
   }
@@ -213,7 +218,7 @@ class HermeumPlugin implements ManagedAgentAspect {
   }
 }
 
-const MANAGED_ASPECTS: ManagedAgentAspect[] = [new SoulPreamble(), new HermeumPlugin()];
+const MANAGED_ASPECTS: ManagedAgentAspect[] = [new SoulPostamble(), new HermeumPlugin()];
 
 // Apply every managed aspect to a write payload. Call after input validation
 // (AgentInputSchema.parse) so injected entries can't trip schema limits.
