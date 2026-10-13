@@ -4,7 +4,7 @@ Notes for agents working in the Hermeum monorepo.
 
 ## Repository Layout
 
-pnpm + Turbo monorepo (Node >=20, pnpm >=9). Workspaces are declared in `pnpm-workspace.yaml` and orchestrated by Turbo (`turbo.json`).
+pnpm + Turbo monorepo (Node >=20, pnpm >=10). Workspaces are declared in `pnpm-workspace.yaml` and orchestrated by Turbo (`turbo.json`).
 
 - `apps/app` — `@hermeum/app`, the main application (TanStack Router + Vinxi server).
 - `apps/docs` — `@hermeum/docs`, the Docusaurus documentation site.
@@ -145,3 +145,14 @@ Run from the repo root via pnpm filter, or from this directory directly.
 - Docusaurus emits to `build/` (not `dist/`); `turbo.json`'s `build.outputs` includes `build/**`.
 - Blog plugin is disabled (`blog: false`); `future.v4: true` enables Rspack via `@docusaurus/faster`.
 - Operation docs (`docs/operation/*.md`) explain configuration in terms of `HERMEUM_*` environment variables, not Helm chart value keys. The Helm chart is documented separately in the chart's `values.yaml`; operation pages should stay chart-agnostic. The sole exception is `installation.md`, which bridges the two by showing `helm install` commands alongside the env vars they set. Chart-specific behavior that has no env-var surface (e.g. `migrations.enabled`, `persistence.*`, `operator.enabled`, `ingress.*`) may still be mentioned in a `:::note` or a dedicated subsection, but the primary explanation must be env-var-first.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->
