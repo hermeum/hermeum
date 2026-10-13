@@ -1,6 +1,6 @@
 import DatabaseClient from "better-sqlite3";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import {
   AgentSession,
@@ -60,6 +60,8 @@ export class SqliteDatabase implements Database {
         firstEventAt: sql<number>`min(${agentSessionEvents.timestamp})`,
         lastEventAt: sql<number>`max(${agentSessionEvents.timestamp})`,
         eventCount: sql<number>`count(*)`,
+        finalized:
+          sql<number | null>`max(case when ${agentSessionEvents.type} = 'session_finalized' then ${agentSessionEvents.timestamp} end) = max(${agentSessionEvents.timestamp})`,
       })
       .from(agentSessionEvents)
       .where(eq(agentSessionEvents.agentId, agentId))
@@ -67,13 +69,64 @@ export class SqliteDatabase implements Database {
       .orderBy(desc(sql`max(${agentSessionEvents.timestamp})`))
       .limit(query.limit + 1)
       .offset(query.offset);
-    const items = rows.slice(0, query.limit).map((row) => ({
+    const page = rows.slice(0, query.limit);
+    // Platform/model come from the earliest session_started row per session,
+    // with the earliest llm_call filling in the model when no session_started
+    // was ingested. One bounded follow-up query for the page's sessions.
+    const firstEvents =
+      page.length > 0
+        ? await this.#firstEventsPerType(agentId, page.map((row) => row.sessionId))
+        : [];
+    const meta = new Map<string, { platform: string | null; model: string | null }>();
+    for (const row of firstEvents) {
+      const parsed = AgentSessionEventSchema.safeParse(row.payload);
+      if (!parsed.success) continue;
+      const entry = meta.get(row.sessionId) ?? { platform: null, model: null };
+      if (parsed.data.type === "session_started") {
+        entry.platform = parsed.data.platform;
+        entry.model = parsed.data.model;
+      } else if (parsed.data.type === "llm_call" && entry.model === null) {
+        entry.model = parsed.data.model;
+      }
+      meta.set(row.sessionId, entry);
+    }
+    const items = page.map((row) => ({
       sessionId: row.sessionId,
       firstEventAt: new Date(row.firstEventAt).toISOString(),
       lastEventAt: new Date(row.lastEventAt).toISOString(),
       eventCount: Number(row.eventCount),
+      finalized: row.finalized === 1,
+      platform: meta.get(row.sessionId)?.platform ?? null,
+      model: meta.get(row.sessionId)?.model ?? null,
     }));
     return { items, hasMore: rows.length > query.limit };
+  }
+
+  // Earliest session_started and llm_call row per session, via a row_number()
+  // window subquery (WHERE cannot filter on window results directly).
+  async #firstEventsPerType(agentId: string, sessionIds: string[]) {
+    const ranked = this.db
+      .select({
+        sessionId: agentSessionEvents.sessionId,
+        type: agentSessionEvents.type,
+        payload: agentSessionEvents.payload,
+        rn: sql<number>`row_number() over (partition by ${agentSessionEvents.sessionId}, ${agentSessionEvents.type} order by ${agentSessionEvents.timestamp} asc, ${agentSessionEvents.id} asc)`.as(
+          "rn"
+        ),
+      })
+      .from(agentSessionEvents)
+      .where(
+        and(
+          eq(agentSessionEvents.agentId, agentId),
+          inArray(agentSessionEvents.sessionId, sessionIds),
+          inArray(agentSessionEvents.type, ["session_started", "llm_call"])
+        )
+      )
+      .as("ranked");
+    return this.db
+      .select({ sessionId: ranked.sessionId, type: ranked.type, payload: ranked.payload })
+      .from(ranked)
+      .where(eq(ranked.rn, 1));
   }
 
   async getAgentSession(agentId: string, sessionId: string): Promise<AgentSession> {

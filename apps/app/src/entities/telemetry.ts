@@ -276,6 +276,23 @@ export const AgentSessionSummarySchema = z
     firstEventAt: z.string().describe("ISO 8601 timestamp of the session's earliest event."),
     lastEventAt: z.string().describe("ISO 8601 timestamp of the session's latest event."),
     eventCount: z.number().int().positive().describe("Total number of stored events for the session."),
+    platform: z
+      .string()
+      .nullable()
+      .describe(
+        "Hermes platform hosting the session (e.g. `api`, `cli`), from the session_started event; null when none was ingested for the session."
+      ),
+    model: z
+      .string()
+      .nullable()
+      .describe(
+        "Model the session ran on: the session_started event's initial model, falling back to the earliest llm_call's model; null when neither was ingested."
+      ),
+    finalized: z
+      .boolean()
+      .describe(
+        "True when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls). Events ingested after finalization flip it back to false."
+      ),
   })
   .describe("One agent session, aggregated from its stored events.");
 

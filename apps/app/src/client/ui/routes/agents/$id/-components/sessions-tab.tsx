@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 
+import { Badge } from "@hermeum/components/ui/badge";
 import {
   Pagination,
   PaginationContent,
@@ -91,6 +92,9 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
         <TableHeader>
           <TableRow>
             <TableHead>Session</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Platform</TableHead>
+            <TableHead>Model</TableHead>
             <TableHead>Started</TableHead>
             <TableHead>Last activity</TableHead>
             <TableHead className="text-right">Events</TableHead>
@@ -114,6 +118,18 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
                   />
                 </span>
               </TableCell>
+              <TableCell>
+                <Badge
+                  variant="secondary"
+                  className={session.finalized ? undefined : "text-green-700"}
+                >
+                  {session.finalized ? "Finalized" : "Active"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {session.platform ?? "—"}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">{session.model ?? "—"}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {formatTime(session.firstEventAt)}
               </TableCell>
