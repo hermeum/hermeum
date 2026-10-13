@@ -52,7 +52,7 @@ export const ConfigSchema = z.object({
     .describe("Container image repository for the Hermes agent (HERMEUM_HERMES_IMAGE_REPOSITORY)."),
   hermesImageTag: z
     .string()
-    .default("v0.21.6")
+    .default("v2026.9.21")
     .describe("Container image tag for the Hermes agent (HERMEUM_HERMES_IMAGE_TAG)."),
   pluginBaseUrl: z
     .url()
