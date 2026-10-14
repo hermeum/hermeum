@@ -80,7 +80,6 @@ Full documentation is published at [here](https://docs.hermeum.app).
 | [What is Hermeum](https://docs.hermeum.app/)                                           | Overview of the platform and what an agent can do.      |
 | [Getting started](https://docs.hermeum.app/using-hermeum/getting-started/)             | Create, manage, and chat with your agents.              |
 | [Creating an agent](https://docs.hermeum.app/using-hermeum/creating-an-agent/)         | How to shape an agent's soul, models, and skills.       |
-| [Messaging platforms](https://docs.hermeum.app/using-hermeum/messaging-platforms/)     | Connect agents to Slack, Discord, Teams, and webhooks.  |
 | [Shared env sets](https://docs.hermeum.app/using-hermeum/shared-env-sets/)             | Reuse environment sets across agents.                   |
 | [Overview](https://docs.hermeum.app/operation/overview/)                               | Architecture and components for self-hosting.           |
 | [Installation](https://docs.hermeum.app/operation/installation/)                       | Prerequisites, Helm install, database choice, upgrades. |

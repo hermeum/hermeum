@@ -104,8 +104,6 @@ arrived.
 
 - [Creating an agent](../creating-an-agent) — the full agent model: soul, config, env,
   skills, crons, and lifecycle.
-- [Messaging platforms](../messaging-platforms) — connect agents to Discord, Microsoft
-  Teams, webhooks, or the OpenAI-compatible API server.
 - [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#skills-hub)
   — add more capabilities to your agent, such as reading project trackers or filtering
   by repository.

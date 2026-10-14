@@ -47,5 +47,3 @@ referenced shared env set (for instance, `OPENAI_API_KEY`) is pulled in from the
 ## Next steps
 
 - [Creating an agent](../creating-an-agent) — the full agent model, including env.
-- [Messaging platforms](../messaging-platforms) — platforms that commonly need shared
-  credentials like bot tokens.
