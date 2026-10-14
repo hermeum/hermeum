@@ -15,9 +15,28 @@ agent you can chat with, deploy, and iterate on.
 
 ## Features
 
-<p align="center">
-  <img src="assets/dashboard.png" alt="Hermeum dashboard — creating an agent" width="720" />
-</p>
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/agents-list.png" alt="Agents list — running agents with status and created timestamps" width="480" />
+      <br /><em>Agents list</em>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/create-agent.png" alt="Create agent — chat on the left generates the agent config YAML on the right" width="480" />
+      <br /><em>Create by chat</em>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/agent-detail.png" alt="Agent detail — webhook endpoint, soul, and verified config" width="480" />
+      <br /><em>Agent detail</em>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="assets/session-monitoring.png" alt="Session monitoring — live transcript beside a filterable stream of session events" width="480" />
+      <br /><em>Session monitoring</em>
+    </td>
+  </tr>
+</table>
 
 - **Tailor an agent by chat** — describe what your agent should do in natural
   language and Hermeum generates the configuration for you.
@@ -25,6 +44,8 @@ agent you can chat with, deploy, and iterate on.
   team uses most.
 - **Shared env sets** — share credentials (such as API keys) across agents
   without re-entering them each time.
+- **Session monitoring** — inspect every agent session as a live transcript
+  beside a stream of telemetry events (model calls, tool calls, errors).
 - **Powered by Kubernetes** — agents run as `HermesAgent` custom resources, with
   a mutating admission webhook that shapes each agent at creation time.
 
