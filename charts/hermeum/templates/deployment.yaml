@@ -112,6 +112,8 @@ spec:
             {{- end }}
             - name: HERMEUM_LOG_LEVEL
               value: {{ .Values.config.logLevel | quote }}
+            - name: HERMEUM_AGENT_SESSION_RETENTION_DAYS
+              value: {{ .Values.config.agentSessionRetentionDays | quote }}
             {{- if .Values.config.allowedEmailDomain }}
             - name: HERMEUM_ALLOWED_EMAIL_DOMAIN
               value: {{ .Values.config.allowedEmailDomain | quote }}

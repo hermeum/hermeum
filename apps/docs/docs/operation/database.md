@@ -35,6 +35,15 @@ HERMEUM_DATABASE_DIALECT=postgres
 HERMEUM_DATABASE_URL=postgres://user:pass@db.example.com:5432/hermeum
 ```
 
+## Retention
+
+The `agent_session_events` table (one row per ingested telemetry event) is kept
+bounded by a scheduled cleanup job: sessions whose most recent event is older
+than `HERMEUM_AGENT_SESSION_RETENTION_DAYS` (default `90`, `0` disables) are
+deleted together with all of their events in a six-hour cycle. Sessions are
+removed whole, so the session views never show partial histories. On Postgres,
+replicas coordinate via an advisory lock so only one pod performs each cycle.
+
 ## Migrations
 
 Hermeum ships per-dialect migration SQL under

@@ -10,6 +10,7 @@ import { toNodeHandler } from "better-auth/node";
 
 import { config } from "./libs/config";
 import { telemetry } from "./infras/posthog";
+import { AgentSessionUseCase } from "./usecases/agent-session";
 import { trpcMiddleware } from "@/server/routers/trpc/resources/index.js";
 import { pluginTrpcMiddleware } from "@/server/routers/trpc/plugin/index.js";
 import { webhookRouter } from "./routers/webhook";
@@ -141,8 +142,13 @@ const shutdownTelemetry = async () => {
 if (!isTest) {
   telemetry.heartbeat();
 
+  // Retention is disabled entirely when the configured window is 0 days.
+  const sessionRetention = new AgentSessionUseCase();
+  sessionRetention.startAgentSessionRetention(config.agentSessionRetentionDays);
+
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.on(signal, () => {
+      sessionRetention.stopAgentSessionRetention();
       void shutdownTelemetry().finally(() => process.exit(0));
     });
   }

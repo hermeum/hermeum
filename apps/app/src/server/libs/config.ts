@@ -62,6 +62,17 @@ export const ConfigSchema = z.object({
         "Injected into every managed agent, whose bundled hermeum plugin " +
         "posts agent-session events to <pluginBaseUrl>/plugin/trpc."
     ),
+  agentSessionRetentionDays: z
+    .number()
+    .int()
+    .min(0)
+    .default(90)
+    .describe(
+      "Delete agent sessions whose most recent event is older than this many days, " +
+        "together with all their events (HERMEUM_AGENT_SESSION_RETENTION_DAYS). " +
+        "A scheduled job prunes whole sessions on a six-hour cycle; 0 disables retention " +
+        "and keeps every session forever."
+    ),
   pluginIdentifier: z
     .string()
     .min(1)
@@ -224,6 +235,9 @@ export const config = ConfigSchema.parse({
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   pluginBaseUrl: process.env.HERMEUM_PLUGIN_BASE_URL,
+  agentSessionRetentionDays: process.env.HERMEUM_AGENT_SESSION_RETENTION_DAYS
+    ? parseInt(process.env.HERMEUM_AGENT_SESSION_RETENTION_DAYS, 10)
+    : undefined,
   pluginIdentifier: process.env.HERMEUM_PLUGIN_IDENTIFIER,
   pluginRef: process.env.HERMEUM_PLUGIN_REF,
   openaiModel: process.env.HERMEUM_OPENAI_MODEL,

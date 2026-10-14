@@ -19,6 +19,10 @@ import { AppendAgentSessionEventsInput, Database } from "@/server/usecases/adapt
 // the Database adaptor against the sqlite schema; injected into use cases via
 // BaseUseCase (see mixin.ts).
 
+// Retention batches at most this many stale sessions per DELETE statement, so
+// a large backlog drains in short transactions instead of one long-running one.
+const RETENTION_BATCH_SESSIONS = 500;
+
 export function createSqliteClient() {
   // Accept both "file:./path.db" and "file:///abs/path.db" forms
   const client = new DatabaseClient(config.databaseUrl.replace(/^file:(\/\/)?/, ""));
@@ -151,6 +155,37 @@ export class SqliteDatabase implements Database {
       }
     }
     return { sessionId, events };
+  }
+
+  async deleteAgentSessionsLastActiveBefore(cutoff: Date): Promise<number> {
+    // Whole-session retention: a session is pruned only once its most recent
+    // event has aged past the cutoff, so the trajectory UI never shows a
+    // half-deleted session. The staleness subquery is self-contained
+    // (re-evaluated per batch at delete time), which spares a session that
+    // receives new events mid-run. Batching by session count terminates the
+    // loop: each non-empty batch removes those sessions entirely, so the next
+    // scan sees strictly fewer stale sessions; an empty batch ends the run.
+    let deleted = 0;
+    this.db.transaction((tx) => {
+      for (;;) {
+        // created_at is integer unixepoch-ms here (`timestamp_ms` mode), so a
+        // raw cutoff ms integer compares exactly against the stored column.
+        const result = tx
+          .delete(agentSessionEvents)
+          .where(
+            sql`${agentSessionEvents.sessionId} in (
+              select ${agentSessionEvents.sessionId} from ${agentSessionEvents}
+              group by ${agentSessionEvents.sessionId}
+              having max(${agentSessionEvents.createdAt}) < ${cutoff.getTime()}
+              limit ${RETENTION_BATCH_SESSIONS}
+            )`
+          )
+          .run();
+        deleted += result.changes;
+        if (result.changes === 0) break;
+      }
+    });
+    return deleted;
   }
 
   async storeAgentToken(agentId: string, tokenHash: string): Promise<void> {

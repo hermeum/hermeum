@@ -33,6 +33,7 @@
         "openaiModel": { "type": "string", "minLength": 1 },
         "openaiBaseUrl": { "type": "string" },
         "betterAuthUrl": { "type": "string" },
+        "agentSessionRetentionDays": { "type": "integer", "minimum": 0 },
         "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "allowedEmailDomain": { "type": "string" },
         "smtpFrom": { "type": "string" },
@@ -64,7 +65,8 @@
         "hermesImageRepository",
         "hermesImageTag",
         "openaiModel",
-        "logLevel"
+        "logLevel",
+        "agentSessionRetentionDays"
       ]
     },
     "secrets": {
