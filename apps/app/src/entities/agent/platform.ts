@@ -91,16 +91,14 @@ export function getTeamsPort(input: AgentInput): number {
   return TEAMS_DEFAULT_PORT;
 }
 
-// Message-platform availability — a derived, read-only view of which inbound
-// message platforms are wired up for an agent, computed from its config + env.
-// Not persisted.
+// Inbound HTTP platform availability — a derived, read-only view of which
+// inbound HTTP message platforms (api-server / webhook / teams) are wired up
+// for an agent, computed from its config + env. Not persisted.
 // https://hermes-agent.nousresearch.com/docs/user-guide/messaging
 
 export enum PlatformId {
   ApiServer = "api-server",
   Webhook = "webhook",
-  Slack = "slack",
-  Discord = "discord",
   Teams = "teams",
 }
 
@@ -108,17 +106,13 @@ export interface PlatformAvailability {
   status: "available" | "unavailable";
   /** Short explanation shown when status is not "available". */
   reason?: string;
-  /** Home channel for chat platforms (slack only), if configured. */
-  home?: string;
   /**
    * Base endpoint URL for this platform, when available.
    * For ingress endpoints the URL carries no port — each HTTP platform gets
    * its own host (`<agent-id>.<platform-label>.<base hostname>`, or
    * `<agent-id>-<platform-label>.<base hostname>` when hosts are flattened).
    * For internal (`*.svc.cluster.local`) endpoints the platform's Service
-   * port is embedded. Absent when the platform has no inbound HTTP surface
-   * (e.g. Slack Socket Mode) or when the platform's entry in
-   * `agent.endpoints` is null.
+   * port is embedded. Absent when `agent.endpoints` is null or missing.
    */
   endpoint?: string;
 }
@@ -129,72 +123,28 @@ export interface PlatformAvailability {
  * `<agent-id>.<label>.<base hostname>` — or, when hosts are flattened,
  * `<agent-id>-<label>.<base hostname>` — mapped wholesale to the platform's
  * Service port (routing is host-based; the whole host is the backend's
- * root). Slack/Discord are gateway-relayed and have no inbound HTTP surface.
+ * root).
  */
-export const PLATFORM_INGRESS_LABELS: Partial<Record<PlatformId, string>> = {
+export const PLATFORM_INGRESS_LABELS: Record<PlatformId, string> = {
   [PlatformId.ApiServer]: "api",
   [PlatformId.Webhook]: "hooks",
   [PlatformId.Teams]: "teams",
 };
 
-interface PlatformMeta {
-  label: string;
-  description: string;
-}
-
-const PLATFORM_META: Record<PlatformId, PlatformMeta> = {
-  [PlatformId.ApiServer]: {
-    label: "API Server",
-    description: "OpenAI-compatible HTTP endpoint for frontends like Open WebUI.",
-  },
-  [PlatformId.Webhook]: {
-    label: "Webhook",
-    description: "HTTP server that accepts signed webhooks and routes them to the agent.",
-  },
-  [PlatformId.Slack]: {
-    label: "Slack",
-    description: "Slack bot relayed through the gateway (Socket Mode).",
-  },
-  [PlatformId.Discord]: {
-    label: "Discord",
-    description: "Discord bot relayed through the gateway (WebSocket).",
-  },
-  [PlatformId.Teams]: {
-    label: "Teams",
-    description: "Microsoft Teams bot relayed through the gateway (HTTPS webhook).",
-  },
+const PLATFORM_LABELS: Record<PlatformId, string> = {
+  [PlatformId.ApiServer]: "API Server",
+  [PlatformId.Webhook]: "Webhook",
+  [PlatformId.Teams]: "Teams",
 };
 
 export function getPlatformLabel(id: PlatformId): string {
-  return PLATFORM_META[id].label;
+  return PLATFORM_LABELS[id];
 }
-
-export function getPlatformDescription(id: PlatformId): string {
-  return PLATFORM_META[id].description;
-}
-
-/** Ordered platform list for UI rendering. */
-export const PLATFORM_IDS: readonly PlatformId[] = [
-  PlatformId.ApiServer,
-  PlatformId.Webhook,
-  PlatformId.Slack,
-  PlatformId.Discord,
-  PlatformId.Teams,
-];
-
-const SLACK_REQUIRED_ENV_VARS = ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_ALLOWED_USERS"];
 
 export function derivePlatformAvailability(id: PlatformId, agent: Agent): PlatformAvailability {
-  const env = agent.env ?? [];
   // Full-qualified endpoint URL per platform, authored by buildAgentEndpoints
-  // — null when the platform has no inbound HTTP surface. Only the HTTP
-  // platforms (api-server / webhook / teams) carry keys in the map.
-  const endpoint: string | undefined =
-    id === PlatformId.ApiServer ||
-    id === PlatformId.Webhook ||
-    id === PlatformId.Teams
-      ? (agent.endpoints?.[id] ?? undefined)
-      : undefined;
+  // (or the MockRuntime) — present for every enabled HTTP platform.
+  const endpoint = agent.endpoints?.[id] ?? undefined;
 
   switch (id) {
     case PlatformId.ApiServer: {
@@ -215,37 +165,6 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
       }
       return { status: "available", ...(endpoint && { endpoint }) };
     }
-    case PlatformId.Slack: {
-      const isSet = (name: string) =>
-        env.some((v) => v.name === name && v.value.trim() !== "");
-      const missing = SLACK_REQUIRED_ENV_VARS.filter((name) => !isSet(name));
-      if (missing.length > 0) {
-        return {
-          status: "unavailable",
-          reason: `Missing env var${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`,
-        };
-      }
-      const home = env.find((v) => v.name === "SLACK_HOME_CHANNEL")?.value;
-      const homeName = env.find((v) => v.name === "SLACK_HOME_CHANNEL_NAME")?.value;
-      if (home) {
-        return { status: "available", home: homeName ? `${home} (${homeName})` : home };
-      }
-      return { status: "available" };
-    }
-    case PlatformId.Discord: {
-      const hasToken = env.some(
-        (v) => v.name === "DISCORD_BOT_TOKEN" && v.value.trim() !== "",
-      );
-      if (!hasToken) {
-        return { status: "unavailable", reason: "Missing env var: DISCORD_BOT_TOKEN." };
-      }
-      const home = env.find((v) => v.name === "DISCORD_HOME_CHANNEL")?.value;
-      const homeName = env.find((v) => v.name === "DISCORD_HOME_CHANNEL_NAME")?.value;
-      if (home) {
-        return { status: "available", home: homeName ? `${home} (${homeName})` : home };
-      }
-      return { status: "available" };
-    }
     case PlatformId.Teams: {
       // An explicit `enabled: false` short-circuits to unavailable even when
       // credentials are present.
@@ -254,6 +173,7 @@ export function derivePlatformAvailability(id: PlatformId, agent: Agent): Platfo
         if (enabledFlag === false) {
           return { status: "unavailable", reason: "Disabled by config.platforms.teams.enabled." };
         }
+        const env = agent.env ?? [];
         const extra = agent.config?.platforms?.teams?.extra;
         const missing: string[] = [];
         if (!(extra?.client_id?.trim() || env.some((v) => v.name === "TEAMS_CLIENT_ID" && v.value.trim() !== ""))) {
