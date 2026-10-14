@@ -1,15 +1,14 @@
 ---
 name: toolsets
 category: reference
-description: Toolsets reference — named bundles of tools controlling what the agent can do; core and platform toolsets for the `toolsets` config field.
+description: Toolsets reference — named bundles of tools controlling what the agent can do; the valid key universe for webhook per-route `toolsets` lists.
 ---
 
-# Toolsets (`config.toolsets`)
+# Toolsets
 
 Toolsets are named bundles of tools that control what the agent can do.
-They are the primary mechanism for configuring tool availability. Every
-tool belongs to exactly one toolset; enabling a toolset makes all tools
-in that bundle available.
+Every tool belongs to exactly one toolset; enabling a toolset makes all
+tools in that bundle available.
 
 **Kinds:**
 
