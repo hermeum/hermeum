@@ -39,11 +39,8 @@ function maskSensitiveEnv(env: Env): Env {
 // Fake per-platform endpoint URLs — one entry per HTTP platform (PlatformId),
 // set only when the platform is enabled, null otherwise.
 function buildEndpoints(agent: Agent): AgentEndpoints {
-  const endpoint = (platform: PlatformId): string | null => {
-    const label = PLATFORM_INGRESS_LABELS[platform];
-    if (label === undefined) return null;
-    return `http://${agent.id}.${label}.mock.local`;
-  };
+  const endpoint = (platform: PlatformId): string =>
+    `http://${agent.id}.${PLATFORM_INGRESS_LABELS[platform]}.mock.local`;
   return {
     [PlatformId.ApiServer]: isApiServerEnabled(agent) ? endpoint(PlatformId.ApiServer) : null,
     [PlatformId.Webhook]: isWebhookEnabled(agent) ? endpoint(PlatformId.Webhook) : null,

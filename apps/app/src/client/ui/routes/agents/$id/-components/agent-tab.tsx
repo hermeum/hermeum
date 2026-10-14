@@ -13,13 +13,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@herme
 
 import { useTRPC } from "@/router";
 import {
-  PLATFORM_IDS,
   derivePlatformAvailability,
-  getPlatformDescription,
   getPlatformLabel,
   type Agent,
   type AgentCron,
-  type PlatformId,
+  PlatformId,
 } from "@/entities";
 import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
 import { CopyButton } from "@/client/ui/components/copy-button";
@@ -46,46 +44,154 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
   );
 }
 
-function PlatformBadge({ id, agent }: { id: PlatformId; agent: Agent }) {
-  const { status, reason, home, endpoint } = derivePlatformAvailability(id, agent);
-  const label = getPlatformLabel(id);
-  const description = getPlatformDescription(id);
+const ENDPOINT_PLATFORM_IDS = [PlatformId.ApiServer, PlatformId.Webhook, PlatformId.Teams] as const;
+
+const ENDPOINT_LABEL_CLASS = "w-28 shrink-0 text-sm font-medium";
+
+interface EndpointRowData {
+  key: string;
+  label: string;
+  url: string;
+  tooltip?: string;
+  note?: string;
+  muted?: boolean;
+}
+
+function EndpointRow({ row }: { row: EndpointRowData }) {
+  const urlClass = `min-w-0 break-all font-mono text-xs${
+    row.muted ? " text-muted-foreground opacity-60" : ""
+  }`;
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
-              status === "unavailable" ? "text-muted-foreground opacity-60" : ""
-            }`}
+    <div className="flex items-start gap-3">
+      <span className={`${ENDPOINT_LABEL_CLASS}${row.muted ? " text-muted-foreground opacity-60" : ""}`}>
+        {row.label}
+      </span>
+      <div className="group flex min-w-0 flex-1 items-center gap-1">
+        {row.tooltip ? (
+          <Tooltip>
+            <TooltipTrigger render={<span className={`${urlClass} cursor-help`} />}>
+              {row.url}
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">{row.tooltip}</div>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className={urlClass}>{row.url}</span>
+        )}
+        <CopyButton text={row.url} className="shrink-0 opacity-0 group-hover:opacity-100" />
+        {row.note && <span className="text-xs text-muted-foreground">{row.note}</span>}
+      </div>
+    </div>
+  );
+}
+
+// Endpoint path suffixes per HTTP platform (upstream semantics):
+// api-server serves the OpenAI-compatible surface at the root, webhook
+// routes live at /webhooks/<route-name> (route names become URL paths),
+// Teams listens on the fixed /api/messages bot path.
+// See docs/official/api-server.md, webhooks.md, teams.md.
+
+function EndpointsSection({ agent }: { agent: Agent }) {
+  const webhookRoutes = Object.keys(
+    agent.config?.platforms?.webhook?.extra?.routes ?? {},
+  ).sort();
+  const rows: EndpointRowData[] = [];
+  const unavailable: Array<{ label: string; reason: string }> = [];
+
+  for (const id of ENDPOINT_PLATFORM_IDS) {
+    const availability = derivePlatformAvailability(id, agent);
+    if (availability.status === "unavailable") {
+      unavailable.push({
+        label: getPlatformLabel(id),
+        reason: availability.reason ?? "Unavailable.",
+      });
+      continue;
+    }
+    if (availability.endpoint === undefined) continue;
+    const label = getPlatformLabel(id);
+    if (id === PlatformId.ApiServer) {
+      rows.push({
+        key: id,
+        label,
+        url: availability.endpoint,
+        tooltip:
+          "OpenAI-compatible base URL — point clients at it (e.g. POST /v1/chat/completions, GET /v1/models).",
+      });
+    } else if (id === PlatformId.Webhook) {
+      if (webhookRoutes.length === 0) {
+        rows.push({
+          key: id,
+          label,
+          url: availability.endpoint,
+          muted: true,
+          note: "No routes configured.",
+        });
+      } else {
+        webhookRoutes.forEach((route, i) => {
+          rows.push({
+            key: `${id}-${route}`,
+            label: i === 0 ? label : "",
+            url: `${availability.endpoint}/webhooks/${route}`,
+          });
+        });
+      }
+    } else if (id === PlatformId.Teams) {
+      rows.push({
+        key: id,
+        label,
+        url: `${availability.endpoint}/api/messages`,
+      });
+    }
+  }
+
+  return (
+    <div className="py-8 flex flex-col gap-3">
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-bold">Endpoints</p>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Endpoints info" />
+            }
           />
-        }
-      >
-        {label}
-      </TooltipTrigger>
-      <TooltipContent className="max-w-sm">
-        <div className="flex flex-col gap-0.5">
-          <span>{description}</span>
-          {endpoint !== undefined && (
-            <div className="group flex min-w-0 items-center gap-1">
-              <span className="min-w-0 break-all font-mono">{endpoint}</span>
-              <CopyButton
-                text={endpoint}
-                className="shrink-0 opacity-0 group-hover:opacity-100"
-              />
+          <TooltipContent>
+            <div className="max-w-xs">
+              Inbound HTTP endpoints for the platforms Hermeum manages (API
+              server, webhook, Teams). Slack and Discord are gateway-relayed
+              and have no endpoint.
             </div>
-          )}
-          {home !== undefined && <span>Home channel: {home}</span>}
-          {reason && (
-            <span className="capitalize opacity-80">
-              {status} — {reason}
-            </span>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No endpoints configured.</p>
+      ) : (
+        <TooltipProvider>
+          <div className="flex flex-col gap-2">
+            {rows.map((row) => (
+              <EndpointRow key={row.key} row={row} />
+            ))}
+            {unavailable.map(({ label, reason }) => (
+              <Tooltip key={label}>
+                <TooltipTrigger
+                  render={
+                    <span
+                      className={`${ENDPOINT_LABEL_CLASS} cursor-help text-muted-foreground opacity-60`}
+                    />
+                  }
+                >
+                  {label}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span className="capitalize opacity-80">Unavailable — {reason}</span>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </TooltipProvider>
+      )}
+    </div>
   );
 }
 
@@ -180,37 +286,6 @@ function CronsSection({ agent }: { agent: Agent }) {
   );
 }
 
-function PlatformsSection({ agent }: { agent: Agent }) {
-  return (
-    <div className="py-8 flex flex-col gap-3">
-      <div className="flex items-center gap-1.5">
-        <p className="text-sm font-bold">Message Platforms</p>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Message platforms info" />
-            }
-          />
-          <TooltipContent>
-            <div className="max-w-xs">
-              Only platforms managed by Hermeum are shown here. Other Hermes
-              platforms (e.g. Telegram, Discord, WhatsApp) are also available
-              and can be wired via the config.yaml editor above.
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <TooltipProvider>
-        <div className="flex flex-wrap gap-2">
-          {PLATFORM_IDS.map((id) => (
-            <PlatformBadge key={id} id={id} agent={agent} />
-          ))}
-        </div>
-      </TooltipProvider>
-    </div>
-  );
-}
-
 export function AgentTab({ agent }: { agent: Agent }) {
   const trpc = useTRPC();
   const envSetIds = agent.sharedEnvSets ?? [];
@@ -226,6 +301,9 @@ export function AgentTab({ agent }: { agent: Agent }) {
 
   return (
     <div className="flex flex-col divide-y">
+      {/* endpoints */}
+      <EndpointsSection agent={agent} />
+
       {/* soul */}
       <div className="py-8 flex flex-col gap-3">
         <p className="text-sm font-bold">Soul</p>
@@ -252,9 +330,6 @@ export function AgentTab({ agent }: { agent: Agent }) {
           <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
         )}
       </div>
-
-      {/* message platforms */}
-      <PlatformsSection agent={agent} />
 
       {/* skills */}
       <div className="py-8 flex flex-col gap-3">

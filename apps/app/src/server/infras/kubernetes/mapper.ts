@@ -133,9 +133,6 @@ export function agentEnvToSecret(
 // <agent-id>-<platform-label>.<base-hostname> (single DNS level).
 function ingressHostFor(agentId: string, platform: PlatformId): string {
   const label = PLATFORM_INGRESS_LABELS[platform];
-  if (label === undefined) {
-    throw new Error(`No ingress subdomain label configured for platform "${platform}"`);
-  }
   const agentLabel = config.agentIngressFlattenHosts ? `${agentId}-${label}` : `${agentId}.${label}`;
   return `${agentLabel}.${config.agentIngressBaseHostname ?? ""}`;
 }

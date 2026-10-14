@@ -1512,153 +1512,6 @@ describe("derivePlatformAvailability", () => {
     });
   });
 
-  describe("slack", () => {
-    const slackEnv = [
-      { name: "SLACK_BOT_TOKEN", value: "xoxb-1", sensitive: true },
-      { name: "SLACK_APP_TOKEN", value: "xapp-1", sensitive: true },
-      { name: "SLACK_ALLOWED_USERS", value: "U01" },
-    ];
-
-    const slackSecretSentinelEnv = [
-      { name: "SLACK_BOT_TOKEN", value: "<secret>", sensitive: true },
-      { name: "SLACK_APP_TOKEN", value: "<secret>", sensitive: true },
-      { name: "SLACK_ALLOWED_USERS", value: "U01" },
-    ];
-
-    it("is unavailable when all three required env vars are missing", () => {
-      const result = derivePlatformAvailability(PlatformId.Slack, makeAgent());
-      expect(result.status).toBe("unavailable");
-      expect(result.reason).toContain("SLACK_BOT_TOKEN");
-      expect(result.reason).toContain("SLACK_APP_TOKEN");
-      expect(result.reason).toContain("SLACK_ALLOWED_USERS");
-    });
-
-    it("names only the missing env vars when some are set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({ env: [{ name: "SLACK_BOT_TOKEN", value: "xoxb-1", sensitive: true }] })
-      );
-      expect(result.status).toBe("unavailable");
-      expect(result.reason).not.toContain("SLACK_BOT_TOKEN");
-      expect(result.reason).toContain("SLACK_APP_TOKEN");
-      expect(result.reason).toContain("SLACK_ALLOWED_USERS");
-    });
-
-    it("is available with no home when all three required env vars are set", () => {
-      const result = derivePlatformAvailability(PlatformId.Slack, makeAgent({ env: slackEnv }));
-      expect(result).toEqual({ status: "available" });
-    });
-
-    it("never exposes an endpoint — Slack uses Socket Mode", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({
-          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
-          env: slackEnv,
-        })
-      );
-      expect(result.endpoint).toBeUndefined();
-    });
-
-    it("treats the <secret> sentinel for sensitive tokens as set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({ env: slackSecretSentinelEnv })
-      );
-      expect(result.status).toBe("available");
-    });
-
-    it("reports SLACK_HOME_CHANNEL as home when set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({ env: [...slackEnv, { name: "SLACK_HOME_CHANNEL", value: "C0123" }] })
-      );
-      expect(result).toEqual({ status: "available", home: "C0123" });
-    });
-
-    it("appends SLACK_HOME_CHANNEL_NAME when set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({
-          env: [
-            ...slackEnv,
-            { name: "SLACK_HOME_CHANNEL", value: "C0123" },
-            { name: "SLACK_HOME_CHANNEL_NAME", value: "ops" },
-          ],
-        })
-      );
-      expect(result).toEqual({ status: "available", home: "C0123 (ops)" });
-    });
-
-    it("is available even when config.slack is present but no env credentials", () => {
-      // config.slack holds behavior knobs only; credentials come from env.
-      const result = derivePlatformAvailability(
-        PlatformId.Slack,
-        makeAgent({ config: { slack: { allowed_channels: ["C01"] } } })
-      );
-      expect(result.status).toBe("unavailable");
-    });
-  });
-
-  describe("discord", () => {
-    const discordEnv = [
-      { name: "DISCORD_BOT_TOKEN", value: "bot-token", sensitive: true },
-    ];
-
-    it("is unavailable when DISCORD_BOT_TOKEN is missing", () => {
-      const result = derivePlatformAvailability(PlatformId.Discord, makeAgent());
-      expect(result.status).toBe("unavailable");
-      expect(result.reason).toContain("DISCORD_BOT_TOKEN");
-    });
-
-    it("is available with no home when DISCORD_BOT_TOKEN is set", () => {
-      const result = derivePlatformAvailability(PlatformId.Discord, makeAgent({ env: discordEnv }));
-      expect(result).toEqual({ status: "available" });
-    });
-
-    it("never exposes an endpoint — Discord uses the Gateway WebSocket", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Discord,
-        makeAgent({
-          endpoints: { "api-server": null, webhook: "https://a1.hooks.example.com", teams: null },
-          env: discordEnv,
-        })
-      );
-      expect(result.endpoint).toBeUndefined();
-    });
-
-    it("reports DISCORD_HOME_CHANNEL as home when set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Discord,
-        makeAgent({ env: [...discordEnv, { name: "DISCORD_HOME_CHANNEL", value: "1234567890" }] })
-      );
-      expect(result).toEqual({ status: "available", home: "1234567890" });
-    });
-
-    it("appends DISCORD_HOME_CHANNEL_NAME when set", () => {
-      const result = derivePlatformAvailability(
-        PlatformId.Discord,
-        makeAgent({
-          env: [
-            ...discordEnv,
-            { name: "DISCORD_HOME_CHANNEL", value: "1234567890" },
-            { name: "DISCORD_HOME_CHANNEL_NAME", value: "bot-updates" },
-          ],
-        })
-      );
-      expect(result).toEqual({ status: "available", home: "1234567890 (bot-updates)" });
-    });
-
-    it("is unavailable when config.discord is present but no env credentials", () => {
-      // config.discord holds behavior knobs only; credentials come from env.
-      const result = derivePlatformAvailability(
-        PlatformId.Discord,
-        makeAgent({ config: { discord: { require_mention: true } } })
-      );
-      expect(result.status).toBe("unavailable");
-    });
-  });
-
   describe("teams", () => {
     const teamsConfig = {
       enabled: true,
@@ -1711,13 +1564,12 @@ describe("derivePlatformAvailability", () => {
       expect(result.reason).toContain("Disabled");
     });
 
-    it("is available with no home when all credentials are set", () => {
+    it("is available when all credentials are set", () => {
       const result = derivePlatformAvailability(
         PlatformId.Teams,
         makeAgent({ config: { platforms: { teams: teamsConfig } }, env: teamsSecretEnv })
       );
       expect(result.status).toBe("available");
-      expect(result.home).toBeUndefined();
     });
 
     it("is available when all credentials come from env vars only", () => {
