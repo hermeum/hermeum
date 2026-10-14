@@ -97,7 +97,9 @@ function ToolsetsSection({ agent }: { agent: Agent }) {
           />
           <TooltipContent>
             <div className="max-w-xs">
-              Hermes&apos; 25 built-in toolsets. Plugin toolsets are not listed.
+              Hermes&apos; built-in toolsets — the ones that need LAN or
+              desktop access (Home Assistant, Spotify, Yuanbao, Computer Use)
+              are hidden. Plugin toolsets are not listed.
             </div>
           </TooltipContent>
         </Tooltip>
