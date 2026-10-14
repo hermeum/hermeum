@@ -59,9 +59,8 @@ For deeper guidance and more examples, see the
 ## Config
 
 The config is the agent's settings file. It's where you pick the model, turn on
-[toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/overview) (web, browser, terminal, code execution, and more), wire up
-[messaging platforms](../messaging-platforms) (Slack, Discord, Teams, webhooks, or the
-OpenAI-compatible API server), and enable integrations like image and video generation.
+[toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/overview) (web, browser, terminal, code execution, and more), and enable
+integrations like image and video generation.
 
 You don't have to write it by hand — the AI config generator fills it out from your
 description, and you can edit it later whenever you need to fine-tune something. For the
@@ -204,7 +203,5 @@ crons:
 
 - [Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/overview)
   — the built-in capabilities an agent can use.
-- [Messaging platforms](../messaging-platforms) — connect an agent to Slack, Discord,
-  Teams, webhooks, or the OpenAI-compatible API server.
 - [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#skills-hub)
   — install capabilities from community hubs, GitHub, or direct URLs.
