@@ -262,7 +262,7 @@ function PlatformsSection({ agent }: { agent: Agent }) {
             <div className="max-w-xs">
               Only platforms managed by Hermeum are shown here. Other Hermes
               platforms (e.g. Telegram, Discord, WhatsApp) are also available
-              and can be wired via the Configuration editor above.
+              and can be wired via the Config editor above.
             </div>
           </TooltipContent>
         </Tooltip>
@@ -307,12 +307,12 @@ export function AgentTab({ agent }: { agent: Agent }) {
 
       {/* config */}
       <div className="py-8 flex flex-col gap-3">
-        <p className="text-sm font-bold">Configuration</p>
+        <p className="text-sm font-bold">Config</p>
         {agent.config ? (
           <AgentConfigEditor
             value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
             readOnly
-            maxHeight="300px"
+            maxHeight="400px"
             foldable
           />
         ) : (
