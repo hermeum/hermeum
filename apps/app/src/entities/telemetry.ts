@@ -288,12 +288,31 @@ export const AgentSessionSummarySchema = z
       .describe(
         "Model the session ran on: the session_started event's initial model, falling back to the earliest llm_call's model; null when neither was ingested."
       ),
-    finalized: z
-      .boolean()
+    status: z
+      .enum(["active", "inactive", "finalized"])
       .describe(
-        "True when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls). Events ingested after finalization flip it back to false."
+        "Live-activity status derived at query time: `finalized` when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls; events ingested after finalization flip it back), `inactive` when not finalized and the latest event is more than one hour old, `active` otherwise."
       ),
   })
   .describe("One agent session, aggregated from its stored events.");
 
 export type AgentSessionSummary = z.infer<typeof AgentSessionSummarySchema>;
+
+export type AgentSessionStatus = AgentSessionSummary["status"];
+
+// A session that delivered its final answer is done — finalization is terminal
+// and age-blind. Everything else shows as inactive once its latest event has
+// aged past this window (strictly greater: at exactly one hour it is still
+// active), so a crashed or abandoned session does not stay "Active" forever.
+export const AGENT_SESSION_INACTIVITY_MS = 3600 * 1000;
+
+export function deriveAgentSessionStatus(
+  finalized: boolean,
+  lastEventAt: string,
+  now: number = Date.now()
+): AgentSessionStatus {
+  if (finalized) return "finalized";
+  return now - new Date(lastEventAt).getTime() > AGENT_SESSION_INACTIVITY_MS
+    ? "inactive"
+    : "active";
+}

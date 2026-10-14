@@ -152,7 +152,7 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
     eventCount: number;
     platform: string | null;
     model: string | null;
-    finalized: boolean;
+    status: "active" | "inactive" | "finalized";
   }> = {
     items: [
       {
@@ -162,7 +162,7 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
         eventCount: 2,
         platform: "cli",
         model: "gpt-5",
-        finalized: true,
+        status: "finalized",
       },
     ],
     hasMore: false,
@@ -182,7 +182,7 @@ describe("AgentSessionUseCase.listAgentSessionSummaries", () => {
     expect(result.items[0]!.sessionId).toBe("hermes-session-1");
     expect(result.items[0]!.platform).toBe("cli");
     expect(result.items[0]!.model).toBe("gpt-5");
-    expect(result.items[0]!.finalized).toBe(true);
+    expect(result.items[0]!.status).toBe("finalized");
     expect(result.hasMore).toBe(false);
   });
 

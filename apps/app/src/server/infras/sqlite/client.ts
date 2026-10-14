@@ -9,6 +9,7 @@ import {
   AgentSessionSummary,
   PaginatedResult,
   PaginationQuery,
+  deriveAgentSessionStatus,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
@@ -94,15 +95,19 @@ export class SqliteDatabase implements Database {
       }
       meta.set(row.sessionId, entry);
     }
-    const items = page.map((row) => ({
-      sessionId: row.sessionId,
-      firstEventAt: new Date(row.firstEventAt).toISOString(),
-      lastEventAt: new Date(row.lastEventAt).toISOString(),
-      eventCount: Number(row.eventCount),
-      finalized: row.finalized === 1,
-      platform: meta.get(row.sessionId)?.platform ?? null,
-      model: meta.get(row.sessionId)?.model ?? null,
-    }));
+    const items = page.map((row) => {
+      const firstEventAt = new Date(row.firstEventAt).toISOString();
+      const lastEventAt = new Date(row.lastEventAt).toISOString();
+      return {
+        sessionId: row.sessionId,
+        firstEventAt,
+        lastEventAt,
+        eventCount: Number(row.eventCount),
+        status: deriveAgentSessionStatus(row.finalized === 1, lastEventAt),
+        platform: meta.get(row.sessionId)?.platform ?? null,
+        model: meta.get(row.sessionId)?.model ?? null,
+      };
+    });
     return { items, hasMore: rows.length > query.limit };
   }
 
