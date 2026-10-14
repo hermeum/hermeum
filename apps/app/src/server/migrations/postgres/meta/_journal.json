@@ -29,6 +29,13 @@
       "when": 1791928853085,
       "tag": "0003_happy_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791937337576,
+      "tag": "0004_cold_queen_noir",
+      "breakpoints": true
     }
   ]
 }

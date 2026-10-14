@@ -26,6 +26,9 @@ export const agentSessionEvents = pgTable(
       table.type,
       table.timestamp
     ),
+    // Covers the retention job's stale-session scan: a GROUP BY session_id
+    // HAVING max(created_at) < cutoff reads this index instead of the table.
+    index("agent_session_events_session_created_idx").on(table.sessionId, table.createdAt),
   ]
 );
 

@@ -79,6 +79,11 @@ config:
   # (HERMEUM_SMTP_FROM). Set it together with secrets.smtpUrl — most SMTP
   # providers reject or spam-filter messages without a From header.
   smtpFrom: ""
+  # Agent-session telemetry retention (HERMEUM_AGENT_SESSION_RETENTION_DAYS):
+  # sessions whose most recent event is older than this many days are deleted
+  # with all their events by a scheduled job (six-hour cycle). 0 disables
+  # retention and keeps every session forever.
+  agentSessionRetentionDays: 90
 
   # ── Web server TLS (optional, HERMEUM_TLS_CERT_FILE / HERMEUM_TLS_KEY_FILE) ─
   # When both certFile and keyFile are set, the hermeum app serves the UI/trpc/

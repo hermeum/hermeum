@@ -19,6 +19,16 @@ import { AppendAgentSessionEventsInput, Database } from "@/server/usecases/adapt
 // implements the Database adaptor against the postgres schema; injected into
 // use cases via BaseUseCase (see mixin.ts).
 
+// Retention batches at most this many stale sessions per DELETE statement, so
+// a large backlog drains in short transactions instead of one long-running one.
+const RETENTION_BATCH_SESSIONS = 500;
+
+// Fixed advisory-lock key for the retention job's cross-replica guard. Any
+// stable int8 constant works; replicas of the same deployment share it, so
+// exactly one pod runs retention per cycle. Keep it stable across releases
+// (changing it defeats the mutual exclusion between old and new replicas).
+const RETENTION_ADVISORY_LOCK_KEY = 742190413;
+
 export function createPostgresClient() {
   const client = postgres(config.databaseUrl);
   return drizzlePg(client);
@@ -150,6 +160,45 @@ export class PostgresDatabase implements Database {
       }
     }
     return { sessionId, events };
+  }
+
+  async deleteAgentSessionsLastActiveBefore(cutoff: Date): Promise<number> {
+    // Whole-session retention: a session is pruned only once its most recent
+    // event has aged past the cutoff, so the trajectory UI never shows a
+    // half-deleted session. The staleness subquery is self-contained
+    // (re-evaluated per batch at delete time), which spares a session that
+    // receives new events mid-run. Batching by session count terminates the
+    // loop: each non-empty batch removes those sessions entirely, so the next
+    // scan sees strictly fewer stale sessions; an empty batch ends the run.
+    return this.db.transaction(async (tx) => {
+      // Cross-replica guard: with a horizontally scaled Postgres deployment
+      // every pod's scheduler fires the job, but only the lock holder works —
+      // the rest skip their cycle. The transaction-scoped advisory lock
+      // auto-releases at commit/rollback, so a crashed holder cannot wedge
+      // the job.
+      const rows = await tx.execute<{ locked: boolean }>(
+        sql`select pg_try_advisory_xact_lock(${RETENTION_ADVISORY_LOCK_KEY}) as locked`
+      );
+      if (!rows[0]?.locked) return 0;
+      let deleted = 0;
+      for (;;) {
+        // drizzle stores created_at without timezone as an ISO string (UTC
+        // wall clock), so an ISO cutoff string compares consistently.
+        const result = await tx
+          .delete(agentSessionEvents)
+          .where(
+            sql`${agentSessionEvents.sessionId} in (
+              select ${agentSessionEvents.sessionId} from ${agentSessionEvents}
+              group by ${agentSessionEvents.sessionId}
+              having max(${agentSessionEvents.createdAt}) < ${cutoff.toISOString()}
+              limit ${RETENTION_BATCH_SESSIONS}
+            )`
+          );
+        deleted += result.count;
+        if (result.count === 0) break;
+      }
+      return deleted;
+    });
   }
 
   async storeAgentToken(agentId: string, tokenHash: string): Promise<void> {

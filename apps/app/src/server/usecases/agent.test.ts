@@ -116,6 +116,7 @@ function makeDatabase(): Database {
     appendAgentSessionEvents: vi.fn(),
     listAgentSessionSummaries: vi.fn(),
     getAgentSession: vi.fn(),
+    deleteAgentSessionsLastActiveBefore: vi.fn(),
     storeAgentToken: vi.fn(),
     findAgentIdByTokenHash: vi.fn(),
     revokeAgentToken: vi.fn(),

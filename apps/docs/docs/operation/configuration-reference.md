@@ -63,6 +63,7 @@ operator-configurable; the token lifecycle is fully automatic.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `HERMEUM_PLUGIN_BASE_URL` | `http://hermeum:3000` | Base URL agents use to reach the Hermeum app. The hermeum plugin posts events to `<pluginBaseUrl>/plugin/trpc/agentSession.agentSessionEvents`. The Helm chart defaults this to the app's in-cluster Service DNS (`http://<release-name>:<config.port>`); override for cross-namespace or proxied routes. |
+| `HERMEUM_AGENT_SESSION_RETENTION_DAYS` | `90` | Retention window, in days, for agent-session telemetry. A scheduled job (six-hour cycle) deletes every session whose most recent event is older than the window, together with all of its events — sessions are pruned whole, never partially. Set `0` to disable retention and keep every session forever. |
 
 ### Auth
 

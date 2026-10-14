@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../infras/kubernetes/client", () => ({ KubernetesClient: vi.fn() }));
 vi.mock("../infras/local-files", () => ({ LocalFiles: vi.fn() }));
@@ -18,6 +18,7 @@ vi.mock("@/server/libs/config", () => ({
 
 import { AgentSessionUseCase } from "./agent-session";
 import type { Database } from "./adaptors/database";
+import type { TelemetryAdaptor } from "./adaptors/telemetry";
 import type { Runtime } from "./adaptors/runtime";
 import type { Agent, AgentSession, Context, PaginatedResult } from "@/entities";
 
@@ -26,6 +27,7 @@ function makeDatabase(): Database {
     appendAgentSessionEvents: vi.fn().mockResolvedValue(2),
     listAgentSessionSummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
     getAgentSession: vi.fn().mockResolvedValue({ sessionId: "hermes-session-1", events: [] }),
+    deleteAgentSessionsLastActiveBefore: vi.fn().mockResolvedValue(0),
     storeAgentToken: vi.fn(),
     findAgentIdByTokenHash: vi.fn(),
     revokeAgentToken: vi.fn(),
@@ -87,7 +89,22 @@ function makeBatch(overrides: Partial<AgentSession> = {}): AgentSession {
   } as AgentSession;
 }
 
-function makeUseCase(db: Database, runtime: Runtime): AgentSessionUseCase {
+function makeLogger(): TelemetryAdaptor {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    heartbeat: vi.fn(),
+    shutdown: vi.fn(),
+  };
+}
+
+function makeUseCase(
+  db: Database,
+  runtime: Runtime,
+  logger: TelemetryAdaptor = makeLogger()
+): AgentSessionUseCase {
   // Constructors of the inherited mixin chain accept the injected adaptors in
   // BaseUseCase order: runtime, files, skillIndex, logger, db.
   return new (AgentSessionUseCase as unknown as new (
@@ -96,7 +113,7 @@ function makeUseCase(db: Database, runtime: Runtime): AgentSessionUseCase {
     skillIndex: unknown,
     logger: unknown,
     db: Database
-  ) => AgentSessionUseCase)(runtime, {}, {}, { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }, db);
+  ) => AgentSessionUseCase)(runtime, {}, {}, logger, db);
 }
 
 describe("AgentSessionUseCase.ingestAgentSessionEvents", () => {
@@ -220,5 +237,149 @@ describe("AgentSessionUseCase.getAgentSession", () => {
 
     expect(runtime.getHermesAgent).not.toHaveBeenCalled();
     expect(db.getAgentSession).toHaveBeenCalledWith("agent-1", "hermes-session-1");
+  });
+});
+
+describe("AgentSessionUseCase.pruneAgentSessions", () => {
+  const MS_PER_DAY = 24 * 3600 * 1000;
+
+  beforeEach(() => {
+    // Frozen clock: the cutoff Date must be exactly one window behind it.
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("deletes sessions last active before one window ago and returns the count", async () => {
+    const frozen = Date.now();
+    const db = makeDatabase();
+    (db.deleteAgentSessionsLastActiveBefore as ReturnType<typeof vi.fn>).mockResolvedValue(7);
+    const logger = makeLogger();
+    const usecase = makeUseCase(db, makeRuntime(null), logger);
+
+    const deleted = await usecase.pruneAgentSessions(90);
+
+    expect(deleted).toBe(7);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledWith(
+      new Date(frozen - 90 * MS_PER_DAY)
+    );
+    expect(logger.info).toHaveBeenCalledWith("retention pruned agent sessions", {
+      cutoff: new Date(frozen - 90 * MS_PER_DAY).toISOString(),
+      deleted: 7,
+    });
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("passes an arbitrary window through unchanged", async () => {
+    const frozen = Date.now();
+    const db = makeDatabase();
+    const usecase = makeUseCase(db, makeRuntime(null));
+
+    await usecase.pruneAgentSessions(30);
+
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledWith(
+      new Date(frozen - 30 * MS_PER_DAY)
+    );
+  });
+});
+
+describe("AgentSessionUseCase agent-session retention schedule", () => {
+  const MS_PER_DAY = 24 * 3600 * 1000;
+  const RUN_INTERVAL_MS = 6 * 3600 * 1000;
+
+  let db: Database;
+  let logger: TelemetryAdaptor;
+  let usecase: AgentSessionUseCase;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    db = makeDatabase();
+    logger = makeLogger();
+    usecase = makeUseCase(db, makeRuntime(null), logger);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("runs immediately on start with a cutoff one window back, then every cycle", async () => {
+    const before = Date.now();
+    usecase.startAgentSessionRetention(90);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(1);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenLastCalledWith(
+      new Date(before - 90 * MS_PER_DAY)
+    );
+
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS - 1);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(2);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenLastCalledWith(
+      new Date(before + RUN_INTERVAL_MS - 90 * MS_PER_DAY)
+    );
+    expect(logger.info).toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("never schedules anything when retention is disabled (0 days)", async () => {
+    usecase.startAgentSessionRetention(0);
+
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS * 2);
+
+    expect(db.deleteAgentSessionsLastActiveBefore).not.toHaveBeenCalled();
+  });
+
+  it("stops further cycles when stopped after startup", async () => {
+    usecase.startAgentSessionRetention(90);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(1);
+
+    usecase.stopAgentSessionRetention();
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS * 2);
+
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores repeated start calls", async () => {
+    usecase.startAgentSessionRetention(90);
+    usecase.startAgentSessionRetention(90);
+
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS);
+
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(2);
+  });
+
+  it("allow restarting after stop", async () => {
+    usecase.startAgentSessionRetention(90);
+    await vi.advanceTimersByTimeAsync(0);
+    usecase.stopAgentSessionRetention();
+
+    usecase.startAgentSessionRetention(90);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(3);
+  });
+
+  it("logs failures and keeps the schedule running", async () => {
+    (db.deleteAgentSessionsLastActiveBefore as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("boom")
+    );
+    usecase.startAgentSessionRetention(90);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "agent session retention run failed",
+      expect.objectContaining({ error: "boom" })
+    );
+
+    await vi.advanceTimersByTimeAsync(RUN_INTERVAL_MS);
+    expect(db.deleteAgentSessionsLastActiveBefore).toHaveBeenCalledTimes(2);
+    expect(logger.info).toHaveBeenCalled();
   });
 });
