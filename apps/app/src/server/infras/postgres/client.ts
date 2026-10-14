@@ -9,6 +9,7 @@ import {
   AgentSessionSummary,
   PaginatedResult,
   PaginationQuery,
+  deriveAgentSessionStatus,
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
@@ -99,15 +100,19 @@ export class PostgresDatabase implements Database {
       }
       meta.set(row.sessionId, entry);
     }
-    const items = page.map((row) => ({
-      sessionId: row.sessionId,
-      firstEventAt: row.firstEventAt.toISOString(),
-      lastEventAt: row.lastEventAt.toISOString(),
-      eventCount: Number(row.eventCount),
-      finalized: row.finalized === true,
-      platform: meta.get(row.sessionId)?.platform ?? null,
-      model: meta.get(row.sessionId)?.model ?? null,
-    }));
+    const items = page.map((row) => {
+      const firstEventAt = row.firstEventAt.toISOString();
+      const lastEventAt = row.lastEventAt.toISOString();
+      return {
+        sessionId: row.sessionId,
+        firstEventAt,
+        lastEventAt,
+        eventCount: Number(row.eventCount),
+        status: deriveAgentSessionStatus(row.finalized === true, lastEventAt),
+        platform: meta.get(row.sessionId)?.platform ?? null,
+        model: meta.get(row.sessionId)?.model ?? null,
+      };
+    });
     return { items, hasMore: rows.length > query.limit };
   }
 

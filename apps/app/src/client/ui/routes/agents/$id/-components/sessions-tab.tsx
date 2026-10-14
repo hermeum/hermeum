@@ -121,9 +121,9 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
               <TableCell>
                 <Badge
                   variant="secondary"
-                  className={session.finalized ? undefined : "text-green-700"}
+                  className={session.status === "active" ? "text-green-700" : undefined}
                 >
-                  {session.finalized ? "Finalized" : "Active"}
+                  {session.status === "active" ? "Active" : session.status === "inactive" ? "Inactive" : "Finalized"}
                 </Badge>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
