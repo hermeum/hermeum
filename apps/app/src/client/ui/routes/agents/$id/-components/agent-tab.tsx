@@ -13,15 +13,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@herme
 
 import { useTRPC } from "@/router";
 import {
-  TOOLSET_IDS,
-  deriveToolsetAvailability,
   derivePlatformAvailability,
-  getToolsetDescription,
-  getToolsetLabel,
   getPlatformLabel,
   type Agent,
   type AgentCron,
-  type ToolsetId,
   PlatformId,
 } from "@/entities";
 import { AgentConfigEditor } from "@/client/ui/components/agent-config-editor";
@@ -45,68 +40,6 @@ function ButtonList({ items, max = BADGE_MAX }: { items: string[]; max?: number 
         </Button>
       ))}
       {overflow > 0 && <span className="text-xs text-muted-foreground">+{overflow} more</span>}
-    </div>
-  );
-}
-
-function ToolsetBadge({ id, agent }: { id: ToolsetId; agent: Agent }) {
-  const { status, reason } = deriveToolsetAvailability(id, agent);
-  const label = getToolsetLabel(id);
-  const description = getToolsetDescription(id);
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className={`h-auto px-2 py-1 font-mono text-xs normal-case tracking-normal ${
-              status === "unavailable" ? "text-muted-foreground opacity-60" : ""
-            }`}
-          />
-        }
-      >
-        {label}
-      </TooltipTrigger>
-      <TooltipContent>
-        <div className="flex flex-col gap-0.5">
-          <span>{description}</span>
-          {reason && (
-            <span className="capitalize opacity-80">
-              {status} — {reason}
-            </span>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function ToolsetsSection({ agent }: { agent: Agent }) {
-  return (
-    <div className="py-8 flex flex-col gap-3">
-      <div className="flex items-center gap-1.5">
-        <p className="text-sm font-bold">Toolsets</p>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Info className="size-3 text-muted-foreground cursor-help" aria-label="Toolsets info" />
-            }
-          />
-          <TooltipContent>
-            <div className="max-w-xs">
-              Hermes&apos; 25 built-in toolsets. Plugin toolsets are not listed.
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <TooltipProvider>
-        <div className="flex flex-wrap gap-2">
-          {TOOLSET_IDS.map((id) => (
-            <ToolsetBadge key={id} id={id} agent={agent} />
-          ))}
-        </div>
-      </TooltipProvider>
     </div>
   );
 }
@@ -385,21 +318,18 @@ export function AgentTab({ agent }: { agent: Agent }) {
 
       {/* config */}
       <div className="py-8 flex flex-col gap-3">
-        <p className="text-sm font-bold">Configuration</p>
+        <p className="text-sm font-bold">config.yaml</p>
         {agent.config ? (
           <AgentConfigEditor
             value={stringifyYaml(agent.config, { blockQuote: "literal", lineWidth: 0 }).trim()}
             readOnly
-            maxHeight="300px"
+            maxHeight="350px"
             foldable
           />
         ) : (
           <p className="text-sm text-muted-foreground">Not set — use Edit to configure.</p>
         )}
       </div>
-
-      {/* toolsets */}
-      <ToolsetsSection agent={agent} />
 
       {/* skills */}
       <div className="py-8 flex flex-col gap-3">
