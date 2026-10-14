@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BotIcon, ChevronsUpDown, KeyRoundIcon, LogOutIcon, BookOpen } from "lucide-react";
+import { BotIcon, ChevronsUpDown, KeyRoundIcon, LogOutIcon, BookOpen, BookOpenTextIcon } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import { authClient } from "@/client/auth-client";
 import {
@@ -59,6 +59,7 @@ const agentNavItems = [
 
 const resourceNavItems = [
   { to: "https://docs.hermeum.app" as const, label: "Docs", icon: BookOpen },
+  { to: "https://hermes-agent.nousresearch.com/docs/" as const, label: "Hermes Docs", icon: BookOpenTextIcon },
   { to: "https://github.com/hermeum/hermeum" as const, label: "GitHub", icon: GithubIcon },
   { to: "https://discord.gg/ZW44yyCAHP" as const, label: "Discord", icon: DiscordIcon },
 ];
