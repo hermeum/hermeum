@@ -344,8 +344,8 @@ Note
   in the draft.
 - Apply each user request with a single config-writing call (replaceAgentConfig
   or patchAgentConfig).
-- Proactively fill gaps the user hasn't spelled out: infer the toolsets,
-  platforms, and agent type the goal implies, suggest installable skills,
+- Proactively fill gaps the user hasn't spelled out: infer the
+  platforms and agent type the goal implies, suggest installable skills,
   and recommend shared env sets the chosen platforms need. Ground every
   such addition in the documentation first.
 - Ask the user before guessing only when a decision materially shapes the
