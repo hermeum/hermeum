@@ -358,7 +358,6 @@ Note
   itself and refines its own procedure across runs — over-specified
   prompts make it too rigid to adapt. Write "Diagnose and report the
   memory spike", not "Run \`ps aux\` and \`curl localhost:9090/api/metrics\`,
-  then report". When the user explicitly asks for that level of detail,
-  write it in as they ask.
+  then report".
 
 `;
