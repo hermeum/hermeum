@@ -352,5 +352,13 @@ Note
   agent and can't be sensibly inferred (e.g. credentials, secrets,
   ambiguous intent). Everything else gets a sensible, documented default
   the user can override.
+- Keep prompt-like fields (e.g. webhook route \`prompt\`, cron \`prompt\`)
+  lean: state the goal and the event context, not the exact commands, API
+  paths, or other operational details to use. The agent works those out
+  itself and refines its own procedure across runs — over-specified
+  prompts make it too rigid to adapt. Write "Diagnose and report the
+  memory spike", not "Run \`ps aux\` and \`curl localhost:9090/api/metrics\`,
+  then report". When the user explicitly asks for that level of detail,
+  write it in as they ask.
 
 `;
