@@ -57,6 +57,11 @@ export const createServer = async (
   // tool args/results are not plugin-truncated; oversize rejections drop
   // the whole batch); the later global parser skips already-parsed bodies.
   app.use("/plugin/trpc", express.json({ limit: "8mb" }));
+  // Chat sends the full UIMessage conversation history each turn, including
+  // accumulated tool results (e.g. readDocument outputs), which can exceed
+  // body-parser's default 100KB JSON limit — raise the limit for this path
+  // only; the later global parser skips already-parsed bodies.
+  app.use("/chat", express.json({ limit: "8mb" }));
   app.use(express.json());
   app.use("/trpc", trpcMiddleware);
   app.use("/plugin/trpc", pluginTrpcMiddleware);
