@@ -109,9 +109,9 @@ export function splitDurationMs(ms: number): DurationParts {
 // fall back to the hand-rolled narrow formatter in `formatDurationParts`.
 const durationFormat = "DurationFormat" in Intl ? new Intl.DurationFormat("en", { style: "narrow" }) : undefined;
 
-// Renders the two most significant units, dropping zero-valued ones (the
-// native formatter drops trailing zeros; the fallback mirrors it so both
-// paths produce the same strings — "34d 19h", "2h 3m", "5m", "30s").
+// Renders the two most significant units and drops zero-valued ones (the
+// native formatter drops them anywhere; the fallback mirrors it so both
+// paths produce the same strings — "34d 19h", "2h 3m", "5m", "20s").
 export function formatDurationParts({ days, hours, minutes, seconds }: DurationParts): string {
   if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) return "0s";
   if (durationFormat !== undefined) {
@@ -119,9 +119,22 @@ export function formatDurationParts({ days, hours, minutes, seconds }: DurationP
     if (hours > 0) return durationFormat.format({ hours, minutes });
     return durationFormat.format({ minutes, seconds });
   }
-  if (days > 0) return [`${days}d`, hours > 0 ? `${hours}h` : null].filter(Boolean).join(" ");
-  if (hours > 0) return [`${hours}h`, minutes > 0 ? `${minutes}m` : null].filter(Boolean).join(" ");
-  return [`${minutes}m`, seconds > 0 ? `${seconds}s` : null].filter(Boolean).join(" ");
+  const units = [
+    [days, "d"] as const,
+    [hours, "h"] as const,
+    [minutes, "m"] as const,
+    [seconds, "s"] as const,
+  ];
+  if (days > 0) return joinNarrow(units.slice(0, 2));
+  if (hours > 0) return joinNarrow(units.slice(1, 3));
+  return joinNarrow(units.slice(2, 4));
+}
+
+function joinNarrow(units: readonly (readonly [value: number, suffix: string])[]): string {
+  return units
+    .filter(([value]) => value > 0)
+    .map(([value, suffix]) => `${value}${suffix}`)
+    .join(" ");
 }
 
 export function formatDurationMs(ms: number): string {
