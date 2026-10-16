@@ -1,7 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 
-import { Badge } from "@hermeum/components/ui/badge";
 import {
   Pagination,
   PaginationContent,
@@ -20,6 +19,7 @@ import {
 } from "@hermeum/components/ui/table";
 
 import { useTRPC } from "@/router";
+import { AgentSessionStatusBadge } from "@/client/ui/components/agent-session-status-badge";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import type { AgentSessionSummary } from "@/entities";
 
@@ -119,12 +119,7 @@ export function SessionsTab({ agentId, page }: { agentId: string; page: number }
                 </span>
               </TableCell>
               <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={session.status === "active" ? "text-green-700" : undefined}
-                >
-                  {session.status === "active" ? "Active" : session.status === "inactive" ? "Inactive" : "Finalized"}
-                </Badge>
+                <AgentSessionStatusBadge status={session.status} />
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {session.platform ?? "—"}

@@ -9,6 +9,8 @@ import { Separator } from "@hermeum/components/ui/separator";
 import { Skeleton } from "@hermeum/components/ui/skeleton";
 
 import { useTRPC } from "@/router";
+import { AgentSessionStatusBadge } from "@/client/ui/components/agent-session-status-badge";
+import { deriveAgentSessionStatusFromEvents, SessionStats } from "./-components/session-stats";
 import { SessionTranscript } from "./-components/session-transcript";
 import { SessionEventsPanel } from "./-components/session-events-panel";
 
@@ -30,6 +32,7 @@ function SessionPage() {
     isPending,
     isFetching,
     error,
+    dataUpdatedAt,
   } = useQuery(trpc.agentSession.get.queryOptions({ agentId: id, sessionId }));
   const queryClient = useQueryClient();
   const refreshSession = () =>
@@ -39,10 +42,14 @@ function SessionPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-6">
-      {/* Header: back, title + timestamps, actions right, separator as in the design */}
+      {/* Header: back, title, agent, status badge and stats inline, actions
+          right, separator as in the design */}
       <div className="shrink-0">
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+          {/* Title cluster (back · name · agent) sits inside the 20px run so
+              its internal · spacing stays tight while the status badge and
+              stats chips get clearly larger separation. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
             <Button
               variant="ghost"
               size="icon-xs"
@@ -53,10 +60,20 @@ function SessionPage() {
             >
               <ArrowLeft />
             </Button>
-            <h1 className="truncate text-2xl font-semibold tracking-tight font-mono">
-              {sessionId}
-            </h1>
-            {agent && <span className="text-muted-foreground">· {agent.name ?? agent.id}</span>}
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-2xl font-semibold tracking-tight font-mono">
+                {sessionId}
+              </h1>
+              {agent && <span className="text-muted-foreground">· {agent.name ?? agent.id}</span>}
+            </div>
+            {session && session.events.length > 0 && (
+              <AgentSessionStatusBadge
+                status={deriveAgentSessionStatusFromEvents(session.events, dataUpdatedAt)}
+              />
+            )}
+            {session && session.events.length > 0 && (
+              <SessionStats events={session.events} now={dataUpdatedAt} />
+            )}
           </div>
           <Button
             variant="outline"
@@ -67,13 +84,6 @@ function SessionPage() {
             <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
         </div>
-        {session && session.events.length > 0 && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {new Date(session.events[0]!.timestamp).toLocaleString()} –{" "}
-            {new Date(session.events[session.events.length - 1]!.timestamp).toLocaleString()} ·{" "}
-            {session.events.length} events
-          </p>
-        )}
         <Separator className="mt-4" />
       </div>
 
