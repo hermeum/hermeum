@@ -19,22 +19,22 @@ describe("deriveAgentSessionStatus", () => {
 
   it("returns active while the latest event is younger than the inactivity window", () => {
     expect(
-      deriveAgentSessionStatus(false, new Date(NOW - 40 * MINUTE).toISOString(), NOW)
+      deriveAgentSessionStatus(false, new Date(NOW - 10 * MINUTE).toISOString(), NOW)
     ).toBe("active");
   });
 
-  it("stays active exactly one hour after the latest event — the window is strictly greater", () => {
+  it("stays active exactly 15 minutes after the latest event — the window is strictly greater", () => {
     expect(
       deriveAgentSessionStatus(false, new Date(NOW - AGENT_SESSION_INACTIVITY_MS).toISOString(), NOW)
     ).toBe("active");
   });
 
-  it("returns inactive once more than one hour passed since the latest event", () => {
+  it("returns inactive once more than 15 minutes passed since the latest event", () => {
     expect(
       deriveAgentSessionStatus(false, new Date(NOW - AGENT_SESSION_INACTIVITY_MS - 1).toISOString(), NOW)
     ).toBe("inactive");
     expect(
-      deriveAgentSessionStatus(false, new Date(NOW - 2 * 3600 * 1000).toISOString(), NOW)
+      deriveAgentSessionStatus(false, new Date(NOW - 30 * MINUTE).toISOString(), NOW)
     ).toBe("inactive");
   });
 

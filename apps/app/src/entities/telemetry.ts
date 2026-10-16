@@ -291,7 +291,7 @@ export const AgentSessionSummarySchema = z
     status: z
       .enum(["active", "inactive", "finalized"])
       .describe(
-        "Live-activity status derived at query time: `finalized` when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls; events ingested after finalization flip it back), `inactive` when not finalized and the latest event is more than one hour old, `active` otherwise."
+        "Live-activity status derived at query time: `finalized` when the session's latest stored event is a session_finalized event (final answer delivered, no further tool calls; events ingested after finalization flip it back), `inactive` when not finalized and the latest event is more than 15 minutes old, `active` otherwise."
       ),
   })
   .describe("One agent session, aggregated from its stored events.");
@@ -302,9 +302,9 @@ export type AgentSessionStatus = AgentSessionSummary["status"];
 
 // A session that delivered its final answer is done — finalization is terminal
 // and age-blind. Everything else shows as inactive once its latest event has
-// aged past this window (strictly greater: at exactly one hour it is still
+// aged past this window (strictly greater: at exactly 15 minutes it is still
 // active), so a crashed or abandoned session does not stay "Active" forever.
-export const AGENT_SESSION_INACTIVITY_MS = 3600 * 1000;
+export const AGENT_SESSION_INACTIVITY_MS = 15 * 60 * 1000;
 
 export function deriveAgentSessionStatus(
   finalized: boolean,
