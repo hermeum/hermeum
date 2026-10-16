@@ -1,6 +1,7 @@
 {
   "extends": "@hermeum/typescript-config/react-library.json",
   "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ES2025.Intl"],
     "paths": {
       "@/*": ["./src/*"],
       "@hermeum/components/*": ["../../packages/components/*"]
