@@ -62,7 +62,7 @@ function EndpointRow({ row }: { row: EndpointRowData }) {
     row.muted ? " text-muted-foreground opacity-60" : ""
   }`;
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-baseline gap-3">
       <span className={`${ENDPOINT_LABEL_CLASS}${row.muted ? " text-muted-foreground opacity-60" : ""}`}>
         {row.label}
       </span>
