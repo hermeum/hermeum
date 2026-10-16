@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   deriveAgentSessionStatusFromEvents,
   formatDurationMs,
+  formatDurationParts,
   formatTokens,
   formatUsd,
   splitDurationMs,
@@ -165,6 +166,23 @@ describe("formatDurationMs", () => {
     expect(formatDurationMs(34 * 86400e3 + 19 * 3600e3)).toBe("34d 19h");
     // Seconds are dropped once the value reaches days, matching the list view.
     expect(formatDurationMs(34 * 86400e3 + 19 * 3600e3 + 5 * 60e3)).toBe("34d 19h");
+  });
+
+  it("keeps the fallback formatter in parity with the native path", () => {
+    // Runs against native Intl.DurationFormat where available (local), and
+    // against itself on Node < 23 (CI) — the two paths must always agree.
+    for (const ms of [
+      0,
+      20_800,
+      90_000,
+      5 * 60e3,
+      19 * 3600e3,
+      2 * 3600e3 + 3 * 60e3,
+      34 * 86400e3 + 19 * 3600e3,
+      34 * 86400e3 + 19 * 3600e3 + 5 * 60e3,
+    ]) {
+      expect(formatDurationParts(splitDurationMs(ms))).toBe(formatDurationMs(ms));
+    }
   });
 });
 

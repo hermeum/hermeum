@@ -104,17 +104,28 @@ export function splitDurationMs(ms: number): DurationParts {
 }
 
 // Locale pinned to English so values are deterministic and match the session
-// list's reference format ("34d 19h", "39.4K"). Zero units are dropped by the
-// formatter; an all-zero duration formats to an empty string, so it is
-// special-cased.
-const DURATION_FORMAT = new Intl.DurationFormat("en", { style: "narrow" });
+// list's reference format ("34d 19h", "39.4K"). Intl.DurationFormat is absent
+// in Node < 23 (the test/CI runtime) and older browsers, so feature-detect and
+// fall back to the hand-rolled narrow formatter in `formatDurationParts`.
+const durationFormat = "DurationFormat" in Intl ? new Intl.DurationFormat("en", { style: "narrow" }) : undefined;
+
+// Renders the two most significant units, dropping zero-valued ones (the
+// native formatter drops trailing zeros; the fallback mirrors it so both
+// paths produce the same strings — "34d 19h", "2h 3m", "5m", "30s").
+export function formatDurationParts({ days, hours, minutes, seconds }: DurationParts): string {
+  if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) return "0s";
+  if (durationFormat !== undefined) {
+    if (days > 0) return durationFormat.format({ days, hours });
+    if (hours > 0) return durationFormat.format({ hours, minutes });
+    return durationFormat.format({ minutes, seconds });
+  }
+  if (days > 0) return [`${days}d`, hours > 0 ? `${hours}h` : null].filter(Boolean).join(" ");
+  if (hours > 0) return [`${hours}h`, minutes > 0 ? `${minutes}m` : null].filter(Boolean).join(" ");
+  return [`${minutes}m`, seconds > 0 ? `${seconds}s` : null].filter(Boolean).join(" ");
+}
 
 export function formatDurationMs(ms: number): string {
-  const { days, hours, minutes, seconds } = splitDurationMs(ms);
-  if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) return "0s";
-  if (days > 0) return DURATION_FORMAT.format({ days, hours });
-  if (hours > 0) return DURATION_FORMAT.format({ hours, minutes });
-  return DURATION_FORMAT.format({ minutes, seconds });
+  return formatDurationParts(splitDurationMs(ms));
 }
 
 const TOKENS_FORMAT = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
