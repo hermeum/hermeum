@@ -67,7 +67,18 @@ describe("deriveAgentSessionStatusFromEvents", () => {
 
   it("is active while the latest event is recent, even when the session was created long ago", () => {
     const events = [sessionStarted(T0), llmCall(new Date(NOW - 40 * 60e3).toISOString())];
-    expect(deriveAgentSessionStatusFromEvents(events, NOW)).toBe("active");
+    const status = deriveAgentSessionStatusFromEvents(events, NOW);
+    console.info("diag-active", JSON.stringify({
+      version: process.version,
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      T0,
+      NOW,
+      timestamps: events.map((e) => e.timestamp),
+      lastEventAt: events[events.length - 1]!.timestamp,
+      deltaMs: NOW - Date.parse(events[events.length - 1]!.timestamp),
+      status,
+    }));
+    expect(status).toBe("active");
   });
 
   it("is inactive once the latest event ages past the inactivity window", () => {
