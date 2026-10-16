@@ -1,4 +1,4 @@
-import { Banknote, Clock, Coins } from "lucide-react";
+import { Banknote, Clock, Coins, History } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@hermeum/components/ui/tooltip";
@@ -153,6 +153,27 @@ export function formatUsd(usd: number): string {
   return USD_FORMAT.format(usd);
 }
 
+// Locale pinned to English so values are deterministic, like the formatters
+// above. "numeric: auto" yields natural phrasing ("9 days ago") instead of
+// "9 days ago." style numeric-only output.
+const RELATIVE_FORMAT = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+// Coarse age of a timestamp relative to `now`: most significant unit only —
+// "9 days ago", "3 hours ago", "25 minutes ago"; "just now" below a minute.
+export function formatRelativeAge(iso: string, now: number = Date.now()): string {
+  const { days, hours, minutes } = splitDurationMs(Math.max(0, now - new Date(iso).getTime()));
+  if (days > 0) return RELATIVE_FORMAT.format(-days, "day");
+  if (hours > 0) return RELATIVE_FORMAT.format(-hours, "hour");
+  if (minutes > 0) return RELATIVE_FORMAT.format(-minutes, "minute");
+  return "just now";
+}
+
+// Same rendering as the sessions list's timestamps (toLocaleString) so the
+// page header and the list agree on the absolute format.
+export function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString();
+}
+
 // A header stat chip: icon + value. When `detail` rows are given the value
 // gets a hover tooltip rendering them as a two-column breakdown.
 function Stat({
@@ -204,7 +225,8 @@ export function SessionStats({
   className?: string;
 }) {
   const stats = summarizeSessionStats(events, now);
-  if (stats.wallClockMs === null) return null;
+  const last = events[events.length - 1];
+  if (stats.wallClockMs === null || last === undefined) return null;
 
   const tokenDetail: (readonly [label: string, value: ReactNode])[] = [
     ["In (incl. cache)", formatTokens(stats.inputTokens)],
@@ -240,6 +262,12 @@ export function SessionStats({
           icon={Banknote}
           ariaLabel="Cost"
           value={stats.totalCostUsd === null ? "Unknown" : formatUsd(stats.totalCostUsd)}
+        />
+        <Stat
+          icon={History}
+          ariaLabel="Last activity"
+          value={formatRelativeAge(last.timestamp, now)}
+          detail={[["Last activity", formatTimestamp(last.timestamp)]]}
         />
       </div>
     </TooltipProvider>

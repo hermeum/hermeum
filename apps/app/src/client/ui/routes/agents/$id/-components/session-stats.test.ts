@@ -4,6 +4,8 @@ import {
   deriveAgentSessionStatusFromEvents,
   formatDurationMs,
   formatDurationParts,
+  formatRelativeAge,
+  formatTimestamp,
   formatTokens,
   formatUsd,
   splitDurationMs,
@@ -199,5 +201,27 @@ describe("formatUsd", () => {
   it("formats USD currency", () => {
     expect(formatUsd(0.06)).toBe("$0.06");
     expect(formatUsd(0)).toBe("$0.00");
+  });
+});
+
+describe("formatRelativeAge", () => {
+  it("formats the most significant elapsed unit as an English relative phrase", () => {
+    expect(formatRelativeAge(T0, NOW)).toBe("34 days ago");
+    expect(formatRelativeAge(T0, Date.parse(T0) + 3 * 3600e3)).toBe("3 hours ago");
+    expect(formatRelativeAge(T0, Date.parse(T0) + 25 * 60e3)).toBe("25 minutes ago");
+    expect(formatRelativeAge(T0, Date.parse(T0) + 59e3)).toBe("just now");
+  });
+
+  it("clamps timestamps in the future to just now", () => {
+    expect(formatRelativeAge(T0, Date.parse(T0) - 5e3)).toBe("just now");
+  });
+});
+
+describe("formatTimestamp", () => {
+  it("matches the sessions list's toLocaleString rendering", () => {
+    // Parity, not a literal string — toLocaleString output depends on the
+    // runtime locale and timezone.
+    const iso = "2026-10-07T08:47:50";
+    expect(formatTimestamp(iso)).toBe(new Date(iso).toLocaleString());
   });
 });
