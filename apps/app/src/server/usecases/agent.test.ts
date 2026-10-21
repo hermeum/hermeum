@@ -1138,3 +1138,56 @@ describe("AgentUseCase managed hermeum plugin", () => {
     expect(db.revokeAgentToken).toHaveBeenCalledWith("agent-1");
   });
 });
+
+describe("AgentUseCase redeployHermesAgent", () => {
+  it("re-applies the managed aspects and stamps a fresh restartedAt", async () => {
+    const stored = makeAgent({
+      userId: "user-1",
+      plugins: [USER_PLUGIN, HERMES_PLUGIN],
+      env: [
+        { name: "REGION", value: "us-east-1" },
+        { name: PLUGIN_TOKEN_ENV_NAME, value: ENV_SECRET_SENTINEL, sensitive: true },
+        PLUGIN_ENV_VAR,
+      ],
+      soul: `User soul.\n\n${MANAGED_SOUL_POSTAMBLE}`,
+    });
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(stored);
+    (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(stored);
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    const result = await useCase.redeployHermesAgent(makeCtx("user-1"), "agent-1");
+
+    const call = (runtime.patchHermesAgent as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
+      id: string;
+      patch: AgentInput & { restartedAt?: string };
+    };
+    expect(call.id).toBe("agent-1");
+    // Managed plugin re-pinned and endpoint re-stamped; the token rides along
+    // as the sentinel (never regenerated at this layer).
+    expect(call.patch.plugins).toEqual([USER_PLUGIN, HERMES_PLUGIN]);
+    expect(call.patch.env).toEqual([
+      { name: "REGION", value: "us-east-1" },
+      { name: PLUGIN_TOKEN_ENV_NAME, value: ENV_SECRET_SENTINEL, sensitive: true },
+      PLUGIN_ENV_VAR,
+    ]);
+    // Postamble re-applied (idempotent) and a fresh restart timestamp set.
+    expect(call.patch.soul).toBe(`User soul.\n\n${MANAGED_SOUL_POSTAMBLE}`);
+    expect(call.patch.restartedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    // The user-facing result is stripped of managed content.
+    expect(result.plugins).toEqual([USER_PLUGIN]);
+    expect(result.env).toEqual([{ name: "REGION", value: "us-east-1" }]);
+    expect(result.soul).toBe("User soul.");
+  });
+
+  it("throws when the agent is not found", async () => {
+    const runtime = makeRuntime();
+    (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    const useCase = makeUseCase(runtime, makeConfig());
+
+    await expect(useCase.redeployHermesAgent(makeCtx("user-1"), "agent-1")).rejects.toThrow(
+      "HermesAgent agent-1 not found"
+    );
+    expect(runtime.patchHermesAgent).not.toHaveBeenCalled();
+  });
+});

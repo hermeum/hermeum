@@ -87,6 +87,15 @@ function AgentDetailPage() {
       onError: (e) => toast.error(e.message),
     })
   );
+  const { mutate: redeployAgent } = useMutation(
+    trpc.agent.redeploy.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent redeployed");
+        setTimeout(invalidateDetail, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
+  );
   const { mutate: archiveAgent, isPending: isArchiving } = useMutation(
     trpc.agent.archive.mutationOptions({
       onSuccess: () => {
@@ -145,6 +154,7 @@ function AgentDetailPage() {
                 <DropdownMenuItem onClick={() => navigate({ to: "/agents/$id/edit", params: { id } })}>
                   Guided edit
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => redeployAgent({ id })}>Redeploy</DropdownMenuItem>
                 {agent.suspended ? (
                   <DropdownMenuItem onClick={() => resumeAgent({ id })}>Resume</DropdownMenuItem>
                 ) : (

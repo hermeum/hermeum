@@ -49,4 +49,10 @@ export const agentRouter = t.router({
     .mutation(async ({ ctx, input }): Promise<Agent> => {
       return await usecase.resumeHermesAgent(ctx, input.id);
     }),
+
+  redeploy: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }): Promise<Agent> => {
+      return await usecase.redeployHermesAgent(ctx, input.id);
+    }),
 });

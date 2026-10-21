@@ -49,6 +49,7 @@ const enum HermeumAnnotation {
 }
 const enum HermeumPodAnnotation {
   EnvHash = "hermeum.app/env-hash",
+  RestartedAt = "hermeum.app/restarted-at",
 }
 
 export function agentEnvResourceName(agentId: string): string {
@@ -318,7 +319,14 @@ export function agentToHermesAgent(agent: Agent): HermesAgent {
     ...(searxngEnabled && { searxng: { enabled: true } }),
     ...(camofoxEnabled && { camofox: { enabled: true } }),
     ...(networking !== undefined && { networking }),
-    podAnnotations: { [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env) },
+    podAnnotations: {
+      [HermeumPodAnnotation.EnvHash]: hashAgentEnv(agent.env),
+      // Redeploy trigger: a fresh timestamp changes the pod template even when
+      // the rest of the manifest is byte-identical, so the StatefulSet rolls.
+      ...(agent.restartedAt !== undefined && {
+        [HermeumPodAnnotation.RestartedAt]: agent.restartedAt,
+      }),
+    },
   };
 
   return {
@@ -419,6 +427,9 @@ export function mapHermesAgent(raw: HermesAgent): Agent {
     })),
     suspended: raw.spec.suspend,
     archived: raw.metadata?.labels?.[HermeumLabel.Archived] === "true",
+    // Round-trip the redeploy trigger so ordinary edits (which reconstruct the
+    // CR from this shape) don't drop the annotation and roll pods again.
+    restartedAt: raw.spec.podAnnotations?.[HermeumPodAnnotation.RestartedAt],
     phase: raw.status?.phase as AgentPhase | undefined,
     reason: raw.status?.reason,
     createdAt: raw.metadata?.creationTimestamp,

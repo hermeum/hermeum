@@ -346,6 +346,46 @@ export class AgentUseCase extends OwnershipGuarded(HermeumConfigLoadable(BaseUse
     return stripManagedAgent(resumed);
   }
 
+  // Redeploy: re-apply the managed-aspect policy and force the pod to restart
+  // even when the rest of the manifest is unchanged. A full-field patch is
+  // deliberate — wrapPatch only wraps field-bearing patches, so sending every
+  // stored input makes each aspect fire: the plugin identifier is re-pinned to
+  // the current pluginRef, the endpoint var is re-stamped, the soul postamble
+  // is re-applied, and the masked ingest token rides along unchanged. The
+  // fresh restartedAt then changes the CR's pod annotations, which is what
+  // rolls the StatefulSet.
+  async redeployHermesAgent(ctx: Context, id: string): Promise<Agent> {
+    const agent = await this.runtime.getHermesAgent(id);
+    if (!agent) {
+      this.logger.warn("can't redeploy — agent not found", { id });
+      throw new Error(`HermesAgent ${id} not found`);
+    }
+    this.verifyOwnership(ctx, agent);
+
+    const patch = wrapManagedPatch(
+      {
+        name: agent.name,
+        description: agent.description,
+        type: agent.type,
+        config: agent.config,
+        soul: agent.soul,
+        env: agent.env,
+        skills: agent.skills,
+        plugins: agent.plugins,
+        packages: agent.packages,
+        crons: agent.crons,
+        sharedEnvSets: agent.sharedEnvSets,
+      },
+      { storedAgent: agent }
+    );
+    const redeployed = await this.runtime.patchHermesAgent({
+      id,
+      patch: { ...patch, restartedAt: new Date().toISOString() },
+    });
+    this.logger.info("redeployed hermes agent", { id, userId: this.requireUser(ctx).id });
+    return stripManagedAgent(redeployed);
+  }
+
   private async checkAgentInputAllowed(
     input: Pick<AgentInput, "type" | "sharedEnvSets">
   ): Promise<void> {
