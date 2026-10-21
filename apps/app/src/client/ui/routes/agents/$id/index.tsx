@@ -154,12 +154,12 @@ function AgentDetailPage() {
                 <DropdownMenuItem onClick={() => navigate({ to: "/agents/$id/edit", params: { id } })}>
                   Guided edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => redeployAgent({ id })}>Redeploy</DropdownMenuItem>
                 {agent.suspended ? (
                   <DropdownMenuItem onClick={() => resumeAgent({ id })}>Resume</DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem onClick={() => suspendAgent({ id })}>Pause</DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={() => redeployAgent({ id })}>Redeploy</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => setArchiveOpen(true)}>
                   Archive
