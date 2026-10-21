@@ -174,12 +174,11 @@ describe("PostHogTelemetry", () => {
       expect(captures[0]?.distinctId).toMatch(/^[0-9a-f-]{36}$/);
     });
 
-    it("captures heartbeats even when telemetry is disabled", () => {
+    it("captures no heartbeat when telemetry is disabled", () => {
       const telemetry = new PostHogTelemetry({ ...baseOptions, telemetryDisabled: true });
       telemetry.heartbeat();
 
-      expect(captures).toHaveLength(1);
-      expect(captures[0]?.event).toBe(HEARTBEAT_EVENT);
+      expect(captures).toHaveLength(0);
     });
 
     it("captures heartbeats even when no api key is set", () => {
@@ -191,12 +190,19 @@ describe("PostHogTelemetry", () => {
     });
 
     it("captures a heartbeat on the hourly interval", () => {
-      new PostHogTelemetry({ ...baseOptions, telemetryDisabled: true });
+      new PostHogTelemetry(baseOptions);
       expect(captures).toHaveLength(0);
 
       vi.advanceTimersByTime(HEARTBEAT_INTERVAL_MS);
       expect(captures).toHaveLength(1);
       expect(captures[0]?.event).toBe(HEARTBEAT_EVENT);
+    });
+
+    it("runs no interval when telemetry is disabled", () => {
+      new PostHogTelemetry({ ...baseOptions, telemetryDisabled: true });
+
+      vi.advanceTimersByTime(HEARTBEAT_INTERVAL_MS * 3);
+      expect(captures).toHaveLength(0);
     });
 
     it("captures no heartbeat and runs no interval outside production", () => {

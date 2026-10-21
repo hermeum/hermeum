@@ -39,12 +39,14 @@ export class PostHogTelemetry implements TelemetryAdaptor {
   #events: PostHog;
   #distinctId: string;
   #isProduction: boolean;
+  #telemetryDisabled: boolean;
   #timer: NodeJS.Timeout | undefined;
 
   constructor(options: PostHogTelemetryOptions) {
     this.#level = options.logLevel;
     this.#distinctId = options.deploymentId ?? randomUUID();
     this.#isProduction = options.isProduction;
+    this.#telemetryDisabled = options.telemetryDisabled;
     this.#events = new PostHog(options.posthogApiKey ?? "", { host: options.posthogHost });
     if (!options.telemetryDisabled && options.posthogApiKey) {
       this.#sdk = new NodeSDK({
@@ -61,7 +63,7 @@ export class PostHogTelemetry implements TelemetryAdaptor {
       });
       this.#sdk.start();
     }
-    if (options.isProduction) {
+    if (options.isProduction && !options.telemetryDisabled) {
       this.#timer = setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL_MS);
       this.#timer.unref();
     }
@@ -83,10 +85,10 @@ export class PostHogTelemetry implements TelemetryAdaptor {
     this.#emit("error", console.error, message, context);
   }
 
-  // Heartbeats only run in production deployments — local development never
-  // reports.
+  // Heartbeats only run in production deployments and only when telemetry is
+  // enabled — local development and opted-out deployments never report.
   heartbeat(properties: LogContext = {}): void {
-    if (!this.#isProduction) return;
+    if (!this.#isProduction || this.#telemetryDisabled) return;
     this.#events.capture({
       distinctId: this.#distinctId,
       event: HEARTBEAT_EVENT,
