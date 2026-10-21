@@ -408,6 +408,7 @@ export const AgentSchema = AgentInputObjectSchema.extend({
   // always present; platforms without an ingress/Service surface null.
   endpoints: AgentEndpointsSchema.optional(),
   createdAt: z.date().optional(),
+  restartedAt: z.string().optional(),
 }).readonly();
 
 export type Agent = z.infer<typeof AgentSchema>;

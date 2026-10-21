@@ -76,6 +76,16 @@ function DashboardPage() {
     })
   );
 
+  const { mutate: redeployAgent } = useMutation(
+    trpc.agent.redeploy.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent redeployed");
+        setTimeout(invalidateList, 500);
+      },
+      onError: (e) => toast.error(e.message),
+    })
+  );
+
   const { mutate: archiveAgent, isPending: isArchiving } = useMutation(
     trpc.agent.archive.mutationOptions({
       onSuccess: () => {
@@ -216,6 +226,9 @@ function DashboardPage() {
                                 Pause
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => redeployAgent({ id: agent.id })}>
+                              Redeploy
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               variant="destructive"

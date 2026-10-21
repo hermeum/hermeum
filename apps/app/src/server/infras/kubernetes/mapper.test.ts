@@ -638,6 +638,35 @@ describe("agentToHermesAgent podAnnotations wiring", () => {
     const b = agentToHermesAgent(makeAgent({ env: [{ name: "REGION", value: "us-west-2" }] }));
     expect(a.spec.podAnnotations).not.toEqual(b.spec.podAnnotations);
   });
+
+  it("stamps the redeploy timestamp alongside the env hash when set", () => {
+    const hermesAgent = agentToHermesAgent(
+      makeAgent({ restartedAt: "2026-10-21T00:00:00.000Z" })
+    );
+    expect(hermesAgent.spec.podAnnotations).toEqual({
+      "hermeum.app/env-hash": hashAgentEnv(undefined),
+      "hermeum.app/restarted-at": "2026-10-21T00:00:00.000Z",
+    });
+  });
+
+  it("changes the annotation when the redeploy timestamp changes", () => {
+    const a = agentToHermesAgent(makeAgent({ restartedAt: "2026-10-21T00:00:00.000Z" }));
+    const b = agentToHermesAgent(makeAgent({ restartedAt: "2026-10-21T00:00:01.000Z" }));
+    expect(a.spec.podAnnotations).not.toEqual(b.spec.podAnnotations);
+  });
+});
+
+describe("mapHermesAgent restartedAt round-trip", () => {
+  it("reads the redeploy timestamp back from the pod annotations", () => {
+    const raw = {
+      spec: { podAnnotations: { "hermeum.app/restarted-at": "2026-10-21T00:00:00.000Z" } },
+    } as unknown as HermesAgent;
+    expect(mapHermesAgent(raw).restartedAt).toBe("2026-10-21T00:00:00.000Z");
+  });
+
+  it("leaves restartedAt undefined when the annotation is absent", () => {
+    expect(mapHermesAgent({ spec: {} } as unknown as HermesAgent).restartedAt).toBeUndefined();
+  });
 });
 
 // `config` is a module-level singleton parsed at import time from process.env, so
