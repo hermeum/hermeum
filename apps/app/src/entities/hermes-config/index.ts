@@ -9,6 +9,13 @@
 
 export { ModelProviderSchema, ModelSchema, type ModelProvider, type Model } from "./model";
 export {
+  ReasoningEffortSchema,
+  ReasoningEffortOverrideSchema,
+  AgentConfigSchema,
+  type ReasoningEffort,
+  type AgentConfig,
+} from "./agent";
+export {
   ApprovalsModeSchema,
   HeadlessModeSchema,
   ApprovalsSchema,
@@ -49,6 +56,7 @@ export { ImageGenSchema, type ImageGen } from "./image-gen";
 export { VideoGenSchema, type VideoGen } from "./video-gen";
 
 import { z } from "zod";
+import { AgentConfigSchema } from "./agent";
 import { ModelSchema } from "./model";
 import { ApprovalsSchema, CommandAllowlistSchema } from "./security";
 import { WebhookSchema } from "./webhook";
@@ -91,6 +99,7 @@ export type Gateway = z.infer<typeof GatewaySchema>;
 export const ConfigSchema = z
   .looseObject({
     model: ModelSchema,
+    agent: AgentConfigSchema,
     approvals: ApprovalsSchema,
     command_allowlist: CommandAllowlistSchema,
     platforms: PlatformsSchema,
