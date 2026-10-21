@@ -213,7 +213,9 @@ export const ConfigSchema = z.object({
   telemetryDisabled: z
     .boolean()
     .default(false)
-    .describe("Disable all deployment telemetry heartbeats (HERMEUM_TELEMETRY_DISABLED)."),
+    .describe(
+      "Disable all telemetry: deployment heartbeats and log mirroring to PostHog (HERMEUM_TELEMETRY_DISABLED)."
+    ),
 }).transform((c) => ({
   ...c,
   // Derived, not env-settable: the plugin's generated client appends
