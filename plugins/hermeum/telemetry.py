@@ -321,12 +321,20 @@ def _envelope(kwargs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _duration_s(value: Any) -> float | None:
-    """Seconds (float) from post_api_request's api_duration, or
-    post_tool_call's duration_ms (converted to seconds). None when untimed."""
+def _duration_from_seconds(value: Any) -> float | None:
+    """Seconds (float) from post_api_request's api_duration, which upstream
+    already measures in seconds (``time.time()`` delta). None when untimed."""
     if not isinstance(value, (int, float)) or value <= 0:
         return None
-    return round(float(value) / 1000 if value > 1000 else float(value), 3)
+    return round(float(value), 3)
+
+
+def _duration_from_ms(value: Any) -> float | None:
+    """Seconds (float) from post_tool_call's duration_ms, which the observer
+    contract measures in milliseconds. None when untimed."""
+    if not isinstance(value, (int, float)) or value <= 0:
+        return None
+    return round(float(value) / 1000, 3)
 
 
 def _tool_status(kwargs: dict[str, Any]) -> str | None:
@@ -511,7 +519,7 @@ class HermeumTelemetry:
             provider=_safe_str(kwargs.get("provider")) or "unknown",
             model=_safe_str(kwargs.get("response_model") or kwargs.get("model")) or "unknown",
             api_mode=_safe_str(kwargs.get("api_mode")) or "unknown",
-            duration_s=_duration_s(kwargs.get("api_duration")),
+            duration_s=_duration_from_seconds(kwargs.get("api_duration")),
             finish_reason=_safe_str(kwargs.get("finish_reason")) or None,
             usage=_usage_from_any(raw_usage),
             cost=cost,
@@ -528,7 +536,7 @@ class HermeumTelemetry:
             tool_call_id=_safe_str(kwargs.get("tool_call_id")) or str(uuid.uuid4()),
             args=_sanitize_value(kwargs.get("args")),
             result=_sanitize_value(kwargs.get("result")),
-            duration_s=_duration_s(kwargs.get("duration_ms")),
+            duration_s=_duration_from_ms(kwargs.get("duration_ms")),
             status=_tool_status(kwargs),
         ))
 
