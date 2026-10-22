@@ -102,24 +102,7 @@ Clean up with `kind delete cluster --name hermeum-demo`.
 
 ## Documentation
 
-Full documentation is published at [here](https://docs.hermeum.app).
-
-
-| Document                                                                               | Description                                             |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [What is Hermeum](https://docs.hermeum.app/)                                           | Overview of the platform and what an agent can do.      |
-| [Getting started](https://docs.hermeum.app/using-hermeum/getting-started/)             | Create, manage, and chat with your agents.              |
-| [Creating an agent](https://docs.hermeum.app/using-hermeum/creating-an-agent/)         | How to shape an agent's soul, models, and skills.       |
-| [Shared env sets](https://docs.hermeum.app/using-hermeum/shared-env-sets/)             | Reuse environment sets across agents.                   |
-| [Overview](https://docs.hermeum.app/operation/overview/)                               | Architecture and components for self-hosting.           |
-| [Installation](https://docs.hermeum.app/operation/installation/)                       | Prerequisites, Helm install, database choice, upgrades. |
-| [Configuration reference](https://docs.hermeum.app/operation/configuration-reference/) | Full `HERMEUM_*` environment variable reference.        |
-| [Instance config](https://docs.hermeum.app/operation/instance-config/)                 | `config.yaml` schema for templates and agent types.     |
-| [Database](https://docs.hermeum.app/operation/database/)                               | SQLite vs Postgres, migrations, scaling.                |
-| [Auth](https://docs.hermeum.app/operation/auth/)                                       | Better Auth setup, secrets, email verification.         |
-| [Mutating admission webhook](https://docs.hermeum.app/operation/mutating-webhook/)     | Admission webhook behavior and TLS options.             |
-| [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/)           | Ingress gateway and per-agent TLS.                      |
-
+Full documentation is available at [docs.hermeum.app](https://docs.hermeum.app).
 
 ## Community
 
