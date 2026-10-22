@@ -50,7 +50,6 @@
     "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",
     "fast-json-patch": "^3.1.1",
-    "handlebars": "^4.7.10",
     "lucide-react": "^1.55.0",
     "nodemailer": "^10.1.0",
     "postgres": "^3.4.9",

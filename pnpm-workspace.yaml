@@ -29,6 +29,9 @@ overrides:
   tinypool@<2.1.2: "2.1.2"
   source-map-js@<1.2.2: "1.2.2"
   postcss-selector-parser@<7.1.6: "7.1.6"
+  launch-editor@<=2.14.1: "2.14.2"
+  follow-redirects@<1.16.1: "1.16.1"
+  shell-quote@<1.11.0: "1.11.0"
 
 onlyBuiltDependencies:
   - core-js
