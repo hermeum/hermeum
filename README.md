@@ -70,6 +70,43 @@ Postgres `secrets.databaseUrl`. See the
 [Installation guide](https://docs.hermeum.app/operation/installation/) and the
 [chart README](charts/hermeum/README.md) for the full reference.
 
+## Demo
+
+Want to let people try Hermeum without setting up sign-in? Run it in **demo
+mode** on a local cluster.
+
+> **Demo mode is not for production.** It disables sign-in entirely and maps
+> every visitor to a single shared demo user, so anyone with the URL can see and
+> edit the same agents and shared env sets. Run it on a throwaway cluster and
+> tear it down when you're done.
+
+```bash
+# 1. Create a local cluster (kind shown; minikube/k3d work too).
+kind create cluster --name hermeum-demo
+
+# 2. Install Hermeum with sign-in disabled.
+helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
+  --namespace hermeum --create-namespace \
+  --set config.demoMode=true \
+  --set secrets.betterAuthSecret=$(openssl rand -base64 32)
+
+# 3. Open the UI at http://localhost:3000 — no sign-in required.
+kubectl port-forward -n hermeum svc/hermeum 3000:3000
+```
+
+The `secrets.betterAuthSecret` value is required for the app to boot, but in
+demo mode no sign-in sessions are ever issued, so any random value works.
+
+To try the "create an agent by chat" flow, also pass an OpenAI-compatible key
+(without it, you can still create agents from templates or a hand-written
+config):
+
+```bash
+--set secrets.openaiApiKey=sk-...
+```
+
+Clean up with `kind delete cluster --name hermeum-demo`.
+
 ## Documentation
 
 Full documentation is published at [here](https://docs.hermeum.app).

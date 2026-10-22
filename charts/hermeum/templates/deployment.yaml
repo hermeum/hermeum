@@ -118,6 +118,8 @@ spec:
             - name: HERMEUM_ALLOWED_EMAIL_DOMAIN
               value: {{ .Values.config.allowedEmailDomain | quote }}
             {{- end }}
+            - name: HERMEUM_DEMO_MODE
+              value: {{ .Values.config.demoMode | quote }}
             {{- if .Values.config.smtpFrom }}
             - name: HERMEUM_SMTP_FROM
               value: {{ .Values.config.smtpFrom | quote }}

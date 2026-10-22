@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { BotIcon, ChevronsUpDown, KeyRoundIcon, LogOutIcon, BookOpen, BookOpenTextIcon } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import { authClient } from "@/client/auth-client";
+import { demoUser } from "@/entities";
 import {
   Sidebar,
   SidebarContent,
@@ -67,8 +68,11 @@ const resourceNavItems = [
 export function AppSidebar({ session }: { session: Session | null | undefined }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { setOpenMobile } = useSidebar();
-  const email = session?.user?.email ?? "";
-  const name = session?.user?.name ?? email;
+  // Demo mode has no real session: show the shared demo identity and hide
+  // sign-out, which would have nothing to sign out of.
+  const demoMode = window.__HERMEUM_DEMO__ === true;
+  const email = demoMode ? demoUser.email : (session?.user?.email ?? "");
+  const name = demoMode ? demoUser.name : (session?.user?.name ?? email);
   const initial = email.charAt(0).toUpperCase();
 
   return (
@@ -118,8 +122,8 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
       </SidebarContent>
 
       <SidebarFooter>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="w-full flex items-center gap-2 rounded-md p-2 h-12 text-sm text-left outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+        {demoMode ? (
+          <div className="w-full flex items-center gap-2 rounded-md p-2 h-12 text-sm text-left">
             <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0">
               <span className="text-sm font-medium">{initial}</span>
             </div>
@@ -127,17 +131,29 @@ export function AppSidebar({ session }: { session: Session | null | undefined })
               <span className="text-sm font-medium truncate">{name}</span>
               <span className="text-xs text-muted-foreground truncate">{email}</span>
             </div>
-            <ChevronsUpDown className="size-4 shrink-0" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuItem
-              onClick={() => authClient.signOut().then(() => window.location.assign("/signin"))}
-            >
-              <LogOutIcon className="size-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="w-full flex items-center gap-2 rounded-md p-2 h-12 text-sm text-left outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+              <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <span className="text-sm font-medium">{initial}</span>
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-sm font-medium truncate">{name}</span>
+                <span className="text-xs text-muted-foreground truncate">{email}</span>
+              </div>
+              <ChevronsUpDown className="size-4 shrink-0" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuItem
+                onClick={() => authClient.signOut().then(() => window.location.assign("/signin"))}
+              >
+                <LogOutIcon className="size-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

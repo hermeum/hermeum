@@ -46,6 +46,13 @@ export const ConfigSchema = z.object({
     .string()
     .optional()
     .describe("Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN)."),
+  demoMode: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Disable sign-in and map every visitor to a single shared demo user (HERMEUM_DEMO_MODE). " +
+        "Not for production: all visitors see and edit the same agents and shared env sets."
+    ),
   hermesImageRepository: z
     .string()
     .default("nousresearch/hermes-agent")
@@ -234,6 +241,7 @@ export const config = ConfigSchema.parse({
   smtpUrl: process.env.HERMEUM_SMTP_URL,
   smtpFrom: process.env.HERMEUM_SMTP_FROM,
   allowedEmailDomain: process.env.HERMEUM_ALLOWED_EMAIL_DOMAIN,
+  demoMode: process.env.HERMEUM_DEMO_MODE === "true",
   hermesImageRepository: process.env.HERMEUM_HERMES_IMAGE_REPOSITORY,
   hermesImageTag: process.env.HERMEUM_HERMES_IMAGE_TAG,
   pluginBaseUrl: process.env.HERMEUM_PLUGIN_BASE_URL,
