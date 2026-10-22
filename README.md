@@ -54,8 +54,8 @@ agent you can chat with, deploy, and iterate on.
 **Prerequisites:** a Kubernetes cluster and Helm 3.x.
 
 Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. It installs
-with sensible defaults; for production you'll want to set
-`secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
+with sensible defaults. For production, set the three secret values shown
+below: `secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
 
 ```bash
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
@@ -65,8 +65,7 @@ helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --set secrets.openaiApiKey=sk-...
 ```
 
-For Postgres (horizontal scaling), set `config.databaseDialect=postgres` and a
-Postgres `secrets.databaseUrl`. See the
+See the
 [Installation guide](https://docs.hermeum.app/operation/installation/) and the
 [chart README](charts/hermeum/README.md) for the full reference.
 
