@@ -36,6 +36,7 @@
         "agentSessionRetentionDays": { "type": "integer", "minimum": 0 },
         "logLevel": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
         "allowedEmailDomain": { "type": "string" },
+        "demoMode": { "type": "boolean" },
         "smtpFrom": { "type": "string" },
         "webTls": {
           "type": "object",

@@ -20,6 +20,15 @@ interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
+    // Demo mode disables sign-in: the server maps every visitor to a shared
+    // demo user, so there is no session to check or sign-in page to show.
+    if (window.__HERMEUM_DEMO__ === true) {
+      if (location.pathname === "/signin") {
+        throw redirect({ to: "/agents" });
+      }
+      return;
+    }
+
     if (location.pathname === "/signin") {
       return;
     }

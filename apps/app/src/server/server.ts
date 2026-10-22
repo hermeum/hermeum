@@ -32,6 +32,16 @@ export interface CreateServerResult {
   webhookServer?: HttpServer | HttpsServer;
 }
 
+// Demo mode is a runtime switch, so the client cannot learn it at build time.
+// Inject it into the served HTML instead of exposing an API endpoint; the
+// client reads window.__HERMEUM_DEMO__ synchronously on first render (the
+// sign-in redirect runs in a router beforeLoad).
+const injectDemoFlag = (html: string): string =>
+  html.replace(
+    "</head>",
+    `<script>window.__HERMEUM_DEMO__=${JSON.stringify(config.demoMode)};</script></head>`
+  );
+
 const loadTlsCredentials = (certFile: string, keyFile: string): { cert: Buffer; key: Buffer } => {
   try {
     return {
@@ -91,16 +101,26 @@ export const createServer = async (
       try {
         let html = fs.readFileSync(path.resolve(root, "index.html"), "utf-8");
         html = await viteServer.transformIndexHtml(req.url, html);
-        res.send(html);
+        res.send(injectDemoFlag(html));
       } catch (e) {
         return next(e);
       }
     });
   } else {
-    app.use(express.static(path.resolve(__dirname, "../client")));
+    // index: false so the SPA fallback below can inject the demo flag for "/"
+    // as well as client-side routes.
+    app.use(express.static(path.resolve(__dirname, "../client"), { index: false }));
 
     app.get("/{*splat}", (_req, res) => {
-      res.sendFile(path.resolve(__dirname, "../client", "index.html"));
+      const indexPath = path.resolve(__dirname, "../client", "index.html");
+      // The client bundle isn't present in every environment (e.g. unit tests);
+      // mirror express.static's 404 instead of failing the request.
+      if (!fs.existsSync(indexPath)) {
+        res.status(404).end();
+        return;
+      }
+      const html = fs.readFileSync(indexPath, "utf-8");
+      res.type("html").send(injectDemoFlag(html));
     });
   }
 

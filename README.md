@@ -54,8 +54,8 @@ agent you can chat with, deploy, and iterate on.
 **Prerequisites:** a Kubernetes cluster and Helm 3.x.
 
 Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. It installs
-with sensible defaults; for production you'll want to set
-`secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
+with sensible defaults. For production, set the three secret values shown
+below: `secrets.betterAuthSecret`, `secrets.smtpUrl`, and `secrets.openaiApiKey`.
 
 ```bash
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
@@ -65,31 +65,44 @@ helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --set secrets.openaiApiKey=sk-...
 ```
 
-For Postgres (horizontal scaling), set `config.databaseDialect=postgres` and a
-Postgres `secrets.databaseUrl`. See the
+See the
 [Installation guide](https://docs.hermeum.app/operation/installation/) and the
 [chart README](charts/hermeum/README.md) for the full reference.
 
+## Demo
+
+A quick way to look around Hermeum on your local machine.
+
+> Demo mode is not for production — run it on a throwaway local cluster and
+> tear it down when you're done.
+
+```bash
+# 1. Create a local cluster (kind shown; minikube/k3d work too).
+kind create cluster --name hermeum-demo
+
+# 2. Install Hermeum in demo mode.
+helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
+  --namespace hermeum --create-namespace \
+  --set config.demoMode=true \
+  --set secrets.betterAuthSecret=$(openssl rand -base64 32)
+
+# 3. Open the UI at http://localhost:3000.
+kubectl port-forward -n hermeum svc/hermeum 3000:3000
+```
+
+To try the "create an agent by chat" flow, also pass an OpenAI-compatible key
+(without it, you can still create agents from templates or a hand-written
+config):
+
+```bash
+--set secrets.openaiApiKey=sk-...
+```
+
+Clean up with `kind delete cluster --name hermeum-demo`.
+
 ## Documentation
 
-Full documentation is published at [here](https://docs.hermeum.app).
-
-
-| Document                                                                               | Description                                             |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [What is Hermeum](https://docs.hermeum.app/)                                           | Overview of the platform and what an agent can do.      |
-| [Getting started](https://docs.hermeum.app/using-hermeum/getting-started/)             | Create, manage, and chat with your agents.              |
-| [Creating an agent](https://docs.hermeum.app/using-hermeum/creating-an-agent/)         | How to shape an agent's soul, models, and skills.       |
-| [Shared env sets](https://docs.hermeum.app/using-hermeum/shared-env-sets/)             | Reuse environment sets across agents.                   |
-| [Overview](https://docs.hermeum.app/operation/overview/)                               | Architecture and components for self-hosting.           |
-| [Installation](https://docs.hermeum.app/operation/installation/)                       | Prerequisites, Helm install, database choice, upgrades. |
-| [Configuration reference](https://docs.hermeum.app/operation/configuration-reference/) | Full `HERMEUM_*` environment variable reference.        |
-| [Instance config](https://docs.hermeum.app/operation/instance-config/)                 | `config.yaml` schema for templates and agent types.     |
-| [Database](https://docs.hermeum.app/operation/database/)                               | SQLite vs Postgres, migrations, scaling.                |
-| [Auth](https://docs.hermeum.app/operation/auth/)                                       | Better Auth setup, secrets, email verification.         |
-| [Mutating admission webhook](https://docs.hermeum.app/operation/mutating-webhook/)     | Admission webhook behavior and TLS options.             |
-| [Per-agent ingress and TLS](https://docs.hermeum.app/operation/ingress-tls/)           | Ingress gateway and per-agent TLS.                      |
-
+Full documentation is available at [docs.hermeum.app](https://docs.hermeum.app).
 
 ## Community
 

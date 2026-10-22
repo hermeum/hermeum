@@ -181,6 +181,7 @@ helm show values charts/hermeum
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
 | `config.agentIngress.baseHostname`   | `""`                             | Per-agent ingress base hostname — each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams), or `<agent-id>-<platform-label>.<base>` when `flattenHosts` is set. Unset = no agent ingress. |
 | `config.agentIngress.flattenHosts`   | `false`                          | Flatten agent ingress hosts to a single DNS level: `<agent-id>-<platform-label>.<base>` — one `*.<base>` wildcard record/cert covers every agent and platform. |
+| `config.demoMode`                    | `false`                          | Disable sign-in for a public demo; every visitor maps to one shared demo user. Not for production. |
 | `ingress.enabled`                    | `false`                          | Emit a UI Ingress.                            |
 | `persistence.enabled`                | `true`                           | PVC for sqlite (ignored for postgres).       |
 
