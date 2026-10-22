@@ -69,7 +69,7 @@ See the
 [Installation guide](https://docs.hermeum.app/operation/installation/) and the
 [chart README](charts/hermeum/README.md) for the full reference.
 
-## Demo
+## Local Demo
 
 A quick way to look around Hermeum on your local machine.
 
