@@ -4,7 +4,7 @@
 #   docker build -f dockerfiles/Dockerfile.app \
 #     --build-arg PLUGIN_REF=$(git rev-parse HEAD) -t hermeum-app .
 
-ARG NODE_IMAGE=node:24-alpine
+ARG NODE_IMAGE=node:24.22.1-alpine
 ARG PNPM_VERSION=10.34.7
 
 # --------------------------------------------------------------------------- #

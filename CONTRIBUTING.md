@@ -7,7 +7,7 @@ set up a local development environment.
 
 Before you begin, make sure you have the following installed and running:
 
-- **Node.js** >= 22 (the repo pins `24.14` in `.nvmrc` — run `nvm use` to match)
+- **Node.js** >= 22 (the repo pins `24.22.1` in `.nvmrc` — run `nvm use` to match)
   and **pnpm** >= 10
 - **Kubernetes** — a running cluster (e.g. [kind](https://kind.sigs.k8s.io/),
   [minikube](https://minikube.sigs.k8s.io/), or a remote cluster) with your
