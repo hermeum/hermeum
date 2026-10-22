@@ -76,7 +76,7 @@ is not a `HERMEUM_*` variable.
 | `HERMEUM_SMTP_URL` | — | SMTP server URL for outgoing email (e.g. `smtps://user:pass@smtp.example.com:465`). Optional. |
 | `HERMEUM_SMTP_FROM` | — | From address for outgoing email, e.g. `Hermeum <no-reply@example.com>`. Set it when `HERMEUM_SMTP_URL` is configured — most SMTP providers reject or spam-filter messages without a From header. Optional. |
 | `HERMEUM_ALLOWED_EMAIL_DOMAIN` | — | Restrict sign-ups to this email domain (e.g. `example.com`). Optional; when unset, any domain is accepted. |
-| `HERMEUM_DEMO_MODE` | `false` | Disable sign-in and map every visitor to a single shared demo user. Every visitor sees and edits the same agents and shared env sets. Intended for short-lived public demos only — never enable in production. |
+| `HERMEUM_AUTH_DISABLED` | `false` | Disable authentication and map every visitor to a single shared anonymous user. Every visitor sees and edits the same agents and shared env sets. Intended for short-lived public instances only — never enable in production. |
 
 ### AI config generator
 

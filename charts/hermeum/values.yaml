@@ -75,10 +75,10 @@ config:
   logLevel: info
   # Restrict sign-ups to this email domain (HERMEUM_ALLOWED_EMAIL_DOMAIN).
   allowedEmailDomain: ""
-  # Disable sign-in for a public demo (HERMEUM_DEMO_MODE). Every visitor maps to
-  # a single shared demo user, so all visitors see and edit the same agents and
-  # shared env sets. Not for production.
-  demoMode: false
+  # Disable authentication for a public instance (HERMEUM_AUTH_DISABLED). Every
+  # visitor maps to a single shared anonymous user, so all visitors see and edit
+  # the same agents and shared env sets. Not for production.
+  authDisabled: false
   # From address for outgoing email, e.g. "Hermeum <no-reply@example.com>"
   # (HERMEUM_SMTP_FROM). Set it together with secrets.smtpUrl — most SMTP
   # providers reject or spam-filter messages without a From header.

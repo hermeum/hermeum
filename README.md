@@ -73,17 +73,17 @@ See the
 
 A quick way to look around Hermeum on your local machine.
 
-> Demo mode is not for production — run it on a throwaway local cluster and
-> tear it down when you're done.
+> Auth-disabled mode is not for production — run it on a throwaway local
+> cluster and tear it down when you're done.
 
 ```bash
 # 1. Create a local cluster (kind shown; minikube/k3d work too).
 kind create cluster --name hermeum-demo
 
-# 2. Install Hermeum in demo mode.
+# 2. Install Hermeum with auth disabled.
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --namespace hermeum --create-namespace \
-  --set config.demoMode=true \
+  --set config.authDisabled=true \
   --set secrets.betterAuthSecret=$(openssl rand -base64 32)
 
 # 3. Open the UI at http://localhost:3000.

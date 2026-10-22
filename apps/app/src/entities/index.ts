@@ -1,5 +1,5 @@
 export * from "./auth";
-export * from "./demo";
+export * from "./anonymous-user";
 export * from "./agent";
 export * from "./agent-type";
 export * from "./skill";
