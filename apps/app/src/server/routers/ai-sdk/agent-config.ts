@@ -52,7 +52,7 @@ export const aiSdkRouter = Router();
 
 aiSdkRouter.post("/agent-config", async (req, res) => {
   const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-  if (!session && !config.demoMode) {
+  if (!session && !config.authDisabled) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

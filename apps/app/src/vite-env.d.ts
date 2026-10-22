@@ -2,7 +2,7 @@
 
 interface Window {
   // Injected into the served HTML by the server (see server/libs/config
-  // demoMode); true when sign-in is disabled and every visitor is the shared
-  // demo user.
-  __HERMEUM_DEMO__?: boolean;
+  // authDisabled); true when auth is disabled and every visitor is the shared
+  // anonymous user.
+  __HERMEUM_AUTH_DISABLED__?: boolean;
 }
