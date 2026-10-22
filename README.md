@@ -72,30 +72,24 @@ Postgres `secrets.databaseUrl`. See the
 
 ## Demo
 
-Want to let people try Hermeum without setting up sign-in? Run it in **demo
-mode** on a local cluster.
+A quick way to look around Hermeum on your local machine.
 
-> **Demo mode is not for production.** It disables sign-in entirely and maps
-> every visitor to a single shared demo user, so anyone with the URL can see and
-> edit the same agents and shared env sets. Run it on a throwaway cluster and
+> Demo mode is not for production — run it on a throwaway local cluster and
 > tear it down when you're done.
 
 ```bash
 # 1. Create a local cluster (kind shown; minikube/k3d work too).
 kind create cluster --name hermeum-demo
 
-# 2. Install Hermeum with sign-in disabled.
+# 2. Install Hermeum in demo mode.
 helm install hermeum oci://ghcr.io/hermeum/charts/hermeum \
   --namespace hermeum --create-namespace \
   --set config.demoMode=true \
   --set secrets.betterAuthSecret=$(openssl rand -base64 32)
 
-# 3. Open the UI at http://localhost:3000 — no sign-in required.
+# 3. Open the UI at http://localhost:3000.
 kubectl port-forward -n hermeum svc/hermeum 3000:3000
 ```
-
-The `secrets.betterAuthSecret` value is required for the app to boot, but in
-demo mode no sign-in sessions are ever issued, so any random value works.
 
 To try the "create an agent by chat" flow, also pass an OpenAI-compatible key
 (without it, you can still create agents from templates or a hand-written
