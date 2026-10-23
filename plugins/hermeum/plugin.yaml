@@ -1,5 +1,5 @@
 name: hermeum
-version: "0.3.1"
+version: "0.3.2"
 description: "Optional Hermeum plugin for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store. Opt-in via `hermes plugins enable hermeum`."
 author: Hermeum
 requires_env:
