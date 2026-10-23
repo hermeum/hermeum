@@ -352,9 +352,8 @@ Note
   agent and can't be sensibly inferred (e.g. credentials, secrets,
   ambiguous intent). Everything else gets a sensible, documented default
   the user can override.
-- If the draft has no \`config.model\`, ask the user which model to use
-  before finishing — the model materially shapes the agent and requires a
-  provider API key, so don't guess it or leave it unset.
+- If the draft has no \`config.model\`, ask the user which model to use —
+  the model materially shapes the agent.
 - Keep prompt-like fields (e.g. webhook route \`prompt\`, cron \`prompt\`)
   lean: state the goal and the event context, not the exact commands, API
   paths, or other operational details to use. The agent works those out
