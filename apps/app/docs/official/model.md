@@ -6,9 +6,9 @@ description: LLM model configuration (`config.model`) — providers, model ids, 
 
 # LLM model configuration (`config.model`)
 
-Configures which LLM provider and model the Hermes agent uses. Only set this
-when the request names a specific provider or model; otherwise omit it so the
-platform default applies.
+Configures which LLM provider and model the Hermes agent uses. The model is
+required for the agent to run — there is no default or auto-detection — so
+set an explicit `provider` and `default` model id.
 
 ## Fields
 

@@ -202,6 +202,15 @@ describe("ChatUseCase.getAgentConfigContext", () => {
     expect(instructions).toContain("config-writing call");
   });
 
+  it("instructs the model to ask for an unconfigured model", async () => {
+    const useCase = new ChatUseCase(makeRuntime(), makeFiles());
+
+    const { instructions } = await useCase.getAgentConfigContext();
+
+    expect(instructions).toContain("config.model");
+    expect(instructions).toContain("ask the user which model");
+  });
+
   it("instructs the model to proactively fill gaps instead of only transcribing requests", async () => {
     const useCase = new ChatUseCase(makeRuntime(), makeFiles());
 
