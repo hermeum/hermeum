@@ -8,6 +8,8 @@
 
 ## See it in action
 
+The demo builds a code-review Hermes agent from a natural-language description.
+
 <p align="center">
   <video src="assets/code-reviewer-demo.mp4" alt="Code reviewer agent demo" width="720" autoplay muted loop playsinline controls></video>
 </p>
@@ -31,8 +33,8 @@ A [Hermes agent](https://hermes-agent.nousresearch.com/docs) is one agent you ru
 yourself: you hand-write its `config.yaml`, start it, and manage it on your own
 machine. Hermeum adds the control plane around it:
 
-- **Describe, don't configure** — turn a plain-English sentence into a working
-  agent configuration instead of editing YAML by hand.
+- **Describe, don't configure** — turn a description written in natural
+  language into a working agent configuration instead of editing YAML by hand.
 - **Manage many agents, not one** — each agent is a `HermesAgent` resource,
   reconciled by the operator into its own running pod on Kubernetes.
 - **Reuse what you build** — templates and shared env sets let a team standardize
