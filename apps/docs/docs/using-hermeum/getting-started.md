@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Create your first agent — a daily standup summarizer.
+description: Create your first agent — a GitHub pull-request code reviewer.
 sidebar_label: Getting started
 sidebar_position: 1
 displayed_sidebar: docsSidebar
@@ -8,20 +8,24 @@ displayed_sidebar: docsSidebar
 
 # Getting started
 
-In this guide you'll create your first Hermeum agent: a **daily standup summarizer**.
-Every weekday at 9am it summarizes yesterday's GitHub commits and open PRs and posts a
-standup-ready digest to Slack.
+In this guide you'll create your first Hermeum agent: a **code reviewer**. It watches for
+pull-request review requests and posts its review back to GitHub from its own account.
 
 You don't need to be a Hermes expert — you can describe what you want in plain language
 and Hermeum will generate the configuration for you.
 
+<video controls width="100%">
+  <source src="https://hermeum.github.io/assets/code-reviewer-demo.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
+
 ## Before you start
 
 - You can sign in to a running Hermeum instance.
-- You have a Slack workspace where you can install a Slack app (you'll need a bot token
-  and an app-level token). If you're not sure how, follow the
-  [Slack setup guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack).
-- You have a GitHub personal access token with `repo` scope for reading commits and PRs.
+- Create a dedicated **GitHub account for the agent**. It posts the reviews, so comments
+  appear under this identity rather than yours.
+- Create a **personal access token (classic)** on that account with the **`repo`** and
+  **`read:org`** scopes.
 
 ## Step 1 — Create the agent
 
@@ -29,81 +33,72 @@ and Hermeum will generate the configuration for you.
 2. Select **New agent**.
 3. Describe what you want in the AI config generator chat, for example:
 
-   > Every weekday at 9am, summarize yesterday's GitHub commits and open PRs, and post a
-   > standup digest to Slack.
+   > Conduct code review on pull requests when you have received a review request.
 
-   Hermeum generates the name, soul, full configuration, and the scheduled cron job for
-   you.
+   Hermeum generates the name, soul, configuration, and the webhook route that receives
+   GitHub's `pull_request` events for you.
 
-## Step 2 — Add the Slack secrets
+## Step 2 — Add the webhook secret and token
 
-The agent connects to Slack via Socket Mode. If you haven't created a Slack app yet,
-follow the official [Slack bot setup guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)
-to get the bot token and app-level token, then add the following credentials as
-environment variables on the agent. In the agent's **Env** section, add each with
-**sensitive** toggled on where noted:
+The agent needs the webhook platform enabled plus two secrets: the shared secret GitHub
+signs its webhook requests with, and the token the `gh` CLI uses to post reviews. In the
+agent's **Env** section, make sure these entries are present (fill in the two values):
 
-| Name | Value | Sensitive |
-|------|-------|-----------|
-| `SLACK_BOT_TOKEN` | `xoxb-...` | yes |
-| `SLACK_APP_TOKEN` | `xapp-...` | yes |
-| `SLACK_ALLOWED_USERS` | `U01ABC2DEF3` | no |
-| `SLACK_HOME_CHANNEL` | `C0123456789` | no |
+| Name              | Value                                 | Sensitive |
+| ----------------- | ------------------------------------- | --------- |
+| `WEBHOOK_ENABLED` | `true`                                | no        |
+| `WEBHOOK_SECRET`  | a random secret you generate          | yes       |
+| `GH_TOKEN`        | `ghp_...` (the personal access token) | yes       |
+
+Generate the webhook secret with any password generator, for example:
+
+```sh
+openssl rand -hex 32
+```
 
 What these do:
 
-- **`SLACK_BOT_TOKEN`** / **`SLACK_APP_TOKEN`** — the credentials Slack generated when
-  you created the app. The bot token (`xoxb-...`) lets the agent post messages; the
-  app-level token (`xapp-...`, scope `connections:write`) opens the Socket Mode
-  WebSocket connection.
-- **`SLACK_ALLOWED_USERS`** — comma-separated Slack member IDs allowed to talk to the
-  agent. Without it, the agent denies all messages by default.
-- **`SLACK_HOME_CHANNEL`** — the channel ID the cron job posts the digest to. Channel IDs
-  start with `C`; look them up in Slack under channel details → **About**.
+- **`WEBHOOK_ENABLED`** — turns on the agent's webhook listener. The webhook platform is
+  enabled through this env var; the config generator wires the route, but enablement is
+  env-only.
+- **`WEBHOOK_SECRET`** — the shared secret used to verify that incoming requests really
+  came from GitHub. You'll paste the same value into GitHub in the next step.
+- **`GH_TOKEN`** — the personal access token from **Before you start**. The `gh` CLI reads
+  it directly, so it can post review comments without an interactive login.
 
-## Step 3 — Add the GitHub token
+## Step 3 — Add a GitHub webhook
 
-The agent reads commits and pull requests from GitHub using the `gh` CLI. In the agent's
-**Env** section, add your GitHub token with **sensitive** toggled on:
+GitHub needs to know where to send review requests. In the repository, go to
+**Settings → Webhooks → Add webhook**, then:
 
-| Name | Value | Sensitive |
-|------|-------|-----------|
-| `GITHUB_TOKEN` | `ghp_...` | yes |
+1. **Payload URL** — copy the agent's webhook URL from the **Endpoints** section on its
+   page. It looks like `https://<agent-id>.hooks.<base-hostname>/webhooks/<route-name>`,
+   where the route name is generated with the agent.
+2. **Content type** — `application/json`.
+3. **Secret** — the same value as `WEBHOOK_SECRET`.
+4. **Which events would you like to trigger this webhook?** — choose **Let me select
+   individual events** and select **Pull requests**.
+5. Select **Add webhook**.
 
-The `gh` CLI reads `GITHUB_TOKEN` automatically, but Hermeum filters this env var out
-of the agent's runtime for security reasons, so the agent can't use it directly. You
-need to ask the agent to sign in manually by reading the token from the `.env` file.
+## Step 4 — Add the GitHub account as a reviewer
 
-Once the agent is running, send it a message:
+For GitHub to request reviews from the agent, the account must be able to review the
+repository:
 
-> install `gh` command at /opt/data/.local/bin and sign in with a token stored at .env file.
+1. Add the agent's GitHub account as a collaborator (or to a team with write access) on
+   the repository.
+2. Add it as a reviewer on the pull requests you want reviewed — manually, or through a
+   `CODEOWNERS` file, a branch-protection rule, or an automation.
 
-This authenticates the `gh` CLI by reading `GITHUB_TOKEN` from `.env`, so the cron job
-can pull repository activity on the next run.
+## Step 5 — Test it
 
-## Step 4 — Save and start the agent
-
-Select **Create**. Hermeum provisions the agent, connects to Slack, and schedules the
-standup cron. The agent's page shows its status as **Running** and lists its connected
-platforms.
-
-## Step 5 — Verify the schedule
-
-Ask the agent to confirm the cron is scheduled, for example:
-
-> Is the daily standup cron scheduled?
-
-You can also trigger it once to test the output before the next 9am:
-
-> Run the daily standup cron now.
-
-The digest will be posted to your `SLACK_HOME_CHANNEL`. Check Slack to confirm it
-arrived.
+Open a pull request in the repository and request a review from the agent's account.
+GitHub sends a `pull_request` event to the agent, the agent reviews the diff, and the
+review appears on the pull request under the agent's GitHub account.
 
 ## Where to go next
 
 - [Creating an agent](../creating-an-agent) — the full agent model: soul, config, env,
   skills, crons, and lifecycle.
 - [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#skills-hub)
-  — add more capabilities to your agent, such as reading project trackers or filtering
-  by repository.
+  — add more capabilities, such as the `github-code-review` skill.
