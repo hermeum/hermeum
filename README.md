@@ -8,7 +8,7 @@
 
 ## See it in action
 
-The demo builds a code-review Hermes agent from a natural-language description.
+The demo builds a Hermes agent, adds a GitHub webhook, and gets a code review.
 
 <p align="center">
   <video src="assets/code-reviewer-demo.mp4" alt="Code reviewer agent demo" width="720" autoplay muted loop playsinline controls></video>
