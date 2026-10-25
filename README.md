@@ -1,42 +1,18 @@
 # Hermeum
 
 <p align="center">
-  <img src="logo.png" alt="Hermeum logo" width="600" />
+  <img src="logo.png" alt="Hermeum logo" width="400" />
 </p>
 
-Hermeum is a platform for creating **fully autonomous Hermes agents** that work
-on your team's behalf. Built on the open-source
-[Hermes agent](https://hermes-agent.nousresearch.com/docs), every agent inherits
-powerful built-in capabilities, while Hermeum gives you a simple way to shape,
-run, and manage it.
+**Fully autonomous Hermes agents, shaped by a sentence — deployed, monitored, and managed from one dashboard.**
 
-Describe what you want your agent to do, and Hermeum turns that into a working
-agent you can chat with, deploy, and iterate on.
+## See it in action
+
+<p align="center">
+  <video src="assets/code-reviewer-demo.mp4" alt="Code reviewer agent demo" width="720" autoplay muted loop playsinline controls></video>
+</p>
 
 ## Features
-
-<table>
-  <tr>
-    <td width="50%" align="center" valign="top">
-      <img src="assets/agents-list.png" alt="Agents list — running agents with status and created timestamps" width="480" />
-      <br /><em>Agents list</em>
-    </td>
-    <td width="50%" align="center" valign="top">
-      <img src="assets/create-agent.png" alt="Create agent — chat on the left generates the agent config YAML on the right" width="480" />
-      <br /><em>Create by chat</em>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center" valign="top">
-      <img src="assets/agent-detail.png" alt="Agent detail — webhook endpoint, soul, and verified config" width="480" />
-      <br /><em>Agent detail</em>
-    </td>
-    <td width="50%" align="center" valign="top">
-      <img src="assets/session-monitoring.png" alt="Session monitoring — live transcript beside a filterable stream of session events" width="480" />
-      <br /><em>Session monitoring</em>
-    </td>
-  </tr>
-</table>
 
 - **Tailor an agent by chat** — describe what your agent should do in natural
   language and Hermeum generates the configuration for you.
@@ -49,9 +25,24 @@ agent you can chat with, deploy, and iterate on.
 - **Powered by Kubernetes** — agents run as `HermesAgent` custom resources, with
   a mutating admission webhook that shapes each agent at creation time.
 
+## Why Hermeum instead of running Hermes directly?
+
+A [Hermes agent](https://hermes-agent.nousresearch.com/docs) is one agent you run
+yourself: you hand-write its `config.yaml`, start it, and manage it on your own
+machine. Hermeum adds the control plane around it:
+
+- **Describe, don't configure** — turn a plain-English sentence into a working
+  agent configuration instead of editing YAML by hand.
+- **Manage many agents, not one** — each agent is a `HermesAgent` resource,
+  reconciled by the operator into its own running pod on Kubernetes.
+- **Reuse what you build** — templates and shared env sets let a team standardize
+  agent shapes and credentials across every agent.
+- **Watch what they do** — session monitoring surfaces every transcript and
+  telemetry event (model calls, tool calls, errors) in one place.
+
 ## Quick installation
 
-**Prerequisites:** a Kubernetes cluster and Helm 3.x.
+**Prerequisites:** a Kubernetes cluster and [Helm](https://helm.sh/) 3.x.
 
 Hermeum ships as a Helm chart (`charts/hermeum`) for Kubernetes. It installs
 with sensible defaults. For production, set the three secret values shown
@@ -71,7 +62,8 @@ See the
 
 ## Local demo
 
-A quick way to look around Hermeum on your local machine.
+A quick way to look around Hermeum on your local machine. Install
+[kind](https://kind.sigs.k8s.io/) and [Helm](https://helm.sh/) first.
 
 > Auth-disabled mode is not for production — run it on a throwaway local
 > cluster and tear it down when you're done.
