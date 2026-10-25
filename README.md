@@ -10,9 +10,7 @@
 
 The demo builds a Hermes agent, adds a GitHub webhook, and gets a code review.
 
-<p align="center">
-  <video src="https://hermeum.github.io/assets/code-reviewer-demo.mp4" width="720" controls></video>
-</p>
+https://github.com/user-attachments/assets/374cb4a7-a7ac-465d-b02e-545edcf40e1a
 
 ## Features
 
