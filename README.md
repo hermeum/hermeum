@@ -10,6 +10,8 @@
 
 The demo builds a Hermes agent, adds a GitHub webhook, and gets a code review.
 
+![Code reviewer agent demo](https://hermeum.github.io/assets/code-reviewer-demo.mp4)
+
 ## Features
 
 - **Tailor an agent by chat** — describe what your agent should do in natural
