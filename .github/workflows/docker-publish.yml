@@ -43,3 +43,18 @@ jobs:
           tags: |
             ghcr.io/hermeum/hermeum:${{ github.ref_name }}
             ghcr.io/hermeum/hermeum:latest
+
+      # Webhook cert-gen image (kubectl + openssl, baked at build time).
+      # Keep the 1.36.5 tag in lockstep with the alpine/k8s base in
+      # dockerfiles/Dockerfile.webhook-cert and the chart default in
+      # charts/hermeum/values.yaml (webhook.certJob.image.tag).
+      - name: Build and push webhook-cert image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: dockerfiles/Dockerfile.webhook-cert
+          platforms: linux/arm64,linux/amd64
+          push: true
+          tags: |
+            ghcr.io/hermeum/webhook-cert:1.36.5
+            ghcr.io/hermeum/webhook-cert:latest

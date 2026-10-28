@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1.7
+# Webhook cert-gen image: kubectl (from alpine/k8s) + openssl, baked at build
+# time so the cert Job never installs packages at runtime.
+#
+# Tag tracks the alpine/k8s base below — keep in lockstep with the chart
+# default (charts/hermeum/values.yaml webhook.certJob.image.tag) and the tag
+# pushed by .github/workflows/docker-publish.yml. Pinning 1.36.x keeps the
+# bundled kubectl within one minor version of every maintained Kubernetes
+# release (1.35–1.37), per the version skew policy.
+FROM alpine/k8s:1.36.5
+RUN apk add --no-cache openssl

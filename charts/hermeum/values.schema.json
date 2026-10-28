@@ -92,6 +92,21 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "certJob": {
+          "type": "object",
+          "properties": {
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": { "type": "string" },
+                "tag": { "type": "string" },
+                "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+              },
+              "required": ["repository", "tag", "pullPolicy"]
+            }
+          },
+          "required": ["image"]
+        },
         "tls": {
           "type": "object",
           "properties": {

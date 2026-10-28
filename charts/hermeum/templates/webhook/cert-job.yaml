@@ -25,11 +25,9 @@ spec:
       serviceAccountName: {{ include "hermeum.fullname" . }}-webhook-cert
       containers:
         - name: cert-gen
-          # alpine/k8s bundles kubectl but not openssl, so we install it at
-          # runtime. Using alpine/k8s (rather than plain alpine) avoids a
-          # second image pull for the kubectl apply step.
-          image: alpine/k8s:1.31.2
-          imagePullPolicy: IfNotPresent
+          # Bundles kubectl + openssl, so nothing is installed at runtime.
+          image: {{ include "hermeum.webhookCertImage" . }}
+          imagePullPolicy: {{ .Values.webhook.certJob.image.pullPolicy }}
           env:
             - name: SVC_NAME
               value: {{ $svcName | quote }}
@@ -46,8 +44,6 @@ spec:
             - -ec
             - |
               set -e
-              # alpine/k8s ships kubectl but not openssl — install it.
-              apk add --no-cache openssl
 
               # Generate a self-signed CA.
               openssl genrsa -out ca.key 2048

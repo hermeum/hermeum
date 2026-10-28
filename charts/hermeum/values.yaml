@@ -224,6 +224,17 @@ webhook:
   enabled: true
   # Container HTTPS port (HERMEUM_WEBHOOK_PORT). In-process TLS termination.
   port: 8443
+  # Image for the cert-generation and caBundle Jobs. Bundles kubectl + openssl
+  # (see dockerfiles/Dockerfile.webhook-cert); no packages are installed at
+  # runtime. The tag tracks the alpine/k8s base; 1.36.x keeps the bundled
+  # kubectl within one minor version of the maintained Kubernetes releases
+  # (1.35–1.37, per the version skew policy). Override with
+  # --set webhook.certJob.image.tag=<ver> for clusters outside that range.
+  certJob:
+    image:
+      repository: ghcr.io/hermeum/webhook-cert
+      tag: "1.36.5"
+      pullPolicy: IfNotPresent
   tls:
     # Use an operator-supplied TLS Secret instead of auto-provisioning.
     # When set, the Secret must contain tls.crt + tls.key + ca.crt; the chart

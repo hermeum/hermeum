@@ -22,8 +22,8 @@ spec:
       serviceAccountName: {{ include "hermeum.fullname" . }}-webhook-cert
       containers:
         - name: patch-cabundle
-          image: alpine/k8s:1.31.2
-          imagePullPolicy: IfNotPresent
+          image: {{ include "hermeum.webhookCertImage" . }}
+          imagePullPolicy: {{ .Values.webhook.certJob.image.pullPolicy }}
           env:
             - name: SECRET_NAME
               value: {{ include "hermeum.webhookTlsSecretName" . | quote }}

@@ -61,6 +61,13 @@ Resolve the hermeum image reference. Tag defaults to Chart.appVersion.
 {{- end -}}
 
 {{/*
+Resolve the webhook cert-gen Job image reference (kubectl + openssl).
+*/}}
+{{- define "hermeum.webhookCertImage" -}}
+{{- printf "%s:%s" .Values.webhook.certJob.image.repository .Values.webhook.certJob.image.tag -}}
+{{- end -}}
+
+{{/*
 Service account name: explicit override, otherwise the templated SA name.
 */}}
 {{- define "hermeum.serviceAccountName" -}}
