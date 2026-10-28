@@ -35,6 +35,18 @@ const config: Config = {
     ],
   ],
 
+  themes: [
+    [
+      "@easyops-cn/docusaurus-search-local",
+      {
+        hashed: true,
+        docsRouteBasePath: "/",
+        indexBlog: false,
+        searchBarPosition: "right",
+      },
+    ],
+  ],
+
   themeConfig: {
     navbar: {
       title: "Hermeum",
