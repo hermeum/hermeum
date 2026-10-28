@@ -178,6 +178,8 @@ helm show values charts/hermeum
 | `env`                                | `[]`                             | Extra env vars appended to the app container (rendered verbatim, after the chart-managed entries — last-wins override). |
 | `envFrom`                            | `[]`                             | Extra `envFrom` sources (ConfigMap/Secret refs) for the app container. |
 | `webhook.enabled`                    | `true`                           | Ship the MutatingWebhookConfiguration.        |
+| `webhook.certJob.image.repository`   | `ghcr.io/hermeum/webhook-cert`   | Image for the cert-gen + caBundle Jobs (kubectl + openssl baked in; nothing installed at runtime). |
+| `webhook.certJob.image.tag`          | `1.36.5`                         | Tracks the `alpine/k8s` base; ±1 minor covers k8s 1.35–1.37. Override for other cluster versions. |
 | `webhook.tls.existingSecret`         | `""`                             | Skip chart cert generation; use operator's.   |
 | `config.agentIngress.baseHostname`   | `""`                             | Per-agent ingress base hostname — each HTTP platform is exposed at `<agent-id>.<platform-label>.<base>` (api / hooks / teams), or `<agent-id>-<platform-label>.<base>` when `flattenHosts` is set. Unset = no agent ingress. |
 | `config.agentIngress.flattenHosts`   | `false`                          | Flatten agent ingress hosts to a single DNS level: `<agent-id>-<platform-label>.<base>` — one `*.<base>` wildcard record/cert covers every agent and platform. |
