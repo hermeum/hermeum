@@ -7,5 +7,5 @@
 # pushed by .github/workflows/docker-publish.yml. Pinning 1.36.x keeps the
 # bundled kubectl within one minor version of every maintained Kubernetes
 # release (1.35–1.37), per the version skew policy.
-FROM alpine/k8s:1.36.5
+FROM alpine/k8s:1.37.1
 RUN apk add --no-cache openssl
