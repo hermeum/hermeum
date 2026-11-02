@@ -20,7 +20,6 @@ vi.mock("@/server/libs/config", () => ({
 }));
 
 import { AgentMemoryUseCase } from "./agent-memory";
-import type { AgentMemoryOperation } from "./agent-memory";
 import type { Database } from "./adaptors/database";
 import type { Runtime } from "./adaptors/runtime";
 import type { AgentMemoryEntry, Context } from "@/entities";
@@ -97,224 +96,22 @@ function makeUseCase(
   return new AgentMemoryUseCase(runtime, undefined, undefined, undefined, db);
 }
 
-function batch(memory: AgentMemoryUseCase, operations: AgentMemoryOperation[], agentId = AGENT) {
-  return memory.batchForAgent(agentId, { operations });
-}
-
-describe("AgentMemoryUseCase.read", () => {
+describe("AgentMemoryUseCase.readForAgent", () => {
   it("scopes entries per agent", async () => {
     const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "one" }], "agent-1");
-    await batch(memory, [{ action: "add", content: "two" }], "agent-2");
+    const ctx = makeCtx();
+    await memory.addEntry(ctx, "agent-1", "one");
+    await memory.addEntry(ctx, "agent-2", "two");
     await expect(memory.readForAgent("agent-1")).resolves.toHaveLength(1);
     await expect(memory.readForAgent("agent-2")).resolves.toHaveLength(1);
   });
-});
 
-describe("AgentMemoryUseCase.batch", () => {
-  it("rejects an empty operations list", async () => {
+  it("reads without an owner context (token-authenticated plugin path)", async () => {
     const memory = makeUseCase();
-    const result = await memory.batchForAgent(AGENT, { operations: [] });
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("operations list is empty.");
-  });
-
-  it("applies add/patch/remove atomically against the final state", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "stale entry" }]);
-    await batch(memory, [{ action: "add", content: "runs macOS" }]);
-
-    const result = await batch(memory, [
-      { action: "remove", oldText: "stale" },
-      { action: "patch", oldText: "macOS", content: "Linux" },
-      { action: "add", content: "uses zsh" },
-    ]);
-
-    expect(result).toEqual({
-      success: true,
-      done: true,
-      target: "memory",
-      entryCount: 2,
-      message: "Applied 3 operation(s).",
-    });
-    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
-    expect(contents).toEqual(["runs Linux", "uses zsh"]);
-  });
-
-  it("rejects an empty add", async () => {
-    const memory = makeUseCase();
-    const result = await batch(memory, [{ action: "add", content: "   " }]);
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("Operation 1 (add): content is required.");
-    expect(await memory.readForAgent(AGENT)).toEqual([]);
-  });
-
-  it("skips duplicate adds idempotently", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "alpha" }]);
-
-    const result = await batch(memory, [{ action: "add", content: "alpha" }]);
-
-    expect(result).toMatchObject({ success: true, entryCount: 1 });
-    expect(await memory.readForAgent(AGENT)).toHaveLength(1);
-  });
-
-  it("patches one span and keeps the rest of the entry", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "User prefers dark mode in all editors" }]);
-
-    await batch(memory, [
-      {
-        action: "patch",
-        oldText: "dark mode in all editors",
-        content: "light mode in VS Code, dark mode in terminal",
-      },
-    ]);
-
+    await memory.addEntry(makeCtx(), AGENT, "entry one");
     await expect(memory.readForAgent(AGENT)).resolves.toEqual([
-      expect.objectContaining({
-        content: "User prefers light mode in VS Code, dark mode in terminal",
-      }),
+      expect.objectContaining({ agentId: AGENT, content: "entry one" }),
     ]);
-  });
-
-  it("prefers an exact whole-entry match over substring matches", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [
-      { action: "add", content: "alpha beta" },
-      { action: "add", content: "alpha" },
-    ]);
-
-    await batch(memory, [{ action: "patch", oldText: "alpha", content: "gamma" }]);
-
-    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
-    expect(contents).toEqual(["alpha beta", "gamma"]);
-  });
-
-  it("reports ambiguous substring matches", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [
-      { action: "add", content: "dark mode" },
-      { action: "add", content: "light mode" },
-    ]);
-
-    const result = await batch(memory, [{ action: "patch", oldText: "mode", content: "theme" }]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain(
-      "Operation 1 (patch): 'mode' matched multiple distinct entries -- be more specific."
-    );
-    // The batch wrote nothing.
-    expect((await memory.readForAgent(AGENT)).map((entry) => entry.content)).toEqual([
-      "dark mode",
-      "light mode",
-    ]);
-  });
-
-  it("rejects a patch span that occurs more than once in the matched entry", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "aaa aaa" }]);
-
-    const result = await batch(memory, [{ action: "patch", oldText: "aa", content: "b" }]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("appears 4 times in the matched entry");
-  });
-
-  it("rejects a no-op patch", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "hello world" }]);
-
-    const result = await batch(memory, [
-      { action: "patch", oldText: "hello", content: "hello" },
-    ]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("Patch is a no-op");
-  });
-
-  it("returns closest entries when nothing matches", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "runs macOS" }]);
-
-    const result = await batch(memory, [
-      { action: "patch", oldText: "macOS runs", content: "x" },
-    ]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("No entry matched 'macOS runs'.");
-    expect(result.closestEntries).toEqual(["runs macOS"]);
-    // Native batch aborts omit the current inventory.
-    expect(result).not.toHaveProperty("currentEntries");
-  });
-
-  it("requires old_text and content per operation", async () => {
-    const memory = makeUseCase();
-    const missingOld = await batch(memory, [{ action: "remove" }]);
-    expect(missingOld.success).toBe(false);
-    if (!missingOld.success) {
-      expect(missingOld.error).toContain("Operation 1 (remove): old_text is required.");
-    }
-
-    const missingContent = await batch(memory, [{ action: "patch", oldText: "x" }]);
-    expect(missingContent.success).toBe(false);
-    if (!missingContent.success) {
-      expect(missingContent.error).toContain(
-        "Operation 1 (patch): content is required — set this operation object's own 'content'"
-      );
-    }
-  });
-
-  it("writes nothing when any operation fails", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [
-      { action: "add", content: "alpha" },
-      { action: "add", content: "beta" },
-    ]);
-
-    const result = await batch(memory, [
-      { action: "patch", oldText: "alpha", content: "ALPHA" },
-      { action: "patch", oldText: "zzz", content: "x" },
-    ]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("No operations were applied (batch is all-or-nothing).");
-    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
-    expect(contents).toEqual(["alpha", "beta"]);
-  });
-
-  it("refuses a multi-op batch that empties a non-empty store", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [
-      { action: "add", content: "alpha" },
-      { action: "add", content: "beta" },
-    ]);
-
-    const result = await batch(memory, [
-      { action: "remove", oldText: "alpha" },
-      { action: "remove", oldText: "beta" },
-    ]);
-
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("Refusing to empty memory");
-    expect(await memory.readForAgent(AGENT)).toHaveLength(2);
-  });
-
-  it("allows a deliberate single-op remove of the final entry", async () => {
-    const memory = makeUseCase();
-    await batch(memory, [{ action: "add", content: "only" }]);
-
-    const result = await batch(memory, [{ action: "remove", oldText: "only" }]);
-
-    expect(result).toMatchObject({ success: true, entryCount: 0 });
   });
 });
 

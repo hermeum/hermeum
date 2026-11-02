@@ -1,23 +1,15 @@
 import { z } from "zod";
 
 import { AgentMemoryEntrySchema } from "@/entities";
-import {
-  AgentMemoryBatchInputSchema,
-  AgentMemoryResultSchema,
-  AgentMemoryUseCase,
-} from "@/server/usecases/agent-memory";
+import { AgentMemoryUseCase } from "@/server/usecases/agent-memory";
 
 import { t, tokenProtectedProcedure } from "./shared.js";
 
 // Hermeum-managed agent memory over the plugin protocol, authenticated by the
-// per-agent ingest token (tokenProtectedProcedure resolves the agent from the
-// Authorization bearer token). The hermeum plugin's MemoryProvider mirrors
-// hermes-agent's native memory tool onto these procedures: `batch` applies the
-// add / patch / remove operations atomically (a drifted single-op tool call is
-// translated into a one-op batch by the plugin), and `read` feeds the
-// provider's prefetch (the native frozen-snapshot analog) and the future
-// operator UI. Operation inputs and result payloads live in the use case (the
-// same boundary as ListAgentsFilterSchema in the resources routers).
+// per-agent ingest token. Read-only: the hermeum plugin's MemoryProvider uses
+// it for prefetch — memory is operator-authored context, and no agent-facing
+// path can write it. Operator writes live in the resources router
+// (agentMemory.add / patch / remove), ownership-guarded.
 
 const usecase = new AgentMemoryUseCase();
 
@@ -29,11 +21,6 @@ export const agentMemoryRouter = t.router({
   read: tokenProtectedProcedure
     .output(AgentMemoryReadResultSchema)
     .query(async ({ ctx }) => ({ entries: await usecase.readForAgent(ctx.agentId) })),
-
-  batch: tokenProtectedProcedure
-    .input(AgentMemoryBatchInputSchema)
-    .output(AgentMemoryResultSchema)
-    .mutation(async ({ ctx, input }) => await usecase.batchForAgent(ctx.agentId, input)),
 });
 
 export type AgentMemoryRouter = typeof agentMemoryRouter;

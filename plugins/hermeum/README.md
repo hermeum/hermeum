@@ -7,9 +7,9 @@ A [hermes-agent](../../../vendor/hermes-agent) plugin with two roles:
    `subagent_stopped`) to Hermeum's plugin-protocol endpoint
    (`POST /plugin/trpc/agentSession.agentSessionEvents`), authenticated as the
    agent's provisioned ingest token (see Configuration).
-2. **Memory provider** (`hermeum`) — stores the agent's memory on the Hermeum
-   control plane, mirroring the native `memory` tool (add / patch / remove,
-   `memory` target only). Activated by name via `memory.provider: hermeum` in
+2. **Memory provider** (`hermeum`) — injects operator-authored memory from the
+   Hermeum control plane as recalled context (read-only; the agent has no
+   memory tool). Activated by name via `memory.provider: hermeum` in
    `config.yaml`; see [Memory provider](#memory-provider).
 
 Post-only events: every event is a completed record (input, output, duration,
@@ -64,30 +64,27 @@ Failed sends are logged and dropped; the agent is never affected.
 ## Memory provider
 
 `memory.py` implements hermes-agent's `MemoryProvider` ABC, backed by Hermeum's
-`agentMemory.*` plugin-protocol endpoints. Agent memory lives on the Hermeum
-control plane, not on the agent disk, so operators can read and correct it
-while the agent is down and it survives agent restarts.
+`agentMemory.read` plugin-protocol endpoint. Memory is **operator-authored**:
+entries are written and curated from the agent's Memory page in Hermeum, and
+the provider injects them into the agent as recalled context. There is no
+agent-facing memory tool — the agent cannot grow or rewrite the store, so
+memory stays bounded and the operator remains the source of truth.
 
-Two procedures carry the whole surface: `agentMemory.batch` applies every write
-(the tool's advertised shape is the atomic `operations` batch; a drifted
-top-level single-op call is translated into a one-op batch), and
-`agentMemory.read` feeds prefetch.
+One procedure carries the whole surface: `agentMemory.read`, called by
+`prefetch()` each turn.
 
 Activated by name in the agent's `config.yaml`:
 
 ```yaml
 memory:
   provider: hermeum
-  memory_enabled: false        # drop the built-in MEMORY.md store and tool
-  user_profile_enabled: false  # no USER.md — Hermeum memory is memory-only
 ```
 
-The tool surface mirrors the native `memory` tool so the model needs no new
-vocabulary, with one target (`memory`) and no character budget:
-
-| Tool | Actions | Notes |
-|---|---|---|
-| `hermeum_memory` | `add`, `patch`, `remove`, batch `operations` | Same JSON payloads, substring matching, and error messages as the native tool. Batch applies atomically. |
+The provider is additive upstream (it runs alongside the built-in `MEMORY.md` /
+`USER.md` stores); enable or disable those with their own `memory_enabled` /
+`user_profile_enabled` keys as usual. Pinning `memory_enabled: false` and
+`user_profile_enabled: false` leaves the Hermeum context as the only memory —
+without giving the agent a write path.
 
 `prefetch()` returns the current entries as recalled context — the native
 "frozen snapshot" analog, re-read each turn so operator edits land on the next
@@ -96,14 +93,7 @@ turn — and `recall_status()` reports the injected count.
 Discovery/activation details: the plugin directory is discovered as a memory
 provider because `memory.py` defines a `MemoryProvider` subclass; on the
 general plugin load path `ctx.register_memory_provider(...)` is inert, and the
-provider is only activated when `memory.provider: hermeum` names it. The
-provider's tools are exposed only while the `memory` toolset is enabled
-(`agent.disabled_toolsets` / per-route webhook toolsets gate them).
-
-The generated Python client's response models reject the memory result
-payloads (openapi-generator turns the zod boolean literals into string enums),
-so the provider reads responses as raw JSON (`*_without_preload_content`) while
-still using the generated request models and API methods.
+provider is only activated when `memory.provider: hermeum` names it.
 
 ## Generating the client
 
