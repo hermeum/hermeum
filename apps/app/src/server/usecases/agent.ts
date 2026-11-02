@@ -218,7 +218,44 @@ class HermeumPlugin implements ManagedAgentAspect {
   }
 }
 
-const MANAGED_ASPECTS: ManagedAgentAspect[] = [new SoulPostamble(), new HermeumPlugin()];
+// Hermeum memory: agent memory is a Hermeum-managed store, so
+// config.memory.provider is pinned to "hermeum" — the hermeum plugin registers
+// that provider, and upstream activates one external provider at a time. An
+// explicitly different provider is rejected before this layer runs (the field
+// is a literal in hermes-config/memory.ts); this aspect guarantees presence
+// when the memory block is absent and repairs a value written through a path
+// that skipped validation. Only `provider` is forced — other memory keys
+// (built-in store flags, char limits) pass through as the operator set them.
+// Deployment-wide — no per-agent context, so ctx is ignored.
+class HermeumMemory implements ManagedAgentAspect {
+  wrapInput(input: AgentInput): AgentInput {
+    return { ...input, config: this.#withMemoryProvider(input.config) };
+  }
+
+  wrapPatch(patch: AgentInput): AgentInput {
+    if (patch.config === undefined) return patch;
+    return { ...patch, config: this.#withMemoryProvider(patch.config) };
+  }
+
+  stripAgent(agent: Agent): Agent {
+    // Visible, non-secret config: operators keep seeing the enforced provider.
+    return agent;
+  }
+
+  // Idempotent: an existing "hermeum" keeps the same value.
+  #withMemoryProvider(configValue: AgentInput["config"]): NonNullable<AgentInput["config"]> {
+    return {
+      ...configValue,
+      memory: { ...configValue?.memory, provider: "hermeum" },
+    };
+  }
+}
+
+const MANAGED_ASPECTS: ManagedAgentAspect[] = [
+  new SoulPostamble(),
+  new HermeumPlugin(),
+  new HermeumMemory(),
+];
 
 // Apply every managed aspect to a write payload. Call after input validation
 // (AgentInputSchema.parse) so injected entries can't trip schema limits.

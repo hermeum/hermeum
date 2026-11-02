@@ -1,10 +1,16 @@
 # hermeum (hermes plugin)
 
-A [hermes-agent](../../../vendor/hermes-agent) plugin that forwards agent-session
-events (`session_started`, `llm_call`, `tool_call`, `error`, `session_finalized`,
-`subagent_started`, `subagent_stopped`) to Hermeum's plugin-protocol endpoint
-(`POST /plugin/trpc/agentSession.agentSessionEvents`), authenticated as the
-agent's provisioned ingest token (see Configuration).
+A [hermes-agent](../../../vendor/hermes-agent) plugin with two roles:
+
+1. **Session telemetry** — forwards agent-session events (`session_started`,
+   `llm_call`, `tool_call`, `error`, `session_finalized`, `subagent_started`,
+   `subagent_stopped`) to Hermeum's plugin-protocol endpoint
+   (`POST /plugin/trpc/agentSession.agentSessionEvents`), authenticated as the
+   agent's provisioned ingest token (see Configuration).
+2. **Memory provider** (`hermeum`) — stores the agent's memory on the Hermeum
+   control plane, mirroring the native `memory` tool (add / patch / remove,
+   `memory` target only). Activated by name via `memory.provider: hermeum` in
+   `config.yaml`; see [Memory provider](#memory-provider).
 
 Post-only events: every event is a completed record (input, output, duration,
 usage arrive together); no event is emitted pre-call. The `pre_api_request`
@@ -29,8 +35,9 @@ field is intentionally left unpopulated.
 ```
 plugins/hermeum/
 ├── plugin.yaml            # hermes plugin manifest
-├── __init__.py            # register(ctx) — hook registration only
+├── __init__.py            # register(ctx) — hook + memory-provider registration
 ├── telemetry.py           # event-building business logic + typed event buffering + flush (threshold/interval/atexit)
+├── memory.py              # Hermeum memory provider (MemoryProvider) + hermeum_memory tool
 └── client/
     ├── requirements.txt   # runtime deps for the generated client
     └── openapi_client/    # generated client, vendored (source only)
@@ -53,6 +60,45 @@ Events buffer client-side and are delivered on three triggers:
 
 Switching session ids flushes first so a batch never mixes sessions.
 Failed sends are logged and dropped; the agent is never affected.
+
+## Memory provider
+
+`memory.py` implements hermes-agent's `MemoryProvider` ABC, backed by Hermeum's
+`agentMemory.*` plugin-protocol endpoints. Agent memory lives on the Hermeum
+control plane, not on the agent disk, so operators can read and correct it
+while the agent is down and it survives agent restarts.
+
+Activated by name in the agent's `config.yaml`:
+
+```yaml
+memory:
+  provider: hermeum
+  memory_enabled: false        # drop the built-in MEMORY.md store and tool
+  user_profile_enabled: false  # no USER.md — Hermeum memory is memory-only
+```
+
+The tool surface mirrors the native `memory` tool so the model needs no new
+vocabulary, with one target (`memory`) and no character budget:
+
+| Tool | Actions | Notes |
+|---|---|---|
+| `hermeum_memory` | `add`, `patch`, `remove`, batch `operations` | Same JSON payloads, substring matching, and error messages as the native tool. Batch applies atomically. |
+
+`prefetch()` returns the current entries as recalled context — the native
+"frozen snapshot" analog, re-read each turn so operator edits land on the next
+turn — and `recall_status()` reports the injected count.
+
+Discovery/activation details: the plugin directory is discovered as a memory
+provider because `memory.py` defines a `MemoryProvider` subclass; on the
+general plugin load path `ctx.register_memory_provider(...)` is inert, and the
+provider is only activated when `memory.provider: hermeum` names it. The
+provider's tools are exposed only while the `memory` toolset is enabled
+(`agent.disabled_toolsets` / per-route webhook toolsets gate them).
+
+The generated Python client's response models reject the memory result
+payloads (openapi-generator turns the zod boolean literals into string enums),
+so the provider reads responses as raw JSON (`*_without_preload_content`) while
+still using the generated request models and API methods.
 
 ## Generating the client
 
@@ -160,5 +206,25 @@ print('health:', t.health_check())
 # Hook methods build the typed event payloads — no manual event construction.
 t.tool_call(tool_name='ping', tool_call_id='tc_1', args={'k': 'v'}, result='ok', status='ok')
 t.flush()
+"
+```
+
+The memory provider shares the same token and base URL; exercise it directly
+(the agent-side activation is `memory.provider: hermeum` in `config.yaml`):
+
+```sh
+.venv/bin/python -c "
+import os, sys
+sys.path.insert(0, 'plugins/hermeum')
+from memory import HermeumMemoryProvider
+p = HermeumMemoryProvider()
+p.initialize('verify-session', hermes_home='.')
+print(p.handle_tool_call('hermeum_memory', {'target': 'memory', 'operations': [
+    {'action': 'add', 'content': 'Hermeum memory works'}]}))
+print(p.handle_tool_call('hermeum_memory', {'target': 'memory', 'operations': [
+    {'action': 'patch', 'old_text': 'memory works', 'content': 'memory is verified'}]}))
+print('recall:', p.prefetch('what do you remember?'))
+print(p.handle_tool_call('hermeum_memory', {'target': 'memory', 'operations': [
+    {'action': 'remove', 'old_text': 'verified'}]}))
 "
 ```

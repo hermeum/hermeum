@@ -15,6 +15,7 @@ import { Runtime } from "./adaptors/runtime";
 import { Database } from "./adaptors/database";
 import { SkillIndexAdaptor } from "./adaptors/skill-index";
 import { MockRuntime } from "./adaptors/mocks/runtime";
+import { InMemoryMemoryStore } from "./adaptors/mocks/memory";
 
 // One MockRuntime per process: its store lives in memory, so every use case
 // holding its own instance would see a different, empty one — agents created
@@ -30,6 +31,12 @@ const sharedMockRuntime = new MockRuntime();
 // database (connections open lazily on first use).
 export const sharedDatabase: Database =
   config.databaseDialect === "postgres" ? new PostgresDatabase() : new SqliteDatabase();
+
+// One in-memory memory store per process for the agent-memory PoC: the plugin
+// tRPC router (agent memory tools) and — later — the operator UI must read and
+// write the same entries. A database-backed adaptor replaces it when memory
+// persistence lands.
+export const sharedMemoryStore = new InMemoryMemoryStore();
 
 // Core base class for use cases backed by the file, runtime, skill index, and
 // telemetry adaptors; mixins like HermeumConfigLoadable build on the injected

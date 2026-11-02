@@ -9,6 +9,13 @@ event union's `oneOf` in openapi/plugin.json). Field extraction mirrors the
 bundled langfuse observability plugin. All event-building business logic
 lives in `telemetry.py` (HermeumTelemetry); this module only registers hooks.
 
+It is also the Hermeum **memory provider** (`memory.py`): agent memory lives on
+the Hermeum control plane, mirrored onto the native `memory` tool's surface
+(add / patch / remove, one `memory` target), activated by `memory.provider:
+hermeum` in config.yaml. On the general plugin path
+`ctx.register_memory_provider(...)` is inert; hermes-agent's memory discovery
+captures the provider from the same `register(ctx)`.
+
 Following the hermes observer contract
 (docs/developer-guide/observer-hooks) — post-only events, LLM spans from the
 request-scoped hook:
@@ -46,6 +53,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from .memory import HermeumMemoryProvider
 from .telemetry import create_telemetry
 
 log = __import__("logging").getLogger("hermeum.plugin")
@@ -78,5 +86,14 @@ def register(ctx: Any) -> None:
     ctx.register_hook("on_session_end", telemetry.session_end)
     ctx.register_hook("subagent_start", telemetry.subagent_started)
     ctx.register_hook("subagent_stop", telemetry.subagent_stopped)
+
+    # Memory provider: the agent's memory lives on the Hermeum control plane and
+    # mirrors the native `memory` tool (add/patch/remove). Activation is owned by
+    # hermes-agent's memory discovery (`memory.provider: hermeum` in config.yaml);
+    # on the general plugin load path this call only records the instance, so the
+    # same register() serves both the hook and the memory-provider surfaces.
+    if hasattr(ctx, "register_memory_provider"):
+        ctx.register_memory_provider(HermeumMemoryProvider(base_url=base_url, token=token))
+        log.info("[hermeum-memory] provider registered")
 
     log.info("[hermeum-telemetry] registered (url=%s)", base_url)

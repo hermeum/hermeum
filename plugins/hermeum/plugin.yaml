@@ -1,6 +1,6 @@
 name: hermeum
 version: "0.3.3"
-description: "Optional Hermeum plugin for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store. Opt-in via `hermes plugins enable hermeum`."
+description: "Optional Hermeum plugin for Hermes — forwards agent-session events (LLM calls, tool usage, errors, subagent lifecycle) to the Hermeum control plane's trajectory store, and provides the Hermeum memory provider (agent memory stored and managed server-side, mirroring the native memory tool). Opt-in via `hermes plugins enable hermeum` / `memory.provider: hermeum`."
 author: Hermeum
 requires_env:
   - HERMEUM_PLUGIN_BASE_URL
