@@ -160,7 +160,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
   // protocol, where the agent identity comes from the ingest token.
   async listEntries(ctx: Context, agentId: string): Promise<AgentMemoryEntry[]> {
     await this.#authorize(ctx, agentId);
-    return await this.read(agentId);
+    return await this.db.listMemoryEntries(agentId);
   }
 
   async addEntry(ctx: Context, agentId: string, content: string): Promise<AgentMemoryEntry[]> {
@@ -170,7 +170,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
       throw new Error("Memory entry content cannot be empty.");
     }
     // Exact duplicates are a no-op, matching the memory tool's semantics.
-    const entries = await this.read(agentId);
+    const entries = await this.db.listMemoryEntries(agentId);
     if (entries.some((entry) => entry.content === trimmed)) {
       return entries;
     }
@@ -204,7 +204,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
       throw new Error("Memory entry not found.");
     }
     this.logger.info("agent memory entry patched (operator)", { agentId, id });
-    return await this.read(agentId);
+    return await this.db.listMemoryEntries(agentId);
   }
 
   async removeEntry(ctx: Context, agentId: string, id: string): Promise<AgentMemoryEntry[]> {
@@ -214,14 +214,22 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
       throw new Error("Memory entry not found.");
     }
     this.logger.info("agent memory entry removed (operator)", { agentId, id });
-    return await this.read(agentId);
-  }
-
-  async read(agentId: string): Promise<AgentMemoryEntry[]> {
     return await this.db.listMemoryEntries(agentId);
   }
 
-  async batch(agentId: string, input: AgentMemoryBatchInput): Promise<AgentMemoryResult> {
+  // -- Agent-facing path (token-authenticated plugin protocol) -------------
+  // No ctx: the plugin protocol resolves the agent from its ingest token, and
+  // these are the only callers — the owner-facing operations above are
+  // ctx-guarded.
+
+  async readForAgent(agentId: string): Promise<AgentMemoryEntry[]> {
+    return await this.db.listMemoryEntries(agentId);
+  }
+
+  async batchForAgent(
+    agentId: string,
+    input: AgentMemoryBatchInput
+  ): Promise<AgentMemoryResult> {
     const operations = input.operations;
     if (operations.length === 0) {
       return failure(`operations list is empty.${BATCH_ALL_OR_NOTHING}`);
@@ -234,7 +242,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
         closest && closest.length > 0 ? { closestEntries: closest } : {}
       );
 
-    const entries = await this.read(agentId);
+    const entries = await this.readForAgent(agentId);
     const working = entries.map((entry) => ({ ...entry }));
 
     for (const [index, operation] of operations.entries()) {

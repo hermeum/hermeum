@@ -98,7 +98,7 @@ function makeUseCase(
 }
 
 function batch(memory: AgentMemoryUseCase, operations: AgentMemoryOperation[], agentId = AGENT) {
-  return memory.batch(agentId, { operations });
+  return memory.batchForAgent(agentId, { operations });
 }
 
 describe("AgentMemoryUseCase.read", () => {
@@ -106,15 +106,15 @@ describe("AgentMemoryUseCase.read", () => {
     const memory = makeUseCase();
     await batch(memory, [{ action: "add", content: "one" }], "agent-1");
     await batch(memory, [{ action: "add", content: "two" }], "agent-2");
-    await expect(memory.read("agent-1")).resolves.toHaveLength(1);
-    await expect(memory.read("agent-2")).resolves.toHaveLength(1);
+    await expect(memory.readForAgent("agent-1")).resolves.toHaveLength(1);
+    await expect(memory.readForAgent("agent-2")).resolves.toHaveLength(1);
   });
 });
 
 describe("AgentMemoryUseCase.batch", () => {
   it("rejects an empty operations list", async () => {
     const memory = makeUseCase();
-    const result = await memory.batch(AGENT, { operations: [] });
+    const result = await memory.batchForAgent(AGENT, { operations: [] });
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toContain("operations list is empty.");
@@ -138,7 +138,7 @@ describe("AgentMemoryUseCase.batch", () => {
       entryCount: 2,
       message: "Applied 3 operation(s).",
     });
-    const contents = (await memory.read(AGENT)).map((entry) => entry.content);
+    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
     expect(contents).toEqual(["runs Linux", "uses zsh"]);
   });
 
@@ -148,7 +148,7 @@ describe("AgentMemoryUseCase.batch", () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toContain("Operation 1 (add): content is required.");
-    expect(await memory.read(AGENT)).toEqual([]);
+    expect(await memory.readForAgent(AGENT)).toEqual([]);
   });
 
   it("skips duplicate adds idempotently", async () => {
@@ -158,7 +158,7 @@ describe("AgentMemoryUseCase.batch", () => {
     const result = await batch(memory, [{ action: "add", content: "alpha" }]);
 
     expect(result).toMatchObject({ success: true, entryCount: 1 });
-    expect(await memory.read(AGENT)).toHaveLength(1);
+    expect(await memory.readForAgent(AGENT)).toHaveLength(1);
   });
 
   it("patches one span and keeps the rest of the entry", async () => {
@@ -173,7 +173,7 @@ describe("AgentMemoryUseCase.batch", () => {
       },
     ]);
 
-    await expect(memory.read(AGENT)).resolves.toEqual([
+    await expect(memory.readForAgent(AGENT)).resolves.toEqual([
       expect.objectContaining({
         content: "User prefers light mode in VS Code, dark mode in terminal",
       }),
@@ -189,7 +189,7 @@ describe("AgentMemoryUseCase.batch", () => {
 
     await batch(memory, [{ action: "patch", oldText: "alpha", content: "gamma" }]);
 
-    const contents = (await memory.read(AGENT)).map((entry) => entry.content);
+    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
     expect(contents).toEqual(["alpha beta", "gamma"]);
   });
 
@@ -208,7 +208,7 @@ describe("AgentMemoryUseCase.batch", () => {
       "Operation 1 (patch): 'mode' matched multiple distinct entries -- be more specific."
     );
     // The batch wrote nothing.
-    expect((await memory.read(AGENT)).map((entry) => entry.content)).toEqual([
+    expect((await memory.readForAgent(AGENT)).map((entry) => entry.content)).toEqual([
       "dark mode",
       "light mode",
     ]);
@@ -286,7 +286,7 @@ describe("AgentMemoryUseCase.batch", () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toContain("No operations were applied (batch is all-or-nothing).");
-    const contents = (await memory.read(AGENT)).map((entry) => entry.content);
+    const contents = (await memory.readForAgent(AGENT)).map((entry) => entry.content);
     expect(contents).toEqual(["alpha", "beta"]);
   });
 
@@ -305,7 +305,7 @@ describe("AgentMemoryUseCase.batch", () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.error).toContain("Refusing to empty memory");
-    expect(await memory.read(AGENT)).toHaveLength(2);
+    expect(await memory.readForAgent(AGENT)).toHaveLength(2);
   });
 
   it("allows a deliberate single-op remove of the final entry", async () => {

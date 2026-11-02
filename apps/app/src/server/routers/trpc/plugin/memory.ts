@@ -28,12 +28,12 @@ const AgentMemoryReadResultSchema = z.object({
 export const agentMemoryRouter = t.router({
   read: tokenProtectedProcedure
     .output(AgentMemoryReadResultSchema)
-    .query(async ({ ctx }) => ({ entries: await usecase.read(ctx.agentId) })),
+    .query(async ({ ctx }) => ({ entries: await usecase.readForAgent(ctx.agentId) })),
 
   batch: tokenProtectedProcedure
     .input(AgentMemoryBatchInputSchema)
     .output(AgentMemoryResultSchema)
-    .mutation(async ({ ctx, input }) => await usecase.batch(ctx.agentId, input)),
+    .mutation(async ({ ctx, input }) => await usecase.batchForAgent(ctx.agentId, input)),
 });
 
 export type AgentMemoryRouter = typeof agentMemoryRouter;
