@@ -185,20 +185,20 @@ function AgentDetailPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as AgentDetailTab)}>
         <TabsList variant="line">
           <TabsTrigger value="agent">Agent</TabsTrigger>
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="memory">Memory</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent">
           <AgentTab agent={agent} />
         </TabsContent>
 
-        <TabsContent value="sessions">
-          <SessionsTab agentId={id} page={page} />
-        </TabsContent>
-
         <TabsContent value="memory">
           <MemoryTab agentId={id} readOnly={agent.archived === true} />
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <SessionsTab agentId={id} page={page} />
         </TabsContent>
       </Tabs>
 
