@@ -6,21 +6,26 @@ const { findAgentIdByTokenHash } = vi.hoisted(() => ({
 
 // mixin is mocked so importing the plugin routers never constructs the real
 // process-wide adaptors (config, database clients, Kubernetes). The memory
-// use case keeps its real implementation and runs against this in-memory
-// store; the agent-session use case is stubbed because its router imports it.
+// use case keeps its real implementation and runs against this map-backed
+// database double; the agent-session use case is stubbed because its router
+// imports it.
 vi.mock("@/server/usecases/mixin", () => {
-  const byAgent = new Map<string, unknown[]>();
+  const byAgent = new Map<string, Record<string, unknown>[]>();
+  const memoryDb = {
+    async listMemoryEntries(agentId: string) {
+      return (byAgent.get(agentId) ?? []).map((entry) => ({ ...entry }));
+    },
+    async saveMemoryEntries(agentId: string, entries: Record<string, unknown>[]) {
+      byAgent.set(
+        agentId,
+        entries.map((entry) => ({ ...entry }))
+      );
+    },
+  };
   return {
     BaseUseCase: class {
       logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    },
-    sharedMemoryStore: {
-      async listEntries(agentId: string) {
-        return ((byAgent.get(agentId) ?? []) as Record<string, unknown>[]).map((entry) => ({ ...entry }));
-      },
-      async saveEntries(agentId: string, entries: Record<string, unknown>[]) {
-        byAgent.set(agentId, entries.map((entry) => ({ ...entry })));
-      },
+      db = memoryDb;
     },
     sharedDatabase: { findAgentIdByTokenHash },
   };

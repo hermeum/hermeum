@@ -120,6 +120,8 @@ function makeDatabase(): Database {
     storeAgentToken: vi.fn(),
     findAgentIdByTokenHash: vi.fn(),
     revokeAgentToken: vi.fn(),
+    listMemoryEntries: vi.fn(),
+    saveMemoryEntries: vi.fn(),
   };
 }
 

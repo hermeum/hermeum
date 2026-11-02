@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 // Agent-session telemetry events ingested from hermes agents
 // (POST /plugin/trpc/agentSession.agentSessionEvents). One row per event;
@@ -45,3 +45,26 @@ export const agentTokens = pgTable("agent_tokens", {
   updatedAt: timestamp("updated_at"),
   revokedAt: timestamp("revoked_at"),
 });
+
+// Hermeum-managed agent memory (the hermeum memory provider). One row per
+// entry — the native store's §-delimited MEMORY.md blocks, kept server-side so
+// operators can read and correct them while the agent is down. The use case
+// mints ids/timestamps and persists the full list atomically, keyed by id
+// (unchanged entries keep their row); `position` preserves the list order
+// (same-millisecond entries would otherwise tie). No foreign key — agents live
+// in the Kubernetes Runtime.
+export const agentMemoryEntries = pgTable(
+  "agent_memory_entries",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    content: text("content").notNull(),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => [
+    // The read path is one agent's entries in list order.
+    index("agent_memory_entries_agent_position_idx").on(table.agentId, table.position),
+  ]
+);

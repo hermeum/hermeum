@@ -1,8 +1,9 @@
 import postgres from "postgres";
 import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 
 import {
+  AgentMemoryEntry,
   AgentSession,
   AgentSessionEvent,
   AgentSessionEventSchema,
@@ -13,7 +14,7 @@ import {
 } from "@/entities";
 import { config } from "@/server/libs/config";
 
-import { agentSessionEvents, agentTokens } from "./schema.js";
+import { agentMemoryEntries, agentSessionEvents, agentTokens } from "./schema.js";
 import { AppendAgentSessionEventsInput, Database } from "@/server/usecases/adaptors/database.js";
 
 // Postgres persistence for the app database. Owns the connection and
@@ -229,5 +230,60 @@ export class PostgresDatabase implements Database {
       .update(agentTokens)
       .set({ revokedAt: new Date() })
       .where(eq(agentTokens.agentId, agentId));
+  }
+
+  async listMemoryEntries(agentId: string): Promise<AgentMemoryEntry[]> {
+    const rows = await this.db
+      .select()
+      .from(agentMemoryEntries)
+      .where(eq(agentMemoryEntries.agentId, agentId))
+      .orderBy(asc(agentMemoryEntries.position));
+    return rows.map((row) => ({
+      id: row.id,
+      agentId: row.agentId,
+      content: row.content,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }));
+  }
+
+  async saveMemoryEntries(agentId: string, entries: AgentMemoryEntry[]): Promise<void> {
+    // Keyed on id, so an entry's id is a durable key rather than an artifact
+    // of a rewrite: unchanged entries keep their row (no churn, created_at
+    // preserved), changed entries update in place, and only entries the use
+    // case dropped are deleted. Position carries the list order; one
+    // transaction keeps the save atomic.
+    await this.db.transaction(async (tx) => {
+      const ids = entries.map((entry) => entry.id);
+      if (ids.length === 0) {
+        await tx.delete(agentMemoryEntries).where(eq(agentMemoryEntries.agentId, agentId));
+        return;
+      }
+      await tx
+        .delete(agentMemoryEntries)
+        .where(and(eq(agentMemoryEntries.agentId, agentId), notInArray(agentMemoryEntries.id, ids)));
+      await tx
+        .insert(agentMemoryEntries)
+        .values(
+          entries.map((entry, position) => ({
+            id: entry.id,
+            agentId,
+            content: entry.content,
+            position,
+            createdAt: new Date(entry.createdAt),
+            updatedAt: new Date(entry.updatedAt),
+          }))
+        )
+        .onConflictDoUpdate({
+          target: agentMemoryEntries.id,
+          // `excluded` is the row proposed by this INSERT: apply its values to
+          // the existing row, keeping the stored created_at.
+          set: {
+            content: sql`excluded.content`,
+            position: sql`excluded.position`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    });
   }
 }

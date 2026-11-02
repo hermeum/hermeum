@@ -20,13 +20,40 @@ vi.mock("@/server/libs/config", () => ({
 }));
 
 import { AgentMemoryUseCase } from "./agent-memory";
-import { InMemoryMemoryStore } from "./adaptors/mocks/memory";
 import type { AgentMemoryOperation } from "./agent-memory";
+import type { Database } from "./adaptors/database";
+import type { AgentMemoryEntry } from "@/entities";
 
 const AGENT = "agent-1";
 
+// Database double: the memory use case only needs the per-agent entry list;
+// the rest of the adaptor is stubbed to satisfy the interface.
+function makeDatabase(): Database {
+  const byAgent = new Map<string, AgentMemoryEntry[]>();
+  return {
+    appendAgentSessionEvents: vi.fn(),
+    listAgentSessionSummaries: vi.fn(),
+    getAgentSession: vi.fn(),
+    deleteAgentSessionsLastActiveBefore: vi.fn(),
+    storeAgentToken: vi.fn(),
+    findAgentIdByTokenHash: vi.fn(),
+    revokeAgentToken: vi.fn(),
+    listMemoryEntries: vi.fn(async (agentId: string) =>
+      (byAgent.get(agentId) ?? []).map((entry) => ({ ...entry }))
+    ),
+    saveMemoryEntries: vi.fn(async (agentId: string, entries: AgentMemoryEntry[]) => {
+      byAgent.set(
+        agentId,
+        entries.map((entry) => ({ ...entry }))
+      );
+    }),
+  } as unknown as Database;
+}
+
 function makeUseCase(): AgentMemoryUseCase {
-  return new AgentMemoryUseCase(new InMemoryMemoryStore());
+  // BaseUseCase order: runtime, files, skillIndex, logger, db — only db matters
+  // here (the infra modules are mocked at the top).
+  return new AgentMemoryUseCase(undefined, undefined, undefined, undefined, makeDatabase());
 }
 
 function batch(memory: AgentMemoryUseCase, operations: AgentMemoryOperation[], agentId = AGENT) {

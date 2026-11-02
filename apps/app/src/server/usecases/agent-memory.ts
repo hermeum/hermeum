@@ -4,8 +4,7 @@ import { z } from "zod";
 
 import type { AgentMemoryEntry } from "@/entities";
 
-import type { MemoryStore } from "./adaptors/memory";
-import { BaseUseCase, sharedMemoryStore } from "./mixin";
+import { BaseUseCase } from "./mixin";
 
 // Hermeum-managed agent memory. The agent-facing tool mirrors hermes-agent's
 // native `memory` tool (vendor/hermes-agent/tools/memory_tool.py and
@@ -29,7 +28,9 @@ import { BaseUseCase, sharedMemoryStore } from "./mixin";
 // Operation inputs and result payloads live here, not in entities: they are
 // this use case's contract (the router imports them), the same boundary as
 // ListAgentsFilterSchema in usecases/agent.ts. The entity (entities/
-// agent-memory.ts) holds only the stored entry.
+// agent-memory.ts) holds only the stored entry; persistence is the Database
+// adaptor's listMemoryEntries/saveMemoryEntries (an id-keyed atomic save:
+// unchanged entries keep their row, dropped entries are deleted).
 
 const PATCH_DROP_HINT =
   "To drop text inside an entry, patch a longer span that contains it; 'remove' deletes the whole entry.";
@@ -153,12 +154,8 @@ function findUniqueMatch(entries: string[], oldText: string): LocateResult {
 }
 
 export class AgentMemoryUseCase extends BaseUseCase {
-  constructor(readonly memory: MemoryStore = sharedMemoryStore) {
-    super();
-  }
-
   async read(agentId: string): Promise<AgentMemoryEntry[]> {
-    return await this.memory.listEntries(agentId);
+    return await this.db.listMemoryEntries(agentId);
   }
 
   async batch(agentId: string, input: AgentMemoryBatchInput): Promise<AgentMemoryResult> {
@@ -274,7 +271,7 @@ export class AgentMemoryUseCase extends BaseUseCase {
       );
     }
 
-    await this.memory.saveEntries(agentId, working);
+    await this.db.saveMemoryEntries(agentId, working);
     this.logger.info("agent memory batch applied", {
       agentId,
       operations: operations.length,
