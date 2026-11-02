@@ -4,6 +4,7 @@ description: "Optional Hermeum plugin for Hermes — forwards agent-session even
 author: Hermeum
 requires_env:
   - HERMEUM_PLUGIN_BASE_URL
+  - HERMEUM_PLUGIN_TOKEN
 provides_hooks:
   - pre_api_request
   - on_session_start
