@@ -68,6 +68,11 @@ Failed sends are logged and dropped; the agent is never affected.
 control plane, not on the agent disk, so operators can read and correct it
 while the agent is down and it survives agent restarts.
 
+Two procedures carry the whole surface: `agentMemory.batch` applies every write
+(the tool's advertised shape is the atomic `operations` batch; a drifted
+top-level single-op call is translated into a one-op batch), and
+`agentMemory.read` feeds prefetch.
+
 Activated by name in the agent's `config.yaml`:
 
 ```yaml

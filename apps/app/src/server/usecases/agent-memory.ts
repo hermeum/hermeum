@@ -9,9 +9,13 @@ import { BaseUseCase, sharedMemoryStore } from "./mixin";
 
 // Hermeum-managed agent memory. The agent-facing tool mirrors hermes-agent's
 // native `memory` tool (vendor/hermes-agent/tools/memory_tool.py and
-// memory_tool_store.py): actions add / patch / remove, batch `operations`
-// applied atomically, short unique substring matching, the same result
-// payloads and error messages. Differences, all deliberate:
+// memory_tool_store.py): add / patch / remove operations, applied atomically as
+// one `operations` batch, with short unique substring matching and the same
+// result payloads and error messages. The plugin always calls the batch
+// procedure (a drifted top-level single-op tool call is translated into a
+// one-op batch there), so this use case exposes just `read` + `batch`.
+//
+// Differences from the native tool, all deliberate:
 //
 // - `target` is always "memory": Hermeum has one store per agent and does not
 //   manage USER.md.
@@ -30,35 +34,7 @@ import { BaseUseCase, sharedMemoryStore } from "./mixin";
 const PATCH_DROP_HINT =
   "To drop text inside an entry, patch a longer span that contains it; 'remove' deletes the whole entry.";
 
-// Legacy 'replace' (removed upstream) — the model-facing message mirrors the
-// native tool's, so a replayed transcript gets the same actionable error.
-const REPLACE_REMOVED =
-  "'replace' is not available; use 'patch'. old_text is the exact span to change and " +
-  "content is its new text; the rest of the entry is kept. To rewrite a whole entry, " +
-  "set old_text to the whole entry. Nothing was written.";
-
 const BATCH_ALL_OR_NOTHING = " No operations were applied (batch is all-or-nothing).";
-
-export const AgentMemoryAddInputSchema = z.object({
-  content: z.string().describe("The new memory entry."),
-});
-export type AgentMemoryAddInput = z.infer<typeof AgentMemoryAddInputSchema>;
-
-export const AgentMemoryPatchInputSchema = z.object({
-  oldText: z
-    .string()
-    .describe(
-      "Span inside exactly one entry to replace; must occur once in that entry. " +
-        "Pass the whole entry to rewrite it."
-    ),
-  content: z.string().describe("Replacement text for oldText; the rest of the entry is kept."),
-});
-export type AgentMemoryPatchInput = z.infer<typeof AgentMemoryPatchInputSchema>;
-
-export const AgentMemoryRemoveInputSchema = z.object({
-  oldText: z.string().describe("Short unique substring identifying the entry to delete."),
-});
-export type AgentMemoryRemoveInput = z.infer<typeof AgentMemoryRemoveInputSchema>;
 
 export const AgentMemoryOperationSchema = z.object({
   action: z.enum(["add", "patch", "remove"]),
@@ -85,10 +61,6 @@ const AgentMemoryFailureSchema = z.object({
   error: z.string(),
   matches: z.array(z.string()).optional().describe("Ambiguous-match previews (80 chars each)."),
   closestEntries: z.array(z.string()).optional().describe("Best-effort near matches for a no-match error."),
-  currentEntries: z
-    .array(z.string())
-    .optional()
-    .describe("Live inventory for single-op no-match errors; batch aborts omit it."),
 });
 
 export const AgentMemoryResultSchema = z.discriminatedUnion("success", [
@@ -109,18 +81,13 @@ function successResult(entryCount: number, message?: string): AgentMemoryResult 
 
 function failure(
   error: string,
-  extra: {
-    matches?: string[];
-    closestEntries?: string[];
-    currentEntries?: string[];
-  } = {}
+  extra: { matches?: string[]; closestEntries?: string[] } = {}
 ): AgentMemoryResult {
   return {
     success: false,
     error,
     ...(extra.matches !== undefined ? { matches: extra.matches } : {}),
     ...(extra.closestEntries !== undefined ? { closestEntries: extra.closestEntries } : {}),
-    ...(extra.currentEntries !== undefined ? { currentEntries: extra.currentEntries } : {}),
   };
 }
 
@@ -185,20 +152,6 @@ function findUniqueMatch(entries: string[], oldText: string): LocateResult {
   return matches.length > 0 ? { index: matches[0]! } : { missing: true };
 }
 
-function noMatchError(entries: string[], oldText: string, verb: string): AgentMemoryResult {
-  const closest = closestEntries(entries, oldText);
-  const hint = oldText.includes("§")
-    ? " old_text must come from ONE entry ('§' separates entries); use one op per entry."
-    : "";
-  const error =
-    `No entry matched '${oldText}'.${hint} Retry the ${verb} with old_text copied verbatim ` +
-    `from the intended entry${closest.length > 0 ? " (closest_entries below)." : "."}`;
-  return failure(error, {
-    currentEntries: entries,
-    ...(closest.length > 0 ? { closestEntries: closest } : {}),
-  });
-}
-
 export class AgentMemoryUseCase extends BaseUseCase {
   constructor(readonly memory: MemoryStore = sharedMemoryStore) {
     super();
@@ -208,98 +161,13 @@ export class AgentMemoryUseCase extends BaseUseCase {
     return await this.memory.listEntries(agentId);
   }
 
-  async add(agentId: string, input: AgentMemoryAddInput): Promise<AgentMemoryResult> {
-    const content = input.content.trim();
-    if (!content) {
-      return failure("Content cannot be empty.");
-    }
-    const entries = await this.read(agentId);
-    if (entries.some((entry) => entry.content === content)) {
-      return successResult(entries.length, "Entry already exists (no duplicate added).");
-    }
-    const now = new Date().toISOString();
-    const next = [
-      ...entries,
-      { id: randomUUID(), agentId, content, createdAt: now, updatedAt: now } satisfies AgentMemoryEntry,
-    ];
-    await this.memory.saveEntries(agentId, next);
-    this.logger.info("agent memory entry added", { agentId, entryCount: next.length });
-    return successResult(next.length, "Entry added.");
-  }
-
-  async patch(agentId: string, input: AgentMemoryPatchInput): Promise<AgentMemoryResult> {
-    // Native keeps the span's whitespace; only whole-entry actions strip.
-    if (!input.oldText.trim()) {
-      return failure("old_text cannot be empty.");
-    }
-    if (!input.content.trim()) {
-      return failure(
-        `content (the new text for the old_text span) is required for 'patch' action. ${PATCH_DROP_HINT}`
-      );
-    }
-    const entries = await this.read(agentId);
-    const contents = entries.map((entry) => entry.content);
-    const located = findUniqueMatch(contents, input.oldText);
-    if ("ambiguous" in located) {
-      return failure(`Multiple entries matched '${input.oldText}'. Be more specific.`, {
-        matches: located.ambiguous,
-      });
-    }
-    if ("missing" in located) {
-      return noMatchError(contents, input.oldText, "patch");
-    }
-    const target = entries[located.index]!;
-    const occurrences = spanOccurrences(target.content, input.oldText);
-    if (occurrences > 1) {
-      return failure(
-        `'${input.oldText}' appears ${occurrences} times in the matched entry, and patch edits ` +
-          "one span. Include more surrounding text so old_text occurs once."
-      );
-    }
-    const patched = target.content.replace(input.oldText, input.content);
-    if (patched === target.content) {
-      return failure(
-        `Patch is a no-op: '${input.oldText}' -> '${input.content}' leaves the entry unchanged.`
-      );
-    }
-    const now = new Date().toISOString();
-    const next = entries.map((entry, index) =>
-      index === located.index ? { ...entry, content: patched, updatedAt: now } : entry
-    );
-    await this.memory.saveEntries(agentId, next);
-    this.logger.info("agent memory entry patched", { agentId, entryCount: next.length });
-    return successResult(next.length, "Entry patched.");
-  }
-
-  async remove(agentId: string, input: AgentMemoryRemoveInput): Promise<AgentMemoryResult> {
-    const oldText = input.oldText.trim();
-    if (!oldText) {
-      return failure("old_text cannot be empty.");
-    }
-    const entries = await this.read(agentId);
-    const contents = entries.map((entry) => entry.content);
-    const located = findUniqueMatch(contents, oldText);
-    if ("ambiguous" in located) {
-      return failure(`Multiple entries matched '${oldText}'. Be more specific.`, {
-        matches: located.ambiguous,
-      });
-    }
-    if ("missing" in located) {
-      return noMatchError(contents, oldText, "remove");
-    }
-    const next = entries.filter((_, index) => index !== located.index);
-    await this.memory.saveEntries(agentId, next);
-    this.logger.info("agent memory entry removed", { agentId, entryCount: next.length });
-    return successResult(next.length, "Entry removed.");
-  }
-
   async batch(agentId: string, input: AgentMemoryBatchInput): Promise<AgentMemoryResult> {
     const operations = input.operations;
     if (operations.length === 0) {
       return failure(`operations list is empty.${BATCH_ALL_OR_NOTHING}`);
     }
-    // Batch aborts omit current_entries (the caller already holds the
-    // inventory); zero-match ops carry closest_entries instead.
+    // Batch aborts omit the current inventory (the caller already holds it);
+    // zero-match ops carry closest_entries instead.
     const batchFailure = (error: string, closest?: string[]): AgentMemoryResult =>
       failure(
         `${error}${BATCH_ALL_OR_NOTHING}`,
@@ -414,10 +282,4 @@ export class AgentMemoryUseCase extends BaseUseCase {
     });
     return successResult(working.length, `Applied ${operations.length} operation(s).`);
   }
-}
-
-// Legacy single-op 'replace' — rejected with the native message. The tool
-// schema does not advertise it; this only catches replayed transcripts.
-export function replacedActionError(): AgentMemoryResult {
-  return failure(REPLACE_REMOVED);
 }

@@ -17,19 +17,44 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr
-from typing import Any, ClassVar, Dict, List
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
+from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentMemoryAddRequest(BaseModel):
+class AgentMemoryBatch200ResponseResultDataOneOf(BaseModel):
     """
-    AgentMemoryAddRequest
+    AgentMemoryBatch200ResponseResultDataOneOf
     """ # noqa: E501
-    content: StrictStr
+    success: StrictBool
+    done: StrictBool
+    target: StrictStr
+    entry_count: Union[StrictFloat, StrictInt] = Field(alias="entryCount")
+    message: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["content"]
+    __properties: ClassVar[List[str]] = ["success", "done", "target", "entryCount", "message"]
+
+    @field_validator('success')
+    def success_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in set(['true']):
+            raise ValueError("must be one of enum values ('true')")
+        return value
+
+    @field_validator('done')
+    def done_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in set(['true']):
+            raise ValueError("must be one of enum values ('true')")
+        return value
+
+    @field_validator('target')
+    def target_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in set(['memory']):
+            raise ValueError("must be one of enum values ('memory')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -49,7 +74,7 @@ class AgentMemoryAddRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentMemoryAddRequest from a JSON string"""
+        """Create an instance of AgentMemoryBatch200ResponseResultDataOneOf from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -81,7 +106,7 @@ class AgentMemoryAddRequest(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentMemoryAddRequest from a dict"""
+        """Create an instance of AgentMemoryBatch200ResponseResultDataOneOf from a dict"""
         if obj is None:
             return None
 
@@ -89,7 +114,11 @@ class AgentMemoryAddRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "content": obj.get("content")
+            "success": obj.get("success"),
+            "done": obj.get("done"),
+            "target": obj.get("target"),
+            "entryCount": obj.get("entryCount"),
+            "message": obj.get("message")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

@@ -51,7 +51,9 @@ describe("agentMemoryRouter token guard", () => {
 
   it("rejects writes without a resolved agent", async () => {
     await expect(
-      pluginRouter.createCaller({ agentId: null }).agentMemory.add({ content: "x" })
+      pluginRouter
+        .createCaller({ agentId: null })
+        .agentMemory.batch({ operations: [{ action: "add", content: "x" }] })
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
@@ -64,12 +66,14 @@ describe("agentMemoryRouter memory operations", () => {
   it("adds an entry, reads it back, and scopes it to the agent", async () => {
     const caller = pluginRouter.createCaller({ agentId: "agent-memory-add" });
 
-    await expect(caller.agentMemory.add({ content: "runs macOS" })).resolves.toEqual({
+    await expect(
+      caller.agentMemory.batch({ operations: [{ action: "add", content: "runs macOS" }] })
+    ).resolves.toEqual({
       success: true,
       done: true,
       target: "memory",
       entryCount: 1,
-      message: "Entry added.",
+      message: "Applied 1 operation(s).",
     });
 
     const { entries } = await caller.agentMemory.read();
@@ -82,22 +86,23 @@ describe("agentMemoryRouter memory operations", () => {
 
   it("patches and removes entries", async () => {
     const caller = pluginRouter.createCaller({ agentId: "agent-memory-patch" });
-    await caller.agentMemory.add({ content: "dark mode everywhere" });
+    await caller.agentMemory.batch({ operations: [{ action: "add", content: "dark mode everywhere" }] });
 
     await expect(
-      caller.agentMemory.patch({ oldText: "dark mode", content: "light mode" })
-    ).resolves.toMatchObject({ success: true, message: "Entry patched." });
+      caller.agentMemory.batch({
+        operations: [{ action: "patch", oldText: "dark mode", content: "light mode" }],
+      })
+    ).resolves.toMatchObject({ success: true, entryCount: 1 });
     expect((await caller.agentMemory.read()).entries[0]?.content).toBe("light mode everywhere");
 
-    await expect(caller.agentMemory.remove({ oldText: "light mode" })).resolves.toMatchObject({
-      success: true,
-      entryCount: 0,
-    });
+    await expect(
+      caller.agentMemory.batch({ operations: [{ action: "remove", oldText: "light mode" }] })
+    ).resolves.toMatchObject({ success: true, entryCount: 0 });
   });
 
-  it("applies a batch atomically", async () => {
+  it("applies a multi-operation batch atomically", async () => {
     const caller = pluginRouter.createCaller({ agentId: "agent-memory-batch" });
-    await caller.agentMemory.add({ content: "alpha" });
+    await caller.agentMemory.batch({ operations: [{ action: "add", content: "alpha" }] });
 
     const result = await caller.agentMemory.batch({
       operations: [
@@ -124,7 +129,7 @@ describe("agentMemoryRouter context resolution", () => {
     const ctx = await createPluginTRPCContext()({ req: makeRequest(`Bearer ${token}`) });
     const caller = pluginRouter.createCaller(ctx);
 
-    await caller.agentMemory.add({ content: "remember this" });
+    await caller.agentMemory.batch({ operations: [{ action: "add", content: "remember this" }] });
 
     expect(findAgentIdByTokenHash).toHaveBeenCalledWith(hashPluginToken(token));
     const { entries } = await caller.agentMemory.read();

@@ -17,24 +17,24 @@ import json
 import pprint
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, field_validator
 from typing import Any, List, Optional
-from openapi_client.models.agent_memory_add200_response_result_data_one_of import AgentMemoryAdd200ResponseResultDataOneOf
-from openapi_client.models.agent_memory_add200_response_result_data_one_of1 import AgentMemoryAdd200ResponseResultDataOneOf1
+from openapi_client.models.agent_memory_batch200_response_result_data_one_of import AgentMemoryBatch200ResponseResultDataOneOf
+from openapi_client.models.agent_memory_batch200_response_result_data_one_of1 import AgentMemoryBatch200ResponseResultDataOneOf1
 from pydantic import StrictStr, Field
 from typing import Union, List, Set, Optional, Dict
 from typing_extensions import Literal, Self
 
-AGENTMEMORYADD200RESPONSERESULTDATA_ONE_OF_SCHEMAS = ["AgentMemoryAdd200ResponseResultDataOneOf", "AgentMemoryAdd200ResponseResultDataOneOf1"]
+AGENTMEMORYBATCH200RESPONSERESULTDATA_ONE_OF_SCHEMAS = ["AgentMemoryBatch200ResponseResultDataOneOf", "AgentMemoryBatch200ResponseResultDataOneOf1"]
 
-class AgentMemoryAdd200ResponseResultData(BaseModel):
+class AgentMemoryBatch200ResponseResultData(BaseModel):
     """
-    AgentMemoryAdd200ResponseResultData
+    AgentMemoryBatch200ResponseResultData
     """
-    # data type: AgentMemoryAdd200ResponseResultDataOneOf
-    oneof_schema_1_validator: Optional[AgentMemoryAdd200ResponseResultDataOneOf] = None
-    # data type: AgentMemoryAdd200ResponseResultDataOneOf1
-    oneof_schema_2_validator: Optional[AgentMemoryAdd200ResponseResultDataOneOf1] = None
-    actual_instance: Optional[Union[AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1]] = None
-    one_of_schemas: Set[str] = { "AgentMemoryAdd200ResponseResultDataOneOf", "AgentMemoryAdd200ResponseResultDataOneOf1" }
+    # data type: AgentMemoryBatch200ResponseResultDataOneOf
+    oneof_schema_1_validator: Optional[AgentMemoryBatch200ResponseResultDataOneOf] = None
+    # data type: AgentMemoryBatch200ResponseResultDataOneOf1
+    oneof_schema_2_validator: Optional[AgentMemoryBatch200ResponseResultDataOneOf1] = None
+    actual_instance: Optional[Union[AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1]] = None
+    one_of_schemas: Set[str] = { "AgentMemoryBatch200ResponseResultDataOneOf", "AgentMemoryBatch200ResponseResultDataOneOf1" }
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -57,25 +57,25 @@ class AgentMemoryAdd200ResponseResultData(BaseModel):
 
     @field_validator('actual_instance')
     def actual_instance_must_validate_oneof(cls, v):
-        instance = AgentMemoryAdd200ResponseResultData.model_construct()
+        instance = AgentMemoryBatch200ResponseResultData.model_construct()
         error_messages = []
         match = 0
-        # validate data type: AgentMemoryAdd200ResponseResultDataOneOf
-        if not isinstance(v, AgentMemoryAdd200ResponseResultDataOneOf):
-            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentMemoryAdd200ResponseResultDataOneOf`")
+        # validate data type: AgentMemoryBatch200ResponseResultDataOneOf
+        if not isinstance(v, AgentMemoryBatch200ResponseResultDataOneOf):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentMemoryBatch200ResponseResultDataOneOf`")
         else:
             match += 1
-        # validate data type: AgentMemoryAdd200ResponseResultDataOneOf1
-        if not isinstance(v, AgentMemoryAdd200ResponseResultDataOneOf1):
-            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentMemoryAdd200ResponseResultDataOneOf1`")
+        # validate data type: AgentMemoryBatch200ResponseResultDataOneOf1
+        if not isinstance(v, AgentMemoryBatch200ResponseResultDataOneOf1):
+            error_messages.append(f"Error! Input type `{type(v)}` is not `AgentMemoryBatch200ResponseResultDataOneOf1`")
         else:
             match += 1
         if match > 1:
             # more than 1 match
-            raise ValueError("Multiple matches found when setting `actual_instance` in AgentMemoryAdd200ResponseResultData with oneOf schemas: AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
+            raise ValueError("Multiple matches found when setting `actual_instance` in AgentMemoryBatch200ResponseResultData with oneOf schemas: AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
         elif match == 0:
             # no match
-            raise ValueError("No match found when setting `actual_instance` in AgentMemoryAdd200ResponseResultData with oneOf schemas: AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
+            raise ValueError("No match found when setting `actual_instance` in AgentMemoryBatch200ResponseResultData with oneOf schemas: AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
         else:
             return v
 
@@ -90,25 +90,25 @@ class AgentMemoryAdd200ResponseResultData(BaseModel):
         error_messages = []
         match = 0
 
-        # deserialize data into AgentMemoryAdd200ResponseResultDataOneOf
+        # deserialize data into AgentMemoryBatch200ResponseResultDataOneOf
         try:
-            instance.actual_instance = AgentMemoryAdd200ResponseResultDataOneOf.from_json(json_str)
+            instance.actual_instance = AgentMemoryBatch200ResponseResultDataOneOf.from_json(json_str)
             match += 1
         except (ValidationError, ValueError) as e:
             error_messages.append(str(e))
-        # deserialize data into AgentMemoryAdd200ResponseResultDataOneOf1
+        # deserialize data into AgentMemoryBatch200ResponseResultDataOneOf1
         try:
-            instance.actual_instance = AgentMemoryAdd200ResponseResultDataOneOf1.from_json(json_str)
+            instance.actual_instance = AgentMemoryBatch200ResponseResultDataOneOf1.from_json(json_str)
             match += 1
         except (ValidationError, ValueError) as e:
             error_messages.append(str(e))
 
         if match > 1:
             # more than 1 match
-            raise ValueError("Multiple matches found when deserializing the JSON string into AgentMemoryAdd200ResponseResultData with oneOf schemas: AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
+            raise ValueError("Multiple matches found when deserializing the JSON string into AgentMemoryBatch200ResponseResultData with oneOf schemas: AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
         elif match == 0:
             # no match
-            raise ValueError("No match found when deserializing the JSON string into AgentMemoryAdd200ResponseResultData with oneOf schemas: AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
+            raise ValueError("No match found when deserializing the JSON string into AgentMemoryBatch200ResponseResultData with oneOf schemas: AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1. Details: " + ", ".join(error_messages))
         else:
             return instance
 
@@ -122,7 +122,7 @@ class AgentMemoryAdd200ResponseResultData(BaseModel):
         else:
             return json.dumps(self.actual_instance)
 
-    def to_dict(self) -> Optional[Union[Dict[str, Any], AgentMemoryAdd200ResponseResultDataOneOf, AgentMemoryAdd200ResponseResultDataOneOf1]]:
+    def to_dict(self) -> Optional[Union[Dict[str, Any], AgentMemoryBatch200ResponseResultDataOneOf, AgentMemoryBatch200ResponseResultDataOneOf1]]:
         """Returns the dict representation of the actual instance"""
         if self.actual_instance is None:
             return None

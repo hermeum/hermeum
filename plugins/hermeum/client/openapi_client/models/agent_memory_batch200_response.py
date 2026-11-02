@@ -17,30 +17,19 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, field_validator
-from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import Any, ClassVar, Dict, List
+from openapi_client.models.agent_memory_batch200_response_result import AgentMemoryBatch200ResponseResult
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
 
-class AgentMemoryAdd200ResponseResultDataOneOf1(BaseModel):
+class AgentMemoryBatch200Response(BaseModel):
     """
-    AgentMemoryAdd200ResponseResultDataOneOf1
+    AgentMemoryBatch200Response
     """ # noqa: E501
-    success: StrictBool
-    error: StrictStr
-    matches: Optional[List[StrictStr]] = None
-    closest_entries: Optional[List[StrictStr]] = Field(default=None, alias="closestEntries")
-    current_entries: Optional[List[StrictStr]] = Field(default=None, alias="currentEntries")
-    additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["success", "error", "matches", "closestEntries", "currentEntries"]
-
-    @field_validator('success')
-    def success_validate_enum(cls, value):
-        """Validates the enum"""
-        if value not in set(['false']):
-            raise ValueError("must be one of enum values ('false')")
-        return value
+    result: AgentMemoryBatch200ResponseResult
+    __properties: ClassVar[List[str]] = ["result"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -60,7 +49,7 @@ class AgentMemoryAdd200ResponseResultDataOneOf1(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of AgentMemoryAdd200ResponseResultDataOneOf1 from a JSON string"""
+        """Create an instance of AgentMemoryBatch200Response from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -72,10 +61,8 @@ class AgentMemoryAdd200ResponseResultDataOneOf1(BaseModel):
         * `None` is only added to the output dict for nullable fields that
           were set at model initialization. Other fields with value `None`
           are ignored.
-        * Fields in `self.additional_properties` are added to the output dict.
         """
         excluded_fields: Set[str] = set([
-            "additional_properties",
         ])
 
         _dict = self.model_dump(
@@ -83,16 +70,14 @@ class AgentMemoryAdd200ResponseResultDataOneOf1(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # puts key-value pairs in additional_properties in the top level
-        if self.additional_properties is not None:
-            for _key, _value in self.additional_properties.items():
-                _dict[_key] = _value
-
+        # override the default output from pydantic by calling `to_dict()` of result
+        if self.result:
+            _dict['result'] = self.result.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of AgentMemoryAdd200ResponseResultDataOneOf1 from a dict"""
+        """Create an instance of AgentMemoryBatch200Response from a dict"""
         if obj is None:
             return None
 
@@ -100,17 +85,8 @@ class AgentMemoryAdd200ResponseResultDataOneOf1(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "success": obj.get("success"),
-            "error": obj.get("error"),
-            "matches": obj.get("matches"),
-            "closestEntries": obj.get("closestEntries"),
-            "currentEntries": obj.get("currentEntries")
+            "result": AgentMemoryBatch200ResponseResult.from_dict(obj["result"]) if obj.get("result") is not None else None
         })
-        # store additional fields in additional_properties
-        for _key in obj.keys():
-            if _key not in cls.__properties:
-                _obj.additional_properties[_key] = obj.get(_key)
-
         return _obj
 
 

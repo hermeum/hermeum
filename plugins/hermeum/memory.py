@@ -7,6 +7,11 @@ result payloads. What changes is where memory lives: entries are stored on the
 Hermeum control plane (plugin protocol agentMemory.*), so operators can see and
 correct them even while the agent is down, and they survive agent restarts.
 
+Hermeum's server exposes two procedures: `agentMemory.batch` carries every
+write (the advertised tool shape is the `operations` batch) and
+`agentMemory.read` feeds prefetch. A drifted top-level single-op tool call is
+translated into a one-op batch here, keeping the server to one mutation path.
+
 Deliberate differences from the native tool:
 
 - `target` is always "memory": Hermeum keeps one store per agent and does not
@@ -36,13 +41,10 @@ sys.path.insert(0, str(_CLIENT_PARENT))
 
 from openapi_client import ApiClient, Configuration  # noqa: E402
 from openapi_client.api.agent_memory_api import AgentMemoryApi  # noqa: E402
-from openapi_client.models.agent_memory_add_request import AgentMemoryAddRequest  # noqa: E402
 from openapi_client.models.agent_memory_batch_request import AgentMemoryBatchRequest  # noqa: E402
 from openapi_client.models.agent_memory_batch_request_operations_inner import (  # noqa: E402
     AgentMemoryBatchRequestOperationsInner,
 )
-from openapi_client.models.agent_memory_patch_request import AgentMemoryPatchRequest  # noqa: E402
-from openapi_client.models.agent_memory_remove_request import AgentMemoryRemoveRequest  # noqa: E402
 
 from agent.memory_provider import MemoryProvider, RecallStatus  # noqa: E402
 from agent.secret_scope import get_secret  # noqa: E402
@@ -251,22 +253,21 @@ class HermeumMemoryProvider(MemoryProvider):
         try:
             operations = args.get("operations")
             if operations:
-                return self._handle_batch(operations)
+                return self._run_operations(operations)
             action = args.get("action") or ""
-            content = args.get("content") or args.get("new_text") or ""
-            old_text = args.get("old_text") or ""
-            if action == "add":
-                return _native_payload(self._call(self._api_required().agent_memory_add_without_preload_content,
-                                                  AgentMemoryAddRequest(content=content)))
-            if action == "patch":
-                return _native_payload(self._call(self._api_required().agent_memory_patch_without_preload_content,
-                                                  AgentMemoryPatchRequest(old_text=old_text, content=content)))
-            if action == "remove":
-                return _native_payload(self._call(self._api_required().agent_memory_remove_without_preload_content,
-                                                  AgentMemoryRemoveRequest(old_text=old_text)))
             if action == "replace":
                 return _failure(_REPLACE_REMOVED)
-            return _failure(f"Unknown action '{action}'. Use: add, patch, remove")
+            if action not in ("add", "patch", "remove"):
+                return _failure(f"Unknown action '{action or 'None'}'. Use: add, patch, remove")
+            # Legacy top-level single-op shape (unadvertised; tolerated for
+            # drifted calls) — translate it into a one-op batch so the server
+            # keeps one mutation path. Native aliases new_text to content.
+            content = args.get("content")
+            if content is None:
+                content = args.get("new_text")
+            return self._run_operations(
+                [{"action": action, "content": content, "old_text": args.get("old_text")}]
+            )
         except Exception as exc:
             log.warning("[hermeum-memory] %s failed", tool_name, exc_info=True)
             return _failure(f"Hermeum memory is unavailable: {exc}")
@@ -281,7 +282,7 @@ class HermeumMemoryProvider(MemoryProvider):
             raise RuntimeError("provider not initialized")
         return self._api
 
-    def _handle_batch(self, operations: Any) -> str:
+    def _run_operations(self, operations: Any) -> str:
         if not isinstance(operations, list):
             return _failure("operations must be a list of {action, content?, old_text?} objects.")
         built: list[AgentMemoryBatchRequestOperationsInner] = []

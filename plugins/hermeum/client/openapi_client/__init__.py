@@ -29,20 +29,17 @@ __all__ = [
     "ApiKeyError",
     "ApiAttributeError",
     "ApiException",
-    "AgentMemoryAdd200Response",
-    "AgentMemoryAdd200ResponseResult",
-    "AgentMemoryAdd200ResponseResultData",
-    "AgentMemoryAdd200ResponseResultDataOneOf",
-    "AgentMemoryAdd200ResponseResultDataOneOf1",
-    "AgentMemoryAddRequest",
+    "AgentMemoryBatch200Response",
+    "AgentMemoryBatch200ResponseResult",
+    "AgentMemoryBatch200ResponseResultData",
+    "AgentMemoryBatch200ResponseResultDataOneOf",
+    "AgentMemoryBatch200ResponseResultDataOneOf1",
     "AgentMemoryBatchRequest",
     "AgentMemoryBatchRequestOperationsInner",
-    "AgentMemoryPatchRequest",
     "AgentMemoryRead200Response",
     "AgentMemoryRead200ResponseResult",
     "AgentMemoryRead200ResponseResultData",
     "AgentMemoryRead200ResponseResultDataEntriesInner",
-    "AgentMemoryRemoveRequest",
     "AgentSessionAgentSessionEvents200Response",
     "AgentSessionAgentSessionEvents200ResponseResult",
     "AgentSessionAgentSessionEvents200ResponseResultData",
@@ -84,20 +81,17 @@ from openapi_client.exceptions import ApiAttributeError as ApiAttributeError
 from openapi_client.exceptions import ApiException as ApiException
 
 # import models into sdk package
-from openapi_client.models.agent_memory_add200_response import AgentMemoryAdd200Response as AgentMemoryAdd200Response
-from openapi_client.models.agent_memory_add200_response_result import AgentMemoryAdd200ResponseResult as AgentMemoryAdd200ResponseResult
-from openapi_client.models.agent_memory_add200_response_result_data import AgentMemoryAdd200ResponseResultData as AgentMemoryAdd200ResponseResultData
-from openapi_client.models.agent_memory_add200_response_result_data_one_of import AgentMemoryAdd200ResponseResultDataOneOf as AgentMemoryAdd200ResponseResultDataOneOf
-from openapi_client.models.agent_memory_add200_response_result_data_one_of1 import AgentMemoryAdd200ResponseResultDataOneOf1 as AgentMemoryAdd200ResponseResultDataOneOf1
-from openapi_client.models.agent_memory_add_request import AgentMemoryAddRequest as AgentMemoryAddRequest
+from openapi_client.models.agent_memory_batch200_response import AgentMemoryBatch200Response as AgentMemoryBatch200Response
+from openapi_client.models.agent_memory_batch200_response_result import AgentMemoryBatch200ResponseResult as AgentMemoryBatch200ResponseResult
+from openapi_client.models.agent_memory_batch200_response_result_data import AgentMemoryBatch200ResponseResultData as AgentMemoryBatch200ResponseResultData
+from openapi_client.models.agent_memory_batch200_response_result_data_one_of import AgentMemoryBatch200ResponseResultDataOneOf as AgentMemoryBatch200ResponseResultDataOneOf
+from openapi_client.models.agent_memory_batch200_response_result_data_one_of1 import AgentMemoryBatch200ResponseResultDataOneOf1 as AgentMemoryBatch200ResponseResultDataOneOf1
 from openapi_client.models.agent_memory_batch_request import AgentMemoryBatchRequest as AgentMemoryBatchRequest
 from openapi_client.models.agent_memory_batch_request_operations_inner import AgentMemoryBatchRequestOperationsInner as AgentMemoryBatchRequestOperationsInner
-from openapi_client.models.agent_memory_patch_request import AgentMemoryPatchRequest as AgentMemoryPatchRequest
 from openapi_client.models.agent_memory_read200_response import AgentMemoryRead200Response as AgentMemoryRead200Response
 from openapi_client.models.agent_memory_read200_response_result import AgentMemoryRead200ResponseResult as AgentMemoryRead200ResponseResult
 from openapi_client.models.agent_memory_read200_response_result_data import AgentMemoryRead200ResponseResultData as AgentMemoryRead200ResponseResultData
 from openapi_client.models.agent_memory_read200_response_result_data_entries_inner import AgentMemoryRead200ResponseResultDataEntriesInner as AgentMemoryRead200ResponseResultDataEntriesInner
-from openapi_client.models.agent_memory_remove_request import AgentMemoryRemoveRequest as AgentMemoryRemoveRequest
 from openapi_client.models.agent_session_agent_session_events200_response import AgentSessionAgentSessionEvents200Response as AgentSessionAgentSessionEvents200Response
 from openapi_client.models.agent_session_agent_session_events200_response_result import AgentSessionAgentSessionEvents200ResponseResult as AgentSessionAgentSessionEvents200ResponseResult
 from openapi_client.models.agent_session_agent_session_events200_response_result_data import AgentSessionAgentSessionEvents200ResponseResultData as AgentSessionAgentSessionEvents200ResponseResultData
