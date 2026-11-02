@@ -13,6 +13,9 @@ const { findAgentIdByTokenHash, ingestAgentSessionEvents } = vi.hoisted(() => ({
 vi.mock("@/server/usecases/mixin", () => ({
   sharedDatabase: { findAgentIdByTokenHash },
   BaseUseCase: class {},
+  // The memory use case extends OwnershipGuarded(BaseUseCase); these tests
+  // never exercise the ownership path.
+  OwnershipGuarded: (Base: new () => object) => class extends Base {},
 }));
 vi.mock("@/server/usecases/agent-session", () => ({
   AgentSessionUseCase: class {

@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
-import type { AgentMemoryEntry } from "@/entities";
+import type { AgentMemoryEntry, Context } from "@/entities";
 
-import { BaseUseCase } from "./mixin";
+import { BaseUseCase, OwnershipGuarded } from "./mixin";
 
 // Hermeum-managed agent memory. The agent-facing tool mirrors hermes-agent's
 // native `memory` tool (vendor/hermes-agent/tools/memory_tool.py and
@@ -153,7 +153,70 @@ function findUniqueMatch(entries: string[], oldText: string): LocateResult {
   return matches.length > 0 ? { index: matches[0]! } : { missing: true };
 }
 
-export class AgentMemoryUseCase extends BaseUseCase {
+export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
+  // Operator-facing operations (the agent detail Memory tab): ownership-
+  // guarded, id-addressed. The agent-facing plugin path below (read / batch) is
+  // ctx-less — it is reached only through the token-authenticated plugin
+  // protocol, where the agent identity comes from the ingest token.
+  async listEntries(ctx: Context, agentId: string): Promise<AgentMemoryEntry[]> {
+    await this.#authorize(ctx, agentId);
+    return await this.read(agentId);
+  }
+
+  async addEntry(ctx: Context, agentId: string, content: string): Promise<AgentMemoryEntry[]> {
+    await this.#authorize(ctx, agentId);
+    const trimmed = content.trim();
+    if (!trimmed) {
+      throw new Error("Memory entry content cannot be empty.");
+    }
+    // Exact duplicates are a no-op, matching the memory tool's semantics.
+    const entries = await this.read(agentId);
+    if (entries.some((entry) => entry.content === trimmed)) {
+      return entries;
+    }
+    // The adaptor stamps createdAt/updatedAt with the database clock and
+    // returns the stored row.
+    const stored = await this.db.addMemoryEntry(agentId, {
+      id: randomUUID(),
+      content: trimmed,
+    });
+    this.logger.info("agent memory entry added (operator)", {
+      agentId,
+      entryCount: entries.length + 1,
+    });
+    return [...entries, stored];
+  }
+
+  async patchEntry(
+    ctx: Context,
+    agentId: string,
+    id: string,
+    content: string
+  ): Promise<AgentMemoryEntry[]> {
+    await this.#authorize(ctx, agentId);
+    const trimmed = content.trim();
+    if (!trimmed) {
+      throw new Error("Memory entry content cannot be empty.");
+    }
+    // The adaptor stamps updatedAt with the database clock.
+    const updated = await this.db.patchMemoryEntry(agentId, id, trimmed);
+    if (!updated) {
+      throw new Error("Memory entry not found.");
+    }
+    this.logger.info("agent memory entry patched (operator)", { agentId, id });
+    return await this.read(agentId);
+  }
+
+  async removeEntry(ctx: Context, agentId: string, id: string): Promise<AgentMemoryEntry[]> {
+    await this.#authorize(ctx, agentId);
+    const removed = await this.db.removeMemoryEntry(agentId, id);
+    if (!removed) {
+      throw new Error("Memory entry not found.");
+    }
+    this.logger.info("agent memory entry removed (operator)", { agentId, id });
+    return await this.read(agentId);
+  }
+
   async read(agentId: string): Promise<AgentMemoryEntry[]> {
     return await this.db.listMemoryEntries(agentId);
   }
@@ -278,5 +341,15 @@ export class AgentMemoryUseCase extends BaseUseCase {
       entryCount: working.length,
     });
     return successResult(working.length, `Applied ${operations.length} operation(s).`);
+  }
+
+  // Operator writes require ownership of the agent; the runtime lookup supplies
+  // the userId the Resources router's session is checked against.
+  async #authorize(ctx: Context, agentId: string): Promise<void> {
+    const agent = await this.runtime.getHermesAgent(agentId);
+    if (!agent) {
+      throw new Error(`HermesAgent ${agentId} not found`);
+    }
+    this.verifyOwnership(ctx, agent);
   }
 }

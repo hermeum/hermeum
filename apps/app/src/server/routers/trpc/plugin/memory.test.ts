@@ -27,6 +27,9 @@ vi.mock("@/server/usecases/mixin", () => {
       logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
       db = memoryDb;
     },
+    // The memory use case extends OwnershipGuarded(BaseUseCase); the plugin
+    // procedures exercised here never need the ownership methods.
+    OwnershipGuarded: (Base: new () => object) => class extends Base {},
     sharedDatabase: { findAgentIdByTokenHash },
   };
 });

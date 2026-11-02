@@ -44,4 +44,18 @@ export interface Database {
   // minted by the use case).
   listMemoryEntries(agentId: string): Promise<AgentMemoryEntry[]>;
   saveMemoryEntries(agentId: string, entries: AgentMemoryEntry[]): Promise<void>;
+
+  // Single-row operations for the operator UI: one statement per action
+  // instead of the read-modify-write + full-save cycle. The adaptor stamps the
+  // timestamps (one clock: the database's) and returns the stored row.
+  // addMemoryEntry appends (the adaptor computes the next position);
+  // patchMemoryEntry returns null when no row matched (the use case turns that
+  // into a not-found error). Position gaps left by removes are harmless — reads
+  // order by position.
+  addMemoryEntry(
+    agentId: string,
+    entry: Pick<AgentMemoryEntry, "id" | "content">
+  ): Promise<AgentMemoryEntry>;
+  patchMemoryEntry(agentId: string, id: string, content: string): Promise<AgentMemoryEntry | null>;
+  removeMemoryEntry(agentId: string, id: string): Promise<boolean>;
 }

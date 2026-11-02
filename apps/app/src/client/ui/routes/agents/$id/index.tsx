@@ -29,17 +29,20 @@ import { PhaseBadge } from "@/client/ui/components/phase-badge";
 import { CopyButton } from "@/client/ui/components/copy-button";
 import { EditInstanceDialog } from "./-components/edit-agent-dialog";
 import { AgentTab } from "./-components/agent-tab";
+import { MemoryTab } from "./-components/memory-tab";
 import { SessionsTab } from "./-components/sessions-tab";
+
+type AgentDetailTab = "agent" | "sessions" | "memory";
 
 export const Route = createFileRoute("/agents/$id/")({
   component: AgentDetailPage,
-  validateSearch: (search: Record<string, unknown>): { tab?: "agent" | "sessions"; page?: number } => {
+  validateSearch: (search: Record<string, unknown>): { tab?: AgentDetailTab; page?: number } => {
     const tab = search.tab;
     const rawPage = search.page;
     const page =
       typeof rawPage === "number" ? rawPage : typeof rawPage === "string" ? Number(rawPage) : NaN;
     return {
-      ...(tab === "agent" || tab === "sessions" ? { tab } : {}),
+      ...(tab === "agent" || tab === "sessions" || tab === "memory" ? { tab } : {}),
       ...(Number.isInteger(page) && page >= 1 ? { page } : {}),
     };
   },
@@ -49,7 +52,7 @@ function AgentDetailPage() {
   const { id } = Route.useParams();
   const { tab = "agent", page = 1 } = Route.useSearch();
   const navigate = useNavigate();
-  const setTab = (tab: "agent" | "sessions") =>
+  const setTab = (tab: AgentDetailTab) =>
     void navigate({ to: "/agents/$id", params: { id }, search: (prev) => ({ ...prev, tab }) });
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -179,10 +182,11 @@ function AgentDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "agent" | "sessions")}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as AgentDetailTab)}>
         <TabsList variant="line">
           <TabsTrigger value="agent">Agent</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="memory">Memory</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agent">
@@ -191,6 +195,10 @@ function AgentDetailPage() {
 
         <TabsContent value="sessions">
           <SessionsTab agentId={id} page={page} />
+        </TabsContent>
+
+        <TabsContent value="memory">
+          <MemoryTab agentId={id} readOnly={agent.archived === true} />
         </TabsContent>
       </Tabs>
 

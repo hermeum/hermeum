@@ -122,6 +122,9 @@ function makeDatabase(): Database {
     revokeAgentToken: vi.fn(),
     listMemoryEntries: vi.fn(),
     saveMemoryEntries: vi.fn(),
+    addMemoryEntry: vi.fn(),
+    patchMemoryEntry: vi.fn(),
+    removeMemoryEntry: vi.fn(),
   };
 }
 

@@ -238,13 +238,7 @@ export class PostgresDatabase implements Database {
       .from(agentMemoryEntries)
       .where(eq(agentMemoryEntries.agentId, agentId))
       .orderBy(asc(agentMemoryEntries.position));
-    return rows.map((row) => ({
-      id: row.id,
-      agentId: row.agentId,
-      content: row.content,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    }));
+    return rows.map(toMemoryEntry);
   }
 
   async saveMemoryEntries(agentId: string, entries: AgentMemoryEntry[]): Promise<void> {
@@ -286,4 +280,62 @@ export class PostgresDatabase implements Database {
         });
     });
   }
+
+  async addMemoryEntry(
+    agentId: string,
+    entry: Pick<AgentMemoryEntry, "id" | "content">
+  ): Promise<AgentMemoryEntry> {
+    // Append: position is the next slot for this agent, computed inside the
+    // INSERT so no read is needed; the database stamps both timestamps (one
+    // clock). Single-replica deployments serialize writes; multi-replica
+    // deployments would need a per-agent lock here.
+    const [row] = await this.db
+      .insert(agentMemoryEntries)
+      .values({
+        id: entry.id,
+        agentId,
+        content: entry.content,
+        position: sql<number>`(select coalesce(max(${agentMemoryEntries.position}) + 1, 0) from ${agentMemoryEntries} where ${agentMemoryEntries.agentId} = ${agentId})`,
+        createdAt: sql`now()`,
+        updatedAt: sql`now()`,
+      })
+      .returning();
+    if (!row) {
+      throw new Error("Failed to create memory entry.");
+    }
+    return toMemoryEntry(row);
+  }
+
+  async patchMemoryEntry(
+    agentId: string,
+    id: string,
+    content: string
+  ): Promise<AgentMemoryEntry | null> {
+    const [row] = await this.db
+      .update(agentMemoryEntries)
+      .set({ content, updatedAt: sql`now()` })
+      .where(and(eq(agentMemoryEntries.agentId, agentId), eq(agentMemoryEntries.id, id)))
+      .returning();
+    return row ? toMemoryEntry(row) : null;
+  }
+
+  async removeMemoryEntry(agentId: string, id: string): Promise<boolean> {
+    const rows = await this.db
+      .delete(agentMemoryEntries)
+      .where(and(eq(agentMemoryEntries.agentId, agentId), eq(agentMemoryEntries.id, id)))
+      .returning({ id: agentMemoryEntries.id });
+    return rows.length > 0;
+  }
+}
+
+type MemoryEntryRow = typeof agentMemoryEntries.$inferSelect;
+
+function toMemoryEntry(row: MemoryEntryRow): AgentMemoryEntry {
+  return {
+    id: row.id,
+    agentId: row.agentId,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
