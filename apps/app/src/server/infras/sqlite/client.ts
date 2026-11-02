@@ -1,6 +1,6 @@
 import DatabaseClient from "better-sqlite3";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
-import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import {
   AgentMemoryEntry,
@@ -226,46 +226,6 @@ export class SqliteDatabase implements Database {
       .where(eq(agentMemoryEntries.agentId, agentId))
       .orderBy(asc(agentMemoryEntries.position));
     return rows.map(toMemoryEntry);
-  }
-
-  async saveMemoryEntries(agentId: string, entries: AgentMemoryEntry[]): Promise<void> {
-    // Keyed on id, so an entry's id is a durable key rather than an artifact
-    // of a rewrite: unchanged entries keep their row (no churn, created_at
-    // preserved), changed entries update in place, and only entries the use
-    // case dropped are deleted. Position carries the list order; one
-    // transaction keeps the save atomic.
-    this.db.transaction((tx) => {
-      const ids = entries.map((entry) => entry.id);
-      if (ids.length === 0) {
-        tx.delete(agentMemoryEntries).where(eq(agentMemoryEntries.agentId, agentId)).run();
-        return;
-      }
-      tx.delete(agentMemoryEntries)
-        .where(and(eq(agentMemoryEntries.agentId, agentId), notInArray(agentMemoryEntries.id, ids)))
-        .run();
-      tx.insert(agentMemoryEntries)
-        .values(
-          entries.map((entry, position) => ({
-            id: entry.id,
-            agentId,
-            content: entry.content,
-            position,
-            createdAt: new Date(entry.createdAt),
-            updatedAt: new Date(entry.updatedAt),
-          }))
-        )
-        .onConflictDoUpdate({
-          target: agentMemoryEntries.id,
-          // `excluded` is the row proposed by this INSERT: apply its values to
-          // the existing row, keeping the stored created_at.
-          set: {
-            content: sql`excluded.content`,
-            position: sql`excluded.position`,
-            updatedAt: sql`excluded.updated_at`,
-          },
-        })
-        .run();
-    });
   }
 
   async addMemoryEntry(

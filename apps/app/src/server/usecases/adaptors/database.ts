@@ -35,23 +35,15 @@ export interface Database {
   revokeAgentToken(agentId: string): Promise<void>;
 
   // Hermeum-managed agent memory (the hermeum memory provider). One store per
-  // agent; the use case owns the matching/edit rules (mirroring the native
-  // store's add/patch/remove semantics) and hands the adaptor the final entry
-  // list. listMemoryEntries returns the agent's entries in list order (the
-  // position column preserves it); saveMemoryEntries persists the list
-  // atomically, keyed by entry id — unchanged entries keep their row, changed
-  // entries update in place, dropped entries are deleted (ids/timestamps are
-  // minted by the use case).
+  // agent; entries are operator-authored and read-only to the agent.
+  // listMemoryEntries returns the agent's entries in list order (the position
+  // column preserves it). Writes are single-row statements — no full-list
+  // replace: addMemoryEntry appends (the adaptor computes the next position)
+  // and stamps both timestamps with the database clock; patchMemoryEntry
+  // returns null when no row matched; removeMemoryEntry returns false when no
+  // row matched (the use case turns those into not-found errors). Position gaps
+  // left by removes are harmless — reads order by position.
   listMemoryEntries(agentId: string): Promise<AgentMemoryEntry[]>;
-  saveMemoryEntries(agentId: string, entries: AgentMemoryEntry[]): Promise<void>;
-
-  // Single-row operations for the operator UI: one statement per action
-  // instead of the read-modify-write + full-save cycle. The adaptor stamps the
-  // timestamps (one clock: the database's) and returns the stored row.
-  // addMemoryEntry appends (the adaptor computes the next position);
-  // patchMemoryEntry returns null when no row matched (the use case turns that
-  // into a not-found error). Position gaps left by removes are harmless — reads
-  // order by position.
   addMemoryEntry(
     agentId: string,
     entry: Pick<AgentMemoryEntry, "id" | "content">

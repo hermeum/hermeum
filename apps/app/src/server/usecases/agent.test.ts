@@ -121,7 +121,6 @@ function makeDatabase(): Database {
     findAgentIdByTokenHash: vi.fn(),
     revokeAgentToken: vi.fn(),
     listMemoryEntries: vi.fn(),
-    saveMemoryEntries: vi.fn(),
     addMemoryEntry: vi.fn(),
     patchMemoryEntry: vi.fn(),
     removeMemoryEntry: vi.fn(),

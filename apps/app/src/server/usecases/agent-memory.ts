@@ -14,9 +14,9 @@ import { BaseUseCase, OwnershipGuarded } from "./mixin";
 // context its creators curated — not to let the agent grow the store without
 // bound. Only operators add, patch, and remove entries.
 //
-// Persistence is the Database adaptor: listMemoryEntries / the id-keyed
-// saveMemoryEntries batch path is gone; single-row add/patch/remove statements
-// stamp their own timestamps (the database's clock).
+// Persistence is the Database adaptor's listMemoryEntries plus single-row
+// add/patch/remove statements, which stamp their own timestamps (the
+// database's clock).
 
 export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
   // -- Operator-facing operations (the agent detail Memory tab) ------------

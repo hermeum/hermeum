@@ -41,12 +41,6 @@ function makeDatabase(): Database {
     listMemoryEntries: vi.fn(async (agentId: string) =>
       (byAgent.get(agentId) ?? []).map((entry) => ({ ...entry }))
     ),
-    saveMemoryEntries: vi.fn(async (agentId: string, entries: AgentMemoryEntry[]) => {
-      byAgent.set(
-        agentId,
-        entries.map((entry) => ({ ...entry }))
-      );
-    }),
     addMemoryEntry: vi.fn(
       async (agentId: string, entry: Pick<AgentMemoryEntry, "id" | "content">) => {
         const now = new Date().toISOString();
@@ -129,7 +123,6 @@ describe("AgentMemoryUseCase operator entries", () => {
     await expect(memory.removeEntry(ctx, AGENT, "entry-id")).rejects.toThrow(
       "don't have permission"
     );
-    expect(db.saveMemoryEntries).not.toHaveBeenCalled();
     expect(db.addMemoryEntry).not.toHaveBeenCalled();
     expect(db.patchMemoryEntry).not.toHaveBeenCalled();
     expect(db.removeMemoryEntry).not.toHaveBeenCalled();
