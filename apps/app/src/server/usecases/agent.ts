@@ -218,35 +218,42 @@ class HermeumPlugin implements ManagedAgentAspect {
   }
 }
 
-// Hermeum memory: agent memory is a Hermeum-managed store, so
-// config.memory.provider is pinned to "hermeum" — the hermeum plugin registers
-// that provider, and upstream activates one external provider at a time. An
-// explicitly different provider is rejected before this layer runs (the field
-// is a literal in hermes-config/memory.ts); this aspect guarantees presence
-// when the memory block is absent and repairs a value written through a path
-// that skipped validation. Only `provider` is forced — other memory keys
-// (built-in store flags, char limits) pass through as the operator set them.
-// Deployment-wide — no per-agent context, so ctx is ignored.
+// Hermeum memory: agent memory is a Hermeum-managed store, so the memory
+// policy is pinned — provider "hermeum" plus both built-in stores off.
+// `provider` alone is additive upstream: an external provider runs alongside
+// MEMORY.md/USER.md, so the flags complete the replacement (the built-in
+// `memory` tool and its prompt guidance are dropped). An explicit different
+// value is rejected before this layer runs (the fields are literals in
+// hermes-config/memory.ts); this aspect guarantees presence when the memory
+// block is absent and repairs a value written through a path that skipped
+// validation. Other memory keys (char limits, approval) pass through as the
+// operator set them. Deployment-wide — no per-agent context, so ctx is
+// ignored.
 class HermeumMemory implements ManagedAgentAspect {
   wrapInput(input: AgentInput): AgentInput {
-    return { ...input, config: this.#withMemoryProvider(input.config) };
+    return { ...input, config: this.#withMemoryPolicy(input.config) };
   }
 
   wrapPatch(patch: AgentInput): AgentInput {
     if (patch.config === undefined) return patch;
-    return { ...patch, config: this.#withMemoryProvider(patch.config) };
+    return { ...patch, config: this.#withMemoryPolicy(patch.config) };
   }
 
   stripAgent(agent: Agent): Agent {
-    // Visible, non-secret config: operators keep seeing the enforced provider.
+    // Visible, non-secret config: operators keep seeing the enforced policy.
     return agent;
   }
 
-  // Idempotent: an existing "hermeum" keeps the same value.
-  #withMemoryProvider(configValue: AgentInput["config"]): NonNullable<AgentInput["config"]> {
+  // Idempotent: an existing enforced value keeps the same value.
+  #withMemoryPolicy(configValue: AgentInput["config"]): NonNullable<AgentInput["config"]> {
     return {
       ...configValue,
-      memory: { ...configValue?.memory, provider: "hermeum" },
+      memory: {
+        ...configValue?.memory,
+        provider: "hermeum",
+        memory_enabled: false,
+        user_profile_enabled: false,
+      },
     };
   }
 }

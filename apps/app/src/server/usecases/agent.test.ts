@@ -1142,16 +1142,31 @@ describe("AgentUseCase managed hermeum plugin", () => {
 });
 
 describe("AgentUseCase managed hermeum memory", () => {
-  it("rejects a non-hermeum provider at validation", () => {
+  it("rejects a non-hermeum provider or enabled built-in store at validation", () => {
     expect(() =>
       AgentInputSchema.parse({ config: { memory: { provider: "retaindb" } } })
     ).toThrow();
     expect(() =>
-      AgentInputSchema.parse({ config: { memory: { provider: "hermeum" } } })
+      AgentInputSchema.parse({ config: { memory: { memory_enabled: true } } })
+    ).toThrow();
+    expect(() =>
+      AgentInputSchema.parse({ config: { memory: { user_profile_enabled: true } } })
+    ).toThrow();
+    expect(() =>
+      AgentInputSchema.parse({
+        config: {
+          memory: {
+            provider: "hermeum",
+            memory_enabled: false,
+            user_profile_enabled: false,
+            memory_char_limit: 3000,
+          },
+        },
+      })
     ).not.toThrow();
   });
 
-  it("createHermesAgent injects the hermeum provider when the config omits memory", async () => {
+  it("createHermesAgent injects the memory policy when the config omits memory", async () => {
     const runtime = makeRuntime();
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ config: input.config })
@@ -1161,11 +1176,15 @@ describe("AgentUseCase managed hermeum memory", () => {
     await useCase.createHermesAgent(makeCtx("user-1"), {});
 
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
-      expect.objectContaining({ config: { memory: { provider: "hermeum" } } })
+      expect.objectContaining({
+        config: {
+          memory: { provider: "hermeum", memory_enabled: false, user_profile_enabled: false },
+        },
+      })
     );
   });
 
-  it("createHermesAgent preserves other config and memory keys, forcing only the provider", async () => {
+  it("createHermesAgent preserves other config and pass-through memory keys while pinning the policy", async () => {
     const runtime = makeRuntime();
     (runtime.createHermesAgent as ReturnType<typeof vi.fn>).mockImplementation(
       async (input: AgentInput) => makeAgent({ config: input.config })
@@ -1173,20 +1192,25 @@ describe("AgentUseCase managed hermeum memory", () => {
     const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.createHermesAgent(makeCtx("user-1"), {
-      config: { memory: { memory_enabled: false }, browser: { cloud_provider: "local" } },
+      config: { memory: { memory_char_limit: 3000 }, browser: { cloud_provider: "local" } },
     });
 
     expect(runtime.createHermesAgent).toHaveBeenCalledWith(
       expect.objectContaining({
         config: {
-          memory: { memory_enabled: false, provider: "hermeum" },
+          memory: {
+            memory_char_limit: 3000,
+            provider: "hermeum",
+            memory_enabled: false,
+            user_profile_enabled: false,
+          },
           browser: { cloud_provider: "local" },
         },
       })
     );
   });
 
-  it("updateHermesAgent injects the provider into a config-carrying patch", async () => {
+  it("updateHermesAgent injects the memory policy into a config-carrying patch", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeAgent({ userId: "user-1" })
@@ -1197,13 +1221,20 @@ describe("AgentUseCase managed hermeum memory", () => {
     const useCase = makeUseCase(runtime, makeConfig());
 
     await useCase.updateHermesAgent(makeCtx("user-1"), "agent-1", {
-      config: { memory: { user_profile_enabled: false } },
+      config: { memory: { memory_char_limit: 1500 } },
     });
 
     expect(runtime.patchHermesAgent).toHaveBeenCalledWith({
       id: "agent-1",
       patch: expect.objectContaining({
-        config: { memory: { user_profile_enabled: false, provider: "hermeum" } },
+        config: {
+          memory: {
+            memory_char_limit: 1500,
+            provider: "hermeum",
+            memory_enabled: false,
+            user_profile_enabled: false,
+          },
+        },
       }),
     });
   });
@@ -1226,15 +1257,24 @@ describe("AgentUseCase managed hermeum memory", () => {
     });
   });
 
-  it("keeps the enforced provider visible on reads", async () => {
+  it("keeps the enforced memory policy visible on reads", async () => {
     const runtime = makeRuntime();
     (runtime.getHermesAgent as ReturnType<typeof vi.fn>).mockResolvedValue(
-      makeAgent({ userId: "user-1", config: { memory: { provider: "hermeum" } } })
+      makeAgent({
+        userId: "user-1",
+        config: {
+          memory: { provider: "hermeum", memory_enabled: false, user_profile_enabled: false },
+        },
+      })
     );
     const useCase = makeUseCase(runtime, makeConfig());
 
     const agent = await useCase.getHermesAgent(makeCtx("user-1"), "agent-1");
-    expect(agent?.config?.memory?.provider).toBe("hermeum");
+    expect(agent?.config?.memory).toMatchObject({
+      provider: "hermeum",
+      memory_enabled: false,
+      user_profile_enabled: false,
+    });
   });
 });
 
