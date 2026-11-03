@@ -194,7 +194,7 @@ function AgentDetailPage() {
         </TabsContent>
 
         <TabsContent value="memory">
-          <MemoryTab agentId={id} readOnly={agent.archived === true} />
+          <MemoryTab agent={agent} />
         </TabsContent>
 
         <TabsContent value="sessions">
