@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "tsx watch src/server/server.ts",
-    "build": "vite build & vite build --mode server & vite build --mode cmd & wait",
+    "build": "vite build & a=$!; vite build --mode server & b=$!; vite build --mode cmd & c=$!; wait $a && wait $b && wait $c",
     "start": "NODE_ENV=production tsx src/server/server.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

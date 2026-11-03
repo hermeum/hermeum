@@ -19,15 +19,16 @@ RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate \
  && apk add --no-cache build-base python3
 
 # --------------------------------------------------------------------------- #
-# deps — install workspace dependencies (cacheable, package.json-only)        #
+# deps — install workspace dependencies (cacheable, package.json + sources)    #
 # --------------------------------------------------------------------------- #
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/app/package.json ./apps/app/
-COPY packages/components/package.json ./packages/components/
-COPY packages/eslint-config/package.json ./packages/eslint-config/
-COPY packages/typescript-config/package.json ./packages/typescript-config/
+# injectWorkspacePackages copies workspace packages into the store at install
+# time, so their sources must be here — package.json alone yields a
+# package.json-only copy and tailwind cannot resolve components/index.css.
+COPY packages ./packages
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
@@ -38,6 +39,7 @@ FROM deps AS builder
 WORKDIR /app
 COPY . .
 RUN pnpm --filter @hermeum/app build \
+ && test -f apps/app/dist/client/index.html \
  && pnpm deploy --filter @hermeum/app --prod /deploy
 
 # --------------------------------------------------------------------------- #
