@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@hermeum/components/ui/button";
@@ -18,15 +18,20 @@ import { Skeleton } from "@hermeum/components/ui/skeleton";
 import { Textarea } from "@hermeum/components/ui/textarea";
 
 import { useTRPC } from "@/router";
-import type { AgentMemoryEntry } from "@/entities";
+import type { Agent, AgentMemoryEntry } from "@/entities";
 
 // Operator view of the agent's Hermeum-managed memory. Entries live on the
 // control plane, so they stay visible and editable while the agent is down;
 // the agent picks up changes on its next turn (prefetch re-reads the list).
 // Archived agents are read-only, matching the rest of the detail page.
-export function MemoryTab({ agentId, readOnly = false }: { agentId: string; readOnly?: boolean }) {
+export function MemoryTab({ agent }: { agent: Agent }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const agentId = agent.id;
+  const readOnly = agent.archived === true;
+  // An empty provider means the agent predates (or skipped) the HermeumMemory
+  // pin; redeploying re-applies the managed aspects and injects "hermeum".
+  const needsRedeploy = agent.config?.memory?.provider;
   const {
     data: entries,
     isPending,
@@ -75,6 +80,47 @@ export function MemoryTab({ agentId, readOnly = false }: { agentId: string; read
       onError: (e) => toast.error(e.message),
     })
   );
+
+  // Redeploy only fixes the provider pin; the agent detail query carries the
+  // config, so refetch it to hide the prompt once the provider is set.
+  const { mutate: redeployAgent, isPending: isRedeploying } = useMutation(
+    trpc.agent.redeploy.mutationOptions({
+      onSuccess: () => {
+        toast.success("Agent redeployed");
+        queryClient.invalidateQueries({ queryKey: trpc.agent.get.queryKey({ id: agentId }) });
+      },
+      onError: (e) => toast.error(e.message),
+    })
+  );
+
+  // Until the provider is pinned, the agent can't read memory, so the entry
+  // editor would be inert. Surface only the healing action in that state.
+  if (needsRedeploy) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium">Memory provider isn&apos;t configured</p>
+              <p className="text-sm text-muted-foreground">
+                Redeploy this agent to activate Hermeum memory so it can read these entries.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                disabled={isRedeploying || readOnly}
+                onClick={() => redeployAgent({ id: agentId })}
+              >
+                <RefreshCw className={`size-4 ${isRedeploying ? "animate-spin" : ""}`} />
+                Redeploy
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isPending) {
     return (
