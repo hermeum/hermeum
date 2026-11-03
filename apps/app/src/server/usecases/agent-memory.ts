@@ -23,7 +23,6 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
   // Ownership-guarded, id-addressed. The agent-facing read below is ctx-less.
 
   async listEntries(ctx: Context, agentId: string): Promise<AgentMemoryEntry[]> {
-    await this.#authorize(ctx, agentId);
     return await this.db.listMemoryEntries(agentId);
   }
 

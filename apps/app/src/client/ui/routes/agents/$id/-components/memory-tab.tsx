@@ -31,7 +31,7 @@ export function MemoryTab({ agent }: { agent: Agent }) {
   const readOnly = agent.archived === true;
   // An empty provider means the agent predates (or skipped) the HermeumMemory
   // pin; redeploying re-applies the managed aspects and injects "hermeum".
-  const needsRedeploy = agent.config?.memory?.provider;
+  const needsRedeploy = !agent.config?.memory?.provider;
   const {
     data: entries,
     isPending,
