@@ -31,6 +31,10 @@ function makeDatabase(): Database {
     storeAgentToken: vi.fn(),
     findAgentIdByTokenHash: vi.fn(),
     revokeAgentToken: vi.fn(),
+    listMemoryEntries: vi.fn().mockResolvedValue([]),
+    addMemoryEntry: vi.fn(),
+    patchMemoryEntry: vi.fn(),
+    removeMemoryEntry: vi.fn(),
   };
 }
 

@@ -54,6 +54,7 @@ export { BrowserCloudProviderSchema, BrowserSchema, type BrowserCloudProvider, t
 export { XSearchSchema, type XSearch } from "./x-search";
 export { ImageGenSchema, type ImageGen } from "./image-gen";
 export { VideoGenSchema, type VideoGen } from "./video-gen";
+export { MemorySchema, type Memory } from "./memory";
 
 import { z } from "zod";
 import { AgentConfigSchema } from "./agent";
@@ -69,6 +70,7 @@ import { BrowserSchema } from "./browser";
 import { XSearchSchema } from "./x-search";
 import { ImageGenSchema } from "./image-gen";
 import { VideoGenSchema } from "./video-gen";
+import { MemorySchema } from "./memory";
 
 // Aggregator for the per-platform sub-schemas under config.platforms.*.
 // Each platform owns its own schema file (slack.ts, webhook.ts, teams.ts,
@@ -111,6 +113,7 @@ export const ConfigSchema = z
     x_search: XSearchSchema,
     image_gen: ImageGenSchema,
     video_gen: VideoGenSchema,
+    memory: MemorySchema,
   })
   .optional()
   .describe(

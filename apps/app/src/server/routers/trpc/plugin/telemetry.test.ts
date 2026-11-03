@@ -7,9 +7,15 @@ const { findAgentIdByTokenHash, ingestAgentSessionEvents } = vi.hoisted(() => ({
 
 // mixin is mocked so importing plugin/shared.ts doesn't pull the real
 // singleton (config + database clients); agent-session is mocked so the
-// router's module-level use case never touches real adaptors.
+// router's module-level use case never touches real adaptors. The memory
+// router (also mounted on pluginRouter) needs BaseUseCase to import; these
+// tests never exercise memory, so an inert stub is enough.
 vi.mock("@/server/usecases/mixin", () => ({
   sharedDatabase: { findAgentIdByTokenHash },
+  BaseUseCase: class {},
+  // The memory use case extends OwnershipGuarded(BaseUseCase); these tests
+  // never exercise the ownership path.
+  OwnershipGuarded: (Base: new () => object) => class extends Base {},
 }));
 vi.mock("@/server/usecases/agent-session", () => ({
   AgentSessionUseCase: class {

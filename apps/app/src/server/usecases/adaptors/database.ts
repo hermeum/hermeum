@@ -1,4 +1,5 @@
 import type {
+  AgentMemoryEntry,
   AgentSession,
   AgentSessionSummary,
   PaginatedResult,
@@ -32,4 +33,21 @@ export interface Database {
   storeAgentToken(agentId: string, tokenHash: string): Promise<void>;
   findAgentIdByTokenHash(tokenHash: string): Promise<string | null>;
   revokeAgentToken(agentId: string): Promise<void>;
+
+  // Hermeum-managed agent memory (the hermeum memory provider). One store per
+  // agent; entries are operator-authored and read-only to the agent.
+  // listMemoryEntries returns the agent's entries in list order (the position
+  // column preserves it). Writes are single-row statements — no full-list
+  // replace: addMemoryEntry appends (the adaptor computes the next position)
+  // and stamps both timestamps with the database clock; patchMemoryEntry
+  // returns null when no row matched; removeMemoryEntry returns false when no
+  // row matched (the use case turns those into not-found errors). Position gaps
+  // left by removes are harmless — reads order by position.
+  listMemoryEntries(agentId: string): Promise<AgentMemoryEntry[]>;
+  addMemoryEntry(
+    agentId: string,
+    entry: Pick<AgentMemoryEntry, "id" | "content">
+  ): Promise<AgentMemoryEntry>;
+  patchMemoryEntry(agentId: string, id: string, content: string): Promise<AgentMemoryEntry | null>;
+  removeMemoryEntry(agentId: string, id: string): Promise<boolean>;
 }
