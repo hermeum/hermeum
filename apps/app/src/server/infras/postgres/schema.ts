@@ -47,12 +47,11 @@ export const agentTokens = pgTable("agent_tokens", {
 });
 
 // Hermeum-managed agent memory (the hermeum memory provider). One row per
-// entry — the native store's §-delimited MEMORY.md blocks, kept server-side so
-// operators can read and correct them while the agent is down. The use case
-// mints ids/timestamps and persists the full list atomically, keyed by id
-// (unchanged entries keep their row); `position` preserves the list order
-// (same-millisecond entries would otherwise tie). No foreign key — agents live
-// in the Kubernetes Runtime.
+// entry — operator-authored notes, kept server-side so operators can read and
+// correct them while the agent is down. Writes are single-row: the adaptor
+// appends a new entry at the next `position` and stamps both timestamps with
+// the database clock; the entry id is the durable key. `position` preserves the
+// list order. No foreign key — agents live in the Kubernetes Runtime.
 export const agentMemoryEntries = pgTable(
   "agent_memory_entries",
   {

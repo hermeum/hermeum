@@ -196,6 +196,21 @@ describe("AgentMemoryUseCase operator entries", () => {
     await expect(memory.removeEntry(ctx, AGENT, "missing")).rejects.toThrow("not found");
   });
 
+  it("rejects a patch that would duplicate another entry", async () => {
+    const memory = makeUseCase();
+    const ctx = makeCtx();
+    await memory.addEntry(ctx, AGENT, "entry one");
+    const entries = await memory.addEntry(ctx, AGENT, "entry two");
+
+    await expect(memory.patchEntry(ctx, AGENT, entries[1]!.id, "entry one")).rejects.toThrow(
+      "Memory entry already exists."
+    );
+    await expect(memory.listEntries(ctx, AGENT)).resolves.toEqual([
+      expect.objectContaining({ content: "entry one" }),
+      expect.objectContaining({ content: "entry two" }),
+    ]);
+  });
+
   it("removes an entry by id", async () => {
     const memory = makeUseCase();
     const ctx = makeCtx();

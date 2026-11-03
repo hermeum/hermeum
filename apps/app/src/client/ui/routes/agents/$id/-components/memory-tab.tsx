@@ -118,8 +118,8 @@ export function MemoryTab({ agentId, readOnly = false }: { agentId: string; read
         <p className="text-sm text-muted-foreground">
           No memory entries yet.{" "}
           {readOnly
-            ? "The agent has not saved anything."
-            : "Add one above, or let the agent save facts with its memory tool."}
+            ? "This agent has no memory."
+            : "Add one above — memory is operator-authored; the agent only reads it."}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

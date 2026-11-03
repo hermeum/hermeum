@@ -62,13 +62,23 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
     if (!trimmed) {
       throw new Error("Memory entry content cannot be empty.");
     }
+    // Keep the store duplicate-free: a patch must not create an entry matching
+    // another one (add refuses exact duplicates too).
+    const entries = await this.db.listMemoryEntries(agentId);
+    if (!entries.some((entry) => entry.id === id)) {
+      throw new Error("Memory entry not found.");
+    }
+    if (entries.some((entry) => entry.id !== id && entry.content === trimmed)) {
+      throw new Error("Memory entry already exists.");
+    }
     // The adaptor stamps updatedAt with the database clock.
     const updated = await this.db.patchMemoryEntry(agentId, id, trimmed);
     if (!updated) {
+      // The entry vanished between the read and the write.
       throw new Error("Memory entry not found.");
     }
     this.logger.info("agent memory entry patched (operator)", { agentId, id });
-    return await this.db.listMemoryEntries(agentId);
+    return entries.map((entry) => (entry.id === id ? updated : entry));
   }
 
   async removeEntry(ctx: Context, agentId: string, id: string): Promise<AgentMemoryEntry[]> {
