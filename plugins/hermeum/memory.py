@@ -89,8 +89,8 @@ class HermeumMemoryProvider(MemoryProvider):
         return (
             "# Hermeum Memory\n"
             "Active. Your memory is operator-managed: entries are curated in Hermeum and "
-            "injected as recalled context. There is no memory tool — the operator updates "
-            "memory, not you."
+            "injected as recalled context. You have no Hermeum memory tool — the operator "
+            "updates memory, not you."
         )
 
     def prefetch(self, query: str, *, session_id: str = "") -> str:

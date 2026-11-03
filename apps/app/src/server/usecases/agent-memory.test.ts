@@ -71,7 +71,7 @@ function makeDatabase(): Database {
   } as unknown as Database;
 }
 
-function makeRuntime(agent: { id: string; userId: string } | null): Runtime {
+function makeRuntime(agent: { id: string; userId: string; archived?: boolean } | null): Runtime {
   return { getHermesAgent: vi.fn().mockResolvedValue(agent) } as unknown as Runtime;
 }
 
@@ -133,6 +133,24 @@ describe("AgentMemoryUseCase operator entries", () => {
     await expect(memory.listEntries(makeCtx(), AGENT)).rejects.toThrow(
       `HermesAgent ${AGENT} not found`
     );
+  });
+
+  it("refuses writes to an archived agent but still lists its entries", async () => {
+    const db = makeDatabase();
+    const memory = makeUseCase(makeRuntime({ id: AGENT, userId: "user-1", archived: true }), db);
+    const ctx = makeCtx();
+
+    await expect(memory.addEntry(ctx, AGENT, "x")).rejects.toThrow(`Agent ${AGENT} is archived`);
+    await expect(memory.patchEntry(ctx, AGENT, "entry-id", "x")).rejects.toThrow(
+      `Agent ${AGENT} is archived`
+    );
+    await expect(memory.removeEntry(ctx, AGENT, "entry-id")).rejects.toThrow(
+      `Agent ${AGENT} is archived`
+    );
+    expect(db.addMemoryEntry).not.toHaveBeenCalled();
+    expect(db.patchMemoryEntry).not.toHaveBeenCalled();
+    expect(db.removeMemoryEntry).not.toHaveBeenCalled();
+    await expect(memory.listEntries(ctx, AGENT)).resolves.toEqual([]);
   });
 
   it("lists entries for the owner", async () => {

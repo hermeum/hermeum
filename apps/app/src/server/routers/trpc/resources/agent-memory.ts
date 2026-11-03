@@ -8,8 +8,8 @@ import { protectedProcedure, t } from "./shared.js";
 // Operator memory management for the agent detail page's Memory tab. Unlike
 // agent-session telemetry (browsable by any authenticated user), memory is
 // curated content: every procedure authorizes ownership in the use case
-// (agent → userId) before touching entries. The agent-facing writes still go
-// through the token-authenticated plugin protocol (agentMemory.batch).
+// (agent → userId) before touching entries, and writes are refused for
+// archived agents.
 
 const usecase = new AgentMemoryUseCase();
 

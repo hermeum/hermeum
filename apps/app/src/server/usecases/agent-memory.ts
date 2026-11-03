@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { AgentMemoryEntry, Context } from "@/entities";
+import type { Agent, AgentMemoryEntry, Context } from "@/entities";
 
 import { BaseUseCase, OwnershipGuarded } from "./mixin";
 
@@ -28,7 +28,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
   }
 
   async addEntry(ctx: Context, agentId: string, content: string): Promise<AgentMemoryEntry[]> {
-    await this.#authorize(ctx, agentId);
+    await this.#authorizeWrite(ctx, agentId);
     const trimmed = content.trim();
     if (!trimmed) {
       throw new Error("Memory entry content cannot be empty.");
@@ -57,7 +57,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
     id: string,
     content: string
   ): Promise<AgentMemoryEntry[]> {
-    await this.#authorize(ctx, agentId);
+    await this.#authorizeWrite(ctx, agentId);
     const trimmed = content.trim();
     if (!trimmed) {
       throw new Error("Memory entry content cannot be empty.");
@@ -72,7 +72,7 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
   }
 
   async removeEntry(ctx: Context, agentId: string, id: string): Promise<AgentMemoryEntry[]> {
-    await this.#authorize(ctx, agentId);
+    await this.#authorizeWrite(ctx, agentId);
     const removed = await this.db.removeMemoryEntry(agentId, id);
     if (!removed) {
       throw new Error("Memory entry not found.");
@@ -91,11 +91,21 @@ export class AgentMemoryUseCase extends OwnershipGuarded(BaseUseCase) {
 
   // Operator operations require ownership of the agent; the runtime lookup
   // supplies the userId the Resources router's session is checked against.
-  async #authorize(ctx: Context, agentId: string): Promise<void> {
+  // Writes additionally refuse archived agents (reads stay available — the
+  // Memory tab shows an archived agent's entries read-only).
+  async #authorize(ctx: Context, agentId: string): Promise<Agent> {
     const agent = await this.runtime.getHermesAgent(agentId);
     if (!agent) {
       throw new Error(`HermesAgent ${agentId} not found`);
     }
     this.verifyOwnership(ctx, agent);
+    return agent;
+  }
+
+  async #authorizeWrite(ctx: Context, agentId: string): Promise<void> {
+    const agent = await this.#authorize(ctx, agentId);
+    if (agent.archived) {
+      throw new Error(`Agent ${agentId} is archived`);
+    }
   }
 }
