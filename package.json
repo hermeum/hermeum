@@ -15,9 +15,9 @@
   },
   "devDependencies": {
     "@trpc/openapi": "11.18.0-alpha",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "tsx": "^4.19.3",
-    "turbo": "^2.11.9",
+    "turbo": "^2.11.11",
     "typescript": "^6.0.3"
   },
   "engines": {
