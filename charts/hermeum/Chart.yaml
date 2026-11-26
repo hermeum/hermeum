@@ -20,6 +20,6 @@ keywords:
 dependencies:
   - name: hermes-agent-operator
     alias: operator
-    version: ">= 0.5.5"
+    version: ">= 0.6.0"
     repository: oci://ghcr.io/hermeum/charts
     condition: operator.enabled
